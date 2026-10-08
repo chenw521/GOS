@@ -11,7 +11,10 @@
 .gos/concerns.md
 .gos/lessons.json
 .gos/lessons.md
-.gos/codebase/
+.gos/codebase/*
+!.gos/codebase/network.md
+!.gos/codebase/require-allowlist.json
+!.gos/codebase/edge-baseline.json
 .gos/logs/
 .gos/project/PROJECT.md
 .gos/project/DECISIONS.md

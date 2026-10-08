@@ -195,7 +195,7 @@
     ".gos/codebase": {
       "git": false,
       "npm": false,
-      "note": "governance data (CJK/process content) — machine-local (gitignored)"
+      "note": "map governance data stays machine-local (gitignored)"
     },
     ".gos/logs": {
       "git": false,
@@ -226,6 +226,21 @@
       "git": false,
       "npm": false,
       "note": "governance data (CJK/process content) — machine-local (gitignored)"
+    },
+    ".gos/codebase/network.md": {
+      "git": true,
+      "npm": false,
+      "note": "public self-hosted codemap (dead edges swept, labels englishized)"
+    },
+    ".gos/codebase/require-allowlist.json": {
+      "git": true,
+      "npm": false,
+      "note": "public require-direction allowlist (map gate reproducer)"
+    },
+    ".gos/codebase/edge-baseline.json": {
+      "git": true,
+      "npm": false,
+      "note": "public edge baseline (drop detection)"
     }
   },
   "dispositions": []
