@@ -1,0 +1,5 @@
+# Phase 6 [R2-F10/R3-F5]: line/anchor hashes assume LF — pin it so CRLF
+# checkouts (autocrlf) can never invalidate sidecar or self-anchor hashes.
+.gos/concerns.md eol=lf
+*.json eol=lf
+*.cjs eol=lf

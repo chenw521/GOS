@@ -1,0 +1,102 @@
+# Release pipeline for this repository: manual dispatch only — a single-person
+# human gate ahead of every irreversible action. Three ordered stages:
+#   validate — all preconditions must pass (semver tag, tag == package.json
+#              version, tag above the newest CHANGELOG version, non-empty
+#              [Unreleased], working npm token) before anything runs;
+#   publish  — npm publish (irreversible) with the version already validated
+#              to equal the tag;
+#   promote  — only after a successful publish: fold [Unreleased] into the
+#              version section, commit CHANGELOG.md, create the GitHub
+#              Release from that section.
+# Irreversible actions always run last, so a failed validation can never
+# leave a half-released state behind.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release, e.g. v0.19.0 (must equal package.json version)'
+        required: true
+        type: string
+
+# Manual releases run serially per ref; a superseded dispatch is cancelled so
+# two half-releases never interleave (private-repo quota savings as a bonus).
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate preconditions
+    runs-on: ubuntu-latest
+    outputs:
+      validated_sha: ${{ steps.sha.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - name: Pin the validated SHA
+        id: sha
+        run: echo "sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+      - name: Run scripts/release-validate.sh
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: bash scripts/release-validate.sh "$RELEASE_TAG"
+
+  publish:
+    name: Publish to npm
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Refuse to publish a SHA that was not validated
+        run: test "$GITHUB_SHA" = "${{ needs.validate.outputs.validated_sha }}" || { echo "HEAD moved between validate and publish — re-dispatch"; exit 1; }
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - name: npm publish (version comes from package.json, validated == tag)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish
+
+  promote:
+    name: Promote changelog and create GitHub Release
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - name: Refuse to promote a SHA that was not validated
+        run: test "$GITHUB_SHA" = "${{ needs.validate.outputs.validated_sha }}" || { echo "HEAD moved between validate and promote — re-dispatch"; exit 1; }
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Promote [Unreleased] into the version section
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: bash scripts/release-promote.sh "$RELEASE_TAG"
+      - name: Commit changelog and create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          tag="${RELEASE_TAG#v}"; tag="${tag#V}"
+          vtag="v$tag"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "chore(release): promote $vtag"
+          git push
+          awk -v h="## [$tag]" 'index($0, h) == 1 {sec = 1; next} sec && /^## / {exit} sec {print}' \
+            CHANGELOG.md > release-notes.md
+          gh release create "$vtag" --target "$GITHUB_SHA" --title "$vtag" \
+            --notes-file release-notes.md

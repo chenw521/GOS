@@ -1,0 +1,11 @@
+# Issue chooser configuration (seeded by `gos init git`).
+# NOTE: the contact link below only resolves when GitHub Discussions is
+# enabled for this repository (Settings -> General -> Features -> Discussions).
+# The Discussions URL is rendered from this repository's slug (owner/repo).
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and discussions
+    url: https://github.com/{{REPO}}/discussions
+    about: >-
+      Ask usage questions and hold open-ended discussions here before opening
+      an issue.

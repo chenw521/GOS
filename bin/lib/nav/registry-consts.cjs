@@ -1,0 +1,25 @@
+// nav/registry-consts — registry data surface (const tables co-located here)
+'use strict';
+
+const SUBCLASS_OVERRIDES = {
+  'lessons.list': 'read',     // B-19: lessons list = read-class
+  'concerns.add': 'write',    // metadata-only (dispatch stays read; internal lock)
+  'concerns.prune': 'write',  // metadata-only (dispatch stays read; internal lock)
+  'changelog.add': 'write',   // metadata-only (dispatch stays read; dedicated lock)
+};
+
+// read-class dispatch for `changelog`: `add` mutates CHANGELOG.md + state.json
+// under its own .gos/cache/changelog.lock (wait-retry, concurrent adds
+// serialize) — the shared .gos/.lock is die-on-contention and must not gate
+// concurrent adds (concerns-family pattern).
+const KNOWN_CASES = ['', 'next', 'instructions', 'status', 'init', 'resume', 'stage', 'context', 'checkpoint', 'commit', 'archive', 'setup', 'teardown', 'doctor', '_contract', 'paths', 'gate', 'section', 'resolve-model', 'config', 'trace', 'decision', 'requirement', 'phase', 'anchor', 'render', 'auto', 'approve', 'lessons', 'truth', 'gap', 'map', 'concerns', 'changelog', 'feedback', 'help', '--help', '-h', '--version', '-v'];
+
+const WRITE_CMDS = new Set(['init', 'commit', 'archive', 'approve', 'checkpoint', 'config', 'auto', 'stage', 'requirement', 'decision', 'render', 'phase', 'anchor', 'lessons', 'truth', 'gap', 'paths', 'feedback']);
+
+const READ_CMDS = new Set(['', 'next', 'instructions', 'status', 'resume', 'context', 'trace', 'resolve-model', 'map', 'concerns', 'changelog']);
+
+const EXEC_CMDS = new Set(['gate', 'section']);
+
+const GLOBAL_CMDS = new Set(['setup', 'teardown', 'doctor', 'help', '--help', '-h', '--version', '-v', '_contract']);
+
+module.exports = { SUBCLASS_OVERRIDES, KNOWN_CASES, WRITE_CMDS, READ_CMDS, EXEC_CMDS, GLOBAL_CMDS };

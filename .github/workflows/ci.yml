@@ -1,0 +1,114 @@
+# CI for the GOS repository itself (GOS-specific; NOT rendered from
+# templates/git/node masters — the node layer is exempt from the master-diff
+# invariant, this repo keeps its own CI file). Never uses pull_request_target.
+#
+# Core trio per R-09: gate (--audit: CI has no task state), sections
+# regression, npm pack manifest integrity. Plus master-consistency (re-render
+# the universal layer and require a zero diff) and PR-only commitlint.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref: private repos have a monthly
+# Actions minute quota, rapid-push workflows should not burn it twice.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: Gate (audit mode)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: gos gate all --audit
+        run: node bin/gos.cjs gate all --audit
+
+  sections:
+    name: Sections (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Trust tracked custom gate (fresh checkout has no machine-local consent)
+        run: node bin/gos.cjs gate trust check.sh
+      - name: Section regression suite
+        run: |
+          set -o pipefail
+          bash test/run-sections.sh 2>&1 | tee "$RUNNER_TEMP/sections-log.txt"
+      - name: Upload section log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sections-log-node${{ matrix.node-version }}
+          path: ${{ runner.temp }}/sections-log.txt
+          retention-days: 7
+
+  pack:
+    name: npm pack manifest
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Pack manifest integrity
+        run: |
+          mkdir -p .gos/cache
+          bash test/pack-check.sh
+
+  masters:
+    name: Template master consistency
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Re-render universal layer
+        run: node bin/gos.cjs init git --render-self
+      - name: Diff must be empty (node layer exempt)
+        run: |
+          git diff --exit-code -- \
+            .github/CODEOWNERS \
+            .github/ISSUE_TEMPLATE/bug_report.yml \
+            .github/ISSUE_TEMPLATE/feature_request.yml \
+            .github/PULL_REQUEST_TEMPLATE.md \
+            commitlint.config.yaml
+
+  commitlint:
+    name: Commit messages (Conventional Commits)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Lint PR commit range
+        run: |
+          npx --yes commitlint@19 --config commitlint.config.yaml \
+            --from origin/main --to HEAD
+      - name: Subject charset policy (ASCII-only)
+        run: bash test/checks/commitlint-charset.sh

@@ -1,0 +1,31 @@
+name: Feature request
+description: Propose a new capability or a change in behavior
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: >-
+        What are you trying to accomplish, and what blocks you today? Describe
+        the goal, not the solution you have in mind.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: >-
+        What should change? Sketch the command, output, or behavior you expect.
+        Small concrete examples beat abstract descriptions.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: >-
+        Workarounds, other tools, or designs you already ruled out, and why
+        they fell short.
+    validations:
+      required: false

@@ -1,0 +1,20 @@
+# Banned early-conformation residue patterns (grep -E syntax, one per line).
+# Applied to README.md and README.zh-CN.md by test/readme-sync.sh; any hit is
+# a failure. Lines starting with '#' and blank lines are ignored.
+
+# Wrong-package install command: npm `gos` is an unrelated third-party squat.
+npm (i|install) -g gos\b
+
+# Beta period: no public-npm install commands (get-organized-system ships only
+# at the open-source launch; distribution is GitHub Packages @chenw521/gos).
+npm (i|install) -g get-organized-system
+npmjs\.com/package/get-organized-system
+
+# Manual symlink install instructions (superseded by `gos setup` / `gos setup --local`).
+ln -s
+
+# Stale engine floor (engines raised to Node >= 20).
+[Nn]ode ?(≥|>=) ?16
+
+# Early per-platform install doc pointer (superseded by the npm package).
+\.opencode/INSTALL\.md

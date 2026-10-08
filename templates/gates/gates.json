@@ -1,0 +1,6 @@
+{
+  "_comment": "GOS custom gates (declarative layer, copied by `gos setup`). Keys: protect = glob blacklist — the gate FAILs when any matched path shows up modified or staged in git; lint = shell command — a non-zero exit FAILs the gate (needs a runnable script in your project); forbid = '<regex> in <path>' entries — git grep hits FAIL. Edit to fit your project; remove keys you do not need.",
+  "protect": [".env", "config/prod/*"],
+  "lint": "npm run lint",
+  "forbid": ["console\\.log in src/"]
+}

@@ -1,0 +1,92 @@
+[
+  {
+    "path": "bin/lib/core/locales/zh.cjs",
+    "category": "sanctioned-zh",
+    "reason": "Sanctioned Simplified-Chinese locale: shipped product surface, excluded from Englishization by design."
+  },
+  {
+    "path": "README.zh-CN.md",
+    "category": "sanctioned-zh",
+    "reason": "Sanctioned Simplified-Chinese readme mirror; English README.md is the canonical copy."
+  },
+  {
+    "path": "README.md",
+    "category": "fixture",
+    "reason": "Language switcher names each locale in its own language (the zh link text is written in Chinese characters) - functional bilingual display."
+  },
+  {
+    "path": "bin/lib/core/locales/en.cjs",
+    "category": "fixture",
+    "reason": "Language-selector UI copy: the zh option label (written in Chinese characters) is a functional bilingual display requirement, not migratable copy."
+  },
+  {
+    "path": "bin/lib/core/state.cjs",
+    "category": "fixture",
+    "reason": "Evidence-feature regex parses zh numeric quantifiers (CJK ideographs for item/count) in user-provided test evidence - functional zh-parsing logic, not display copy."
+  },
+  {
+    "path": "test/readme-sync.sh",
+    "category": "fixture",
+    "reason": "Deliberate CJK test data (assertions, fixtures, goldens); migrates together with its module batch."
+  },
+  {
+    "path": "test/sections/T16-truth.test.sh",
+    "category": "fixture",
+    "reason": "Deliberate CJK test data (assertions, fixtures, goldens); migrates together with its module batch."
+  },
+  {
+    "path": "test/sections/T17-semantic-engine.test.sh",
+    "category": "fixture",
+    "reason": "Deliberate CJK test data (assertions, fixtures, goldens); migrates together with its module batch."
+  },
+  {
+    "path": "test/sections/T23-concerns.test.sh",
+    "category": "fixture",
+    "reason": "Deliberate CJK test data (assertions, fixtures, goldens); migrates together with its module batch."
+  },
+  {
+    "path": "test/sections/T27-archive-slug.test.sh",
+    "category": "fixture",
+    "reason": "Deliberate CJK test data (assertions, fixtures, goldens); migrates together with its module batch."
+  },
+  {
+    "path": "test/sections/T29-command-registry.test.sh",
+    "category": "fixture",
+    "reason": "Deliberate CJK test data (assertions, fixtures, goldens); migrates together with its module batch."
+  },
+  {
+    "path": "test/sections/T3-decision.test.sh",
+    "category": "fixture",
+    "reason": "Deliberate CJK test data (assertions, fixtures, goldens); migrates together with its module batch."
+  },
+  {
+    "path": "test/sections/T31-map-gate.test.sh",
+    "category": "fixture",
+    "reason": "Deliberate CJK test data (assertions, fixtures, goldens); migrates together with its module batch."
+  },
+  {
+    "path": "test/sections/T32-map-render.test.sh",
+    "category": "fixture",
+    "reason": "Deliberate CJK test data (assertions, fixtures, goldens); migrates together with its module batch."
+  },
+  {
+    "path": "test/sections/T35-u-negative.test.sh",
+    "category": "fixture",
+    "reason": "Deliberate CJK test data (assertions, fixtures, goldens); migrates together with its module batch."
+  },
+  {
+    "path": "test/sections/T51-commit-guard.test.sh",
+    "category": "fixture",
+    "reason": "Deliberate CJK test data (assertions, fixtures, goldens); migrates together with its module batch."
+  },
+  {
+    "path": "test/sections/T74-i18n.test.sh",
+    "category": "fixture",
+    "reason": "Deliberate CJK test data (assertions, fixtures, goldens); migrates together with its module batch."
+  },
+  {
+    "path": "test/checks/commitlint-charset.sh",
+    "category": "fixture",
+    "reason": "Deliberate CJK commit-subject literal exercising the charset rejection path."
+  }
+]

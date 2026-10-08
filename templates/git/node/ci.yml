@@ -1,0 +1,25 @@
+# CI for user repositories seeded by `gos init git` (Node layer).
+# Scope: lint the PR commit range against Conventional Commits. Keep
+# permissions minimal; this file never uses pull_request_target.
+name: CI
+
+on:
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  commitlint:
+    name: Commit messages (Conventional Commits)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Lint PR commit range
+        run: |
+          npx --yes commitlint@19 --config commitlint.config.yaml \
+            --from "${{ github.event.pull_request.base.sha }}" \
+            --to "${{ github.event.pull_request.head.sha }}"

@@ -1,0 +1,44 @@
+{
+  "name": "@chenw521/gos",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
+  "version": "1.0.0-dev",
+  "description": "GOS — Get Organized System: adaptive workflow plugin combining GSD's project governance, OpenSpec's phase lifecycle, and Superpowers' execution discipline",
+  "license": "MIT",
+  "author": "chenw521",
+  "type": "module",
+  "main": ".opencode/plugins/gos.js",
+  "bin": {
+    "gos": "bin/gos.cjs"
+  },
+  "files": [
+    "bin/",
+    "skills/",
+    "templates/",
+    "hooks/commit-msg.sh",
+    ".opencode/plugins/",
+    ".opencode/commands/",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chenw521/GOS.git"
+  },
+  "keywords": [
+    "opencode",
+    "claude-code",
+    "codex",
+    "ai",
+    "workflow",
+    "gsd",
+    "superpowers",
+    "openspec"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "acorn": "^8.18.0"
+  }
+}

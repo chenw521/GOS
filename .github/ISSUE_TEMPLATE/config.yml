@@ -1,0 +1,11 @@
+# Issue chooser configuration (seeded by `gos init git`).
+# NOTE: the contact link below only resolves when GitHub Discussions is
+# enabled for this repository (Settings -> General -> Features -> Discussions).
+# Replace OWNER/REPO in the URL with this repository's owner and name.
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and discussions
+    url: https://github.com/chenw521/GOS/discussions
+    about: >-
+      Ask usage questions and hold open-ended discussions here before opening
+      an issue.

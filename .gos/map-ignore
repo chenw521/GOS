@@ -1,0 +1,3 @@
+# [Phase D T4] extraction opt-out list — glob patterns, one per line (# = comment)
+# fixtures with fake gos calls etc. belong here, e.g.:
+# docs/legacy-*.md

@@ -1,0 +1,84 @@
+# GOS session state (machine-managed, local)
+.gos/state.json
+
+# GOS process artifacts stay machine-local (public repo ships product only):
+# task dirs, archives, retrospectives, milestone/feedback feedstock
+.gos/task/
+.gos/archive/
+.gos/project/RETROSPECTIVE.md
+.gos/project/milestones/
+.gos/project/feedback/
+.gos/concerns.md
+.gos/lessons.json
+.gos/lessons.md
+.gos/codebase/
+.gos/logs/
+.gos/project/PROJECT.md
+.gos/project/DECISIONS.md
+.gos/project/REQUIREMENTS.md
+.gos/project/ROADMAP.md
+.gos/project/project.json
+.changes.md
+
+# commit-msg hook install copy (master ships at hooks/commit-msg.sh)
+hooks/commit-msg
+
+# ship transaction staging dir (transient; must never ride the ADD_PATHS sweep)
+.gos/.ship-staging/
+
+# Dependencies
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temp/test files
+*.tmp
+*.bak
+.cache/
+
+# Build output
+dist/
+build/
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+# [Phase D T2] audit receipts are tracked (cross-machine auditable)
+# [Phase D T9] network.md refresh backups (keep 5, machine-local)
+# [Phase D T10] exemptions are tracked + audited (R2-F11)
+npm-debug.log*
+
+# GOS concurrency lock (machine-local)
+.gos/.lock
+
+# parallel wave worktrees (gos-build Wave isolation)
+.worktrees/
+
+# incubator test dirs (clean-room build artifacts, machine-local)
+test-*/
+# [Phase D T10] manifest is machine-local freshness anchor (spec §7)
+
+# Phase U: truth-verification artifacts (ephemeral evidence scripts + logs)
+test/out/
+
+# [Phase W T16] machine caches — whole dir ignored (deps/run-manifest/edges.lock/anchors/backups)
+.gos/cache/
+# [P12] feedback drafts stay untracked (feedstock; only .gos/FEEDBACK.md publishes)
+.gos/project/feedback/
+# [Phase W T16] audit logs stay tracked (truth-receipts/exemptions/edge-audit) — reverse the global *.log
+!.gos/logs/**
+.gos/codebase/edge-history.ndjson
+.playwright-mcp/
+

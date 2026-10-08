@@ -1,0 +1,46 @@
+GOS — Get Organized System CLI
+
+Usage: gos <command> [args]  — full detail: gos help <cmd> | machine: gos help --json
+
+— write (task/project state (lock)) —
+  init         init task: gos init <level> "<intent>" | --project (Lv4 four-file set) ⚠ --force init: discard existing task state and re-init
+  stage        stage flow position: show / back <stage> [reason]
+  checkpoint   wave/area-level recovery point
+  commit       atomic commit of stage artifacts + advance stage
+  archive      archive spec/plan + write delta.md, mark DONE
+  paths        GOS_PATHS registry query: abs-path JSON (project_root + per-key metadata) or README regen
+  config       show/set model staffing: team | solo | elite | lean
+  decision     truth-source decisions: add [id] "title" --rationale | amend | cover | list | import
+  requirement  truth-source requirements: add | list | drop | claim
+  phase        Lv4 phase lifecycle: add | list | claim | unclaim | mark-done ⚠ --force claim: bypass DONE/archive preconditions (data-loss risk if task mid-flight)
+  anchor       re-anchor state.project_root (rescue)
+  render       regenerate DECISIONS/ROADMAP/REQUIREMENTS views from project.json
+  auto         auto-flow toggle (on | off)
+  approve      record user sign-off for a stage gate
+  lessons      dual-file lessons: add --type model|project --text | list | prune | rebase-anchor | skip
+  truth        observable truths: add "<desc>" | verify <id> (--replay executes it)
+  gap          state gaps: list | resolve <G-id> --resolution "<r>" (fail-closed)
+
+— read (read-only) —
+  next           guided: what to do right now
+  instructions   stage-by-step guidance for the current task
+  status         full status (decisions/truths/requirements/gaps)
+  (no command)   status alias (no-arg call)
+  resume         print resume summary (paste into a fresh AI session)
+  context        pre-computed context JSON (read_files, decisions, truths, gates)
+  resolve-model  subagent model resolution (staffing-aware)
+  trace          trace chain: requirements → decisions → tasks → truths
+  map            anchor-network map 2.0: edge graph | scan | anchor <spec> | closure | show (fn-level: closure/show <path#fn:x>, graph --fn <anchor>)
+  concerns       curated worry list: add | list | prune (hash sidecar anchored)
+
+— exec (executes) —
+  gate  hard gates: coverage|truths|requirements|lessons|semantic|codemap|all + custom gates
+
+— global (project-independent) —
+  setup      install skills symlinks for detected platforms
+  teardown   remove skill symlinks
+  doctor     diagnose installation (CLI/skills links/platforms), read-only
+  _contract  print frozen contract table (tests/skills assert from it)
+  help       this help (rendered from COMMANDS registry)
+
+Every command's output ends with a "Next:" hint — follow the chain.

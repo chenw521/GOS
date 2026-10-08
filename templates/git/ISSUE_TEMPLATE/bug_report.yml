@@ -1,0 +1,68 @@
+name: Bug report
+description: Report something that is not working as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Fill in the sections below;
+        the more detail you provide, the faster triage goes.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: >-
+        What happened, and what did you expect to happen instead? Include the
+        exact steps to reproduce, starting from a clean checkout if possible.
+      placeholder: |
+        1. Run `...`
+        2. Observe ...
+        3. Expected ...
+    validations:
+      required: true
+  - type: input
+    id: assistant
+    attributes:
+      label: AI assistant
+      description: >-
+        If an AI assistant drove the session that hit the bug, name the harness
+        (e.g. opencode, Claude Code). Leave empty for manual sessions.
+      placeholder: opencode
+    validations:
+      required: false
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      description: The model name used in that session (empty for manual sessions).
+      placeholder: glm-4.6
+    validations:
+      required: false
+  - type: textarea
+    id: gos-version
+    attributes:
+      label: Output of `gos --version`
+      description: Paste the exact output of `gos --version` (marked required: most bugs are version-sensitive).
+      render: shell
+      placeholder: gos 0.19.0
+    validations:
+      required: true
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js version
+      description: Output of `node --version` (e.g. v20.11.0).
+      placeholder: v20.11.0
+    validations:
+      required: false
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Linux
+        - macOS
+        - Windows
+        - Other (describe in the description above)
+    validations:
+      required: true

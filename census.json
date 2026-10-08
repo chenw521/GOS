@@ -1,0 +1,232 @@
+{
+  "schema_version": 1,
+  "_doc": "File census of this repository (ground truth: git ls-files + npm pack --dry-run). Matching rule: keys are repo-root-relative paths; one optional trailing slash is stripped (dir/ == dir). A path inherits the MOST SPECIFIC entry covering it — exact match > deeper prefix > shallower prefix; a key K covers path P iff P === K or P starts with K + '/'. Labels: git = tracked in this repo, npm = shipped in the npm tarball. git:false entries document gitignore-covered machine-local zones (validated alive only where they exist on disk: this machine or any clone after gos runtime use). Reconciled from four sources by test/pack-check.sh: npm pack manifest <-> npm:true, git ls-files top-level <-> git:true, .gitignore <-> git:false, git status --porcelain -uall untracked <-> git:false entries; a root-matching or dead entry is rejected. Dispositions are executed ONE at a time via scripts/census-dispose.sh (no batch mode).",
+  "entries": {
+    "bin": {
+      "git": true,
+      "npm": true,
+      "note": "CLI runtime"
+    },
+    "skills": {
+      "git": true,
+      "npm": true,
+      "note": "bundled workflow skills (incl. gos-review subagent definition)"
+    },
+    "templates": {
+      "git": true,
+      "npm": true,
+      "note": "seeding templates"
+    },
+    "hooks": {
+      "git": true,
+      "npm": true,
+      "note": "commit-msg.sh hook master"
+    },
+    "hooks/commit-msg": {
+      "git": false,
+      "npm": false,
+      "note": "install copy produced by gos setup --commitlint (gitignored)"
+    },
+    ".opencode/commands": {
+      "git": true,
+      "npm": true,
+      "note": "opencode slash commands, project-level for clones; seeded user-level by gos setup"
+    },
+    ".opencode/plugins": {
+      "git": true,
+      "npm": true,
+      "note": "plugin entry point is shipped (files array)"
+    },
+    ".opencode": {
+      "git": true,
+      "npm": false,
+      "note": "host integration docs stay repo-only"
+    },
+    "README.md": {
+      "git": true,
+      "npm": true,
+      "note": "npm README auto-include"
+    },
+    "README.zh-CN.md": {
+      "git": true,
+      "npm": true,
+      "note": "auto-included by the npm README* rule (verified in pack)"
+    },
+    "package.json": {
+      "git": true,
+      "npm": true,
+      "note": "always packed"
+    },
+    "LICENSE": {
+      "git": true,
+      "npm": true,
+      "note": "npm LICENSE auto-include"
+    },
+    ".gos": {
+      "git": true,
+      "npm": false,
+      "note": "product mechanism files only: gates, config, map-ignore, README, cjk-whitelist"
+    },
+    ".gos/task": {
+      "git": false,
+      "npm": false,
+      "note": "active task dir — machine-local process artifact (gitignored)"
+    },
+    ".gos/archive": {
+      "git": false,
+      "npm": false,
+      "note": "task archives stay on disk only (gitignored; 80% CJK + privacy findings per audit)"
+    },
+    ".gos/project/RETROSPECTIVE.md": {
+      "git": false,
+      "npm": false,
+      "note": "milestone retrospective, machine-local (gitignored)"
+    },
+    ".gos/project/milestones": {
+      "git": false,
+      "npm": false,
+      "note": "per-milestone docs, machine-local (gitignored)"
+    },
+    ".gos/project/feedback": {
+      "git": false,
+      "npm": false,
+      "note": "feedback drafts feedstock (gitignored)"
+    },
+    ".gos/state.json": {
+      "git": false,
+      "npm": false,
+      "note": "machine-local session state (gitignored)"
+    },
+    ".gos/cache": {
+      "git": false,
+      "npm": false,
+      "note": "machine-local caches (gitignored)"
+    },
+    ".gos/.lock": {
+      "git": false,
+      "npm": false,
+      "note": "machine-local concurrency lock (gitignored)"
+    },
+    ".changes.md": {
+      "git": false,
+      "npm": false,
+      "note": "stage-commit change feed, machine-local (gitignored)"
+    },
+    "test": {
+      "git": true,
+      "npm": false,
+      "note": "section + integration tests"
+    },
+    "scripts": {
+      "git": true,
+      "npm": false,
+      "note": "repo maintenance scripts"
+    },
+    ".github": {
+      "git": true,
+      "npm": false,
+      "note": "CI workflows and templates"
+    },
+    ".codex": {
+      "git": true,
+      "npm": false,
+      "note": "host install docs (compat direction, untested)"
+    },
+    ".claude-plugin": {
+      "git": true,
+      "npm": false,
+      "note": "host marketplace metadata (compat direction, untested)"
+    },
+    "package-lock.json": {
+      "git": true,
+      "npm": false,
+      "note": "npm pack excludes lockfiles from tarballs (verified)"
+    },
+    "CHANGELOG.md": {
+      "git": true,
+      "npm": false,
+      "note": "not auto-included by npm (verified in pack)"
+    },
+    "CONTRIBUTING.md": {
+      "git": true,
+      "npm": false,
+      "note": "not auto-included by npm (verified in pack)"
+    },
+    "commitlint.config.yaml": {
+      "git": true,
+      "npm": false,
+      "note": "repo commit lint config"
+    },
+    ".gitignore": {
+      "git": true,
+      "npm": false,
+      "note": "tracked ignore rules"
+    },
+    ".gitattributes": {
+      "git": true,
+      "npm": false,
+      "note": "line-ending policy"
+    },
+    "AGENTS.md": {
+      "git": true,
+      "npm": false,
+      "note": "repo-internal agent instructions; pack-check forbids shipping it"
+    },
+    "census.json": {
+      "git": true,
+      "npm": false,
+      "note": "this census, staged via commit.cjs ADD_PATHS"
+    },
+    ".gos/concerns.md": {
+      "git": false,
+      "npm": false,
+      "note": "governance data (CJK/process content) — machine-local (gitignored)"
+    },
+    ".gos/lessons.json": {
+      "git": false,
+      "npm": false,
+      "note": "governance data (CJK/process content) — machine-local (gitignored)"
+    },
+    ".gos/lessons.md": {
+      "git": false,
+      "npm": false,
+      "note": "governance data (CJK/process content) — machine-local (gitignored)"
+    },
+    ".gos/codebase": {
+      "git": false,
+      "npm": false,
+      "note": "governance data (CJK/process content) — machine-local (gitignored)"
+    },
+    ".gos/logs": {
+      "git": false,
+      "npm": false,
+      "note": "governance data (CJK/process content) — machine-local (gitignored)"
+    },
+    ".gos/project/PROJECT.md": {
+      "git": false,
+      "npm": false,
+      "note": "governance data (CJK/process content) — machine-local (gitignored)"
+    },
+    ".gos/project/DECISIONS.md": {
+      "git": false,
+      "npm": false,
+      "note": "governance data (CJK/process content) — machine-local (gitignored)"
+    },
+    ".gos/project/REQUIREMENTS.md": {
+      "git": false,
+      "npm": false,
+      "note": "governance data (CJK/process content) — machine-local (gitignored)"
+    },
+    ".gos/project/ROADMAP.md": {
+      "git": false,
+      "npm": false,
+      "note": "governance data (CJK/process content) — machine-local (gitignored)"
+    },
+    ".gos/project/project.json": {
+      "git": false,
+      "npm": false,
+      "note": "governance data (CJK/process content) — machine-local (gitignored)"
+    }
+  },
+  "dispositions": []
+}

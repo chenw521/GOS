@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+# gh stub for `gos feedback push` section tests (T70) — network-dependency
+# truth rule: everything CI-runnable must be local; real gh only under
+# GOS_E2E_NETWORK=1 (one-shot, never in the suite).
+#
+# Contract:
+#   repo view <slug> --json owner,viewerPermission,visibility
+#       -> {"owner":{"login":"<GH_STUB_OWNER|octocat>"},"name":"<repo>",
+#           "viewerPermission":"WRITE","visibility":"<GH_STUB_VISIBILITY|public>"}
+#   api user [--jq .login]
+#       -> {"login":"<GH_STUB_LOGIN|octocat>"} (bare login with --jq)
+#   search issues --repo <slug> <query> --json url
+#       -> contents of the $GH_STUB_HITS file when set (a JSON array), else []
+#   issue create --repo <slug> --title <t> --body <b>
+#       -> argv appended to $GH_STUB_LOG as ONE JSON-array line (argv-array
+#          assertion surface); prints https://github.com/<slug>/issues/<n>
+#          (n = $GH_STUB_ISSUE_N or the post-append log line count);
+#          GH_STUB_FAIL_CREATE=1 -> exit 1 (crash-window simulation)
+#   anything else -> exit 3 (unexpected-subcommand tripwire)
+set -u
+
+cmd="${1:-}"
+[ $# -gt 0 ] && shift
+
+stub_log_argv() {
+  python3 - "$@" <<'PYSTUB'
+import json, os, sys
+log = os.environ.get('GH_STUB_LOG')
+if not log:
+    raise SystemExit(0)
+with open(log, 'a') as fh:
+    fh.write(json.dumps(sys.argv[1:]) + '\n')
+PYSTUB
+}
+
+stub_slug_of() {   # first value following --repo in the remaining argv
+  local prev=""
+  local a
+  for a in "$@"; do
+    if [ "$prev" = "--repo" ]; then
+      printf '%s' "$a"
+      return 0
+    fi
+    prev="$a"
+  done
+  printf ''
+}
+
+case "$cmd" in
+  repo)
+    if [ "${1:-}" != "view" ]; then
+      echo "gh-stub: unsupported repo subcommand: $*" >&2
+      exit 3
+    fi
+    slug="${2:-}"
+    if [ -z "$slug" ]; then
+      echo "gh-stub: repo view needs a slug" >&2
+      exit 3
+    fi
+    owner="${GH_STUB_OWNER:-octocat}"
+    vis="${GH_STUB_VISIBILITY:-public}"
+    printf '{"owner":{"login":"%s"},"name":"%s","viewerPermission":"WRITE","visibility":"%s"}\n' \
+      "$owner" "${slug#*/}" "$vis"
+    ;;
+  api)
+    if [ "${1:-}" != "user" ]; then
+      echo "gh-stub: unsupported api target: $*" >&2
+      exit 3
+    fi
+    login="${GH_STUB_LOGIN:-octocat}"
+    if printf '%s\n' "$@" | grep -q -- '--jq'; then
+      printf '%s\n' "$login"
+    else
+      printf '{"login":"%s"}\n' "$login"
+    fi
+    ;;
+  search)
+    if [ "${1:-}" != "issues" ]; then
+      echo "gh-stub: unsupported search target: $*" >&2
+      exit 3
+    fi
+    if [ -n "${GH_STUB_HITS:-}" ] && [ -f "$GH_STUB_HITS" ]; then
+      cat "$GH_STUB_HITS"
+    else
+      printf '[]\n'
+    fi
+    ;;
+  issue)
+    if [ "${1:-}" != "create" ]; then
+      echo "gh-stub: unsupported issue subcommand: $*" >&2
+      exit 3
+    fi
+    if [ "${GH_STUB_FAIL_CREATE:-0}" = "1" ]; then
+      echo "gh-stub: simulated create failure" >&2
+      exit 1
+    fi
+    stub_log_argv "$@"
+    slug="$(stub_slug_of "$@")"
+    n="${GH_STUB_ISSUE_N:-}"
+    if [ -z "$n" ] && [ -n "${GH_STUB_LOG:-}" ] && [ -f "${GH_STUB_LOG}" ]; then
+      n="$(wc -l < "${GH_STUB_LOG}" | tr -d '[:space:]')"
+    fi
+    printf 'https://github.com/%s/issues/%s\n' "${slug:-owner/repo}" "${n:-1}"
+    ;;
+  *)
+    echo "gh-stub: unexpected subcommand: ${cmd:-<none>} $*" >&2
+    exit 3
+    ;;
+esac
