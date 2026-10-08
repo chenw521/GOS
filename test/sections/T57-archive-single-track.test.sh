@@ -85,8 +85,14 @@ if grep -qE '^- user_summary: *$' "${DST}delta.md" 2>/dev/null; then echo "  ✓
 t57_teardown
 
 # ===== S: .changes.md sealed — top note + mtime untouched by archive =====
-if grep -q "SEALED (read-only archive)" "$GOS_ROOT/.changes.md" 2>/dev/null; then echo "  ✓ S1 repo .changes.md carries the seal note"; PASS=$((PASS+1)); else echo "  ✗ S1 seal note missing in repo .changes.md"; FAIL=$((FAIL+1)); fi
-if grep -qi "do not append" "$GOS_ROOT/.changes.md" 2>/dev/null; then echo "  ✓ S2 seal note forbids appending"; PASS=$((PASS+1)); else echo "  ✗ S2 seal note lacks the no-append instruction"; FAIL=$((FAIL+1)); fi
+# .changes.md is machine-local: assert seal wording only where the file exists
+# (developer machines); fresh clones/CI legitimately have none.
+if [ -f "$GOS_ROOT/.changes.md" ]; then
+  if grep -q "SEALED (read-only archive)" "$GOS_ROOT/.changes.md" 2>/dev/null; then echo "  ✓ S1 repo .changes.md carries the seal note"; PASS=$((PASS+1)); else echo "  ✗ S1 seal note missing in repo .changes.md"; FAIL=$((FAIL+1)); fi
+  if grep -qi "do not append" "$GOS_ROOT/.changes.md" 2>/dev/null; then echo "  ✓ S2 seal note forbids appending"; PASS=$((PASS+1)); else echo "  ✗ S2 seal note lacks the no-append instruction"; FAIL=$((FAIL+1)); fi
+else
+  echo "  ○ S1/S2 skipped: .changes.md is machine-local and absent here (fresh checkout)"
+fi
 t57_new
 t57_ready
 printf '# Changelog\n\n## [Unreleased]\n\n- Test mtime seal probe (R-01) [%s]\n' "$TODAY" > CHANGELOG.md
