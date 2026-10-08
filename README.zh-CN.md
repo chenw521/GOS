@@ -167,6 +167,23 @@ GOS/
 | npm 分发（GitHub Packages 内测 → 开源日上公共 npm）+ CI | 进行中 |
 | v1.0 正式发布 | 📋 |
 
+## CLI 速查
+
+<!-- gos:core-shortlist begin -->
+- `gos`（无参数）——状态 + 下一步（零记忆入口）
+- `gos init <level> "<intent>"`——开始任务
+- `gos commit <stage>`——原子提交 + 阶段推进
+- `gos gate all`——硬门禁（失败 exit 1）
+- `gos context <stage>`——预计算上下文 JSON
+- `gos resume`——跨会话恢复摘要
+- `gos instructions <stage>`——逐阶段指引
+- `gos phase <sub>`——Lv4 phase 生命周期
+- `gos decision <sub>`——记录/修订决策
+- `gos help [--json]`——全量能力发现
+
+Full capability: `gos help [--json]`
+<!-- gos:core-shortlist end -->
+
 ## 社区
 
 - **贡献指南** — 提 PR 前先读 [CONTRIBUTING.md](CONTRIBUTING.md)（本地绿=CI 绿命令清单、changelog 义务、AI 代码声明条款）。

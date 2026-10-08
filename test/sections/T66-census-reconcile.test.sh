@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# gos-map:none
 # gos-map:fn bin/lib/task/commit.cjs#fn:cmdCommit
+# gos-map:file census.json
+# gos-map:file test/pack-check.sh
+# gos-map:file scripts/census-dispose.sh
 # T66: census.json four-way reconciliation + disposition executor
 # Cases: A=real-repo pack-check green  B=sandbox baseline green
 #        b..j=mutation experiments (each must turn red / stay quiet)

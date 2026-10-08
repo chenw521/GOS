@@ -1,6 +1,6 @@
 {
   "current": {
-    "total": 687,
+    "total": 688,
     "callgraph": 340,
     "testof_fn": 62,
     "fn_count": 384,
@@ -777,7 +777,7 @@
       "cmdStage": "bin/lib/task/stage.cjs"
     },
     "fp": "e4ae18bc883cc96b",
-    "at": "2026-10-08T02:44:24.993Z"
+    "at": "2026-10-08T05:09:36.498Z"
   },
   "peak": {
     "total": 690,

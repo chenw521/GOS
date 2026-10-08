@@ -280,13 +280,16 @@ const EXTRACTORS = [
         try { lines = fs.readFileSync(path.join(secDir, f), 'utf8').split('\n').slice(0, 5); } catch { lines = []; }
         const ann = lines.find((l) => /^#\s*gos-map:(cmd|both)\s/.test(l));   // [Phase S/D-02] both lines also carry cmd edges
         const none = lines.some((l) => /^#\s*gos-map:none/.test(l));
+        // fn/file-only sections are annotated too (testof_fn / file-anchor
+        // linkage) — they must not count against R-10
+        const fnOrFile = lines.some((l) => /^#\s*gos-map:(fn|file)\s/.test(l));
         if (ann) {
           // COMMANDS-whitelist filter: trailing prose in the annotation line can never
           // become an edge target (dead-anchor prevention at extraction time)
           for (const c of ann.replace(/^#\s*gos-map:(cmd|both)\s*/, '').split(/[\s,]+/).filter(Boolean)) {
             if (core.COMMANDS[c]) out.push({ sec, cmd: c });   // multi-cmd expands one edge per cmd
           }
-        } else if (!none) {
+        } else if (!none && !fnOrFile) {
           unannotated.push(sec);
         }
       }
@@ -640,7 +643,7 @@ function semanticClosure(root, changedFiles) {
     const files = fs.readdirSync(secDir).filter((f) => /^T.*\.test\.sh$/.test(f));
     for (const f of files) {
       const head = fs.readFileSync(path.join(secDir, f), 'utf8').split('\n').slice(0, 5);
-      if (!head.some((l) => /^#\s*gos-map:(cmd|none)/.test(l))) unannotated++;
+      if (!head.some((l) => /^#\s*gos-map:(cmd|fn|file|both|none)/.test(l))) unannotated++;
     }
   } catch { unannotated = 0; }
   const hunks = diffHunksByFile(root);
@@ -651,6 +654,23 @@ function semanticClosure(root, changedFiles) {
   };
   for (const cf of changedFiles) {
     const fileHunks = hunks[cf] || (changedFiles.length ? [[1, Infinity]] : []);
+    // section file-anchors (source 4): a changed file named by a section's
+    // `# gos-map:file <path>` header puts that section on the must-run list
+    // (layout/config tests bind to files the static code graph cannot see)
+    try {
+      const secFiles2 = fs.readdirSync(secDir).filter((f) => /^T.*\.test\.sh$/.test(f));
+      for (const f of secFiles2) {
+        const head = fs.readFileSync(path.join(secDir, f), 'utf8').split('\n').slice(0, 6);
+        for (const l of head) {
+          const m = l.match(/^#\s*gos-map:file\s+(\S+)/);
+          if (m && (m[1] === cf || cf.startsWith(m[1]))) {
+            const sec = f.replace(/\.test\.sh$/, '');
+            if (!mustRun.has(sec)) mustRun.set(sec, new Set());
+            mustRun.get(sec).add(`file:${m[1]}`);
+          }
+        }
+      }
+    } catch { /* no sections dir */ }
     // calls: consumer files calling a command whose IMPLEMENTATION hunk changed
     for (const e of sem.switch || []) {
       if (cf !== e.file) continue;

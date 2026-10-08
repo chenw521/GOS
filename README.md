@@ -212,6 +212,23 @@ three-layer architecture rather than carried over wholesale.
 | npm distribution (GitHub Packages beta → public npm at launch) + CI | ongoing |
 | v1.0 public release | 📋 |
 
+## CLI reference
+
+<!-- gos:core-shortlist begin -->
+- `gos` (no args) — status + what's next (zero-memorization entry)
+- `gos init <level> "<intent>"` — start task
+- `gos commit <stage>` — atomic commit + stage advance
+- `gos gate all` — hard gates (exit 1 on failure)
+- `gos context <stage>` — pre-computed context JSON
+- `gos resume` — cross-session resume summary
+- `gos instructions <stage>` — stage-by-stage guidance
+- `gos phase <sub>` — Lv4 phase lifecycle
+- `gos decision <sub>` — record/amend decisions
+- `gos help [--json]` — full capability discovery
+
+Full capability: `gos help [--json]`
+<!-- gos:core-shortlist end -->
+
 ## Community
 
 - **Contributing** — read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR

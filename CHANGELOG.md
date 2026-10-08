@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add publish the self-hosted codemap and map mechanism data (D-81): network.md swept and englishized, allowlist + baseline tracked, census split recorded (R-01) [2026-10-08]
 - Change P13 complete: full-repo englishization landed and the public history rebuilt as 32 milestone snapshot commits - all seven observable truths replay green, remote force-pushed, benchmark synced (D-74/R-01) [2026-09-30]
 - Change P13 waves 1-3: CJK boundary lint + whitelist wired into gate/CI, i18n inventory v2 line-level, CONTRACTS frozen strings migrated to English, all bin/ modules englishized per the audience split - product face bilingual via catalog, contributor face direct English (R-01) [2026-09-29]
 - Fix P15 review findings across lessons disposal audit, content-id binding, blast vacuity refusal, and migration backup safety (D-62/D-63/D-64/D-65) [2026-09-28]

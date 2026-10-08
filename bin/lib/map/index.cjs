@@ -214,7 +214,19 @@ function cmdMap(args) {
     // universe dies even when it exists on disk — an existing-but-unscanned
     // file (docs, config, a directory) must never read as verified safety.
     const known = engine.mapKnownKeys(engine.scanSources(root));
-    const unknown = rel.filter((p) => !known.has(p));
+    // File-anchor exemption: an input unknown to the code-scan universe may
+    // still be named by a section's `# gos-map:file` header (layout/config
+    // data the static graph never sees). Such inputs carry section hits —
+    // dying here would hide exactly the linkage the anchor exists for.
+    const knownFiles = new Set();
+    try {
+      const secDir = path.join(root, 'test', 'sections');
+      for (const f of fs.readdirSync(secDir).filter((x) => /^T.*\.test\.sh$/.test(x))) {
+        const head = fs.readFileSync(path.join(secDir, f), 'utf8').split('\n').slice(0, 6);
+        for (const l of head) { const m = l.match(/^#\s*gos-map:file\s+(\S+)/); if (m) knownFiles.add(m[1]); }
+      }
+    } catch { /* no sections dir */ }
+    const unknown = rel.filter((p) => !known.has(p) && !knownFiles.has(p));
     if (unknown.length) {
       if (print0) { console.error(`blast: unknown path(s): ${unknown.join(', ')} — nothing to report`); process.exit(1); }
       core.die(`blast: ${SC.closureUnknownPath.replace('<paths>', unknown.join(', '))}`);

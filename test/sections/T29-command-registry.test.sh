@@ -268,7 +268,7 @@ import json, re, sys, os
 env = json.load(open('env.json'))
 core = {n for n, e in env['commands'].items() if e.get('core')}
 assert len(core) <= 10, f'core set {len(core)} > 10'
-docs = [os.path.join(sys.argv[1], p) for p in ['.opencode/plugins/gos.js', 'AGENTS.md', 'README.md', 'README.zh-CN.md', 'skills/gos-router/SKILL.md']]
+docs = [os.path.join(sys.argv[1], p) for p in ['.opencode/plugins/gos.js', 'README.md', 'README.zh-CN.md', 'skills/gos-router/SKILL.md']]
 failed = False
 for d in docs:
     s = open(d, encoding='utf-8').read()

@@ -232,6 +232,7 @@ function checkManifest(root, mustRunSecs, allowlist) {   // → {advisories, fai
   if (m.schema_version !== 2) return { advisory: null, advisories: [], failures: [core.gateFail('manifest-stale', { verdict: SC.manifestStale + ' (old manifest schema — re-run the suite to rewrite)', evidence: [p], fix: core.gateCmd('bash test/run-sections.sh') })] };   // [m7] explicit, not misleading
   // filter audit: a partial run is legitimate (closure responsibility) but never silent
   const advisories = [];
+  if (m.selector === 'affected') advisories.push('manifest: affected-sections run (map-blast closure + fail-safe set) — full suite remains the CI authority');
   if (typeof m.filter === 'string' && m.filter) advisories.push(SC.manifestPartialRun.replace('<filter>', m.filter));
   const cur = core.worktreeContentHash(root);
   if (!cur || !m.head_tree || !m.patch_sha) return { advisory: null, advisories, failures: [core.gateFail('manifest-stale', { verdict: SC.manifestStale, evidence: [p], fix: core.gateCmd('bash test/run-sections.sh') })] };
