@@ -86,14 +86,17 @@ async function cmdChangelogAdd(rest) {
   }
 
   // If the summary already opens with a category verb, do not stack another
-  // one on top ("Add Fix ..." reads as a duplication artifact).
+  // one on top ("Add Fix ..." reads as a duplication artifact). A Conventional
+  // Commits token (e.g. "feat:" / "fix(ops):") passes through verbatim so the
+  // bullet derives a well-formed aggregate subject at push time.
   let verb = opts.type || null;
+  const conventional = typeof verb === 'string' && /^(feat|fix|docs|refactor|test|chore|ci|build|perf|revert)(\([a-z0-9-]+\))?:$/.test(verb);
   if (!verb) {
     const first = String(summary).split(/\s+/)[0];
     verb = clcore.CATEGORY_VERBS.includes(first) ? '' : 'Add';
   }
-  if (verb && !clcore.CATEGORY_VERBS.includes(verb)) {
-    core.die(`changelog add: --type '${verb}' is not a category verb — allowed: ${clcore.CATEGORY_VERBS.join(', ')}`);
+  if (verb && !conventional && !clcore.CATEGORY_VERBS.includes(verb)) {
+    core.die(`changelog add: --type '${verb}' is not a category verb or conventional token (feat:|fix(ops):…) — allowed verbs: ${clcore.CATEGORY_VERBS.join(', ')}`);
   }
   const refsArg = opts.refs ? parseRefsArg(opts.refs) : null;
 

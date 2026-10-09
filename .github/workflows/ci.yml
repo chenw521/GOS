@@ -114,6 +114,19 @@ jobs:
         run: |
           npx --yes commitlint@19 --config commitlint.config.yaml \
             --from origin/main --to HEAD
+      - name: Lint push range (aggregates are commit messages too)
+        if: github.event_name == 'push'
+        env:
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.event.after }}
+        run: |
+          if [ "$PUSH_BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "branch creation push — nothing to lint"; exit 0
+          fi
+          git rev-parse --verify --quiet "${PUSH_BEFORE}^{commit}" >/dev/null \
+            || git fetch -q origin "$PUSH_BEFORE" || true
+          npx --yes commitlint@19 --config commitlint.config.yaml \
+            --from "$PUSH_BEFORE" --to "$PUSH_AFTER"
       - name: Subject charset policy (ASCII-only)
         if: github.event_name == 'pull_request'
         run: bash test/checks/commitlint-charset.sh

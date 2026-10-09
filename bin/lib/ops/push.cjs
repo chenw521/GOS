@@ -9,6 +9,8 @@
 
 const core = require('../core/index.cjs');
 const clcore = require('./changelog-core.cjs');
+const fs = require('fs');
+const path = require('path');
 const { execFileSync } = require('child_process');
 
 const MAIN_REF = 'refs/heads/main';
@@ -16,6 +18,58 @@ const MAIN_REF = 'refs/heads/main';
 // server-side hook declines and branch-protection refusals all route to the
 // PR path instead of a raw git error dump.
 const PERMISSION_FAILURE_RE = /(^|\W)(401|403)(\W|$)|permission denied|pre-receive hook declined|protected branch|branch protection|GH00\d/i;
+// Fallback conventional token set when no commitlint yaml resolves.
+const STANDARD_TYPES = ['feat', 'fix', 'docs', 'refactor', 'test', 'chore', 'ci', 'build', 'perf', 'revert'];
+const STANDARD_SCOPES = null; // null = any scope allowed
+
+// Aggregate subjects are commit messages, not changelog prose: the trace
+// refs and date stamp are changelog metadata and never belong in a subject.
+function stripChangelogMetadata(text) {
+  return text.replace(/\s*\([^()]*\)\s*\[\d{4}-\d{2}-\d{2}\]\s*$/, '').replace(/\s*\[\d{4}-\d{2}-\d{2}\]\s*$/, '').trim();
+}
+
+// Minimal Conventional Commits validator: type/scope enums and header length
+// read from the same commitlint yaml the commit-msg hook uses (seeded repo
+// config first, then the shipped master). Deliberately dependency-free —
+// npx is not a push prerequisite.
+function loadCommitlintRules() {
+  const candidates = [
+    path.join(process.cwd(), 'commitlint.config.yaml'),
+    path.join(core.GOS_SELF_ROOT, 'templates', 'git', 'commitlint.config.yaml'),
+  ];
+  for (const cfgPath of candidates) {
+    let text;
+    try {
+      text = fs.readFileSync(cfgPath, 'utf8');
+    } catch {
+      continue;
+    }
+    const types = extractEnum(text, /type-enum:[\s\S]*?- always\n((?:\s+- \w+\n?)+)/);
+    const scopes = extractEnum(text, /scope-enum:[\s\S]*?- always\n((?:\s+- \w+\n?)+)/);
+    if (types.length) return { types, scopes, source: cfgPath };
+  }
+  return { types: STANDARD_TYPES, scopes: STANDARD_SCOPES, source: 'built-in conventional set' };
+}
+
+function extractEnum(text, re) {
+  const m = String(text || '').match(re);
+  if (!m) return [];
+  return m[1].split('\n').map((l) => l.trim()).filter((l) => l.startsWith('- ')).map((l) => l.slice(2).trim()).filter(Boolean);
+}
+
+function validateSubject(subject) {
+  const rules = loadCommitlintRules();
+  const errors = [];
+  if (subject.length > 72) errors.push(`header exceeds 72 chars (${subject.length})`);
+  const m = subject.match(/^(\w+)(?:\(([^)]+)\))?:\s+.+$/);
+  if (!m) {
+    errors.push(`not Conventional Commits shaped "type(scope): subject" — allowed types: ${rules.types.join('|')}`);
+  } else {
+    if (!rules.types.includes(m[1])) errors.push(`type '${m[1]}' not in type-enum (${rules.types.join('|')}) — from ${path.basename(rules.source)}`);
+    if (rules.scopes && m[2] && !rules.scopes.includes(m[2])) errors.push(`scope '${m[2]}' not in scope-enum (${rules.scopes.join('|')}) — from ${path.basename(rules.source)}`);
+  }
+  return { ok: errors.length === 0, errors };
+}
 
 function gitOut(argv) {
   // LC_ALL=C pins git's stderr/output language: the permission-class
@@ -129,12 +183,18 @@ function cmdPush(args) {
   let subject = message;
   let rest = [];
   if (subject == null) {
-    const bullets = changelogDeltaBullets(baseSha, headSha);
+    const bullets = changelogDeltaBullets(baseSha, headSha).map(stripChangelogMetadata);
     if (!bullets.length) {
       core.die('push: refusing — no --message and no new CHANGELOG.md [Unreleased] bullets between origin/main and HEAD; write the entry first (gos changelog add --summary "<one sentence>")');
     }
     subject = bullets[0];
     rest = bullets.slice(1);
+  }
+  const verdict = validateSubject(subject);
+  if (!verdict.ok) {
+    console.error('push: aggregate subject fails the conventional-format contract:');
+    for (const e of verdict.errors) console.error(`  ✗ ${e}`);
+    core.die('push: refusing — pass --message "type(scope): one-liner" (the derived changelog bullet is prose, not a commit subject)');
   }
   const aggregateMessage = buildAggregateMessage(subject, rest, ahead, baseSha, headSha);
   // commit-tree only creates an unreachable object — local branches and the
@@ -150,6 +210,33 @@ function cmdPush(args) {
     core.die(`push: git push failed:\n${firstStderrLines(pushed.err)}`);
   }
   console.log(`✓ pushed ${aggSha.slice(0, 8)} → origin/main (${ahead} commit(s) → 1 semantic commit)`);
+  convergeLocalMain(aggSha);
+}
+
+// Post-push convergence: preserve the atomic chain on an audit branch, then
+// move local main onto the aggregate (identical tree, worktree untouched).
+// Runs only on success, only when HEAD is main and the tree is clean — any
+// other situation keeps the old divergence with a notice instead of a
+// destructive reset.
+function convergeLocalMain(aggSha) {
+  const branch = gitOut(['branch', '--show-current']).trim();
+  // Tracked modifications only: untracked files (e.g. installed hooks)
+  // survive `git reset --hard` untouched, so they must not block convergence.
+  const dirty = gitTry(['status', '--porcelain', '--untracked-files=no']).out.trim().length > 0;
+  if (branch !== 'main' || dirty) {
+    console.log(`… convergence skipped (${branch !== 'main' ? `HEAD is '${branch}', not main` : 'working tree not clean'}) — audit branch not created, local chain stays as is`);
+    return;
+  }
+  const preHead = gitOut(['rev-parse', 'HEAD']).trim();
+  let name = `chain/pre-${preHead.slice(0, 8)}`;
+  try {
+    const st = JSON.parse(fs.readFileSync(path.join(core.GOS_DIR, 'state.json'), 'utf8'));
+    const m = String((st && st.spec_path) || '').match(/\.gos\/task\/([^/]+)\//);
+    if (m) name = `chain/${m[1]}`;
+  } catch { /* state optional — fallback name stands */ }
+  gitOut(['branch', '-f', name, preHead]);
+  gitOut(['reset', '--hard', aggSha]);
+  console.log(`✓ converged: atomic chain preserved on ${name}, main now at the aggregate ${aggSha.slice(0, 8)}`);
 }
 
 // Single source for the archive-time hint: the archive flow prints this line

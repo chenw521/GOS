@@ -44,6 +44,9 @@ const CATEGORY_VERBS = [
   'Rename', 'Revert', 'Secure', 'Split', 'Test', 'Wire',
 ];
 const VERB_RE = new RegExp(`^(?:${CATEGORY_VERBS.join('|')})\\b`);
+// Conventional Commits prefix a bullet may carry instead of a category verb
+// ("feat: ...", "fix(ops): ...") so the bullet doubles as an aggregate subject.
+const CONVENTIONAL_VERB_RE = /^(feat|fix|docs|refactor|test|chore|ci|build|perf|revert)(\([a-z0-9-]+\))?:\s/;
 
 const H1_RE = /^#[ \t]+\S/;
 const H2_RE = /^##(?:[ \t]|$)/;
@@ -140,8 +143,8 @@ function validateEntry(entry) {
   const wm = content.match(/^(\S+)(?:\s+([\s\S]*))?$/);
   const verb = wm ? wm[1] : '';
   const rest = wm && wm[2] ? wm[2].trim() : '';
-  if (!verb || !VERB_RE.test(content)) {
-    errors.push(`structure: entry must start with a category verb — allowed: ${CATEGORY_VERBS.join(', ')}`);
+  if (!verb || (!VERB_RE.test(content) && !CONVENTIONAL_VERB_RE.test(content))) {
+    errors.push(`structure: entry must start with a category verb or conventional token (feat:/fix(ops):) — allowed: ${CATEGORY_VERBS.join(', ')}`);
   }
 
   if (!STAMP_TAIL_RE.test(rest)) {

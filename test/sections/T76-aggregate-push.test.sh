@@ -12,7 +12,7 @@ t76_setup() {
   T76_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-t76"
   mkdir -p "$T76_DIR" || exit 1
   git init -q --bare "$T76_DIR/origin.git"
-  git init -q "$T76_DIR/work"
+  git init -q -b main "$T76_DIR/work"
   cd "$T76_DIR/work" || exit 1
   git remote add origin "$T76_DIR/origin.git"
   echo base > root.txt && git add root.txt && git commit -q -m "chore: seed base" || exit 1
@@ -21,7 +21,7 @@ t76_setup() {
 }
 
 t76_seed_changelog() {
-  printf '# Changelog\n\n## [Unreleased]\n\n- Add aggregate push discipline (D-83) [2026-10-08]\n' > CHANGELOG.md
+  printf '# Changelog\n\n## [Unreleased]\n\n- feat: aggregate push discipline (D-83) [2026-10-08]\n' > CHANGELOG.md
   git add CHANGELOG.md && git commit -q -m "docs: changelog entry" || exit 1
 }
 
@@ -49,9 +49,11 @@ NEW_TIP=$(git rev-parse origin/main)
 assert_eq "exactly one new commit on origin/main" "1" "$(git rev-list --count "$OLD_TIP..$NEW_TIP")"
 assert_eq "aggregate parent is the old origin tip" "$OLD_TIP" "$(git rev-parse "$NEW_TIP^")"
 assert_eq "aggregate tree equals HEAD tree" "$HEAD_TREE" "$(git rev-parse "$NEW_TIP^{tree}")"
-assert_eq "subject derives from the changelog bullet" "Add aggregate push discipline (D-83) [2026-10-08]" "$(git log -1 --format=%s "$NEW_TIP")"
-assert_eq "local HEAD unchanged by the aggregate push" "$PRE_HEAD" "$(git rev-parse HEAD)"
-assert_eq "no local branch contains the aggregate" "0" "$(git branch --contains "$NEW_TIP" | wc -l | tr -d ' ')"
+assert_eq "subject derives from the changelog bullet" "feat: aggregate push discipline" "$(git log -1 --format=%s "$NEW_TIP")"
+assert_contains "convergence reports the audit branch" "converged" "$OUT"
+assert_eq "main converged onto the aggregate" "$NEW_TIP" "$(git rev-parse HEAD)"
+CHAIN_TIP=$(git for-each-ref --format='%(objectname)' refs/heads/chain | head -1)
+assert_eq "audit branch preserves the atomic chain tip" "$PRE_HEAD" "$CHAIN_TIP"
 
 # --- T76.2: re-run is a no-op ---
 set +e; OUT2=$(node "$GOS" push 2>&1); RC2=$?; set -e
@@ -69,10 +71,10 @@ if [ "$RC" -ne 0 ]; then echo "  ✓ empty message source refuses (exit $RC)"; P
 assert_contains "refusal names the fail-closed rule" "refusing" "$OUT"
 
 # --- T76.4: explicit --message overrides the empty changelog ---
-set +e; OUT=$(node "$GOS" push --message "Add explicit message aggregate" 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" push --message "feat(ops): explicit message aggregate" 2>&1); RC=$?; set -e
 assert_exit "--message push exits 0" 0 "$RC"
 git fetch -q origin
-assert_eq "--message becomes the aggregate subject" "Add explicit message aggregate" "$(git log -1 --format=%s origin/main)"
+assert_eq "--message becomes the aggregate subject" "feat(ops): explicit message aggregate" "$(git log -1 --format=%s origin/main)"
 
 # --- T76.5: pre-receive decline -> PR-path guidance ---
 t76_teardown; t76_setup
@@ -135,6 +137,7 @@ FEATURE_TIP=$(git rev-parse HEAD)
 set +e; OUT=$(git push origin feature 2>&1); RC=$?; set -e
 assert_exit "multi-commit feature-branch push untouched" 0 "$RC"
 assert_eq "feature branch tip on remote" "$FEATURE_TIP" "$(git ls-remote origin refs/heads/feature | cut -f1)"
+git checkout -q main
 
 # --- T76.10: advance-template subject rejected even as a single commit ---
 t76_teardown; t76_setup
@@ -213,11 +216,25 @@ R=$(git commit-tree "$T15TREE" -p "$(git rev-parse origin/main)" -m "chore: rebu
 git push -q origin "$R:refs/heads/main" || exit 1
 git fetch -q origin
 echo t16 > t16.txt && git add t16.txt && git commit -q --no-verify -m "feat: t16 content" || exit 1
-set +e; OUT15=$(node "$GOS" push --message "topology divergence case" 2>&1); RC15=$?; set -e
+set +e; OUT15=$(node "$GOS" push --message "feat(ops): topology divergence case" 2>&1); RC15=$?; set -e
 assert_exit "rebuild-topology divergence push exits 0" 0 "$RC15"
 assert_contains "notice names topology-only divergence" "topology-only divergence" "$OUT15"
 git fetch -q origin
 assert_eq "aggregate lands on the rebuilt tip" "$(git rev-parse 'HEAD^{tree}')" "$(git rev-parse 'origin/main^{tree}')"
+assert_contains "convergence ran after the rebuild push" "converged" "$OUT15"
+assert_eq "main matches origin after convergence" "$(git rev-parse origin/main)" "$(git rev-parse HEAD)"
+
+# --- T76.16: non-conventional derived subject refuses with a --message hint ---
+echo t17 > t17.txt && git add t17.txt && git commit -q --no-verify -m "feat: t17 content" || exit 1
+printf '# Changelog\n\n## [Unreleased]\n\n- Add plain prose summary without a conventional type (R-01) [2026-10-09]\n' > CHANGELOG.md
+git add CHANGELOG.md && git commit -q --no-verify -m "docs: plain changelog bullet" || exit 1
+PRE16=$(git rev-parse origin/main)
+set +e; OUT16=$(node "$GOS" push 2>&1); RC16=$?; set -e
+[ "$RC16" -ne 0 ] && { echo "  ✓ non-conventional subject refused"; PASS=$((PASS+1)); } || { echo "  ✗ non-conventional subject must fail"; FAIL=$((FAIL+1)); }
+assert_contains "refusal names the format contract" "conventional-format contract" "$OUT16"
+assert_contains "refusal hints at an explicit subject" "one-liner" "$OUT16"
+git fetch -q origin
+assert_eq "origin untouched by the refused push" "$PRE16" "$(git rev-parse origin/main)"
 
 t76_teardown
 echo "--- T76 done ---"

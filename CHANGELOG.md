@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- feat: aggregate subjects carry a conventional-format contract enforced at three layers, and gos push converges local main onto the aggregate after success (R-01) [2026-10-09]
 - Add gos push distinguishes content divergence from history-rebuild topology divergence via tree containment (R-01) [2026-10-09]
 - Add gos push refuses diverged clones instead of silently dropping remote-only content, permission errors are locale-neutral, and the aggregate guard self-test now runs in CI (R-01) [2026-10-09]
 - Add gos push aggregates the local atomic chain into one semantic remote commit on main, with a pre-push hook master and CI guard rejecting raw multi-commit, tree-empty, and advance-template pushes (R-01) [2026-10-08]
