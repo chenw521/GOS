@@ -20,9 +20,14 @@
     "hooks": {
       "git": true,
       "npm": true,
-      "note": "commit-msg.sh hook master"
+      "note": "hook masters (commit-msg.sh, pre-push.sh)"
     },
     "hooks/commit-msg": {
+      "git": false,
+      "npm": false,
+      "note": "install copy produced by gos setup --commitlint (gitignored)"
+    },
+    "hooks/pre-push": {
       "git": false,
       "npm": false,
       "note": "install copy produced by gos setup --commitlint (gitignored)"

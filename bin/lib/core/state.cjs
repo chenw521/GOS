@@ -920,6 +920,17 @@ const COMMANDS = {
     next: ['gos feedback list', 'gos feedback push <N>'],
     contractKeys: ['command_contracts.feedbackAdded', 'command_contracts.feedbackClosed', 'command_contracts.feedbackOwnerRefuse', 'command_contracts.feedbackPublished', 'command_contracts.feedbackGhMissing'],
   },
+  'push': {
+    desc: 'aggregate origin/main..HEAD into one semantic commit and push to main (local chain untouched; mutates only the remote)',
+    class: 'read', aliases: [], core: false,
+    subs: [],
+    flags: [
+      { name: '--message', scope: 'push', effect: 'explicit aggregate subject (default: CHANGELOG.md [Unreleased] bullets added since origin/main)', risk: 'safe' },
+    ],
+    usage: 'gos push [--message "<one-liner>"]',
+    next: ['gos push', 'gos changelog add'],
+    contractKeys: [],
+  },
   'help': {
     desc: 'this help (rendered from COMMANDS registry)', class: 'global', aliases: ['--help', '-h'], core: true,
     subs: ['<cmd>'], flags: [{ name: '--json', scope: 'help', effect: 'machine-readable envelope (sole legal machine mode)', risk: 'safe' }],

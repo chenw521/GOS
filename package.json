@@ -17,6 +17,7 @@
     "skills/",
     "templates/",
     "hooks/commit-msg.sh",
+    "hooks/pre-push.sh",
     ".opencode/plugins/",
     ".opencode/commands/",
     "README.md"

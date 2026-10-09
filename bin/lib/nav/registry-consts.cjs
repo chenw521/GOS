@@ -12,11 +12,14 @@ const SUBCLASS_OVERRIDES = {
 // under its own .gos/cache/changelog.lock (wait-retry, concurrent adds
 // serialize) — the shared .gos/.lock is die-on-contention and must not gate
 // concurrent adds (concerns-family pattern).
-const KNOWN_CASES = ['', 'next', 'instructions', 'status', 'init', 'resume', 'stage', 'context', 'checkpoint', 'commit', 'archive', 'setup', 'teardown', 'doctor', '_contract', 'paths', 'gate', 'section', 'resolve-model', 'config', 'trace', 'decision', 'requirement', 'phase', 'anchor', 'render', 'auto', 'approve', 'lessons', 'truth', 'gap', 'map', 'concerns', 'changelog', 'feedback', 'help', '--help', '-h', '--version', '-v'];
+// Same read-class dispatch for `push`: it mutates only the git remote (one
+// aggregate commit), never local .gos state, and git itself serializes
+// remote updates — the shared die-on-contention .gos/.lock must not gate it.
+const KNOWN_CASES = ['', 'next', 'instructions', 'status', 'init', 'resume', 'stage', 'context', 'checkpoint', 'commit', 'archive', 'setup', 'teardown', 'doctor', '_contract', 'paths', 'gate', 'section', 'resolve-model', 'config', 'trace', 'decision', 'requirement', 'phase', 'anchor', 'render', 'auto', 'approve', 'lessons', 'truth', 'gap', 'map', 'concerns', 'changelog', 'feedback', 'push', 'help', '--help', '-h', '--version', '-v'];
 
 const WRITE_CMDS = new Set(['init', 'commit', 'archive', 'approve', 'checkpoint', 'config', 'auto', 'stage', 'requirement', 'decision', 'render', 'phase', 'anchor', 'lessons', 'truth', 'gap', 'paths', 'feedback']);
 
-const READ_CMDS = new Set(['', 'next', 'instructions', 'status', 'resume', 'context', 'trace', 'resolve-model', 'map', 'concerns', 'changelog']);
+const READ_CMDS = new Set(['', 'next', 'instructions', 'status', 'resume', 'context', 'trace', 'resolve-model', 'map', 'concerns', 'changelog', 'push']);
 
 const EXEC_CMDS = new Set(['gate', 'section']);
 

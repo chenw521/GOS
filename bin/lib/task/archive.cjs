@@ -6,6 +6,7 @@ const ops = require('../ops/doctor.cjs');  // direct aspect require (dependency 
 const render = require('../render/views.cjs');
 const sibPlansnap = require('./plansnap.cjs');
 const clcore = require('../ops/changelog-core.cjs');  // task→ops (single-track gate primitives)
+const sibPush = require('../ops/push.cjs');  // archive→ops push hint (single source for the printed line)
 const knowledge = require('../knowledge/lessons-json.cjs');  // task→knowledge (DAG: json truth loads)
 const fs = require('fs');
 const path = require('path');
@@ -516,6 +517,9 @@ function cmdArchive(opts = {}) {
   core.writeState(state);
   console.log(`${core.CONTRACTS.state_semantics.archived} ${moved} file(s) + delta.md → ${path.relative('.', dest)}`);
   console.log('Next: state.json kept locally until you start a new task (gos init --force)');
+  // Remote publication hint: printed, never invoked — pushing stays a
+  // user-executed act (message derives from [Unreleased] at push time).
+  console.log(sibPush.archivePushHint());
 }
 
 const sibContext = require('./context.cjs');  // home of archiveSlugParts

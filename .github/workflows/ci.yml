@@ -4,7 +4,8 @@
 #
 # Core trio per R-09: gate (--audit: CI has no task state), sections
 # regression, npm pack manifest integrity. Plus master-consistency (re-render
-# the universal layer and require a zero diff) and PR-only commitlint.
+# the universal layer and require a zero diff), commitlint on PRs, and the
+# aggregate-push guard on pushes to main.
 name: CI
 
 on:
@@ -32,6 +33,8 @@ jobs:
           node-version: 22
       - name: gos gate all --audit
         run: node bin/gos.cjs gate all --audit
+      - name: Aggregate guard self-test
+        run: bash test/checks/aggregate-guard.sh --self-test
 
   sections:
     name: Sections (Node ${{ matrix.node-version }})
@@ -97,7 +100,7 @@ jobs:
 
   commitlint:
     name: Commit messages (Conventional Commits)
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -107,8 +110,24 @@ jobs:
         with:
           node-version: 22
       - name: Lint PR commit range
+        if: github.event_name == 'pull_request'
         run: |
           npx --yes commitlint@19 --config commitlint.config.yaml \
             --from origin/main --to HEAD
       - name: Subject charset policy (ASCII-only)
+        if: github.event_name == 'pull_request'
         run: bash test/checks/commitlint-charset.sh
+      - name: Aggregate push guard (push range discipline)
+        if: github.event_name == 'push'
+        env:
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.event.after }}
+          PUSH_FORCED: ${{ github.event.forced }}
+        run: |
+          args=()
+          if [ "$PUSH_FORCED" = "true" ]; then args+=(--forced); fi
+          # a force push may leave BEFORE unreachable from any ref; fetch the
+          # raw sha so the guard can resolve it
+          git rev-parse --verify --quiet "${PUSH_BEFORE}^{commit}" >/dev/null \
+            || git fetch origin "$PUSH_BEFORE"
+          bash test/checks/aggregate-guard.sh "${args[@]}" "$PUSH_BEFORE" "$PUSH_AFTER"

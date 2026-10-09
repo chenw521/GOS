@@ -23,8 +23,9 @@
 .gos/project/project.json
 .changes.md
 
-# commit-msg hook install copy (master ships at hooks/commit-msg.sh)
+# hook install copies (masters ship at hooks/*.sh)
 hooks/commit-msg
+hooks/pre-push
 
 # ship transaction staging dir (transient; must never ride the ADD_PATHS sweep)
 .gos/.ship-staging/

@@ -187,6 +187,7 @@ function main() {
     case 'concerns': knowledge.cmdConcerns(args); break;
     case 'changelog': task.cmdChangelog(args); break;
     case 'feedback': ops.cmdFeedback(args); break;
+    case 'push': ops.cmdPush(args); break;
     case 'render': render.cmdRender(); break;
     case 'auto': nav.cmdAuto(args); break;
     case 'approve': nav.cmdApprove(args); break;

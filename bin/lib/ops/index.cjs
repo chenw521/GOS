@@ -6,6 +6,7 @@ module.exports = {
   ...require('./feedback.cjs'),
   ...require('./gate.cjs'),
   ...require('./paths.cjs'),
+  ...require('./push.cjs'),
   ...require('./section.cjs'),
   ...require('./setup.cjs'),
 };

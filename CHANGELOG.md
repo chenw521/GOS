@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add gos push distinguishes content divergence from history-rebuild topology divergence via tree containment (R-01) [2026-10-09]
+- Add gos push refuses diverged clones instead of silently dropping remote-only content, permission errors are locale-neutral, and the aggregate guard self-test now runs in CI (R-01) [2026-10-09]
+- Add gos push aggregates the local atomic chain into one semantic remote commit on main, with a pre-push hook master and CI guard rejecting raw multi-commit, tree-empty, and advance-template pushes (R-01) [2026-10-08]
 - Add publish the self-hosted codemap and map mechanism data (D-81): network.md swept and englishized, allowlist + baseline tracked, census split recorded (R-01) [2026-10-08]
 - Change P13 complete: full-repo englishization landed and the public history rebuilt as 32 milestone snapshot commits - all seven observable truths replay green, remote force-pushed, benchmark synced (D-74/R-01) [2026-09-30]
 - Change P13 waves 1-3: CJK boundary lint + whitelist wired into gate/CI, i18n inventory v2 line-level, CONTRACTS frozen strings migrated to English, all bin/ modules englishized per the audience split - product face bilingual via catalog, contributor face direct English (R-01) [2026-09-29]

@@ -127,6 +127,7 @@ function cmdSetup(args) {
 // The prior core.hooksPath value is backed up under .gos/cache/ (machine-local)
 // so teardown can restore it; idempotent re-runs keep the original backup.
 const COMMITLINT_HOOK_REL = path.join('hooks', 'commit-msg');
+const PRE_PUSH_HOOK_REL = path.join('hooks', 'pre-push');
 const COMMITLINT_STATE_REL = path.join('.gos', 'cache', 'commitlint-hook.json');
 const COMMITLINT_HOOKS_PATH_VALUE = 'hooks';
 
@@ -155,25 +156,34 @@ function cmdSetupCommitlint(args) {
     return;
   }
 
-  const src = path.join(core.GOS_SELF_ROOT, 'hooks', 'commit-msg.sh');
-  if (!fs.existsSync(src)) core.die(`hook master missing: ${src} (reinstall GOS, then gos setup --commitlint)`);
+  const hookMasters = [
+    { rel: COMMITLINT_HOOK_REL, src: path.join(core.GOS_SELF_ROOT, 'hooks', 'commit-msg.sh') },
+    { rel: PRE_PUSH_HOOK_REL, src: path.join(core.GOS_SELF_ROOT, 'hooks', 'pre-push.sh') },
+  ];
+  for (const hm of hookMasters) {
+    if (!fs.existsSync(hm.src)) core.die(`hook master missing: ${hm.src} (reinstall GOS, then gos setup --commitlint)`);
+  }
 
   if (!fs.existsSync(statePath)) {
     fs.mkdirSync(path.dirname(statePath), { recursive: true });
     fs.writeFileSync(statePath, JSON.stringify({
       prior_core_hooks_path: gitConfigGet(top, 'core.hooksPath'),
       hook: COMMITLINT_HOOK_REL,
+      hooks: [COMMITLINT_HOOK_REL, PRE_PUSH_HOOK_REL],
       hooks_path: COMMITLINT_HOOKS_PATH_VALUE,
     }, null, 2) + '\n');
   }
 
   fs.mkdirSync(path.join(top, 'hooks'), { recursive: true });
-  fs.copyFileSync(src, path.join(top, COMMITLINT_HOOK_REL));
-  fs.chmodSync(path.join(top, COMMITLINT_HOOK_REL), 0o755);
+  for (const hm of hookMasters) {
+    fs.copyFileSync(hm.src, path.join(top, hm.rel));
+    fs.chmodSync(path.join(top, hm.rel), 0o755);
+  }
   execFileSync('git', ['-C', top, 'config', 'core.hooksPath', COMMITLINT_HOOKS_PATH_VALUE], { stdio: 'ignore' });
   console.log(`✓ commitlint hook installed: ${COMMITLINT_HOOK_REL} (core.hooksPath=${COMMITLINT_HOOKS_PATH_VALUE})`);
+  console.log(`✓ pre-push guard installed: ${PRE_PUSH_HOOK_REL} (aggregate-push discipline on refs/heads/main)`);
   console.log('✓ linting via npx --yes commitlint@19 (pinned major, matches templates/git/node/ci.yml)');
-  console.log('Next: commit messages must follow Conventional Commits; remove anytime with `gos setup --commitlint --teardown`');
+  console.log('Next: commit messages must follow Conventional Commits; raw multi-commit pushes to main are redirected to `gos push`; remove anytime with `gos setup --commitlint --teardown`');
 }
 
 function teardownCommitlint(top, statePath) {
@@ -183,9 +193,13 @@ function teardownCommitlint(top, statePath) {
   }
   let st = {};
   try { st = JSON.parse(fs.readFileSync(statePath, 'utf8')); } catch { /* corrupted backup: still remove files */ }
-  const hookAbs = path.join(top, st.hook || COMMITLINT_HOOK_REL);
-  try { fs.unlinkSync(hookAbs); } catch { /* already gone */ }
-  try { fs.rmdirSync(path.dirname(hookAbs)); } catch { /* non-empty hooks dir stays */ }
+  // State written before the pre-push guard shipped carries only `hook`;
+  // newer state carries the full `hooks` list.
+  const hookRels = Array.isArray(st.hooks) && st.hooks.length ? st.hooks : [st.hook || COMMITLINT_HOOK_REL];
+  for (const rel of hookRels) {
+    try { fs.unlinkSync(path.join(top, rel)); } catch { /* already gone */ }
+  }
+  try { fs.rmdirSync(path.join(top, path.dirname(hookRels[0]))); } catch { /* non-empty hooks dir stays */ }
 
   const cur = gitConfigGet(top, 'core.hooksPath');
   if (cur === (st.hooks_path || COMMITLINT_HOOKS_PATH_VALUE)) {
