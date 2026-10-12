@@ -130,6 +130,13 @@ const COMMITLINT_HOOK_REL = path.join('hooks', 'commit-msg');
 const PRE_PUSH_HOOK_REL = path.join('hooks', 'pre-push');
 const COMMITLINT_STATE_REL = path.join('.gos', 'cache', 'commitlint-hook.json');
 const COMMITLINT_HOOKS_PATH_VALUE = 'hooks';
+// commitlint's real config resolution set (D-94, consumed by
+// ops/brownfield-probe.cjs): the rc family and the commitlint.config family
+// are stat candidates; package.json counts only through its 'commitlint' key
+// (checked by the probe, not by stat). Exported so the candidate strings
+// live in exactly one place.
+const COMMITLINT_RC_CANDIDATES = ['.commitlintrc', '.commitlintrc.json', '.commitlintrc.yml', '.commitlintrc.yaml', '.commitlintrc.js', '.commitlintrc.cjs', '.commitlintrc.mjs', '.commitlintrc.ts'];
+const COMMITLINT_CONFIG_CANDIDATES = ['commitlint.config.js', 'commitlint.config.cjs', 'commitlint.config.mjs', 'commitlint.config.ts'];
 
 function gitTopOrDie() {
   try {
@@ -392,4 +399,4 @@ function cmdTeardown() {
   console.log(`✓ Removed ${removed} symlink(s). (Clone/npm package untouched — uninstall via npm if desired.)`);
 }
 
-module.exports = { GOS_SKILL_NAMES, detectPlatforms, cmdSetup, cmdSetupCommitlint, onboarding, seedGatesExamples, cmdTeardown };
+module.exports = { GOS_SKILL_NAMES, detectPlatforms, cmdSetup, cmdSetupCommitlint, onboarding, seedGatesExamples, cmdTeardown, COMMITLINT_HOOK_REL, PRE_PUSH_HOOK_REL, COMMITLINT_STATE_REL, COMMITLINT_HOOKS_PATH_VALUE, COMMITLINT_RC_CANDIDATES, COMMITLINT_CONFIG_CANDIDATES };

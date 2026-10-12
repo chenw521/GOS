@@ -6,6 +6,7 @@
 #        C=npx-missing skip  D=teardown/restore/idempotency
 #        E=gos-root layout uses master config via --config
 #        F=packaging (files array + npm pack)  G=sandbox commit stat carries hooks/
+#        H=offline npx classification via PATH shim (fail-open/fail-closed)
 T60_DIR=""
 
 t60_setup() {
@@ -145,6 +146,37 @@ assert_exit "E1 gos-root layout: master config enforced (exit 1)" 1 "$ERC"
 set +e; sh hooks/commit-msg goodmsg.txt >/dev/null 2>&1; ERC2=$?; set -e
 assert_exit "E2 gos-root layout: conventional message passes" 0 "$ERC2"
 
+# --- H: offline npx classification via PATH shim (D-94) ---
+# A shim npx shadows the real one: tool-unrunnable network/registry failures
+# (npm ERR! network / ENOTFOUND / ...) fail open — output echoed, exit 0;
+# every other non-zero exit (including commitlint validation verdicts)
+# propagates — fail-closed bias.
+mkdir -p "$T60_DIR/shim-bin"
+printf '%s\n' '#!/bin/sh' 'echo "shim-npx: stdout marker"' 'echo "npm ERR! network request to registry failed" >&2' 'exit 3' > "$T60_DIR/shim-bin/npx"
+chmod +x "$T60_DIR/shim-bin/npx"
+set +e; HOUT=$(PATH="$T60_DIR/shim-bin:$PATH" sh hooks/commit-msg badmsg.txt 2>&1); HRC=$?; set -e
+assert_exit "H1 offline npx failure (npm ERR! network) exits 0 (fail-open)" 0 "$HRC"
+assert_contains "H2 network-class output echoed verbatim" "npm ERR! network request to registry failed" "$HOUT"
+assert_contains "H2 captured stdout echoed too" "shim-npx: stdout marker" "$HOUT"
+
+printf '%s\n' '#!/bin/sh' 'echo "shim-npx: generic tool failure" >&2' 'exit 3' > "$T60_DIR/shim-bin/npx"
+chmod +x "$T60_DIR/shim-bin/npx"
+set +e; HOUT2=$(PATH="$T60_DIR/shim-bin:$PATH" sh hooks/commit-msg badmsg.txt 2>&1); HRC2=$?; set -e
+assert_exit "H3 non-network npx failure propagates (fail-closed, exit 3)" 3 "$HRC2"
+assert_contains "H4 propagated failure output visible" "shim-npx: generic tool failure" "$HOUT2"
+
+# H5 (review M2): a forged network token on STDOUT alone must NOT fail the
+# hook open. commitlint echoes the commit message on stdout ("⧗ input:
+# <subject>"), so a FAILING message containing ENOTFOUND/... could forge the
+# network classification when stdout+stderr are captured combined. The hook
+# captures them separately and classifies network tokens from STDERR ONLY:
+# empty stderr + non-zero rc stays a fail-closed validation failure.
+printf '%s\n' '#!/bin/sh' 'echo "⧗ input: feat: forged ENOTFOUND subject"' 'exit 1' > "$T60_DIR/shim-bin/npx"
+chmod +x "$T60_DIR/shim-bin/npx"
+set +e; HOUT3=$(PATH="$T60_DIR/shim-bin:$PATH" sh hooks/commit-msg badmsg.txt 2>&1); HRC3=$?; set -e
+assert_exit "H5 stdout-only network token does NOT fail open (fail-closed, exit 1)" 1 "$HRC3"
+assert_contains "H5 forged-stdout failure output still echoed" "ENOTFOUND" "$HOUT3"
+
 # --- G: a committed hooks/ file shows up in git show --stat (wave-commit proxy) ---
 git add hooks/commit-msg templates/git/commitlint.config.yaml >/dev/null 2>&1
 git commit -q -m "chore: add hook copy" >/dev/null 2>&1
@@ -156,6 +188,11 @@ assert_contains "F1 package.json files array ships hooks/" "HAS_HOOKS" "$(cat t6
 set +e; PACK=$(cd "$GOS_ROOT" && npm pack --dry-run 2>&1); PRC=$?; set -e
 assert_exit "F2 npm pack --dry-run exits 0" 0 "$PRC"
 assert_contains "F3 tarball listing includes hooks/commit-msg.sh" "hooks/commit-msg.sh" "$PACK"
+
+# F4/F5: both masters carry exactly one `# gos-managed` marker line (D-94).
+set +e; MC=$(grep -c "gos-managed" "$GOS_ROOT/hooks/commit-msg.sh"); MP=$(grep -c "gos-managed" "$GOS_ROOT/hooks/pre-push.sh"); set -e
+assert_eq "F4 commit-msg.sh master is gos-managed (exactly one marker)" "1" "$MC"
+assert_eq "F5 pre-push.sh master is gos-managed (exactly one marker)" "1" "$MP"
 
 echo "--- T60 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]

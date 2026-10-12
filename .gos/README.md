@@ -63,6 +63,7 @@ Every artifact under .gos/: who writes it, who reads it, when it can be deleted.
 
 | Path | Producer | Readers | Purge policy | Tracked |
 |:--|:--|:--|:--|:--|
+| `.gitignore` | cli (brownfield adoption) | git | never | yes |
 | `.ship-staging` | cli (commit ship two-phase) | ship transaction only | rollback/rename on completion | no |
 
 ## Layout rules

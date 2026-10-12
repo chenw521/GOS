@@ -26,6 +26,8 @@ Every task passes INTENT → VERIFY → TRACE. Waiting for user confirmation IS 
 Full capability: `gos help [--json]`
 <!-- gos:core-shortlist end -->
 
+- `gos brownfield` — adopting an existing repo (probe, safe-skip seed, dormant hooks; not part of the core shortlist set)
+
 ```bash
 gos                # no args = status + what's next (zero-memorization)
 gos init <level> "<intent>"   # start a task (creates state.json + R-01)
@@ -36,6 +38,7 @@ gos init <level> "<intent>"   # start a task (creates state.json + R-01)
 | When | Do | Read for detail |
 |:---|:---|:---|
 | **FIRST STEP (state-first guard)** | **Check for an in-flight task BEFORE anything else: `gos status`. Active task exists (not DONE)? → take the `gos resume` branch — present the summary, continue from its current stage. NEVER re-init over live state, NEVER re-ask INTENT for a task already in flight. Only when no active task exists → New task flow.** | — |
+| Existing repo, no GOS assets yet | `gos brownfield` — read the adoption report (safe-skip seed, dormant hooks), then continue with New task flow | — |
 | New task | Restate intent → present options with trade-offs → WAIT for confirm | — |
 | Assessing level | Show ALL levels with recommendation highlighted → WAIT | `reference/complexity-matrix.md` |
 | User confirms level | `gos init <level> "<intent>"` | — |

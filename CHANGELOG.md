@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add gos brownfield unified adoption for existing repositories — safe-skip conflicts with tiered overwrite, dormant hooks, guidance-only AGENTS, single-object JSON report (D-88/D-89/D-90/D-91/D-92/D-93/D-94/D-95/D-96/D-97/D-98/D-99/D-100/R-01) [2026-10-12]
 - feat: aggregate subjects carry a conventional-format contract enforced at three layers, and gos push converges local main onto the aggregate after success (R-01) [2026-10-09]
 - Add gos push distinguishes content divergence from history-rebuild topology divergence via tree containment (R-01) [2026-10-09]
 - Add gos push refuses diverged clones instead of silently dropping remote-only content, permission errors are locale-neutral, and the aggregate guard self-test now runs in CI (R-01) [2026-10-09]

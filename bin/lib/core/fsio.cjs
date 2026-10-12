@@ -58,6 +58,7 @@ const GOS_PATHS = {
   lessons_json:     { rel: 'lessons.json', producer: 'cli (lessons family)', readers: 'lessons/gate/commit/archive', purge: 'never (audit chain lives here)', tracked: true, granularity: 'file' },
   lessons_backup:   { rel: 'lessons-migration-backup-<ymd>.md', producer: 'cli (lessons migrate)', readers: 'migration rollback runbook', purge: 'latest generation only', tracked: true, granularity: 'file' },
   map_ignore:       { rel: 'map-ignore', producer: 'cli', readers: 'map', purge: 'never', tracked: true, granularity: 'file' },
+  gitignore:        { rel: '.gitignore', producer: 'cli (brownfield adoption)', readers: 'git', purge: 'never', tracked: true, granularity: 'file' },
   readme:           { rel: 'README.md', producer: 'cli (gos paths --markdown)', readers: 'human+agent navigation', purge: 'regen any time', tracked: true, granularity: 'file' },
   feedback_ledger:   { rel: 'FEEDBACK.md', producer: 'cli (feedback push backfill)', readers: 'paths render + humans', purge: 'regen any time (rendered)', tracked: true, granularity: 'file' },
   // --- root: CLI directories ---

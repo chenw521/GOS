@@ -35,6 +35,8 @@ jobs:
         run: node bin/gos.cjs gate all --audit
       - name: Aggregate guard self-test
         run: bash test/checks/aggregate-guard.sh --self-test
+      - name: stale-verb guard (command files × KNOWN_CASES)
+        run: bash test/checks/stale-verbs.sh
 
   sections:
     name: Sections (Node ${{ matrix.node-version }})

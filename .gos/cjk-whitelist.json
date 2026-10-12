@@ -85,6 +85,11 @@
     "reason": "Deliberate CJK test data (assertions, fixtures, goldens); migrates together with its module batch."
   },
   {
+    "path": "test/sections/T81-brownfield-handoff.test.sh",
+    "category": "fixture",
+    "reason": "Deliberate CJK test data (zh handoff/skeleton render assertions for brownfield locale coverage); migrates together with its module batch."
+  },
+  {
     "path": "test/checks/commitlint-charset.sh",
     "category": "fixture",
     "reason": "Deliberate CJK commit-subject literal exercising the charset rejection path."

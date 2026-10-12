@@ -73,6 +73,8 @@ Phase 从路线图认领，内部跑完整 Lv3，归档时合并回 `project.jso
 
 ## 快速开始
 
+### 绿地——三步从零开始
+
 ```bash
 npm i -g @chenw521/gos        # 公网 npm 安装
 # 发布前的替代方式（现在即可用，跟随 main）：
@@ -89,6 +91,28 @@ macOS / Linux / Windows 全平台（需要提权的符号链接自动降级为 j
 ```
 
 任何时候敲 `gos`（无参数）即显示状态和下一步。
+
+### 接管已有仓库（brownfield）
+
+仓库里已经有自己的历史、配置和文件，怎么接入 GOS？`gos brownfield`
+逐路径探测、归类冲突、只补种缺失的资产——是接管，不是霸占：
+
+```bash
+gos brownfield          # 接管报告（--json 输出机器可读格式）
+```
+
+```
+brownfield 接管报告 — '/path/to/repo'
+core.hooksPath：未设置——种下的钩子处于休眠（git 读 .git/hooks/；GOS 绝不写 .git/hooks/ 或 git config）
+资产清单：
+  created            hooks/commit-msg [inactive]
+  report_only        AGENTS.md
+补救步骤：
+  1. hooks/commit-msg：运行 gos setup --commitlint
+  2. AGENTS.md：运行 gos brownfield --print-agents-skeleton
+```
+
+它绝不做的事：绝不覆盖已存在的文件（必须显式 `gos brownfield --overwrite <asset>`——用户自有钩子仍会拒绝）；绝不写入 AGENTS.md / CLAUDE.md / GEMINI.md（`--print-agents-skeleton` 只向 stdout 打印起始骨架）；种下的钩子保持**休眠**，直到 `gos setup --commitlint`；模板包仍由 `gos init git` 种入，不在此步。术语说明：此处的 "brownfield" 指*把 GOS 接管进已有仓库*——与 GOS 历史中决策导入的 "brownfield import" 无关。
 
 <!-- gos:core-shortlist begin -->
 - `gos`（无参数）— 状态 + 下一步（零记忆入口）

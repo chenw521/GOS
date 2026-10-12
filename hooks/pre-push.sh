@@ -2,6 +2,7 @@
 # GOS pre-push hook: aggregate-push discipline on refs/heads/main.
 # Installed by `gos setup --commitlint` (copies this master to <toplevel>/hooks/pre-push).
 # Removed by `gos setup --commitlint --teardown`.
+# gos-managed: GOS hook master - local edits are overwritten by re-running gos setup.
 #
 # Policy: a raw push that would land more than one commit on refs/heads/main,
 # or land a tree-empty commit, or land an advance-template subject, is

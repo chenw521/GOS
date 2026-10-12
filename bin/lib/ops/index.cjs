@@ -1,6 +1,7 @@
 // ops/index.cjs — module entry: spreads the aspect exports (single wiring point to bin/gos.cjs)
 'use strict';
 module.exports = {
+  ...require('./brownfield.cjs'),
   ...require('./config.cjs'),
   ...require('./doctor.cjs'),
   ...require('./feedback.cjs'),

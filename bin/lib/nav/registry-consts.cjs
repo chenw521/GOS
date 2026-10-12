@@ -15,7 +15,7 @@ const SUBCLASS_OVERRIDES = {
 // Same read-class dispatch for `push`: it mutates only the git remote (one
 // aggregate commit), never local .gos state, and git itself serializes
 // remote updates — the shared die-on-contention .gos/.lock must not gate it.
-const KNOWN_CASES = ['', 'next', 'instructions', 'status', 'init', 'resume', 'stage', 'context', 'checkpoint', 'commit', 'archive', 'setup', 'teardown', 'doctor', '_contract', 'paths', 'gate', 'section', 'resolve-model', 'config', 'trace', 'decision', 'requirement', 'phase', 'anchor', 'render', 'auto', 'approve', 'lessons', 'truth', 'gap', 'map', 'concerns', 'changelog', 'feedback', 'push', 'help', '--help', '-h', '--version', '-v'];
+const KNOWN_CASES = ['', 'next', 'instructions', 'status', 'init', 'resume', 'stage', 'context', 'checkpoint', 'commit', 'archive', 'setup', 'teardown', 'doctor', '_contract', 'paths', 'gate', 'section', 'resolve-model', 'config', 'trace', 'decision', 'requirement', 'phase', 'anchor', 'render', 'auto', 'approve', 'lessons', 'truth', 'gap', 'map', 'concerns', 'changelog', 'feedback', 'push', 'brownfield', 'help', '--help', '-h', '--version', '-v'];
 
 const WRITE_CMDS = new Set(['init', 'commit', 'archive', 'approve', 'checkpoint', 'config', 'auto', 'stage', 'requirement', 'decision', 'render', 'phase', 'anchor', 'lessons', 'truth', 'gap', 'paths', 'feedback']);
 
@@ -23,6 +23,10 @@ const READ_CMDS = new Set(['', 'next', 'instructions', 'status', 'resume', 'cont
 
 const EXEC_CMDS = new Set(['gate', 'section']);
 
-const GLOBAL_CMDS = new Set(['setup', 'teardown', 'doctor', 'help', '--help', '-h', '--version', '-v', '_contract']);
+// `brownfield` is GLOBAL (not write/exec): like `setup --commitlint` it mutates
+// repo files, but guardCwd's .gos/.lock is reserved for task-state commands —
+// a brownfield repo has no .gos yet, and the die-on-contention lock would
+// break lock-free semantics (R4-F1, D-88).
+const GLOBAL_CMDS = new Set(['setup', 'teardown', 'doctor', 'help', '--help', '-h', '--version', '-v', '_contract', 'brownfield']);
 
 module.exports = { SUBCLASS_OVERRIDES, KNOWN_CASES, WRITE_CMDS, READ_CMDS, EXEC_CMDS, GLOBAL_CMDS };

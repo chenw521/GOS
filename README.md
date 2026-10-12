@@ -111,6 +111,8 @@ as milestone debt — nothing silently disappears.
 
 ## Quick start
 
+### Greenfield — three steps from zero
+
 ```bash
 npm i -g @chenw521/gos        # from the public npm registry
 # pre-publish alternative (works today, tracks main):
@@ -132,6 +134,36 @@ Use GOS to build a user-auth feature        # or just: fix this bug for me
 ```
 
 Type `gos` (no arguments) any time for status + what's next.
+
+### Brownfield — adopting an existing repository
+
+Bringing GOS into a repo that already has history, configs and files of its
+own? `gos brownfield` probes every relevant path, classifies conflicts, and
+seeds only what's missing — adoption, not takeover:
+
+```bash
+gos brownfield          # adoption report (--json for machine output)
+```
+
+```
+brownfield adoption report — '/path/to/repo'
+core.hooksPath: unset — seeded hooks are dormant (git reads .git/hooks/; GOS never writes .git/hooks/ or git config)
+assets:
+  created            hooks/commit-msg [inactive]
+  report_only        AGENTS.md
+remediation steps:
+  1. hooks/commit-msg: run gos setup --commitlint
+  2. AGENTS.md: run gos brownfield --print-agents-skeleton
+```
+
+What it never does: never overwrites an existing file (explicit
+`gos brownfield --overwrite <asset>` only — user-owned hooks still refuse);
+never writes AGENTS.md / CLAUDE.md / GEMINI.md (`--print-agents-skeleton`
+prints a starter skeleton to stdout); seeded hooks stay **dormant** until
+`gos setup --commitlint`; the template bundle still arrives via
+`gos init git`, not here. Terminology note: "brownfield" here means *adopting
+GOS into an existing repo* — unrelated to the decision-import "brownfield
+import" used elsewhere in GOS history.
 
 <!-- gos:core-shortlist begin -->
 - `gos` (no args) — status + what's next (zero-memorization entry)

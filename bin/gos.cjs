@@ -169,6 +169,7 @@ function main() {
     case 'setup': ops.cmdSetup(args); break;
     case 'teardown': ops.cmdTeardown(); break;
     case 'doctor': ops.cmdDoctor(); break;
+    case 'brownfield': ops.cmdBrownfield(args); break;
     case '_contract': map.cmdContract(args); break;
     case 'paths': ops.cmdPaths(args); break;
     case 'gate': ops.cmdGate(args); break;

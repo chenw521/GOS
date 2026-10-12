@@ -220,9 +220,25 @@ function askConflict(destRel, timeoutMs) {
 //   unreadable file         -> keep (fail-closed, no overwrite attempt)
 //   conflicting file        -> overwrite ONLY via --overwrite or an explicit
 //                              interactive 'y'; every overwrite first writes
-//                              <file>.gos-bak, then unlinks a symlink (refuse
-//                              passthrough) and recreates a regular file.
-// opts: { root, codeowner, repo | files, overwrite, nonInteractive, ask, askTimeoutMs }
+//                              <file>.gos-bak, then renames the new content
+//                              into place (a symlink dest is replaced as an
+//                              entry — refuse passthrough).
+// neverOverwrite (array of repo-relative dest paths) draws a hard line ABOVE
+// the conflict ladder: a listed dest that conflicts is ALWAYS kept — the
+// doOverwrite decision (flag or ask) is never even consulted for it. This is
+// the brownfield-adoption guard for files whose live content is authoritative
+// (e.g. an adopted repo's own README).
+// All file writes (create, .gos-bak, overwrite) go through
+// core.writeAtomicText — temp file + fsync + rename — so a reader (or a
+// concurrent seed of the same dest) never observes a torn or empty file; the
+// rename replaces a symlink dest atomically (refuse passthrough without the
+// missing-file window of the old unlink+recreate).
+// opts: { root, codeowner, repo | files, overwrite, nonInteractive, ask, askTimeoutMs, neverOverwrite }
+// Returns { created, skipped, overwritten, skippedDetail } — skippedDetail is
+// a parallel array of { dest, reason } aligned with skipped by index, with
+// reason from the closed set:
+//   identical | conflict-kept | never | directory | unreadable
+// (consumed by the brownfield command's five-state file vocabulary).
 // Nothing is ever staged — `git add` stays a user act.
 async function seed(opts) {
   const o = opts && typeof opts === 'object' ? opts : {};
@@ -230,6 +246,11 @@ async function seed(opts) {
   if (!root || typeof root !== 'string') {
     throw new Error('seed: root (git toplevel) is required');
   }
+  const neverList = o.neverOverwrite === undefined ? [] : o.neverOverwrite;
+  if (!Array.isArray(neverList) || neverList.some((p) => typeof p !== 'string')) {
+    throw new Error('seed: neverOverwrite must be an array of destination paths');
+  }
+  const never = new Set(neverList);
   let files;
   if (o.files && typeof o.files === 'object') {
     files = o.files;
@@ -244,34 +265,35 @@ async function seed(opts) {
   const ask = typeof o.ask === 'function' ? o.ask : askConflict;
   const created = [];
   const skipped = [];
+  const skippedDetail = [];
   const overwritten = [];
+  const skip = (dest, reason) => { skipped.push(dest); skippedDetail.push({ dest, reason }); };
   for (const dest of Object.keys(files).sort()) {
     const content = files[dest];
     const abs = path.join(root, dest);
     let st = null;
     try { st = fs.lstatSync(abs); } catch { st = null; }
     if (!st) {
-      fs.mkdirSync(path.dirname(abs), { recursive: true });
-      fs.writeFileSync(abs, content);
+      core.writeAtomicText(abs, content);
       created.push(dest);
       continue;
     }
-    if (st.isDirectory()) { skipped.push(dest); continue; }
+    if (st.isDirectory()) { skip(dest, 'directory'); continue; }
     let existing;
-    try { existing = fs.readFileSync(abs); } catch { skipped.push(dest); continue; }
-    if (Buffer.compare(existing, Buffer.from(content, 'utf8')) === 0) { skipped.push(dest); continue; }
+    try { existing = fs.readFileSync(abs); } catch { skip(dest, 'unreadable'); continue; }
+    if (Buffer.compare(existing, Buffer.from(content, 'utf8')) === 0) { skip(dest, 'identical'); continue; }
+    if (never.has(dest)) { skip(dest, 'never'); continue; }
     let doOverwrite = o.overwrite === true;
     if (!doOverwrite) {
       if (o.nonInteractive === true) doOverwrite = false;
       else doOverwrite = (await ask(dest, o.askTimeoutMs)) === 'overwrite';
     }
-    if (!doOverwrite) { skipped.push(dest); continue; }
-    fs.writeFileSync(`${abs}.gos-bak`, existing);
-    if (st.isSymbolicLink()) fs.unlinkSync(abs);
-    fs.writeFileSync(abs, content);
+    if (!doOverwrite) { skip(dest, 'conflict-kept'); continue; }
+    core.writeAtomicText(`${abs}.gos-bak`, existing);
+    core.writeAtomicText(abs, content);
     overwritten.push(dest);
   }
-  return { created, skipped, overwritten };
+  return { created, skipped, overwritten, skippedDetail };
 }
 
 // Render the universal layer with self-repo arguments. Single entry point for

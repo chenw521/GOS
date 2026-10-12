@@ -340,6 +340,13 @@ const CONTRACTS = {
     feedbackOwnerRefuse: '✗ refusing push: repo owner',  // owner-mismatch guard head
     feedbackPublished: '✓ published: ',                  // push success URL prefix
     feedbackGhMissing: "'gh' executable not found on PATH",
+    // brownfield adoption — frozen closed sets (D-88/D-99; tests assert from `_contract`):
+    // per-asset outcome taxonomy, dormant-hook state flags, the exit-code table,
+    // and the preflight refusal reason vocabulary (placeholders absent — literal sets).
+    brownfieldStatusSet: 'created | kept_identical | kept_conflict | locked_user_owned | report_only',
+    brownfieldStateFlags: 'inactive | untrusted',
+    brownfieldExitCodes: '0 success; 1 generic fatal (incl. corrupt hooks state file); 2 locked-overwrite refused; 3 unknown asset name; 4 non-git or cwd≠toplevel; 5 self-repo',
+    brownfieldPreflightReasons: 'path occupied by non-directory | dangling symlink | unwritable ancestor | symlink escape',
   },
   // semantic_checks — Phase B (defect-1 semantic gates) check registry [D-33]:
   // texts frozen from spec §2; skills/tests assert from here (gos _contract).
@@ -737,6 +744,18 @@ const COMMANDS = {
     subs: [], flags: [], usage: 'gos doctor',
     next: ['gos setup'],
     contractKeys: [],
+  },
+  'brownfield': {
+    desc: 'adopt GOS into an existing repo: classify conflicts, seed missing assets, install dormant hooks (lock-free global class)', class: 'global', aliases: [], core: false,
+    subs: [],
+    flags: [
+      { name: '--json', scope: 'brownfield', effect: 'machine-readable report envelope (sole legal machine mode)', risk: 'safe' },
+      { name: '--overwrite', scope: 'brownfield', effect: 'overwrite conflicting assets, optionally limited to one named asset (locked user-owned assets still refuse)', risk: 'mutating' },
+      { name: '--print-agents-skeleton', scope: 'brownfield', effect: 'print a starter AGENTS.md skeleton to stdout without touching the repo', risk: 'safe' },
+    ],
+    usage: 'gos brownfield [--json] [--overwrite [<asset>]] [--print-agents-skeleton]',
+    next: ['gos setup --commitlint', 'gos init <level> "<intent>"'],
+    contractKeys: ['command_contracts.brownfieldStatusSet', 'command_contracts.brownfieldStateFlags', 'command_contracts.brownfieldExitCodes', 'command_contracts.brownfieldPreflightReasons'],
   },
   '_contract': {
     desc: 'print frozen contract table (tests/skills assert from it)', class: 'global', aliases: [], core: false,

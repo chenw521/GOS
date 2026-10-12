@@ -23,7 +23,7 @@ import re, sys
 src = open(sys.argv[1]).read().split('\n')
 viol = []
 ROOT_LEGAL = {'.gos/', '.venv', 'venv', 'spec.md', 'plan.md', 'edges.json', 'edges.lock', 'run-manifest.json', 'deps.json', 'exemptions.log', 'edge-audit.log', 'state.json', 'config.json', 'gates.json', 'concerns.md',
-              'lessons.md', 'map-ignore', 'README.md', '.lock'}
+              'lessons.md', 'map-ignore', 'README.md', '.lock', '.gitignore'}
 DIR_LEGAL = ('project/', 'codebase/', 'archive/', 'gates/', 'renderers/', 'task/', 'cache/', 'logs/')
 for i, ln in enumerate(src, 1):
     stripped = ln.strip()
