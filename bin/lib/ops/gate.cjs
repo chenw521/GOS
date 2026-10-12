@@ -1008,6 +1008,28 @@ function cmdGate(args) {
         const last = String(cjkOut).trim().split('\n').filter(Boolean).pop();
         console.log(last || '✓ cjk lint: tracked tree clean');
       }
+      // ascii-filenames: name discipline peer of cjk-lint (content) — all
+      // tracked path segments pure ASCII; empty-track/not-a-repo refuse to
+      // pass vacuously (exit 2). Same selfRepo scope: the naming rule is a
+      // property of THIS repo's tracked tree.
+      checked++;
+      let ascOut = '';
+      let ascRc = 0;
+      try {
+        ascOut = execFileSync('bash',
+          [path.join(core.GOS_SELF_ROOT, 'test', 'checks', 'ascii-filenames.sh')],
+          { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 120000 });
+      } catch (e) {
+        ascRc = e.status == null ? 1 : e.status;
+        ascOut = `${e.stdout || ''}${e.stderr || ''}`;
+      }
+      if (ascRc !== 0) {
+        const tailA = String(ascOut).trim().split('\n').filter(Boolean).slice(-3).join('\n');
+        failures.push(core.gateFail('ascii-filenames', { verdict: `ascii filenames: ${tailA || `exited ${ascRc}`}`, evidence: String(ascOut).trim().split('\n').filter(Boolean).slice(-3), fix: 'rename the file to a pure-ASCII path or drop it from the tree — see test/checks/ascii-filenames.sh' }));
+      } else {
+        const lastA = String(ascOut).trim().split('\n').filter(Boolean).pop();
+        console.log(`✓ ${lastA || 'ascii filenames: tracked names clean'}`);
+      }
     }
   }
 

@@ -38,6 +38,9 @@ jobs:
       - name: stale-verb guard (command files × KNOWN_CASES)
         run: bash test/checks/stale-verbs.sh
 
+      - name: ascii filename guard (tracked names pure ASCII)
+        run: bash test/checks/ascii-filenames.sh
+
   sections:
     name: Sections (Node ${{ matrix.node-version }})
     runs-on: ubuntu-24.04
