@@ -1,9 +1,9 @@
 {
   "current": {
-    "total": 762,
-    "callgraph": 372,
-    "testof_fn": 81,
-    "fn_count": 419,
+    "total": 765,
+    "callgraph": 373,
+    "testof_fn": 82,
+    "fn_count": 420,
     "fns": [
       "acornCtx",
       "acquireChangelogLock",
@@ -376,6 +376,7 @@
       "snapshotShrinkage",
       "spawnOneSection",
       "specCardFloorFailures",
+      "specDecisionTitles",
       "specPathOf",
       "stageIndex",
       "stripChangelogMetadata",
@@ -812,6 +813,7 @@
       "backupRenderedViews": "bin/lib/render/views.cjs",
       "renderProjectViews": "bin/lib/render/views.cjs",
       "cmdRender": "bin/lib/render/views.cjs",
+      "specDecisionTitles": "bin/lib/task/archive.cjs",
       "archiveDirExists": "bin/lib/task/archive.cjs",
       "cmdArchive": "bin/lib/task/archive.cjs",
       "cmdChangelog": "bin/lib/task/changelog.cjs",
@@ -846,14 +848,14 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "917f5fb9e491b8c1",
-    "at": "2026-10-12T06:33:48.400Z"
+    "fp": "2c6e8947ee83bccd",
+    "at": "2026-10-12T09:35:32.321Z"
   },
   "peak": {
-    "total": 764,
-    "callgraph": 374,
-    "testof_fn": 81,
-    "fn_count": 419,
+    "total": 765,
+    "callgraph": 373,
+    "testof_fn": 82,
+    "fn_count": 420,
     "fns": [
       "acornCtx",
       "acquireChangelogLock",
@@ -968,6 +970,7 @@
       "confirmSectionList",
       "consumeExemptions",
       "contractKeysFlat",
+      "contractTokens",
       "convergeLocalMain",
       "cryptoEmptySha",
       "currentRootRealpath",
@@ -1147,7 +1150,6 @@
       "pushLazyFreezeLedger",
       "readConfigLocale",
       "readExemptions",
-      "readGitConfig",
       "readOldAnchor",
       "readSentinel",
       "readState",
@@ -1226,6 +1228,7 @@
       "snapshotShrinkage",
       "spawnOneSection",
       "specCardFloorFailures",
+      "specDecisionTitles",
       "specPathOf",
       "stageIndex",
       "stripChangelogMetadata",
@@ -1530,7 +1533,7 @@
       "cmdStatus": "bin/lib/nav/status.cjs",
       "cmdNext": "bin/lib/nav/status.cjs",
       "levelFlow": "bin/lib/nav/status.cjs",
-      "readGitConfig": "bin/lib/ops/brownfield-probe.cjs",
+      "contractTokens": "bin/lib/ops/brownfield-probe.cjs",
       "classifyHooksPath": "bin/lib/ops/brownfield-probe.cjs",
       "hookOwnership": "bin/lib/ops/brownfield-probe.cjs",
       "detectCommitlintConfigs": "bin/lib/ops/brownfield-probe.cjs",
@@ -1662,6 +1665,7 @@
       "backupRenderedViews": "bin/lib/render/views.cjs",
       "renderProjectViews": "bin/lib/render/views.cjs",
       "cmdRender": "bin/lib/render/views.cjs",
+      "specDecisionTitles": "bin/lib/task/archive.cjs",
       "archiveDirExists": "bin/lib/task/archive.cjs",
       "cmdArchive": "bin/lib/task/archive.cjs",
       "cmdChangelog": "bin/lib/task/changelog.cjs",
@@ -1696,8 +1700,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "cf6eeb9cb7941be2",
-    "at": "2026-10-12T02:12:22.656Z"
+    "fp": "2c6e8947ee83bccd",
+    "at": "2026-10-12T09:15:46.321Z"
   },
   "note": "peak rotates ONLY via gos map baseline reset --reason (approve-gated); scan is peak-monotonic (D-30/R-34)"
 }

@@ -14,6 +14,33 @@ const { execFileSync } = require('child_process');
 
 // archiveSlugParts lives in context.cjs (census context domain home; breaks the archive↔ops/doctor file cycle)
 
+// specDecisionTitles: for decision-less states (Lv1/2 keep decisions in
+// spec prose, never in state.json), extract the decision lead lines from
+// the archived spec.md's "## Decisions" section so delta.md never shows a
+// false vacancy. A decision lead = the paragraph's first line carrying a
+// "label: sentence" shape. Returns [] when the section or leads are absent.
+function specDecisionTitles(specPath) {
+  let text;
+  try { text = fs.readFileSync(specPath, 'utf8'); } catch { return []; }
+  const head = text.match(/^## Decisions[^\n]*$/m);
+  if (!head) return [];
+  const after = text.slice(head.index + head[0].length);
+  const nextSec = after.search(/^## /m);
+  const section = nextSec === -1 ? after : after.slice(0, nextSec);
+  const titles = [];
+  // Per-line lead matching (paragraph splitting merged adjacent decision
+  // lines into one block). A lead = "Decision-token [(label)]: sentence" or
+  // "D-NN: sentence" at line start within the Decisions section.
+  const LEAD_RE = /^((?:D-\d+|Decision[\w-]{1,32})(?:\s*\([^)\n]{1,50}\))?[^:\n]{0,16}):\s*(\S.*)$/;
+  for (const line of section.split('\n')) {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) continue;
+    const lead = t.match(LEAD_RE);
+    if (lead) titles.push(`${lead[1].trim()}: ${lead[2].trim()}`);
+  }
+  return titles;
+}
+
 function archiveDirExists(date, slug) {
   if (!fs.existsSync(core.ARCHIVE_DIR)) return false;
   const base = `${date}-${slug}`;
@@ -428,7 +455,11 @@ function cmdArchive(opts = {}) {
     `- Level: Lv${state.level ?? '?'}`,
     `- user_summary: ${core.sanitizeEcho(state.changelog_user_summary ?? '')}`,
     `- Completed: ${state.completed_stages.join(' → ')}`,
-    `- Decisions: ${state.decisions.map(d => `${d.id} ${d.title}`).join('; ') || 'none'}`,
+    `- Decisions: ${state.decisions.map(d => `${d.id} ${d.title}`).join('; ') || (() => {
+      const tidD = core.currentTaskId(state);
+      const specTitles = tidD ? specDecisionTitles(path.join(dest, 'task', tidD, 'spec.md')) : [];
+      return specTitles.length ? `${specTitles.join('; ')} (from spec.md)` : 'none recorded — see spec.md';
+    })()}`,
     `- Truths: ${state.observable_truths.map(t => `${t.id} ${t.verified ? '✓' : '✗'}`).join(' ') || 'none'}`,
     `- Requirements: ${state.requirements.map(r => r.id).join(', ')}`,
   ].join('\n');
@@ -524,4 +555,4 @@ function cmdArchive(opts = {}) {
 
 const sibContext = require('./context.cjs');  // home of archiveSlugParts
 
-module.exports = { archiveDirExists, cmdArchive };
+module.exports = { archiveDirExists, cmdArchive, specDecisionTitles };
