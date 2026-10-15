@@ -16,12 +16,15 @@
 //     task = covered decisions then active requirements (state order),
 //     '/'-joined; empty derivation → refuse (fail-closed).
 //   - date stamp: changelog-core.utcToday() — the single UTC time source.
-// Write safety: a missing CHANGELOG.md bootstraps from
-// templates/git/CHANGELOG.md.tpl resolved off GOS_SELF_ROOT (a decoy
-// ./templates in the target repo cannot shadow the master); the
-// CHANGELOG.md + state.json read-modify-write runs under a dedicated O_EXCL
-// lockfile (.gos/cache/changelog.lock) with bounded wait-retry so concurrent
-// adds serialize instead of dying or losing entries; file replacement is
+// Write safety: the changelog location resolves through the single
+// root-anchored resolver in ops/changelog-core (D-07 — never process cwd, so
+// subdir invocations can no longer bootstrap a foreign CHANGELOG); a missing
+// file bootstraps from templates/git/CHANGELOG.md.tpl resolved off
+// GOS_SELF_ROOT (a decoy ./templates in the target repo cannot shadow the
+// master); the CHANGELOG.md + state.json read-modify-write runs under a
+// dedicated O_EXCL lockfile (.gos/cache/changelog.lock, shared implementation
+// in ops/changelog-core) with bounded wait-retry so concurrent adds serialize
+// instead of dying or losing entries; file replacement is
 // temp-write + atomic rename. The family is read-class at dispatch level and
 // mutates under its own internal lock (the concerns pattern — the shared
 // .gos/.lock is die-on-contention and must not gate concurrent adds).
@@ -35,14 +38,7 @@ const path = require('node:path');
 const core = require('../core/index.cjs');
 const clcore = require('../ops/changelog-core.cjs');
 
-const CHANGELOG_MD = path.resolve('CHANGELOG.md');
-const CHANGELOG_LOCK = path.join(core.GOS_DIR, 'cache', 'changelog.lock');
 const TEMPLATE_MASTER = path.join(core.GOS_SELF_ROOT, 'templates', 'git', 'CHANGELOG.md.tpl');
-const LOCK_WAIT_MS = 15000;
-const LOCK_RETRY_MS = 50;
-const LOCK_STALE_MS = 120000;
-
-let lockOwned = false;
 
 function cmdChangelog(args) {
   const sub = String((args || [])[0] || '').toLowerCase();
@@ -100,7 +96,7 @@ async function cmdChangelogAdd(rest) {
   }
   const refsArg = opts.refs ? parseRefsArg(opts.refs) : null;
 
-  acquireChangelogLock();
+  clcore.acquireChangelogLock();
   try {
     const st2 = core.readState();
     if (!st2) core.die(`${core.CONTRACTS.state_semantics.noActiveTask} \`gos init\` first.`);
@@ -123,7 +119,7 @@ async function cmdChangelogAdd(rest) {
     let text;
     let bootstrapped = false;
     try {
-      text = fs.readFileSync(CHANGELOG_MD, 'utf8');
+      text = fs.readFileSync(clcore.resolveChangelogMd(), 'utf8');
     } catch {
       text = loadChangelogSkeleton();
       bootstrapped = true;
@@ -137,7 +133,7 @@ async function cmdChangelogAdd(rest) {
     }
     const ins = insertUnreleasedTop(text, entry);
     if (!ins.ok) core.die(`changelog add: cannot insert entry — ${ins.reason}`);
-    core.writeAtomicText(CHANGELOG_MD, ins.text);
+    core.writeAtomicText(clcore.resolveChangelogMd(), ins.text);
     if (bootstrapped) console.log('✓ bootstrapped CHANGELOG.md from the Keep a Changelog master template');
     if (st2.changelog_user_summary !== summary) {
       st2.changelog_user_summary = summary;
@@ -146,7 +142,7 @@ async function cmdChangelogAdd(rest) {
     console.log('✓ changelog entry written to CHANGELOG.md [Unreleased]:');
     console.log(`  ${entry}`);
   } finally {
-    releaseChangelogLock();
+    clcore.releaseChangelogLock();
   }
 }
 
@@ -163,7 +159,7 @@ async function cmdChangelogAdd(rest) {
 function cmdChangelogLint() {
   let text;
   try {
-    text = fs.readFileSync(CHANGELOG_MD, 'utf8');
+    text = fs.readFileSync(clcore.resolveChangelogMd(), 'utf8');
   } catch {
     console.log("⚠ changelog lint: CHANGELOG.md not found — obligations start once the file exists; the next 'gos changelog add' bootstraps it from the Keep a Changelog master template (advisory, not blocking)");
     process.exit(0);
@@ -260,63 +256,6 @@ function deriveTraceRefs(stateL) {
   // --refs when the task's surface is too broad to summarize.
   if (refs.length > 4) return { tooBroad: true, refs: refs.slice(0, 4) };
   return { refs };
-}
-
-// O_EXCL acquire with bounded wait: a live holder is waited out (concurrent
-// adds serialize), a dead-pid / stale-heartbeat / corrupt holder is broken.
-function acquireChangelogLock() {
-  fs.mkdirSync(path.dirname(CHANGELOG_LOCK), { recursive: true });
-  const deadline = Date.now() + LOCK_WAIT_MS;
-  for (;;) {
-    let fd = null;
-    try {
-      fd = fs.openSync(CHANGELOG_LOCK, 'wx');
-    } catch (e) {
-      if (e.code !== 'EEXIST') core.die(`changelog lock: open failed (${e.message})`);
-      let info = null;
-      try { info = JSON.parse(fs.readFileSync(CHANGELOG_LOCK, 'utf8')); } catch { /* empty or corrupt */ }
-      let mtimeStale = false;
-      try { mtimeStale = Date.now() - fs.statSync(CHANGELOG_LOCK).mtimeMs > LOCK_STALE_MS; } catch { mtimeStale = false; }
-      // Dead-owner evidence: re-read and only break the lock that still carries
-      // the pid we judged dead (a fresh owner may have replaced it meanwhile).
-      if (info !== null && !core.pidAlive(info.pid)) {
-        let cur = null;
-        try { cur = JSON.parse(fs.readFileSync(CHANGELOG_LOCK, 'utf8')); } catch { /* gone or corrupt */ }
-        if (cur !== null && cur.pid === info.pid) {
-          try { fs.unlinkSync(CHANGELOG_LOCK); } catch { /* racing */ }
-        }
-        continue;
-      }
-      // Age evidence: an empty/corrupt lock younger than LOCK_STALE_MS may be
-      // mid-write by a just-started holder (open 'wx' precedes the pid write) —
-      // breaking it here would let two writers hold the lock at once.
-      if (mtimeStale) {
-        try { fs.unlinkSync(CHANGELOG_LOCK); } catch { /* racing */ }
-        continue;
-      }
-      if (Date.now() > deadline) {
-        core.die(`changelog lock: held by live pid ${info.pid} (since ${info.started_at}) — waited ${LOCK_WAIT_MS}ms; inspect ${CHANGELOG_LOCK}`);
-      }
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, LOCK_RETRY_MS);
-      continue;
-    }
-    try {
-      fs.writeSync(fd, JSON.stringify({ pid: process.pid, started_at: new Date().toISOString() }));
-    } finally {
-      fs.closeSync(fd);
-    }
-    lockOwned = true;
-    process.on('exit', () => { releaseChangelogLock(); });
-    return;
-  }
-}
-
-// Ownership flag guards the unlink: after an intentional release a new
-// process may already hold a fresh lock at the same path — never remove it.
-function releaseChangelogLock() {
-  if (!lockOwned) return;
-  lockOwned = false;
-  try { fs.unlinkSync(CHANGELOG_LOCK); } catch { /* already gone */ }
 }
 
 function loadChangelogSkeleton() {

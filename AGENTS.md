@@ -16,3 +16,8 @@ this file only tells you where they are.
 - File disposition (git/npm/local): the census ledger is the truth —
   census.json, reconciled by test/pack-check.sh; CJK boundary by
   test/checks/cjk-lint.sh. Run pack-check before touching layout.
+- Issues: read the matching .github/ISSUE_TEMPLATE form before opening one;
+  issues opened through the CLI (`gh issue create`) must carry that form's
+  type label (bug or enhancement) — the triage-gate workflow
+  (.github/workflows/triage-gate.yml) closes unlabelled issues once with
+  relabel guidance.

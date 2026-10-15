@@ -12,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const EXEMPT_LOG_REL = core.GOS_PATHS.exemptions.rel; // T16: logs/ via registry (relative for git add pathspec)
+const EXEMPT_LOG_REL = core.GOS_PATHS.exemptions.rel; // T16: logs/ via registry (relative read/write path join)
 
 // T5 semanticChecks: orchestrates ①bidirectional ②diff-hit ③artifact existence.
 // Prints ✓/⚠ lines inline; returns {failures, passes} — caller (cmdGate / T7 commit
@@ -211,16 +211,107 @@ function semanticDiffPhase(state, tasks) {
 }
 
 function readExemptions(root) {
-  try { return fs.readFileSync(path.join(root, '.gos', EXEMPT_LOG_REL), 'utf8').split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#')); }
-  catch { return []; }
+  // R-35/D-02 line grammar: `<iso8601> <section> :: <reason>` — FIELD 2 is the
+  // section (the reason rides along for the `gos logs` view). #-prefixed lines
+  // are comments (filtered); a bare single-token legacy line has no field 2 and
+  // yields nothing.
+  try {
+    return fs.readFileSync(path.join(root, '.gos', EXEMPT_LOG_REL), 'utf8').split('\n')
+      .map((l) => l.trim()).filter((l) => l && !l.startsWith('#'))
+      .map((l) => l.split(/\s+/)[1]).filter(Boolean);
+  } catch { return []; }
 }
 
-function consumeExemptions(root) {   // called from cmdCommit — auto-expiry (R2-F11: tracked, auditable)
+function consumeExemptions(root) {   // called from cmdCommit — auto-expiry (R2-F11: auditable, machine-local per D-01)
   const p = path.join(root, '.gos', EXEMPT_LOG_REL);
   if (!fs.existsSync(p)) return;
   const lines = readExemptions(root);
   if (lines.length) console.log(`✓ ${core.CONTRACTS.semantic_checks.exemptCleared} (${lines.length} entr${lines.length === 1 ? 'y' : 'ies'})`);
-  fs.writeFileSync(p, '');
+  fs.rmSync(p, { force: true });   // D-01: consumed ledger leaves no unignored residue (dir may not be gitignored in foreign repos)
+}
+
+// ---------- [D-02/R-35] gos logs: runtime ledger view (READ-class, no lock) ----------
+// Renders the machine-local logs trio (D-01) as formatted tables. The ledgers
+// are enriched at write time (receipts carry the truth text, exemptions carry
+// the reason) so the view never needs to join task state — historical lines
+// survive post-archive.
+
+const LOGS_VIEWS = {
+  receipts: { key: 'truth_receipts', title: 'logs.receipts.title' },
+  exemptions: { key: 'exemptions', title: 'logs.exemptions.title' },
+  audit: { key: 'edge_audit', title: 'logs.audit.title' },
+};
+
+function parseLogsLine(kind, line) {
+  if (kind === 'receipts') {
+    // enriched: `<iso8601> <id> replay-verified: <cmd> :: <truth text>`; legacy
+    // `- [date] id replay-verified: <cmd>` lines render with the whole tail as cmd.
+    const m = line.match(/^(\S+)\s+(\S+)\s+replay-verified:\s+(.*)$/);
+    if (!m) return { a: '', b: '', c: line, d: '' };
+    let cmd = m[3]; let truth = '';
+    const idx = cmd.lastIndexOf(' :: ');
+    if (idx >= 0) { truth = cmd.slice(idx + 4); cmd = cmd.slice(0, idx); }
+    return { a: m[1], b: m[2], c: cmd, d: truth };
+  }
+  if (kind === 'exemptions') {
+    const m = line.match(/^(\S+)\s+(\S+)\s+::\s+(.*)$/);
+    if (!m) return { a: '', b: line, c: '' };
+    return { a: m[1], b: m[2], c: m[3] };
+  }
+  // audit: `<iso8601> <action> <from> -> <to> <type>` (edges.cjs writer)
+  const m = line.match(/^(\S+)\s+(.+)$/);
+  if (!m) return { a: '', b: line };
+  return { a: m[1], b: m[2] };
+}
+
+function clipCp(s, n) { return [...String(s)].slice(0, n).join(''); }
+
+function padCp(s, w) {
+  const s2 = String(s);
+  const len = [...s2].length;
+  return s2 + ' '.repeat(Math.max(0, w - len));
+}
+
+function cmdLogs(args) {
+  const sub = (args[0] || '').toLowerCase();
+  const view = LOGS_VIEWS[sub];
+  const usage = 'Usage: gos logs <receipts|exemptions|audit> [--last N]';
+  if (!view) core.die(`${usage}   (view the runtime audit ledgers — receipts carry truth text, exemptions carry the reason; default last 20)`);
+  let last = 20;
+  const rest = args.slice(1);
+  for (let i = 0; i < rest.length; i++) {
+    if (rest[i] === '--last') {
+      const v = rest[++i];
+      if (v === undefined || !/^\d+$/.test(v) || Number(v) < 1 || Number(v) > 10000) {
+        core.die(`logs: --last must be an integer between 1 and 10000 (entries), e.g. --last 5\n${usage}`);
+      }
+      last = Number(v);
+    } else core.die(`logs: unknown argument '${rest[i]}'\n${usage}`);
+  }
+  const root = core.mapRootDir();
+  const entry = core.GOS_PATHS[view.key];
+  const file = path.join(root, '.gos', entry.rel);
+  let lines = [];
+  try {
+    lines = fs.readFileSync(file, 'utf8').split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+  } catch { /* absent ledger = empty (machine-local, may not exist yet) */ }
+  const shown = lines.slice(-last);
+  console.log(core.t(view.title, { path: entry.rel, n: String(shown.length), total: String(lines.length) }));
+  if (!shown.length) { console.log(core.t('logs.empty')); return; }
+  const rows = shown.map((l) => parseLogsLine(sub, l));
+  if (sub === 'receipts') {
+    const wB = Math.min(10, Math.max(...rows.map((r) => [...r.b].length), 2));
+    const wC = Math.min(60, Math.max(...rows.map((r) => [...clipCp(r.c, 60)].length), 7));
+    console.log(`  ${padCp('TIMESTAMP', 25)}${padCp('ID', wB + 2)}${padCp('COMMAND', wC + 2)}TRUTH`);
+    for (const r of rows) console.log(`  ${padCp(r.a, 25)}${padCp(r.b, wB + 2)}${padCp(clipCp(r.c, 60), wC + 2)}${clipCp(r.d, 80)}`);
+  } else if (sub === 'exemptions') {
+    const wB = Math.min(28, Math.max(...rows.map((r) => [...r.b].length), 7));
+    console.log(`  ${padCp('TIMESTAMP', 25)}${padCp('SECTION', wB + 2)}REASON`);
+    for (const r of rows) console.log(`  ${padCp(r.a, 25)}${padCp(clipCp(r.b, 28), wB + 2)}${clipCp(r.c, 120)}`);
+  } else {
+    console.log(`  ${padCp('TIMESTAMP', 25)}ENTRY`);
+    for (const r of rows) console.log(`  ${padCp(r.a, 25)}${clipCp(r.b, 160)}`);
+  }
 }
 
 function checkManifest(root, mustRunSecs, allowlist) {   // → {advisories, failures} (empty failures = pass); advisory when no manifest
@@ -556,15 +647,25 @@ function cmdGate(args) {
   // gos gate trust <name>: hash registration must work on unmanaged trees too
   // (setup seeding runs before any `gos init`).
   if (args[0] === 'trust') { cmdGateTrust(args); return; }
-  // [Phase D T10] gate --exempt <section>: explicit, tracked, auto-expiring exemption
+  // [Phase D T10 → D-01, R-35] gate --exempt <section> --reason "<why>": explicit,
+  // machine-local, auto-expiring exemption. --reason is MANDATORY, >=10 codepoints
+  // after sanitization (truth-waive precedent — an exemption must be auditable).
+  // Line grammar pinned `<iso8601> <section> :: <reason>` (single line, no # — a
+  // #-prefixed form would be filtered as a comment by the one-shot reader).
   if (args[0] === '--exempt') {
     const sec = args[1];
-    if (!sec) core.die('Usage: gos gate --exempt <section-name>');
+    if (!sec || sec.startsWith('--')) core.die('Usage: gos gate --exempt <section-name> --reason "<why>"   (--reason mandatory, >=10 codepoints)');
+    if (/[\s#]/.test(sec)) core.die('gate --exempt: section name must be a single token without whitespace or # (line grammar: <iso8601> <section> :: <reason>)');
+    const ri = args.indexOf('--reason');
+    const rawReason = ri >= 0 ? args[ri + 1] : null;
+    const reason = rawReason == null ? '' : String(rawReason).replace(/[\r\n#]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (rawReason == null || core.cpLen(reason) < 10) {
+      core.die('gate --exempt: --reason is mandatory and must be at least 10 codepoints after sanitization (single line, no #) — one-shot exemptions must be auditable [R-35]');
+    }
     const root = core.mapRootDir();
     core.acquireEdgeLock();
-    try { fs.appendFileSync(path.join(root, '.gos', EXEMPT_LOG_REL), `${sec}\n`); } catch (e) { core.die(`cannot write exemptions.log: ${e.message}`); }
-    try { execFileSync('git', ['-C', root, 'add', '--', path.join('.gos', EXEMPT_LOG_REL)]); } catch { /* non-git */ }
-    console.log(`✓ exemption recorded: ${sec} (consumed + cleared at next gos commit — one-shot by design)`);
+    try { fs.appendFileSync(path.join(root, '.gos', EXEMPT_LOG_REL), `${new Date().toISOString()} ${sec} :: ${reason}\n`); } catch (e) { core.die(`cannot write exemptions.log: ${e.message}`); }
+    console.log(`✓ exemption recorded: ${sec} — ${reason} (consumed + cleared at next gos commit — one-shot by design)`);
     return;
   }
   // Flag-tolerant positional parse: `gate --audit` and `gate all --audit` both
@@ -1097,4 +1198,4 @@ function renderGateFailures(failures, opts = {}) {
   return out.join('\n');
 }
 
-module.exports = { getSemanticPlanTasks, checkBidirectional, loadSemanticAllowlist, semanticAllowlisted, semanticBaselineShas, diffHitCheck, semanticDiffPhase, readExemptions, consumeExemptions, checkManifest, impactClosurePhase, semanticChecks, loadTrustStore, cmdGateTrust, cmdGate, specCardFloorFailures, projectDecisionIds, stripSpecForScan, renderGateFailures };
+module.exports = { getSemanticPlanTasks, checkBidirectional, loadSemanticAllowlist, semanticAllowlisted, semanticBaselineShas, diffHitCheck, semanticDiffPhase, readExemptions, consumeExemptions, checkManifest, impactClosurePhase, semanticChecks, loadTrustStore, cmdGateTrust, cmdGate, cmdLogs, specCardFloorFailures, projectDecisionIds, stripSpecForScan, renderGateFailures };

@@ -71,7 +71,7 @@ assert_contains "T33.3b stale text distinguishes from missing" "manifest stale" 
 # --- T33.4 exemption: --exempt writes the tracked log -> gate passes -> commit consumes and clears it ---
 git checkout -q -- bin/gos.cjs
 printf '{"schema_version":2,"sections_run":[],"head_tree":"deadbeef","patch_sha":"deadbeef","finished_at":"z"}' > .gos/cache/run-manifest.json
-set +e; node "$GOS" gate --exempt T30-map-edges >/dev/null 2>&1; ERC=$?; set +e
+set +e; node "$GOS" gate --exempt T30-map-edges --reason "manifest fixture exemption for T33" >/dev/null 2>&1; ERC=$?; set +e
 assert_exit "T33.4a gate --exempt exits 0" 0 "$ERC"
 assert_file "T33.4b exemptions.log written (tracked)" ".gos/logs/exemptions.log"
 grep -q "T30-map-edges" .gos/logs/exemptions.log && echo "  ✓ exemption records the section" && PASS=$((PASS+1)) || { echo "  ✗ exemption log content wrong"; FAIL=$((FAIL+1)); }
@@ -86,8 +86,11 @@ if grep -q "run-manifest.json" "$GOS_ROOT/test/run-sections.sh" && grep -q "sha2
 else echo "  ✗ runner manifest wiring missing"; FAIL=$((FAIL+1)); fi
 
 # --- T33.6 doc-only downgrade: stale manifest + purely allowlisted dirty files (.changes.md) -> advisory, not FAIL ---
-# preconditions: T33.4 restored bin/gos.cjs and committed; head_tree taken from the current HEAD tree (legal ancestor),
-# patch_sha forged -> hits the stale branch; .changes.md is on the B-5 allowlist -> downgrade to advisory.
+# preconditions: T33.4 restored bin/gos.cjs; .changes.md seeded TRACKED (D-01/R-34: the
+# exemption ledger is no longer git-staged, so the scenario dirties the tree honestly);
+# head_tree taken from the current HEAD tree (legal ancestor), patch_sha forged -> hits
+# the stale branch; .changes.md is on the B-5 allowlist -> downgrade to advisory.
+printf 'base\n' > .changes.md && git add .changes.md && git commit -qm changes-md
 printf '{"schema_version":2,"sections_run":[],"head_tree":"%s","patch_sha":"deadbeef","finished_at":"z"}\n' "$(WTH_H)" > .gos/cache/run-manifest.json
 printf 'doc touch\n' >> .changes.md
 set +e; G=$(node "$GOS" gate all 2>&1); GRC=$?; set +e

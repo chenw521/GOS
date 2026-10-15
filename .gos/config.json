@@ -1,8 +1,7 @@
 {
   "model_profile": "solo",
   "models": {
-    "checker": "glm-4.7-flash"
+    "checker": "glm-5.3flash"
   },
-  "lessons_migrated": true,
   "locale": "en"
 }

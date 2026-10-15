@@ -40,7 +40,7 @@ s['observable_truths']=[{'id':'T-01','description':'fake excerpt','verified':Tru
 json.dump(s,open('.gos/state.json','w'),indent=2)"
 set +e; OUT=$(node "$GOS" gate truths 2>&1); RC=$?; set -e
 assert_exit "A2 fake excerpt object → gate truths exit 1" 1 "$RC"
-assert_contains "A2 failure names excerpt feature requirement" "exit-code|count|path" "$OUT"
+assert_contains "A2 failure names excerpt feature requirement" "exit-code|count|path (manual); count|path|KV (replay; synthetic exit/status keys vetoed)" "$OUT"
 
 # --- A3: valid three-element evidence (numeric-stat excerpt + real artifact) → ✓ ---
 python3 -c "

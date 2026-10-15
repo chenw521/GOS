@@ -68,6 +68,13 @@ module.exports = {
   'setup.lang.saved': 'language saved: {locale} ({source})',
   'help.contractKeysHeader': '  contract keys (not commands — used by test assertions):',
 
+  // ---- logs view surfaces (D-02/R-35: runtime ledger rendering; paths/counts
+  // interpolate — the ledgers themselves are locale-invariant machine files) ----
+  'logs.receipts.title': 'truth receipts — {path} (showing last {n} of {total})',
+  'logs.exemptions.title': 'gate exemptions — {path} (showing last {n} of {total})',
+  'logs.audit.title': 'edge audit — {path} (showing last {n} of {total})',
+  'logs.empty': 'no entries yet — the ledger fills as the corresponding commands run',
+
   // ---- lessons attribution (D-67; CONSOLE-only localization — the md view
   // stays locale-invariant en by design, F8) ----
   'lessons.attribution': 'lessons: {projN} project + {globN} global loaded (project: {projPath}; global: {globPath}) — expiring soon: {expiring}',

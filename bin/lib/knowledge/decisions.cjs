@@ -7,6 +7,23 @@ const fs = require('node:fs');
 const path = require('node:path');
 const core = require('../core/index.cjs');
 
+// D-03 (R-28): mutation commands auto-render the project views inline — an
+// in-process call inside the already-held .gos lock critical section (lesson
+// c7a4be64: never a nested CLI call). Null project (Lv3 task) = nothing to render.
+// Dependency inversion: knowledge stays render-agnostic; the task layer (the
+// composition root — task→knowledge and task→render are both allowlisted)
+// installs the render hook at load time.
+let _autoRender = null;
+
+function setAutoRender(fn) {
+  _autoRender = typeof fn === 'function' ? fn : null;
+}
+
+function autoRenderViews(project) {
+  if (!project || !_autoRender) return;
+  _autoRender(project);
+}
+
 function decisionParseOpts(rest, valueFlags) {
   const pos = [];
   const opt = {};
@@ -163,6 +180,7 @@ function cmdDecision(args) {
     core.writeState(state);
     console.log(`${core.CONTRACTS.command_contracts.decisionAdded}${id.slice(2)} added: ${title}`);
     console.log('Next: gos decision list');
+    if (touchedProject && project) autoRenderViews(project); // D-03: views stay fresh after the mutation
     return;
   }
 
@@ -191,6 +209,7 @@ function cmdDecision(args) {
     if (pd) core.saveProject(project);
     core.writeState(state);
     console.log(`${core.CONTRACTS.command_contracts.decisionAmended}${id.slice(2)} amended`);
+    if (pd) autoRenderViews(project); // D-03: views stay fresh after the mutation
     return;
   }
 
@@ -224,6 +243,7 @@ function cmdDecision(args) {
     if (pd) core.saveProject(project);
     core.writeState(state);
     console.log(`${core.CONTRACTS.command_contracts.decisionAmended}${id.slice(2)} ${core.CONTRACTS.command_contracts.decisionCovered}${coveredBy.slice(1)}`);
+    if (pd) autoRenderViews(project); // D-03: views stay fresh after the mutation
     return;
   }
 
@@ -303,5 +323,7 @@ Object.assign(module.exports, {
   decisionPlanTasks,
   projectDecisionRows,
   printDecisionRows,
+  setAutoRender,
+  autoRenderViews,
   cmdDecision,
 });   // assignment (not reassignment): sibling modules hold live references to this export

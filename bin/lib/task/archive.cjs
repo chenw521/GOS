@@ -8,6 +8,7 @@ const sibPlansnap = require('./plansnap.cjs');
 const clcore = require('../ops/changelog-core.cjs');  // task→ops (single-track gate primitives)
 const sibPush = require('../ops/push.cjs');  // archive→ops push hint (single source for the printed line)
 const knowledge = require('../knowledge/lessons-json.cjs');  // task→knowledge (DAG: json truth loads)
+const phasegate = require('../knowledge/phase.cjs');  // task→knowledge (DAG precedent) — D-06 predicate home
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
@@ -140,8 +141,33 @@ function cmdArchive(opts = {}) {
   // design; CHANGELOG.md is deliberately not consulted for version truth.
   // GOS_SKIP_SHIP_CHECK=1 skips both (tests / non-release archives).
   if (!fromCommit && process.env.GOS_SKIP_SHIP_CHECK !== '1') {
+    // ---- D-06/R-33 (F-9/F-11): PROJECT.md pre-flight — same slot as the SHIP ritual ----
+    // Validate-then-mutate (lesson 8a11d879): the refusal lands BEFORE any
+    // project.json mutation, task collection (staging), or auto-render, so a
+    // skeleton PROJECT.md never strands a half-archived phase. Applies only
+    // when a PROJECT.md exists (plain tasks seed none).
+    {
+      const pmPath = path.join(core.PROJECT_DIR, 'PROJECT.md');
+      let pmText = null;
+      if (fs.existsSync(pmPath)) { try { pmText = fs.readFileSync(pmPath, 'utf8'); } catch { /* unreadable */ } }
+      if (pmText !== null) {
+        const report = phasegate.projectMdSectionReport(pmText);
+        if (report.sections.length === 0 || report.lacking.length > 0) {
+          console.error(`${core.CONTRACTS.state_semantics.archiveBlocked} (PROJECT.md gate):`);
+          if (report.sections.length === 0) {
+            console.error('  ✗ .gos/project/PROJECT.md carries no `## ` section — a filled project vision needs at least one.');
+          } else {
+            console.error(`  ✗ .gos/project/PROJECT.md has ${report.lacking.length} unfilled section(s): ${report.lacking.map((s) => s.name).join(', ')}`);
+          }
+          console.error('  Fix: fill every `## ` section (replace the TODO guidance lines with real content, at least 20 codepoints per section), then re-run `gos archive`.');
+          process.exit(1);
+        }
+      }
+    }
+    // D-07: the obligation reads through the single root-anchored resolver —
+    // a relocated changelog (gos config changelog-path) is honored here.
     let changelogText = null;
-    try { changelogText = fs.readFileSync('CHANGELOG.md', 'utf8'); } catch { /* absent */ }
+    try { changelogText = fs.readFileSync(clcore.resolveChangelogMd(), 'utf8'); } catch { /* absent */ }
     if (changelogText === null) {
       console.error(`${core.CONTRACTS.state_semantics.archiveBlocked} (SHIP ritual):`);
       console.error('  ✗ SHIP BLOCKED: CHANGELOG.md not found — obligations start once the file exists');

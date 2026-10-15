@@ -1,8 +1,19 @@
 // ops/changelog-core — single-source CHANGELOG.md validator primitives.
 // Shared implementation for `gos changelog add` (pre-write gate) and
 // `gos changelog lint` (post-hoc enforcement): one validator, zero drift (R-05).
-// Pure functions only — no filesystem access, no CLI side effects; the command
-// shells live in bin/lib/task/changelog.cjs and consume this module.
+// The validator family stays pure — no filesystem access, no CLI side effects;
+// the command shells live in bin/lib/task/changelog.cjs and consume this module.
+//
+// D-07 (R-32) widens the module with the single root-anchored changelog
+// LOCATION resolver + the shared changelog lock: `path.resolve('CHANGELOG.md')`
+// at require time was cwd-anchored — subdir invocations bootstrapped a foreign
+// CHANGELOG and archive misreported. The resolver folds the two former
+// hardcodes (task/changelog.cjs + task/archive.cjs) into one function anchored
+// at the PROJECT ROOT (git toplevel → nearest .gos ancestor → cwd), reading
+// the PROJECT-layer config key `changelog_path` (global layer is never
+// consulted — a global value could not pass in-root validation for other
+// repos, D-07 R3-F8). Validation runs on BOTH the config-set write side and
+// the resolver read side (R1-F5) from one implementation below.
 //
 // Entry format contract (bullet inside [Unreleased] or a version section):
 //   `- <CategoryVerb> <one-sentence summary> (<D-nn|R-nn refs>) [YYYY-MM-DD]`
@@ -34,6 +45,10 @@
 //       [Unreleased] or in the latest version section
 
 'use strict';
+
+const fs = require('node:fs');
+const path = require('node:path');
+const core = require('../core/index.cjs');
 
 // Imperative category verbs an entry must start with (exact word, imperative
 // form). Exported so the add generator templates its output from the same
@@ -318,6 +333,212 @@ function promoteUnreleased(text, tag) {
   return { ok: true, text: out.join('\n') };
 }
 
+// ---- D-07 (R-32): single changelog location resolver + shared lock ----
+
+const CHANGELOG_PATH_KEY = 'changelog_path';
+const DEFAULT_CHANGELOG_REL = 'CHANGELOG.md';
+
+// Project root for changelog resolution — NEVER process cwd (R2-4): git
+// toplevel first (sandbox-isolation safe: every managed repo is its own git
+// tree, and a bare ancestor can never be mistaken for the project), then the
+// nearest ancestor carrying a .gos/ directory (non-git managed trees), then
+// cwd as the base of last resort for genuinely unmanaged trees.
+// Self-root carve-out: a resolved root equal to the CLI's OWN checkout is
+// never adopted from a nested cwd — scratch directories inside the
+// installation tree (the repo's test sandboxes) are unmanaged context, not
+// project subdirs (same interference pattern `run-sections --fresh` and T61
+// sidestep by placing fixtures outside the self-repo). At the self root
+// itself the root still wins: running AT the checkout is project context.
+function changelogProjectRoot() {
+  let here = process.cwd();
+  try { here = fs.realpathSync(here); } catch { /* keep cwd */ }
+  let selfRoot = core.GOS_SELF_ROOT;
+  try { selfRoot = fs.realpathSync(selfRoot); } catch { /* keep lexical */ }
+  const top = core.gitToplevelRealpath();
+  if (top) {
+    if (top === here) return top;
+    if (top === selfRoot) return here; // nested inside the CLI checkout — unmanaged
+    return top;
+  }
+  let dir = here;
+  for (;;) {
+    try { if (fs.statSync(path.join(dir, '.gos')).isDirectory() && dir !== selfRoot) return dir; } catch { /* not here */ }
+    const parent = path.dirname(dir);
+    if (parent === dir) return here;
+    dir = parent;
+  }
+}
+
+// Path-shape validation shared by `gos config changelog-path` (write side) and
+// the resolver (read side) — R1-F5 dual validation, one implementation.
+// Rejects: absolute paths, '..' segments (raw input AND normalized escape),
+// realpath escapes via symlink chains, anything under .git/, node_modules/,
+// or .gos/ entirely (R3-F8: agent artifacts never live at the .gos/ root —
+// orphan scan and ship adoption would sweep the file away), and any suffix
+// other than .md. Returns { ok, rel (posix), abs } or { ok: false, reason }.
+function validateChangelogRelPath(raw, root) {
+  const input = String(raw == null ? '' : raw).trim();
+  if (!input) return { ok: false, reason: 'path is empty — pass a repo-relative path like docs/CHANGELOG.md' };
+  if (path.isAbsolute(input)) {
+    return { ok: false, reason: `'${input}' is absolute — changelog-path is repo-relative and resolves against the project root` };
+  }
+  for (const seg of input.split(/[\\/]+/)) {
+    if (seg === '..') return { ok: false, reason: `'${input}' contains a '..' segment — the changelog must stay inside the project root` };
+  }
+  const abs = path.resolve(root, input);
+  const rel = path.relative(root, abs);
+  if (!rel || rel === '' || rel.startsWith('..') || path.isAbsolute(rel)) {
+    return { ok: false, reason: `'${input}' does not resolve inside the project root (${root})` };
+  }
+  const segs = rel.split(path.sep);
+  if (segs[0] === '.gos') {
+    return { ok: false, reason: `'${input}' lives under .gos/ (including .gos/cache/) — agent artifacts never live there; orphan scan and ship adoption would sweep the file away` };
+  }
+  if (segs.includes('.git')) return { ok: false, reason: `'${input}' lives under .git/ — git internals are off-limits` };
+  if (segs.includes('node_modules')) return { ok: false, reason: `'${input}' lives under node_modules/ — dependencies are off-limits` };
+  if (!/\.md$/.test(rel)) return { ok: false, reason: `'${input}' must end with .md` };
+  // Symlink containment: realpath the nearest existing ancestor — a link chain
+  // escaping the project root is rejected even when the lexical path is clean.
+  let probe = abs;
+  const tail = [];
+  for (;;) {
+    if (fs.existsSync(probe)) break;
+    tail.unshift(path.basename(probe));
+    const parent = path.dirname(probe);
+    if (parent === probe) { probe = null; break; }
+    probe = parent;
+  }
+  if (probe !== null) {
+    let rp = null;
+    try { rp = fs.realpathSync(probe); } catch { rp = null; }
+    if (rp !== null) {
+      const deep = tail.length ? path.join(rp, ...tail) : rp;
+      const relReal = path.relative(root, deep);
+      if (relReal === '' || relReal.startsWith('..') || path.isAbsolute(relReal)) {
+        return { ok: false, reason: `'${input}' resolves (realpath) outside the project root — symlink escape` };
+      }
+    }
+  }
+  return { ok: true, rel: segs.join('/'), abs };
+}
+
+// Project-layer `changelog_path` (never the merged two-layer view — the key is
+// project-owned by ruling). Read-side fail-closed: a corrupt layer DIES here
+// (no silent fallback to the default location; the quarantine rename stays a
+// config-command behavior — read-class commands never mutate).
+function configuredChangelogRel(root) {
+  const p = path.join(root, '.gos', 'config.json');
+  let raw;
+  try {
+    raw = fs.readFileSync(p, 'utf8');
+  } catch (e) {
+    if (e && e.code === 'ENOENT') return null;
+    core.die(`changelog: project config ${p} is unreadable (${e.message}) — fix the file, then re-run`);
+  }
+  let obj;
+  try {
+    obj = JSON.parse(raw);
+  } catch (e) {
+    core.die(`changelog: project config ${p} is corrupt (${e.message}) — fix or delete it (the next \`gos config\` write command quarantines it), then re-run. Refusing to fall back to the default location silently.`);
+  }
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+    core.die(`changelog: project config ${p} is not a JSON object — fix or delete it, then re-run`);
+  }
+  const v = obj[CHANGELOG_PATH_KEY];
+  if (v === undefined || v === null) return null;
+  return String(v);
+}
+
+// THE resolver (folds the former changelog.cjs:38 + archive.cjs:144
+// hardcodes): absolute path of the changelog, anchored at the project root and
+// reading the project-layer config. Hand-edited config values are re-validated
+// here (R1-F5 read-side half) — invalid stored values die with fix guidance.
+function resolveChangelogMd() {
+  const root = changelogProjectRoot();
+  const rel = configuredChangelogRel(root);
+  if (rel == null) return path.join(root, DEFAULT_CHANGELOG_REL);
+  const v = validateChangelogRelPath(rel, root);
+  if (!v.ok) {
+    core.die(`changelog: configured changelog_path '${rel}' is invalid — ${v.reason}. Fix it with \`gos config changelog-path <repo-relative .md path>\` or remove '${CHANGELOG_PATH_KEY}' from ${path.join(root, '.gos', 'config.json')}`);
+  }
+  return v.abs;
+}
+
+// ---- shared changelog lock (moved from task/changelog.cjs — D-07) ----
+// Root-anchored (was cwd-anchored) so every consumer serializes on one lock
+// file per project. Lock ordering is pinned: .gos/.lock → changelog.lock
+// (R2-4); `gos config changelog-path` (write-class dispatch already holds
+// .gos/.lock) acquires this second and holds both across the whole mv.
+
+const CHANGELOG_LOCK_WAIT_MS = 15000;
+const CHANGELOG_LOCK_RETRY_MS = 50;
+const CHANGELOG_LOCK_STALE_MS = 120000;
+
+let _changelogLockOwned = false;
+
+function changelogLockPath() {
+  return path.join(changelogProjectRoot(), '.gos', 'cache', 'changelog.lock');
+}
+
+// O_EXCL acquire with bounded wait: a live holder is waited out (concurrent
+// adds / config-set moves serialize), a dead-pid / stale-heartbeat / corrupt
+// holder is broken.
+function acquireChangelogLock() {
+  const lockPath = changelogLockPath();
+  fs.mkdirSync(path.dirname(lockPath), { recursive: true });
+  const deadline = Date.now() + CHANGELOG_LOCK_WAIT_MS;
+  for (;;) {
+    let fd = null;
+    try {
+      fd = fs.openSync(lockPath, 'wx');
+    } catch (e) {
+      if (e.code !== 'EEXIST') core.die(`changelog lock: open failed (${e.message})`);
+      let info = null;
+      try { info = JSON.parse(fs.readFileSync(lockPath, 'utf8')); } catch { /* empty or corrupt */ }
+      let mtimeStale = false;
+      try { mtimeStale = Date.now() - fs.statSync(lockPath).mtimeMs > CHANGELOG_LOCK_STALE_MS; } catch { mtimeStale = false; }
+      // Dead-owner evidence: re-read and only break the lock that still carries
+      // the pid we judged dead (a fresh owner may have replaced it meanwhile).
+      if (info !== null && !core.pidAlive(info.pid)) {
+        let cur = null;
+        try { cur = JSON.parse(fs.readFileSync(lockPath, 'utf8')); } catch { /* gone or corrupt */ }
+        if (cur !== null && cur.pid === info.pid) {
+          try { fs.unlinkSync(lockPath); } catch { /* racing */ }
+        }
+        continue;
+      }
+      // Age evidence: an empty/corrupt lock younger than CHANGELOG_LOCK_STALE_MS
+      // may be mid-write by a just-started holder (open 'wx' precedes the pid
+      // write) — breaking it here would let two writers hold the lock at once.
+      if (mtimeStale) {
+        try { fs.unlinkSync(lockPath); } catch { /* racing */ }
+        continue;
+      }
+      if (Date.now() > deadline) {
+        core.die(`changelog lock: held by live pid ${info.pid} (since ${info.started_at}) — waited ${CHANGELOG_LOCK_WAIT_MS}ms; inspect ${lockPath}`);
+      }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, CHANGELOG_LOCK_RETRY_MS);
+      continue;
+    }
+    try {
+      fs.writeSync(fd, JSON.stringify({ pid: process.pid, started_at: new Date().toISOString() }));
+    } finally {
+      fs.closeSync(fd);
+    }
+    _changelogLockOwned = true;
+    process.on('exit', () => { releaseChangelogLock(); });
+    return;
+  }
+}
+
+// Ownership flag guards the unlink: after an intentional release a new
+// process may already hold a fresh lock at the same path — never remove it.
+function releaseChangelogLock() {
+  if (!_changelogLockOwned) return;
+  _changelogLockOwned = false;
+  try { fs.unlinkSync(changelogLockPath()); } catch { /* already gone */ }
+}
+
 module.exports = {
   CATEGORY_VERBS,
   parseChangelog,
@@ -325,4 +546,11 @@ module.exports = {
   validateStructure,
   promoteUnreleased,
   utcToday,
+  changelogProjectRoot,
+  validateChangelogRelPath,
+  configuredChangelogRel,
+  resolveChangelogMd,
+  changelogLockPath,
+  acquireChangelogLock,
+  releaseChangelogLock,
 };

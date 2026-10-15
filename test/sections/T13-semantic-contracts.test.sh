@@ -86,14 +86,8 @@ for SUB in all truths coverage lessons; do
 done
 
 # --- T13.7: no ✓ → no banner (gate lessons without any lessons truth = nothing to check) ---
+# (sentinel deleted D-09: the gate reads truth-file existence only — no config key)
 rm -f .gos/lessons.md .gos/lessons.json .gos/cache/.lessons-anchors.json
-python3 -c "
-import json
-p='.gos/config.json'
-try:
-    c=json.load(open(p)); c['lessons_migrated']=False; json.dump(c,open(p,'w'),indent=2)
-except FileNotFoundError:
-    json.dump({'lessons_migrated':False},open(p,'w'),indent=2)"
 set +e; LOUT=$(node "$GOS" gate lessons 2>&1); LRC=$?; set -e
 assert_exit "gate lessons without lessons truth exits 0" 0 "$LRC"
 if printf '%s\n' "$LOUT" | grep -q "$BANNER"; then
@@ -101,10 +95,6 @@ if printf '%s\n' "$LOUT" | grep -q "$BANNER"; then
 else
   echo "  ✓ no banner without ✓ (nothing-to-check path)"; PASS=$((PASS+1))
 fi
-python3 -c "
-import json
-p='.gos/config.json'
-c=json.load(open(p)); c['lessons_migrated']=True; json.dump(c,open(p,'w'),indent=2)"
 
 # --- T13.8: input-constraint helper via `_contract --check-input` [R1-F9] ---
 set +e

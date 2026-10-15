@@ -6,6 +6,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const core = require('../core/index.cjs');
+const decisions = require('./decisions.cjs');
 
 const REQ_ID_RE = /^R-\d{2,3}$/;
 
@@ -71,6 +72,7 @@ function cmdRequirement(args) {
     core.writeState(state);
     console.log(`${core.CONTRACTS.command_contracts.reqAdded}${id.slice(2)} added: ${text}`);
     console.log('Next: gos requirement list');
+    if (state.project === true && proj) decisions.autoRenderViews(proj); // D-03: views stay fresh after the mutation
     return;
   }
 
@@ -119,6 +121,7 @@ function cmdRequirement(args) {
     if (pr) core.saveProject(proj);
     if (sr) core.writeState(state);
     console.log(`✓ Requirement ${id} claimed by ${phaseL}`);
+    if (pr) decisions.autoRenderViews(proj); // D-03: views stay fresh after the mutation
     return;
   }
 

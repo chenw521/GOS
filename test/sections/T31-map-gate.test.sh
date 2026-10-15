@@ -89,9 +89,9 @@ assert_file "T31.8a init seeds .gos/cache/edges.json" ".gos/cache/edges.json"
 python3 -c "import json;d=json.load(open('.gos/cache/edges.json'));exit(0 if d.get('edges')==[] and d.get('schema_version')==1 else 1)" && echo "  ✓ init seed schema valid" && PASS=$((PASS+1)) || { echo "  ✗ init seed schema wrong"; FAIL=$((FAIL+1)); }
 cd "$T31_DIR" && rm -rf "$INIT_DIR"
 
-# --- T31.9 static: .lock ignored; cache/ whole-dir ignored (edges.lock/json moved in); logs/ reverse tracked ---
-if grep -qx "\.gos/\.lock" "$GOS_ROOT/.gitignore" && grep -qx "\.gos/cache/" "$GOS_ROOT/.gitignore" && grep -qx "!\.gos/logs/\*\*" "$GOS_ROOT/.gitignore"; then
-  echo "  ✓ .gitignore: .lock+cache/ ignored; logs/ reversed tracked"; PASS=$((PASS+1))
+# --- T31.9 static: .lock ignored; cache/ whole-dir ignored (edges.lock/json moved in); logs/ machine-local (D-01) ---
+if grep -qx "\.gos/\.lock" "$GOS_ROOT/.gitignore" && grep -qx "\.gos/cache/" "$GOS_ROOT/.gitignore" && grep -qx "\.gos/logs/" "$GOS_ROOT/.gitignore" && ! grep -q '!\.gos/logs' "$GOS_ROOT/.gitignore"; then
+  echo "  ✓ .gitignore: .lock+cache/ ignored; logs/ machine-local (no reversal)"; PASS=$((PASS+1))
 else echo "  ✗ .gitignore coverage wrong"; FAIL=$((FAIL+1)); fi
 
 # --- T31.10 gate integration hook exists (integrity function + die message family) ---

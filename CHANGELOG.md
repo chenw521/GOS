@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add Milestone trust-repair intake completed: 23 open issues triaged and labelled, 24 requirements mapped across three phases, seeded-asset lifecycle audit filed as issues 18 to 23, milestone archives documented (R-01) [2026-10-14]
+- Change Milestone v1.0.0-dev closed with roadmap and requirements archived to milestones and an annotated tag cut, and the successor milestone initialized for the 17 open self-hosting issues across three phases (R-01) [2026-10-13]
 - Add delta.md renders spec decision titles for decision-less Lv1/2 archives with provenance marker (R-01) [2026-10-12]
 - Add P14 closeout — ascii filename guard wired into CI and gate all beside cjk-lint, plus release process docs at .github/RELEASE.md with dormant benchmark rule (R-01) [2026-10-12]
 - Add gos brownfield unified adoption for existing repositories — safe-skip conflicts with tiered overwrite, dormant hooks, guidance-only AGENTS, single-object JSON report (D-88/D-89/D-90/D-91/D-92/D-93/D-94/D-95/D-96/D-97/D-98/D-99/D-100/R-01) [2026-10-12]

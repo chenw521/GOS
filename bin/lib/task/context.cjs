@@ -56,6 +56,16 @@ function cmdContext(args) {
   if (stage === 'THINK') {
     out.read_files = ['.gos/state.json'];
     if (fs.existsSync(path.join(core.PROJECT_DIR, 'DECISIONS.md'))) out.read_files.push('.gos/project/DECISIONS.md');
+    // D-06/R-33: a FILLED PROJECT.md joins the THINK read set — a TODO-only
+    // skeleton must not pose as project vision (predicate shared with the
+    // approve-archive gate; see knowledge/phase.cjs).
+    {
+      const pmPath = path.join(core.PROJECT_DIR, 'PROJECT.md');
+      if (fs.existsSync(pmPath)) {
+        try { if (knowledge.projectMdFilled(fs.readFileSync(pmPath, 'utf8'))) out.read_files.push('.gos/project/PROJECT.md'); }
+        catch { /* unreadable PROJECT.md must never break context */ }
+      }
+    }
     pushCuratedConcerns(out);
     if (fs.existsSync(path.join(core.GOS_DIR, 'lessons.md'))) out.read_files.push('.gos/lessons.md');
     // B-11/B-16 [R1-F8]: global lessons join read_files with untrusted annotation

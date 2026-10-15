@@ -46,6 +46,17 @@ t39_setup() {
   mkdir -p "$T39_DIR" && cd "$T39_DIR" || exit 1
   git init -q . && git -c user.email=t@t -c user.name=t commit -q --allow-empty -m root
   node "$GOS" init --project 1 "t39 container" >/dev/null 2>&1
+  # T90 PROJECT.md gate: fill the seeded skeleton (TODO-only would block archive preflight)
+  cat > .gos/project/PROJECT.md << 'EOF'
+## What This Is
+t39 fixture container for render-truth, park lifecycle, and ghost-plan coverage.
+
+## Core Value
+Exercises parked-phase debt visibility and legacy residual rendering in one section.
+
+## Requirements Evolution
+Legacy done-phase residuals (frozen requirement, superseded decisions) are injected below.
+EOF
   node "$GOS" phase add "A-alpha: first" --goal "t39 fixture one" >/dev/null 2>&1
   node "$GOS" phase add "B-beta: second" --goal "t39 fixture two" >/dev/null 2>&1
   node "$GOS" phase add "C-gamma: third" --goal "t39 fixture three" >/dev/null 2>&1

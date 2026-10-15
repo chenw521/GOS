@@ -354,7 +354,7 @@ const CONTRACTS = {
   semantic_checks: {
     banner: 'gate checks syntax+consistency only, not semantic quality',
     evidenceShape: '{command, output_excerpt, artifact_path}',
-    excerptFeature: 'exit-code|count|path (one must match)',
+    excerptFeature: 'exit-code|count|path (manual); count|path|KV (replay; synthetic exit/status keys vetoed)',
     bidirectional: 'state.decisions ↔ plan Covers exact equality (R-NN one-way)',
     diffHit: 'task∩diff nonempty AND diff⊆∪Files(allowlist)',
     pathExists: 'artifact_path exists on disk at gate time',
@@ -538,11 +538,61 @@ function checkInputConstraint({ value, maxCp, label = 'input', noNewlineListPref
   return { ok: true, value: trimmed };
 }
 
-const EVIDENCE_FEATURE_RES = [
+// D-04 [R-26]: evidence features split per mode. MANUAL keeps the original
+// three (exit-code allowed — the manual excerpt bar is unchanged); REPLAY
+// widens the count/KV families and is subject to the synthetic-key veto in
+// replayEvidenceHit below.
+const EVIDENCE_FEATURE_RES_MANUAL = [
   /exit( code)?[ :=]+\d/i,                                         // ① exit code
   /\d+\s+(passed|failed|tests?|assertions?|files?|gates?|条|个)/i,  // ② numeric stats
   /[\/\w@.-]+\.(cjs|js|ts|py|R|sh|md|json)(:\d+)?/,                // ③ file path
 ];
+
+// Replay-only families, weakest evidence last: ② digit-then-word, ② digit-
+// after-word (enumerated forms like `total 165` — generic by design, the veto
+// kills the synthetic-key subset), ③ file path, ④ KV `KEY=VALUE`/`KEY: VALUE`.
+const EVIDENCE_FEATURE_RES_REPLAY = [
+  /\d+\s+(passed|failed|tests?|assertions?|files?|gates?|条|个)/i,  // ②a digit-then-word
+  /\b[A-Za-z][A-Za-z_]*\s+\d+/,                                     // ②b digit-after-word
+  /[\/\w@.-]+\.(cjs|js|ts|py|R|sh|md|json)(:\d+)?/,                // ③ file path
+  /^([A-Za-z_][\w .-]*?)\s*[=:]\s*\S+/,                             // ④ KV family
+];
+
+// Tiered replay hit selection (count > path > KV, document order within a
+// tier). R1 hardening: (a) synthetic-key veto is LHS-normalized (lowercase +
+// strip [_\s-]) against {exit, exitcode, rc, returncode, code, status, ret},
+// killing `Exit=0`, `EXIT_CODE=0`, `rc:0`, `status 0` variants in any tier;
+// (b) on any `=` line a path hit on the RHS is demoted (never tier ③) and the
+// KV tier skips env-noise LHS {path, home, pwd, shell, lang, ls_colors,
+// npm_config_*} — `PATH=/usr/.../x.js` can never win the excerpt; (c) ANSI
+// CSI sequences are stripped before classification. Widened families raise
+// convenience, not authenticity (echo-forgeable; artifact-on-disk is the
+// non-forgeable leg) — spec D-04 honest note.
+function replayEvidenceHit(stdoutText) {
+  const normLhs = (s) => s.toLowerCase().replace(/[_\s-]/g, '');
+  const VETO = new Set(['exit', 'exitcode', 'rc', 'returncode', 'code', 'status', 'ret']);
+  const ENV_NOISE = new Set(['path', 'home', 'pwd', 'shell', 'lang', 'lscolors']);
+  const vetoShape = /^([A-Za-z][\w\s-]*?)\s*(?:[=:]|\s)\s*\d+/;
+  const kvShape = EVIDENCE_FEATURE_RES_REPLAY[3];
+  const lines = String(stdoutText == null ? '' : stdoutText)
+    .replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '') // ANSI CSI strip
+    .split(/\r?\n/)
+    .map((l) => l.trim());
+  const tiers = { count: null, path: null, kv: null };
+  for (const l of lines) {
+    if (!l || cpLen(l) > 200) continue;
+    const vm = vetoShape.exec(l);
+    if (vm && VETO.has(normLhs(vm[1]))) continue; // vetoed synthetic key: no tier at all
+    const eqAt = l.indexOf('=');
+    const pathScope = eqAt >= 0 ? l.slice(0, eqAt) : l; // `=`-RHS path demoted from ③
+    const km = kvShape.exec(l);
+    const kvLhs = km ? normLhs(km[1]) : null;
+    if (!tiers.count && (EVIDENCE_FEATURE_RES_REPLAY[0].test(l) || EVIDENCE_FEATURE_RES_REPLAY[1].test(l))) tiers.count = l;
+    if (!tiers.path && EVIDENCE_FEATURE_RES_REPLAY[2].test(pathScope)) tiers.path = l;
+    if (!tiers.kv && km && !VETO.has(kvLhs) && !ENV_NOISE.has(kvLhs) && !kvLhs.startsWith('npmconfig')) tiers.kv = l;
+  }
+  return tiers.count || tiers.path || tiers.kv || null;
+}
 
 function validateEvidenceObject(ev, repoRoot) {
   if (ev === undefined || ev === null) return CONTRACTS.state_semantics.evidenceMissing;
@@ -563,7 +613,10 @@ function validateEvidenceObject(ev, repoRoot) {
     errs.push(`evidence.output_excerpt: non-empty string required (feature match needed: ${CONTRACTS.semantic_checks.excerptFeature})`);
   } else {
     if (cpLen(exc) > 200) errs.push(`evidence.output_excerpt: ${cpLen(exc)} codepoints exceeds cap 200`);
-    if (!EVIDENCE_FEATURE_RES.some((re) => re.test(exc))) {
+    const featureOk = ev.replay === true
+      ? replayEvidenceHit(exc) !== null
+      : EVIDENCE_FEATURE_RES_MANUAL.some((re) => re.test(exc));
+    if (!featureOk) {
       errs.push(`evidence.output_excerpt: no feature match (${CONTRACTS.semantic_checks.excerptFeature})`);
     }
     const bt2 = badText(exc);
@@ -875,6 +928,16 @@ const COMMANDS = {
     next: ['gos gate truths'],
     contractKeys: [],
   },
+  'logs': {
+    desc: 'view runtime audit ledgers: receipts | exemptions | audit (formatted tables, --last N, default 20)', class: 'read', aliases: [], core: false,
+    subs: ['receipts', 'exemptions', 'audit'],
+    flags: [
+      { name: '--last', scope: 'logs', effect: 'show only the last N entries (default 20)', risk: 'safe' },
+    ],
+    usage: 'gos logs <receipts|exemptions|audit> [--last N]',
+    next: ['gos logs receipts', 'gos gate all'],
+    contractKeys: [],
+  },
   'gap': {
     desc: 'state gaps: list | resolve <G-id> --resolution "<r>" (fail-closed)', class: 'write', aliases: [], core: false,
     subs: ['list', 'resolve <G-id> --resolution "<r>"'], flags: [],
@@ -1009,5 +1072,7 @@ module.exports = {
   PHASE_STATUS,
   CONTRACTS,
   STAGE_ORDER,
-  EVIDENCE_FEATURE_RES,
+  EVIDENCE_FEATURE_RES_MANUAL,
+  EVIDENCE_FEATURE_RES_REPLAY,
+  replayEvidenceHit,
 };

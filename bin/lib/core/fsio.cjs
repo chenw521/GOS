@@ -75,13 +75,14 @@ const GOS_PATHS = {
   edges_lock:       { rel: 'cache/edges.lock', producer: 'cli (commit)', readers: 'commit gate', purge: 'regen each commit', tracked: false, granularity: 'file' },
   edges:            { rel: 'cache/edges.json', producer: 'cli', readers: 'map', purge: 'regen', tracked: false, granularity: 'file' },
   backups_dir:      { rel: 'cache/backups', producer: 'cli (network.md refresh)', readers: 'none (rolling keep-5 recovery)', purge: 'rolling', tracked: false, granularity: 'dir' },
+  render_backup:    { rel: 'cache/render-backup', producer: 'cli (render)', readers: 'recovery (pre-write view snapshots)', purge: 'rolling (14d expiry, full history)', tracked: false, granularity: 'dir' },
   concerns_anchors: { rel: 'cache/.concerns-anchors.json', producer: 'cli', readers: 'concerns anchor guard', purge: 'regen', tracked: false, granularity: 'file' },
   concerns_anchors_bak: { rel: 'cache/.concerns-anchors.bak', producer: 'cli', readers: 'recovery shadow', purge: 'regen', tracked: false, granularity: 'file' },
   lessons_anchors:  { rel: 'cache/.lessons-anchors.json', producer: 'cli', readers: 'lessons derived cache (live_ids; rebuildable via lessons anchor-rebuild)', purge: 'regen', tracked: false, granularity: 'file' },
-  // --- logs/: audit receipts, tracked (Phase D T10 semantics preserved) ---
-  truth_receipts:   { rel: 'logs/truth-receipts.md', producer: 'cli (truth verify)', readers: 'verify/audit', purge: 'never (cross-machine audit)', tracked: true, granularity: 'file' },
-  exemptions:       { rel: 'logs/exemptions.log', producer: 'cli (gate --exempt)', readers: 'exempt audit', purge: 'never (cross-machine audit)', tracked: true, granularity: 'file' },
-  edge_audit:       { rel: 'logs/edge-audit.log', producer: 'cli (commit gate)', readers: 'edge audit', purge: 'never (cross-machine audit)', tracked: true, granularity: 'file' },
+  // --- logs/: runtime audit ledgers, machine-local by design (D-01: durable audit = archive/ + CHANGELOG + commits) ---
+  truth_receipts:   { rel: 'logs/truth-receipts.md', producer: 'cli (truth verify)', readers: 'verify/audit', purge: 'runtime state, machine-local', tracked: false, granularity: 'file' },
+  exemptions:       { rel: 'logs/exemptions.log', producer: 'cli (gate --exempt)', readers: 'exempt audit', purge: 'runtime state, machine-local', tracked: false, granularity: 'file' },
+  edge_audit:       { rel: 'logs/edge-audit.log', producer: 'cli (commit gate)', readers: 'edge audit', purge: 'runtime state, machine-local', tracked: false, granularity: 'file' },
   // --- task/<id>/: per-phase in-flight artifacts (dynamic) ---
   spec:             { rel: 'task/<task_id>/spec.md', producer: 'agent (THINK)', readers: 'plan/review/verify', purge: 'archived at commit ship', tracked: true, granularity: 'file' },
   plan:             { rel: 'task/<task_id>/plan.md', producer: 'agent (PLAN)', readers: 'build/review', purge: 'archived at commit ship', tracked: true, granularity: 'file' },

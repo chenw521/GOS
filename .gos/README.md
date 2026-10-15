@@ -39,6 +39,7 @@ Every artifact under .gos/: who writes it, who reads it, when it can be deleted.
 | `cache/edges.lock` | cli (commit) | commit gate | regen each commit | no |
 | `cache/edges.json` | cli | map | regen | no |
 | `cache/backups` | cli (network.md refresh) | none (rolling keep-5 recovery) | rolling | no |
+| `cache/render-backup` | cli (render) | recovery (pre-write view snapshots) | rolling (14d expiry, full history) | no |
 | `cache/.concerns-anchors.json` | cli | concerns anchor guard | regen | no |
 | `cache/.concerns-anchors.bak` | cli | recovery shadow | regen | no |
 | `cache/.lessons-anchors.json` | cli | lessons derived cache (live_ids; rebuildable via lessons anchor-rebuild) | regen | no |
@@ -47,9 +48,9 @@ Every artifact under .gos/: who writes it, who reads it, when it can be deleted.
 
 | Path | Producer | Readers | Purge policy | Tracked |
 |:--|:--|:--|:--|:--|
-| `logs/truth-receipts.md` | cli (truth verify) | verify/audit | never (cross-machine audit) | yes |
-| `logs/exemptions.log` | cli (gate --exempt) | exempt audit | never (cross-machine audit) | yes |
-| `logs/edge-audit.log` | cli (commit gate) | edge audit | never (cross-machine audit) | yes |
+| `logs/truth-receipts.md` | cli (truth verify) | verify/audit | runtime state, machine-local | no |
+| `logs/exemptions.log` | cli (gate --exempt) | exempt audit | runtime state, machine-local | no |
+| `logs/edge-audit.log` | cli (commit gate) | edge audit | runtime state, machine-local | no |
 
 ## task/&lt;id&gt;/ — per-phase in-flight artifacts (dynamic, resolved per active task)
 

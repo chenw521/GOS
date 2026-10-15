@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # gos-map:cmd render
-# T7: renderer (three GENERATED views + MANUAL preservation + backup rotation)
+# T7: renderer (three GENERATED views + MANUAL preservation + D-08 backup lifecycle)
+# D-08: backups under .gos/cache/render-backup, full history (no rotation), 14d expiry
+# sweep on render entry, one-shot migration from legacy .gos/archive/render-backup.
 # Env: GOS (CLI path), TESTBASE (repo root for sandbox), + assert helpers sourced by runner
 T7_DIR=""
 
@@ -77,10 +79,83 @@ assert_contains "manual note preserved after re-render" "my manual note" "$DEC2"
 MC=$(grep -c '^<!-- MANUAL:notes -->$' .gos/project/DECISIONS.md)
 assert_eq "manual marker exactly once" "1" "$MC"
 
-# --- T7.5: backup rotation — render 6× keeps ≤5 backup dirs ---
+# --- T7.5: D-08 backup relocation — .gos/cache/render-backup, full history (no keep-5) ---
 for i in 1 2 3 4 5 6; do node "$GOS" render >/dev/null 2>&1 || true; done
-BC=$(ls -1 .gos/archive/render-backup 2>/dev/null | wc -l | tr -d ' ')
-if [ "$BC" -le 5 ] && [ "$BC" -ge 1 ]; then echo "  ✓ backup rotation keeps ≤5 dirs (found $BC)"; PASS=$((PASS+1)); else echo "  ✗ backup rotation broken (found ${BC:-0})"; FAIL=$((FAIL+1)); fi
+assert_file "backup dir relocated to .gos/cache/render-backup" ".gos/cache/render-backup"
+BC=$(ls -1 .gos/cache/render-backup 2>/dev/null | wc -l | tr -d ' ')
+if [ "${BC:-0}" -ge 6 ]; then echo "  ✓ full history kept — no keep-5 rotation (found $BC)"; PASS=$((PASS+1)); else echo "  ✗ full history broken — rotation still active (found ${BC:-0})"; FAIL=$((FAIL+1)); fi
+if [ ! -e .gos/archive/render-backup ]; then echo "  ✓ fresh sandbox never creates legacy archive path"; PASS=$((PASS+1)); else echo "  ✗ fresh render still writes .gos/archive/render-backup"; FAIL=$((FAIL+1)); fi
+
+# --- T7.5a: D-08 one-shot migration — timestamp dirs move, junk stays behind + warning ---
+LEG=.gos/archive/render-backup
+MIG_A=$(date -u -d '2 days ago' +%Y-%m-%dT%H-%M-%S-000Z)
+MIG_B=$(date -u -d '1 day ago' +%Y-%m-%dT%H-%M-%S-000Z)
+mkdir -p "$LEG/$MIG_A" "$LEG/$MIG_B" "$LEG/junk-dir"
+echo miga > "$LEG/$MIG_A/DECISIONS.md"
+echo migb > "$LEG/$MIG_B/DECISIONS.md"
+echo stay > "$LEG/junk-dir/keep.txt"
+echo stray > "$LEG/stray.txt"
+set +e; MOUT=$(node "$GOS" render 2>&1); MRC=$?; set -e
+assert_exit "render exits 0 with legacy dir present" 0 "$MRC"
+assert_file "legacy snapshot A migrated" ".gos/cache/render-backup/$MIG_A"
+assert_file "legacy snapshot B migrated" ".gos/cache/render-backup/$MIG_B"
+assert_eq "migrated content intact" "miga" "$(cat ".gos/cache/render-backup/$MIG_A/DECISIONS.md" 2>/dev/null)"
+assert_file "junk dir stays behind" "$LEG/junk-dir"
+assert_file "junk file stays behind" "$LEG/stray.txt"
+if [ ! -e "$LEG/$MIG_A" ] && [ ! -e "$LEG/$MIG_B" ]; then echo "  ✓ legacy timestamp dirs drained"; PASS=$((PASS+1)); else echo "  ✗ legacy timestamp dirs remain un-migrated"; FAIL=$((FAIL+1)); fi
+if printf '%s' "$MOUT" | grep -qF '[render-backup]'; then echo "  ✓ migration warning banner present"; PASS=$((PASS+1)); else echo "  ✗ migration warning missing"; FAIL=$((FAIL+1)); fi
+if printf '%s' "$MOUT" | grep -qF 'junk-dir'; then echo "  ✓ junk-dir warned"; PASS=$((PASS+1)); else echo "  ✗ junk-dir not warned"; FAIL=$((FAIL+1)); fi
+if printf '%s' "$MOUT" | grep -qF 'stray.txt'; then echo "  ✓ stray.txt warned"; PASS=$((PASS+1)); else echo "  ✗ stray.txt not warned"; FAIL=$((FAIL+1)); fi
+
+# --- T7.5b: D-08 14d expiry sweep — expired non-newest removed, young kept ---
+SW_O1=$(date -u -d '30 days ago' +%Y-%m-%dT%H-%M-%S-000Z)
+SW_O2=$(date -u -d '20 days ago' +%Y-%m-%dT%H-%M-%S-000Z)
+mkdir -p ".gos/cache/render-backup/$SW_O1" ".gos/cache/render-backup/$SW_O2"
+echo o1 > ".gos/cache/render-backup/$SW_O1/DECISIONS.md"
+echo o2 > ".gos/cache/render-backup/$SW_O2/DECISIONS.md"
+node "$GOS" render >/dev/null 2>&1 || true
+if [ ! -e ".gos/cache/render-backup/$SW_O1" ]; then echo "  ✓ expired 30d entry removed"; PASS=$((PASS+1)); else echo "  ✗ expired 30d entry survived sweep"; FAIL=$((FAIL+1)); fi
+if [ ! -e ".gos/cache/render-backup/$SW_O2" ]; then echo "  ✓ expired 20d entry removed (young newest exists)"; PASS=$((PASS+1)); else echo "  ✗ expired 20d entry survived sweep"; FAIL=$((FAIL+1)); fi
+assert_file "migrated young snapshot A kept by sweep" ".gos/cache/render-backup/$MIG_A"
+assert_file "migrated young snapshot B kept by sweep" ".gos/cache/render-backup/$MIG_B"
+
+# --- T7.5c: D-08 hard floor — newest backup never deleted, all-expired case ---
+t7_teardown; t7_setup
+node "$GOS" init 4 "plat" --project >/dev/null 2>&1
+t7_seed
+FL_1=$(date -u -d '30 days ago' +%Y-%m-%dT%H-%M-%S-000Z)
+FL_2=$(date -u -d '20 days ago' +%Y-%m-%dT%H-%M-%S-000Z)
+mkdir -p ".gos/cache/render-backup/$FL_1" ".gos/cache/render-backup/$FL_2"
+echo f1 > ".gos/cache/render-backup/$FL_1/DECISIONS.md"
+echo f2 > ".gos/cache/render-backup/$FL_2/DECISIONS.md"
+node "$GOS" render >/dev/null 2>&1 || true
+if [ ! -e ".gos/cache/render-backup/$FL_1" ]; then echo "  ✓ all-expired: older entry still removed"; PASS=$((PASS+1)); else echo "  ✗ all-expired: older entry survived"; FAIL=$((FAIL+1)); fi
+if [ -e ".gos/cache/render-backup/$FL_2" ]; then echo "  ✓ hard floor: newest expired backup NEVER deleted"; PASS=$((PASS+1)); else echo "  ✗ hard floor violated — newest expired backup deleted"; FAIL=$((FAIL+1)); fi
+
+# --- T7.5d: D-08 sweep adversarial — symlink/junk/future-stamp warn+skip, never traversed ---
+# isolate FL_2 as the sole timestamp candidate (young backups from 5c's render
+# would legally outrank it — the floor only protects the NEWEST backup)
+ls .gos/cache/render-backup 2>/dev/null | grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}T' | grep -vx "$FL_2" | while read -r d; do rm -rf ".gos/cache/render-backup/$d"; done
+EVIL="$T7_DIR/evil-target"
+mkdir -p "$EVIL"; echo payload > "$EVIL/inside.txt"
+ln -s "$EVIL" ".gos/cache/render-backup/evil-link"
+mkdir ".gos/cache/render-backup/not-a-stamp"
+echo j > ".gos/cache/render-backup/junk.txt"
+FUT=$(date -u -d '+30 days' +%Y-%m-%dT%H-%M-%S-000Z)
+mkdir ".gos/cache/render-backup/$FUT"; echo fut > ".gos/cache/render-backup/$FUT/DECISIONS.md"
+mkdir ".gos/cache/render-backup/2026-10-15Tnotparsable"
+set +e; DOUT=$(node "$GOS" render 2>&1); DRC=$?; set -e
+assert_exit "render exits 0 amid adversarial entries" 0 "$DRC"
+if [ -L ".gos/cache/render-backup/evil-link" ]; then echo "  ✓ symlink skipped (link intact)"; PASS=$((PASS+1)); else echo "  ✗ symlink removed by sweep"; FAIL=$((FAIL+1)); fi
+assert_file "symlink target never traversed (payload intact)" "$EVIL/inside.txt"
+assert_file "non-timestamp dir skipped" ".gos/cache/render-backup/not-a-stamp"
+assert_file "junk file at backup root skipped" ".gos/cache/render-backup/junk.txt"
+assert_file "future-stamped entry skipped" ".gos/cache/render-backup/$FUT"
+assert_file "unparseable-prefix entry skipped" ".gos/cache/render-backup/2026-10-15Tnotparsable"
+if [ -e ".gos/cache/render-backup/$FL_2" ]; then echo "  ✓ floor holds amid junk (expired newest kept)"; PASS=$((PASS+1)); else echo "  ✗ floor lost amid junk entries"; FAIL=$((FAIL+1)); fi
+if printf '%s' "$DOUT" | grep -qF 'evil-link'; then echo "  ✓ symlink warned"; PASS=$((PASS+1)); else echo "  ✗ symlink not warned"; FAIL=$((FAIL+1)); fi
+if printf '%s' "$DOUT" | grep -qF 'not-a-stamp'; then echo "  ✓ junk dir warned"; PASS=$((PASS+1)); else echo "  ✗ junk dir not warned"; FAIL=$((FAIL+1)); fi
+if printf '%s' "$DOUT" | grep -qF "$FUT"; then echo "  ✓ future stamp warned"; PASS=$((PASS+1)); else echo "  ✗ future stamp not warned"; FAIL=$((FAIL+1)); fi
 
 # --- T7.6: no project.json → advisory message, exit 0 ---
 t7_teardown; t7_setup

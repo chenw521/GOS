@@ -23,7 +23,7 @@ function truthFind(state, id) {
   return (state.observable_truths || []).find((t) => t && t.id === id) || null;
 }
 
-function appendTruthReceipt(id, commandStr) {
+function appendTruthReceipt(id, commandStr, truthText) {
   // B-18-class hardening: a tracked symlink (.gos/truth-receipts.md → arbitrary
   // file) must not redirect receipt content; lstat regular-file check + O_NOFOLLOW.
   if (fs.existsSync(TRUTH_RECEIPTS_PATH) && !fs.lstatSync(TRUTH_RECEIPTS_PATH).isFile()) {
@@ -32,9 +32,12 @@ function appendTruthReceipt(id, commandStr) {
   let needsNl = false;
   fs.mkdirSync(path.dirname(TRUTH_RECEIPTS_PATH), { recursive: true }); // logs/ may not exist yet
   try { const prev = fs.readFileSync(TRUTH_RECEIPTS_PATH, 'utf8'); needsNl = prev.length > 0 && !prev.endsWith('\n'); } catch { /* first receipt */ }
-  const d = new Date();
-  const p = (n) => String(n).padStart(2, '0');
-  const line = `- [${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}] ${id} replay-verified: ${commandStr}\n`;
+  // D-02/R-35 write-side enrichment: `<iso8601> <id> replay-verified: <cmd> :: <truth text>`
+  // — the receipt carries the truth text (single line, first 80 codepoints) so the
+  // `gos logs` view can show it without joining state.
+  const text = String(truthText == null ? '' : truthText).replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const clipped = [...text].slice(0, 80).join('');
+  const line = `${new Date().toISOString()} ${id} replay-verified: ${commandStr}${clipped ? ` :: ${clipped}` : ''}\n`;
   fs.appendFileSync(TRUTH_RECEIPTS_PATH, (needsNl ? '\n' : '') + line,
     { flag: fs.constants.O_APPEND | fs.constants.O_CREAT | fs.constants.O_WRONLY | fs.constants.O_NOFOLLOW });
 }
@@ -62,16 +65,28 @@ function cmdTruth(args) {
 
   if (sub === 'verify') {
     const id = rest[0];
-    if (!id || id.startsWith('--')) core.die('Usage: gos truth verify <id> --command <c> --excerpt <e> --artifact <a> [--replay]');
+    if (!id || id.startsWith('--')) core.die('Usage: gos truth verify <id> --command <c> --excerpt <e> --artifact <a> [--replay] [--timeout <ms>]');
     const truthL = truthFind(state, id);
     if (!truthL) core.die(`truth verify: ${id} not found`);
-    let command = null, excerpt = null, artifact = null, replay = false;
+    let command = null, excerpt = null, artifact = null, replay = false, timeoutMs = null;
     for (let i = 1; i < rest.length; i++) {
       if (rest[i] === '--command') command = rest[++i];
       else if (rest[i] === '--excerpt') excerpt = rest[++i];
       else if (rest[i] === '--artifact') artifact = rest[++i];
       else if (rest[i] === '--replay') replay = true;
+      else if (rest[i] === '--timeout') {
+        // D-05 [R-27]: flag only (no env var); /^\d+$/ and 1..600000 — `0` (Node
+        // no-timeout semantics), `1e5`, `+5`, fractionals all die with usage copy.
+        const v = rest[++i];
+        if (v === undefined || !/^\d+$/.test(v) || Number(v) < 1 || Number(v) > 600000) {
+          core.die(`truth verify: --timeout must be an integer between 1 and 600000 (milliseconds), e.g. --timeout 120000\nUsage: gos truth verify <id> --command <c> --excerpt <e> --artifact <a> [--replay] [--timeout <ms>]`);
+        }
+        timeoutMs = Number(v);
+      }
       else core.die(`truth verify: unknown argument '${rest[i]}'`);
+    }
+    if (timeoutMs !== null && !replay) {
+      core.die('truth verify: --timeout applies only to --replay (the execution budget)\nUsage: gos truth verify <id> --command <c> --excerpt <e> --artifact <a> [--replay] [--timeout <ms>]');
     }
     const repoRoot = core.currentRootRealpath() || process.cwd();
 
@@ -83,20 +98,31 @@ function cmdTruth(args) {
         core.die(`truth verify --replay: --command must be a JSON array of strings, e.g. --command '["node","-e","console.log(3)"]' [B-1]`);
       }
       let stdout = '';
+      const budget = timeoutMs != null ? timeoutMs : 30000;
       try {
+        // D-04 R2 [R2-2]: maxBuffer explicit 64 MiB — the Node default (1 MiB)
+        // kills >1MB stdout with a misleading "command failed" error.
         stdout = execFileSync(argv[0], argv.slice(1), {
-          cwd: repoRoot, stdio: ['ignore', 'pipe', 'pipe'], timeout: 30000, encoding: 'utf8',
+          cwd: repoRoot, stdio: ['ignore', 'pipe', 'pipe'], timeout: budget,
+          maxBuffer: 64 * 1024 * 1024, encoding: 'utf8',
         });
       } catch (e) {
-        const why = /timed out/i.test(String(e.message)) ? 'timed out (>30s)' : `command failed (${e.message.split('\n')[0]})`;
-        core.die(`truth verify --replay: ${why} — evidence NOT set [B-1]`);
+        const msg = String(e.message || '');
+        if (e.code === 'ENOBUFS' || /maxBuffer/i.test(msg)) {
+          core.die('truth verify --replay: stdout exceeded maxBuffer 64 MiB — command output too large; write it to a file and cite that artifact instead; evidence NOT set [B-1/R2-2]');
+        }
+        if (e.code === 'ETIMEDOUT' || /timed.?out/i.test(msg)) {
+          core.die(`truth verify --replay: command timed out after ${budget} ms — rerun with a larger --timeout <ms> budget (digits only, cap 600000); evidence NOT set [B-1]`);
+        }
+        // failure diagnostics append the last stderr lines (evidence stays stdout-only)
+        const tail = String(e.stderr || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(-3).join(' | ');
+        core.die(`truth verify --replay: command failed (${msg.split('\n')[0]})${tail ? ` — last stderr: ${tail}` : ''}; evidence NOT set [B-1]`);
       }
-      // The excerpt must be an actual stdout line hitting feature ② count-stats or
-      // ③ path — the synthetic exit-code ① form is explicitly NOT a replay hit.
-      const lines = String(stdout).split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-      const hit = lines.find((l) => core.cpLen(l) <= 200 && (core.EVIDENCE_FEATURE_RES[1].test(l) || core.EVIDENCE_FEATURE_RES[2].test(l)));
+      // Tiered selection (D-04): count > path > KV over ANSI-stripped lines;
+      // synthetic exit/status keys vetoed, env-dump RHS paths never win.
+      const hit = core.replayEvidenceHit(stdout);
       if (!hit) {
-        core.die(`truth verify --replay: no stdout line hits a required feature (count-stats or path; synthetic exit-code line does not count)${lines.length ? '' : ' — stdout empty'} [B-1/R2-6]`);
+        core.die(`truth verify --replay: no stdout line hits a required feature (count/path/KV; synthetic exit-code|status keys are vetoed)${String(stdout).trim() ? '' : ' — stdout empty'} [B-1/R2-6]`);
       }
       const commandStr = JSON.stringify(argv);
       const ev = { command: commandStr, output_excerpt: hit, artifact_path: artifact, replay: true };
@@ -105,8 +131,10 @@ function cmdTruth(args) {
       truthL.verified = true;
       truthL.evidence = ev;
       core.writeState(state);
-      appendTruthReceipt(id, commandStr);
-      console.log(`✓ truth ${id} replay-verified (evidence from actual stdout; receipt appended to .gos/truth-receipts.md)`);
+      appendTruthReceipt(id, commandStr, truthL.description);
+      // R-35: the echo names the registry rel (stale .gos/truth-receipts.md path
+      // fixed — the ledger actually lives under logs/ per GOS_PATHS).
+      console.log(`✓ truth ${id} replay-verified (evidence from actual stdout; receipt appended to .gos/${core.GOS_PATHS.truth_receipts.rel})`);
       return;
     }
 
@@ -145,6 +173,7 @@ function cmdTruth(args) {
   console.log('  add "<desc>"                    register observable truth (auto id T1/T2…)');
   console.log('  verify <id> --command <c> --excerpt <e> --artifact <a>          manual evidence');
   console.log('  verify <id> --replay --command \'<JSON argv>\' --artifact <a>    execute & capture stdout');
+  console.log('                                              [--timeout <ms>]  exec budget 1..600000 (default 30000)');
 }
 
 Object.assign(module.exports, {

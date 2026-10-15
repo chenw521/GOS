@@ -57,6 +57,12 @@ module.exports = {
   // ---- status / guidance surfaces (first-user high-frequency, FB-1) ----
   'status.localeLine': '语言: {locale}（来源: {source}）— 可用 GOS_LANG 或 {cmd:setup} --lang <en|zh-CN> 切换',
   'status.noActiveTask.next': '下一步: 运行 `gos init <level> "<意图>"` 开始一个任务',
+
+  // ---- logs 视图（D-02/R-35：运行时账本渲染；路径与计数为插值——账本文件本身与语言无关）----
+  'logs.receipts.title': '真相回执 — {path}（显示最近 {n} 条，共 {total} 条）',
+  'logs.exemptions.title': '门禁豁免 — {path}（显示最近 {n} 条，共 {total} 条）',
+  'logs.audit.title': '边审计 — {path}（显示最近 {n} 条，共 {total} 条）',
+  'logs.empty': '暂无条目——对应命令运行后账本会自动填充',
   'status.headlessAutoConfirm': '📍 本任务由 headless 自动确认（已审计）',
   'status.aiChatStart': '→ 或在 AI 对话中: "用 GOS ..."',
   'status.aiChatContinue': '→ 在 AI 对话中: "用 GOS 继续"',

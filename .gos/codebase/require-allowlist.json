@@ -4,6 +4,7 @@
   "moduleRoots": [
     "bin",
     "bin/lib/core",
+    "bin/lib/core/locales",
     "bin/lib/knowledge",
     "bin/lib/map",
     "bin/lib/nav",
@@ -12,6 +13,11 @@
     "bin/lib/task"
   ],
   "directions": [
+    {
+      "from": "bin",
+      "to": "bin/lib/core",
+      "edges": 1
+    },
     {
       "from": "bin",
       "to": "bin/lib/knowledge",
@@ -43,9 +49,39 @@
       "edges": 1
     },
     {
+      "from": "bin/lib/core",
+      "to": "bin/lib/core/locales",
+      "edges": 2
+    },
+    {
+      "from": "bin/lib/knowledge",
+      "to": "bin/lib/core",
+      "edges": 8
+    },
+    {
+      "from": "bin/lib/map",
+      "to": "bin/lib/core",
+      "edges": 7
+    },
+    {
+      "from": "bin/lib/nav",
+      "to": "bin/lib/core",
+      "edges": 4
+    },
+    {
+      "from": "bin/lib/nav",
+      "to": "bin/lib/knowledge",
+      "edges": 2
+    },
+    {
       "from": "bin/lib/nav",
       "to": "bin/lib/task",
       "edges": 2
+    },
+    {
+      "from": "bin/lib/ops",
+      "to": "bin/lib/core",
+      "edges": 12
     },
     {
       "from": "bin/lib/ops",
@@ -74,13 +110,23 @@
     },
     {
       "from": "bin/lib/render",
+      "to": "bin/lib/core",
+      "edges": 1
+    },
+    {
+      "from": "bin/lib/render",
       "to": "bin/lib/map",
       "edges": 1
     },
     {
       "from": "bin/lib/task",
+      "to": "bin/lib/core",
+      "edges": 8
+    },
+    {
+      "from": "bin/lib/task",
       "to": "bin/lib/knowledge",
-      "edges": 4
+      "edges": 6
     },
     {
       "from": "bin/lib/task",
@@ -95,21 +141,14 @@
     {
       "from": "bin/lib/task",
       "to": "bin/lib/ops",
-      "edges": 5
+      "edges": 6
     },
     {
       "from": "bin/lib/task",
       "to": "bin/lib/render",
-      "edges": 2
-    },
-    {
-      "from": "bin/lib/nav",
-      "to": "bin/lib/knowledge",
-      "edges": 2
+      "edges": 3
     }
   ],
-  "free_to": [
-    "bin/lib/core"
-  ],
-  "generated_at": "2026-09-22T05:10:22.251Z"
+  "free_to": [],
+  "generated_at": "2026-10-15T11:30:35.091Z"
 }

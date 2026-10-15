@@ -15,7 +15,9 @@ function detectBrownfield() {
     'DECISIONS.md': (t) => /^\|\s*D-\d{2,3}\s*\|/m.test(t),
     'REQUIREMENTS.md': (t) => /^\|\s*R-\d{2,3}\s*\|/m.test(t),
     'ROADMAP.md': (t) => t.split('\n').some(l => /^\|\s*[^:|#\s]/.test(l) && !/^\|\s*Phase\s*\|/.test(l)),
-    'PROJECT.md': (t) => t.split('\n').filter(l => l.trim() && !l.startsWith('#')).length > 2,
+    // D-06: TODO guidance lines are seeded scaffolding, never handwritten
+    // content — a fresh skeleton must not read as brownfield.
+    'PROJECT.md': (t) => t.split('\n').filter(l => l.trim() && !l.startsWith('#') && !l.trim().startsWith('TODO:')).length > 2,
   };
   for (const [name, test] of Object.entries(checks)) {
     const p = path.join(core.PROJECT_DIR, name);
@@ -24,6 +26,38 @@ function detectBrownfield() {
     }
   }
   return found.length ? found : null;
+}
+
+// D-06/R-33 (F-8): PROJECT.md per-section predicate. Every `## ` section must
+// carry at least one content line: non-TODO, >=20 codepoints, and not a
+// separator/dash string (three junk lines like `-`/`x`/`n/a` still fail). A
+// section-less file never passes vacuously — at least one `## ` section is
+// required. Shared by brownfield detection, the approve-archive pre-flight
+// (archive.cjs), and the THINK read_files wiring (context.cjs).
+const PROJECT_MD_MIN_CP = 20;
+const PROJECT_MD_SEPARATOR_RE = /^[-=_*\s]+$/;
+
+function projectMdSectionReport(text) {
+  const sections = [];
+  let cur = null;
+  for (const raw of String(text).split(/\r?\n/)) {
+    if (/^## /.test(raw)) {
+      cur = { name: raw.replace(/^##\s*/, '').trim() || '(untitled)', content: 0 };
+      sections.push(cur);
+      continue;
+    }
+    if (!cur) continue; // preamble before the first `## ` section
+    const t = raw.trim();
+    if (!t || t.startsWith('TODO:') || PROJECT_MD_SEPARATOR_RE.test(t)) continue;
+    if ([...t].length < PROJECT_MD_MIN_CP) continue;
+    cur.content++;
+  }
+  return { sections, lacking: sections.filter((s) => s.content < 1) };
+}
+
+function projectMdFilled(text) {
+  const r = projectMdSectionReport(text);
+  return r.sections.length >= 1 && r.lacking.length === 0;
 }
 
 function cmdPhase(args) {
@@ -58,6 +92,7 @@ function cmdPhase(args) {
     }
     console.log(`${core.CONTRACTS.command_contracts.phaseAdded}${name}`);
     console.log('Next: gos phase list');
+    decisions.autoRenderViews(project); // D-03: views stay fresh after the mutation
     return;
   }
 
@@ -85,6 +120,7 @@ function cmdPhase(args) {
     core.saveProject(project);
     console.log(`${core.CONTRACTS.command_contracts.phaseAmended}${ph.name}`);
     console.log('Next: gos phase list');
+    decisions.autoRenderViews(project); // D-03: views stay fresh after the mutation
     return;
   }
 
@@ -189,6 +225,7 @@ function cmdPhase(args) {
     core.saveProject(project);
     console.log(`${core.CONTRACTS.command_contracts.phaseClaimed}${phases[n].name}`);
     console.log('Next: THINK (intent = phase goal)');
+    decisions.autoRenderViews(project); // D-03: views stay fresh after the mutation
     return;
   }
 
@@ -310,4 +347,6 @@ function cmdPhase(args) {
 Object.assign(module.exports, {
   cmdPhase,
   detectBrownfield,
+  projectMdSectionReport,
+  projectMdFilled,
 });   // assignment (not reassignment): sibling modules hold live references to this export

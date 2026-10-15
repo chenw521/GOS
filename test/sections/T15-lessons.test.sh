@@ -178,8 +178,6 @@ store.entries.push({ id: core.sha16(line), at: "2026-08-14", type: "project", te
 j.appendAuditRow(store, "migrate", "fixture", { count: 1 });
 fs.mkdirSync(".gos/cache", { recursive: true });
 j.saveStore({ truth: ".gos/lessons.json", anchor: ".gos/cache/.lessons-anchors.json", file: ".gos/lessons.md", global: false }, store);
-const fs2 = require("fs");
-fs2.writeFileSync(".gos/config.json", JSON.stringify({ lessons_migrated: true }, null, 2) + "\n");
 '
 OUT=$(t15_g lessons list 2>&1); RC=$?
 assert_exit "injected tags on raw legacy entry → drift fail-closed" "1" "$RC"
@@ -218,11 +216,13 @@ if ls .gos/lessons-migration-backup-*.md >/dev/null 2>&1 && grep -q "legacy mode
 else
   echo "  ✗ migration backup missing"; FAIL=$((FAIL+1))
 fi
-if python3 -c "import json; c=json.load(open('.gos/config.json')); assert c.get('lessons_migrated') is True" 2>/dev/null; then
-  echo "  ✓ sentinel lessons_migrated=true in config"; PASS=$((PASS+1))
-else
-  echo "  ✗ sentinel missing"; FAIL=$((FAIL+1))
-fi
+# genesis guard (D-09, sentinel deleted): a deleted-but-committed lessons.json
+# must be RESTORED, never re-migrated (fresh chain would launder the deletion)
+git add .gos/lessons.json >/dev/null 2>&1 && git commit -q -m "lessons: track migrated truth"
+rm -f .gos/lessons.json
+OUT=$(t15_g lessons add --type project --scene "gx" --lesson "genesis probe" 2>&1); RC=$?
+assert_exit "deleted-but-committed lessons.json refuses re-migration" "1" "$RC"
+assert_contains "genesis guard says restore, don't remigrate" "restore, don't remigrate" "$OUT"
 cd "$T15_DIR" || exit 1
 rm -rf "$T15_MIG"
 
@@ -355,10 +355,12 @@ OUT=$(t15_g lessons rebase-anchor --type project 2>&1); RC=$?
 assert_exit "rebase-anchor rejected" "1" "$RC"
 assert_contains "pointer to anchor-rebuild" "anchor-rebuild" "$OUT"
 
-# --- T15.17: sentinel true + json missing → bootstrap illegal (die with recovery) ---
+# --- T15.17: json missing + generated md view present → header guard fails closed ---
+# (genesis degradation: this sandbox never committed the json, so the git-log
+# genesis guard has no ancestor to catch — the generated-md header guard owns it)
 rm -f .gos/lessons.json
 OUT=$(t15_g lessons list 2>&1); RC=$?
-assert_exit "post-sentinel missing json fails closed" "1" "$RC"
+assert_exit "json missing with generated md view fails closed" "1" "$RC"
 assert_contains "recovery points at git restore/backup" "restore" "$OUT"
 
 # --- T15.18: symlinked global truth file → write refused [B-18] ---

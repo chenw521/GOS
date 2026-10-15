@@ -8,12 +8,11 @@ const path = require('path');
 
 const RENDERED_HEADER = core.CONTRACTS.command_contracts.generatedHeader;
 
-const RENDER_KEEP_BACKUPS = 5;
-
 // D-05 scope: active phase + 2 phases before it (by project.phases order).
 // No active phase → last 3 phases. Unknown birth_phase (not in phases[]) → always included.
 
-// D-05 backup: only meaningful when the full rendered set exists; prune keeps newest 5 by name (= time) order
+// D-08 backup: only meaningful when the full rendered set exists; history is
+// kept in full — expiry (14d rolling sweep) runs on the render entry.
 
 // D-05 atomic protocol: write ALL temps first, then rename ALL; any rename failure →
 // restore already-renamed files from the pre-render content and die (never a torn set).
@@ -97,7 +96,194 @@ const RENDER_KEEP_BACKUPS = 5;
 // validator (validateEvidenceObject, R4-F14 single consumption point) + manual:true;
 
 const MANUAL_MARKER = core.CONTRACTS.command_contracts.manualMarker;
-const RENDER_BACKUP_DIR = path.join(core.ARCHIVE_DIR, 'render-backup');
+// D-08 (R-29): backups are machine-local cache under .gos/cache/render-backup —
+// full history (no rotation), 14d rolling expiry swept on render entry.
+const RENDER_BACKUP_DIR = core.resolvePath('render_backup');
+const LEGACY_RENDER_BACKUP_DIR = path.join(core.ARCHIVE_DIR, 'render-backup');
+const RENDER_BACKUP_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+// Strict timestamp-dir gate (D-08/R2-5): prefix filter is the classification
+// contract; junk NEVER gets recursed into or removed.
+const TS_DIR_PREFIX_RE = /^\d{4}-\d{2}-\d{2}T/;
+// Full shape: 2026-10-15T12-34-56-789Z (fs-safe ISO, fixed-width → sortable).
+const TS_DIR_FULL_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/;
+// T8 hook: entries silently skipped by name at the backup root — the last-render
+// manifest rides the backup root (it is the manifest, not junk); warn+skip stays
+// the default for everything else.
+const RENDER_BACKUP_SILENT_SKIP = new Set(['manifest.json']);
+const VIEW_NAMES = ['DECISIONS.md', 'ROADMAP.md', 'REQUIREMENTS.md'];
+// D-03/R3-F1 last-render manifest: content hashes of the three view bodies
+// (footer + MANUAL region stripped), written in the same rename batch as the views.
+const MANIFEST_PATH = path.join(RENDER_BACKUP_DIR, 'manifest.json');
+
+function renderBackupWarn(msg) {
+  console.error(`⚠ [render-backup] ${msg}`);
+}
+
+function backupStampMs(name) {
+  const m = name.match(TS_DIR_FULL_RE);
+  if (!m) return NaN;
+  return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6], +m[7]);
+}
+
+// D-08 one-shot migration: timestamp dirs move from the legacy archive path to
+// the cache dir; junk (non-timestamp names, symlinks, non-dirs) STAYS BEHIND
+// with a warning — never recursed into, never deleted. Same strict filter as
+// the sweep (R2-5).
+function migrateLegacyRenderBackup() {
+  let st;
+  try { st = fs.lstatSync(LEGACY_RENDER_BACKUP_DIR); } catch { return; }
+  if (st.isSymbolicLink() || !st.isDirectory()) {
+    renderBackupWarn(`migration: legacy path is not a directory, skipping: ${LEGACY_RENDER_BACKUP_DIR}`);
+    return;
+  }
+  for (const name of fs.readdirSync(LEGACY_RENDER_BACKUP_DIR)) {
+    let est;
+    try { est = fs.lstatSync(path.join(LEGACY_RENDER_BACKUP_DIR, name)); } catch { continue; }
+    if (est.isSymbolicLink() || !est.isDirectory() || !TS_DIR_PREFIX_RE.test(name)) {
+      renderBackupWarn(`migration: leaving non-timestamp entry behind: ${name}`);
+      continue;
+    }
+    const dest = path.join(RENDER_BACKUP_DIR, name);
+    if (fs.existsSync(dest)) continue; // already migrated — idempotent re-run
+    try {
+      fs.mkdirSync(RENDER_BACKUP_DIR, { recursive: true });
+      fs.renameSync(path.join(LEGACY_RENDER_BACKUP_DIR, name), dest);
+    } catch (e) {
+      renderBackupWarn(`migration failed for ${name}: ${e.message}`);
+    }
+  }
+  try {
+    if (fs.readdirSync(LEGACY_RENDER_BACKUP_DIR).length === 0) fs.rmdirSync(LEGACY_RENDER_BACKUP_DIR);
+  } catch { /* junk remains behind — warnings above already name it */ }
+}
+
+// D-08 expiry sweep (rides the render entry, not a separate command): entries
+// older than 14 days are removed, EXCEPT the newest backup — hard floor, never
+// deleted even when judged expired (clock rolled back). Every entry is lstat'd:
+// symlinks and non-directories warn+skip and are never traversed (cache/ is an
+// ignored zone — rmSync must not chase attacker-planted links); future-dated
+// name-stamps warn+skip (clock rolled forward).
+function sweepRenderBackups() {
+  let entries;
+  try { entries = fs.readdirSync(RENDER_BACKUP_DIR); } catch { return; }
+  const now = Date.now();
+  const candidates = [];
+  for (const name of entries) {
+    if (RENDER_BACKUP_SILENT_SKIP.has(name)) continue; // T8: named skip-list hook
+    let st;
+    try { st = fs.lstatSync(path.join(RENDER_BACKUP_DIR, name)); } catch { continue; }
+    if (st.isSymbolicLink() || !st.isDirectory()) {
+      renderBackupWarn(`sweep: skipping non-directory entry: ${name}`);
+      continue;
+    }
+    if (!TS_DIR_PREFIX_RE.test(name)) {
+      renderBackupWarn(`sweep: skipping non-timestamp entry: ${name}`);
+      continue;
+    }
+    const stamp = backupStampMs(name);
+    if (Number.isNaN(stamp)) {
+      renderBackupWarn(`sweep: skipping unparseable timestamp entry: ${name}`);
+      continue;
+    }
+    if (stamp > now) {
+      renderBackupWarn(`sweep: skipping future-stamped entry: ${name}`);
+      continue;
+    }
+    candidates.push({ name, stamp });
+  }
+  if (!candidates.length) return;
+  const newestStamp = Math.max(...candidates.map((c) => c.stamp));
+  for (const c of candidates) {
+    if (now - c.stamp <= RENDER_BACKUP_MAX_AGE_MS) continue; // still young
+    if (c.stamp === newestStamp) continue; // hard floor: newest never deleted
+    try { fs.rmSync(path.join(RENDER_BACKUP_DIR, c.name), { recursive: true, force: true }); }
+    catch (e) { renderBackupWarn(`sweep failed for ${c.name}: ${e.message}`); continue; }
+    console.error(`- [render-backup] sweep: expired entry removed: ${c.name}`);
+  }
+}
+
+// D-03/R3-F1 diff basis: view content minus the generated-at footer and the
+// MANUAL region — the stable identity of a rendered body (the footer timestamp
+// and preserved manual content must never influence the change decision).
+function stripViewBody(content) {
+  const lines = String(content).split('\n');
+  const markerIdx = lines.findIndex((l) => l.trim() === MANUAL_MARKER);
+  const manual = markerIdx !== -1;
+  const body = (manual ? lines.slice(0, markerIdx) : lines)
+    .filter((l) => !/^<!-- generated at .+ -->$/.test(l.trim()))
+    .join('\n');
+  return { body, manual };
+}
+
+// D-03/R3-F1 last-render manifest gate: the renderer refuses to clobber view
+// content it cannot vouch for. Provenance = the GENERATED header (line 1) —
+// init skeletons and handwritten brownfield views are NOT gated (the import
+// flow stays untouched); rendered views without a matching manifest (fresh
+// clone — .gos/cache does not travel) are. Returns null (proceed) or the
+// self-describing refusal reason.
+function renderManifestRefusal() {
+  const states = {};
+  let tracked = 0;
+  for (const n of VIEW_NAMES) {
+    let text = null;
+    try { text = fs.readFileSync(path.join(core.PROJECT_DIR, n), 'utf8'); } catch { text = null; }
+    if (text === null) continue;
+    const rendered = (text.split('\n')[0] || '').trim() === RENDERED_HEADER;
+    states[n] = { ...stripViewBody(text), rendered };
+    if (rendered) tracked++;
+  }
+  if (!tracked) return null;
+  const reconcile = 'Reconcile: move content you want to keep into the MANUAL region, or re-run with: gos render --force';
+  let mf = null;
+  try { mf = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8')); } catch { mf = null; }
+  if (!mf || !mf.views || typeof mf.views !== 'object') {
+    return `last-render manifest (.gos/cache/render-backup/manifest.json) missing or unreadable while rendered views exist — .gos/cache does not travel with a clone. ${reconcile}`;
+  }
+  for (const n of VIEW_NAMES) {
+    if (!states[n] || !states[n].rendered) continue;
+    const e = mf.views[n];
+    if (!e || typeof e.body_hash !== 'string') return `${n}: no manifest entry (manifest and views disagree). ${reconcile}`;
+    if (e.body_hash !== core.sha16(states[n].body)) return `${n}: body differs from the last render (hand edit detected) — generated bodies are renderer-owned. ${reconcile}`;
+    if (e.manual === true && !states[n].manual) return `${n}: MANUAL region present at last render is now missing — restore it (or its content) from .gos/cache/render-backup. ${reconcile}`;
+  }
+  return null;
+}
+
+// Skip-path manifest touch-up: a MANUAL marker added after the last render is
+// legal (preserved verbatim) — recording it keeps a later marker LOSS refusable.
+function syncManifestManualFlags(prevStripped) {
+  let mf = null;
+  try { mf = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8')); } catch { return; }
+  if (!mf || !mf.views || typeof mf.views !== 'object') return;
+  let drifted = false;
+  for (const n of VIEW_NAMES) {
+    const e = mf.views[n];
+    if (!e || typeof e !== 'object') continue;
+    const manual = !!(prevStripped[n] && prevStripped[n].manual);
+    if (e.manual !== manual) { e.manual = manual; drifted = true; }
+  }
+  if (drifted) core.writeAtomicJson(MANIFEST_PATH, mf);
+}
+
+// R2-F10: a killed render leaves .tmp<pid> temps behind; dead-pid ones are
+// swept at the render entry, live-pid ones are somebody's in-flight write and stay.
+function sweepOrphanTemps() {
+  const zones = [
+    { dir: core.PROJECT_DIR, re: /^\.(?:DECISIONS|ROADMAP|REQUIREMENTS)\.md\.tmp(\d+)$/ },
+    { dir: RENDER_BACKUP_DIR, re: /^\.manifest\.json\.tmp(\d+)-\d+$/ },
+  ];
+  for (const z of zones) {
+    let entries;
+    try { entries = fs.readdirSync(z.dir); } catch { continue; }
+    for (const name of entries) {
+      const m = name.match(z.re);
+      if (!m) continue;
+      const pid = parseInt(m[1], 10);
+      if (pid === process.pid || core.pidAlive(pid)) continue;
+      try { fs.unlinkSync(path.join(z.dir, name)); } catch { /* racing */ }
+    }
+  }
+}
 
 function renderPathsMarkdown() {
   const lines = [];
@@ -121,7 +307,7 @@ function renderPathsMarkdown() {
   emit('Root — global truth sources (files)', rootFiles);
   emit('Root — CLI directories (dir-registered prefix zones)', rootDirs);
   emit('cache/ — machine caches (git-ignored, safe to delete any time)', entries.filter(([, e]) => e.rel.startsWith('cache/')));
-  emit('logs/ — audit receipts (tracked)', entries.filter(([, e]) => e.rel.startsWith('logs/')));
+  emit('logs/ — runtime state, machine-local', entries.filter(([, e]) => e.rel.startsWith('logs/')));
   emit('task/&lt;id&gt;/ — per-phase in-flight artifacts (dynamic, resolved per active task)', entries.filter(([, e]) => e.rel.startsWith('task/')));
   emit('Transient zones (orphan-scan excluded)', entries.filter(([, e]) => e.rel.startsWith('.')));
   // Published feedback ledger — the ONLY feedback data that renders here.
@@ -191,68 +377,106 @@ function backupRenderedViews(names) {
   const dest = path.join(RENDER_BACKUP_DIR, ts);
   fs.mkdirSync(dest, { recursive: true });
   for (const n of names) fs.copyFileSync(path.join(core.PROJECT_DIR, n), path.join(dest, n));
-  const dirs = fs.readdirSync(RENDER_BACKUP_DIR)
-    .filter((d) => { try { return fs.statSync(path.join(RENDER_BACKUP_DIR, d)).isDirectory(); } catch { return false; } })
-    .sort();
-  for (const old of dirs.slice(0, Math.max(0, dirs.length - RENDER_KEEP_BACKUPS))) {
-    fs.rmSync(path.join(RENDER_BACKUP_DIR, old), { recursive: true, force: true });
-  }
+  // D-08: full history — no rotation here; the 14d sweep rides the render entry.
 }
 
-function renderProjectViews(project) {
+function renderProjectViews(project, opts = {}) {
   const p = project || core.loadProject();
   if (!p) return null;
+  const force = !!opts.force;
+  const auto = !!opts.auto; // mutation-driven: diff-skip + refusal carries the auto prefix
   fs.mkdirSync(core.PROJECT_DIR, { recursive: true });
-  const names = ['DECISIONS.md', 'ROADMAP.md', 'REQUIREMENTS.md'];
+  // D-08: migration + expiry sweep ride the render entry (not a separate command).
+  migrateLegacyRenderBackup();
+  sweepRenderBackups();
+  sweepOrphanTemps();
+  // D-03/R3-F1: manifest gate — rendered bodies are renderer-owned; hand-edited
+  // or unvouched content refuses instead of being silently destroyed. --force
+  // is the explicit reconcile exit.
+  if (!force) {
+    const refusal = renderManifestRefusal();
+    if (refusal) core.die(`${auto ? 'auto-render' : 'render'} refused: ${refusal}`);
+  }
+  const names = VIEW_NAMES;
   // Phase V [R1-F8]: self-describing footer — generated views carry write-time snapshot
   // semantics (residual rows keep their last-written status forever, D-08); point readers
   // at the live merged views so a frozen 'active' row never misleads again.
   const snapshotFooter = `\n<!-- generated at ${new Date().toISOString()} after phase ${p.last_archived_phase || '(milestone reset)'} — row status is a write-time snapshot, not a live lifecycle; live merged view: gos decision list --all / gos requirement list --all -->`;
   const bodies = {
-    'DECISIONS.md': renderDecisionsMd(p) + snapshotFooter,
-    'ROADMAP.md': renderRoadmapMd(p) + snapshotFooter,
-    'REQUIREMENTS.md': renderRequirementsMd(p) + snapshotFooter,
+    'DECISIONS.md': renderDecisionsMd(p),
+    'ROADMAP.md': renderRoadmapMd(p),
+    'REQUIREMENTS.md': renderRequirementsMd(p),
   };
   const prev = {};
+  const prevStripped = {};
   for (const n of names) {
     const f = path.join(core.PROJECT_DIR, n);
     prev[n] = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : null;
+    prevStripped[n] = prev[n] === null ? null : stripViewBody(prev[n]);
   }
+  // D-03 R1-F4: diff on footer-free stripped bodies — a no-change mutation
+  // writes nothing at all (footer timestamp only advances when body content
+  // changed; no backup churn). Explicit `gos render` (and archive renders)
+  // stay write-through renders.
+  if (auto && names.every((n) => prevStripped[n] !== null && core.sha16(prevStripped[n].body) === core.sha16(bodies[n]))) {
+    syncManifestManualFlags(prevStripped);
+    return { rendered: [], skipped: true };
+  }
+  // D-03 R1-F4: backup AFTER the diff decision — a no-change render never
+  // churns the backup history.
   if (names.every((n) => prev[n] !== null)) backupRenderedViews(names);
+  const manifest = { schema_version: 1, views: {} };
+  for (const n of names) {
+    manifest.views[n] = { body_hash: core.sha16(bodies[n]), manual: !!(prevStripped[n] && prevStripped[n].manual) };
+  }
+  const prevManifest = fs.existsSync(MANIFEST_PATH) ? fs.readFileSync(MANIFEST_PATH, 'utf8') : null;
   const temps = {};
   const renamed = [];
   try {
+    fs.mkdirSync(RENDER_BACKUP_DIR, { recursive: true });
     for (const n of names) {
-      const manual = map.manualRegion(prev[n]);
-      const content = manual ? bodies[n] + '\n' + manual : bodies[n]; // rendered + one blank line + MANUAL verbatim
+      const manual = prev[n] === null ? null : map.manualRegion(prev[n]);
+      const content = manual ? bodies[n] + snapshotFooter + '\n' + manual : bodies[n] + snapshotFooter; // rendered + footer + one blank line + MANUAL verbatim
       temps[n] = { tmp: path.join(core.PROJECT_DIR, `.${n}.tmp${process.pid}`), final: path.join(core.PROJECT_DIR, n) };
       fs.writeFileSync(temps[n].tmp, content);
     }
-    for (const n of names) {
+    // D-03/R3-F1: the manifest joins the SAME rename batch — views and manifest
+    // land together or not at all.
+    temps.__manifest__ = { tmp: path.join(RENDER_BACKUP_DIR, `.manifest.json.tmp${process.pid}-${Date.now()}`), final: MANIFEST_PATH };
+    fs.writeFileSync(temps.__manifest__.tmp, JSON.stringify(manifest, null, 2) + '\n');
+    for (const n of [...names, '__manifest__']) {
       fs.renameSync(temps[n].tmp, temps[n].final);
       renamed.push(n);
     }
   } catch (e) {
+    if (renamed.includes('__manifest__')) {
+      try {
+        if (prevManifest === null) fs.unlinkSync(MANIFEST_PATH);
+        else fs.writeFileSync(MANIFEST_PATH, prevManifest);
+      } catch { /* best-effort restore */ }
+    }
     for (const n of renamed) {
+      if (n === '__manifest__') continue;
       try {
         const f = path.join(core.PROJECT_DIR, n);
         if (prev[n] === null) fs.unlinkSync(f);
         else fs.writeFileSync(f, prev[n]);
       } catch { /* best-effort restore */ }
     }
-    for (const n of names) { try { if (temps[n] && fs.existsSync(temps[n].tmp)) fs.unlinkSync(temps[n].tmp); } catch { /* best-effort */ } }
+    for (const k of Object.keys(temps)) { try { if (temps[k] && fs.existsSync(temps[k].tmp)) fs.unlinkSync(temps[k].tmp); } catch { /* best-effort */ } }
     core.die(`render failed mid-rename (${e.message}) — previous views restored`);
   }
   return { rendered: names };
 }
 
-function cmdRender() {
+function cmdRender(args = []) {
+  const force = (args || []).includes('--force'); // D-03/R3-F1: bypass the manifest refusal
   const project = core.loadProject();
   if (!project) {
     console.log('(no project.json — nothing to render)');
     return;
   }
-  const res = renderProjectViews(project);
+  const res = renderProjectViews(project, { force });
   console.log(`${core.CONTRACTS.command_contracts.renderDone} ${(res ? res.rendered : []).join(', ')}`);
 }
 

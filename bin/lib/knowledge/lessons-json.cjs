@@ -504,20 +504,30 @@ function parseLegacyMd(text) {
   return { entries };
 }
 
-function projectConfigPath() { return path.join(core.GOS_DIR, 'config.json'); }
-function globalConfigFile() { return path.join(require('node:os').homedir(), '.config', 'gos', 'config.json'); }
+// D-09 sentinel deletion: the lessons_migrated sentinel is gone outright.
+// Its launder-protection role moved to the genesis guards below + the
+// generated-md header guard (generatedMdPresent).
 
-function readSentinel(P) {
-  const cfgPath = P.global ? globalConfigFile() : projectConfigPath();
-  try { return JSON.parse(fs.readFileSync(cfgPath, 'utf8')).lessons_migrated === true; } catch { return false; }
+// Genesis guard (project side, R1-F6a): a tracked lessons.json that vanished
+// from the worktree must be RESTORED, never re-migrated — `git log -- <path>`
+// finds any ancestor commit carrying it (a fresh migration would mint a new
+// audit chain and launder the deletion). Non-git dirs degrade to the header
+// guard (returns 0).
+function genesisHistoryCount(P) {
+  const root = core.currentRootRealpath();
+  if (!root) return 0;
+  const rel = path.relative(root, P.truth);
+  try {
+    const out = execFileSync('git', ['-C', root, 'log', '--format=%H', '--', rel], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    return out.split('\n').filter(Boolean).length;
+  } catch { return 0; } // git failure ≠ proof of history — degrade to the header guard
 }
 
-function writeSentinel(P) {
-  const cfgPath = P.global ? globalConfigFile() : projectConfigPath();
-  let cfg = {};
-  try { cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) || {}; } catch { /* fresh */ }
-  cfg.lessons_migrated = true;
-  core.writeAtomicJson(cfgPath, cfg);
+// Genesis guard (global side, R1-F6b): no git here — the one-time migration
+// backup and the truth-bak shadow are the witnesses that a store ever existed.
+function globalMigrationBackups(P) {
+  try { return fs.readdirSync(path.dirname(P.truth)).filter((f) => /^lessons-migration-backup-\d{4}-\d{2}-\d{2}\.md$/.test(f)); }
+  catch { return []; }
 }
 
 function generatedMdPresent(P) {
@@ -535,30 +545,44 @@ function readOldAnchor(P) {
   } catch { return null; }
 }
 
-// One-time md→json migration (spec §3.3 pinned state machine):
-// resume = state-derived (json parses ⇒ ingest done — never re-parse md);
-// write order ①backup(read-back verified, abort-on-fail) ②json atomic ③sidecar
-// ④md ⑤sentinel LAST (idempotent). Version skew dies as upgrade, never tamper.
+// One-time md→json migration (spec §3.3 pinned state machine; D-09 sentinel-free):
+// resume = state-derived (json parses ⇒ ingest done — never re-parse md) and may
+// only REGENERATE the md view after chain verification — the sidecar is NEVER
+// rewritten here (a stale sidecar is the sanctioned witness of hand edits;
+// healing it would launder deletions, R1-F6c).
+// Genesis guards precede any bootstrap: restore, don't remigrate.
+// Write order ①backup(read-back verified, abort-on-fail) ②json atomic ③sidecar
+// ④md. Version skew dies as upgrade, never tamper.
 function migrateLegacy(P, opts = {}) {
   const side = P.global ? 'global' : 'project';
   if (fs.existsSync(P.truth)) {
     let st = null;
     try { st = JSON.parse(fs.readFileSync(P.truth, 'utf8')); } catch { st = null; }
     if (st && Array.isArray(st.entries)) {
-      // resume-forward crash-tail completion: ONLY while the sentinel is unset
-      // (the ②→⑤ crash window). With sentinel set, a sidecar mismatch is
-      // evidence for the invariants — healing it here would launder hand edits.
-      if (!readSentinel(P)) {
-        writeSidecar(P, st);
-        if (verifyLessonsMd(P, st).status !== 'ok') writeLessonsMd(P, st);
-        writeSentinel(P);
+      // resume-heal: md view regeneration ONLY, gated on chain verification
+      // (R1-F6c). The sidecar stays untouched — a missing/stale sidecar
+      // resolves through the next sanctioned saveStore, never here.
+      if (chainViolations(st, side).length === 0 && verifyLessonsMd(P, st).status !== 'ok') {
+        writeLessonsMd(P, st);
       }
       return { already: true, count: st.entries.length };
     }
     core.die(`lessons ${side}: lessons.json exists but is unusable — recover via git restore${P.global ? ` or cp ${P.truthBak} ${P.truth}` : ''}; never delete-and-remigrate (the audit chain lives in the json)`);
   }
-  if (readSentinel(P)) {
-    core.die(`lessons ${side}: sentinel lessons_migrated=true but lessons.json missing — bootstrap is illegal post-sentinel; recover the file (git restore${P.global ? ` or cp ${P.truthBak} ${P.truth}` : ''})`);
+  // genesis guards (D-09, sentinel replacement): a store that ever existed must
+  // be restored, never re-migrated through a fresh (laundered) audit chain
+  if (!P.global) {
+    const ancestors = genesisHistoryCount(P);
+    if (ancestors > 0) {
+      core.die(`lessons ${side}: lessons.json is missing but ${ancestors} ancestor commit(s) carry it — restore, don't remigrate (git restore .gos/lessons.json; the audit chain lives in the json, a fresh migration would launder it)`);
+    }
+  } else {
+    const backups = globalMigrationBackups(P);
+    const hasTruthBak = P.truthBak && fs.existsSync(P.truthBak);
+    if (backups.length || hasTruthBak) {
+      const found = backups.length ? `migration backup(s) ${backups.join(', ')}` : `truth-bak ${path.basename(P.truthBak)}`;
+      core.die(`lessons ${side}: lessons.json is missing but ${found} exist${backups.length && hasTruthBak ? '' : 's'} — restore, don't remigrate (cp ${P.truthBak} ${P.truth}, or recover entries from the backup); never delete-and-remigrate`);
+    }
   }
   if (generatedMdPresent(P)) {
     core.die(`lessons ${side}: lessons.json missing while a GENERATED lessons.md view exists — the view is derived, not truth; recover the json (git restore${P.global ? ` or cp ${P.truthBak} ${P.truth}` : ''}) instead of re-deriving`);
@@ -609,8 +633,7 @@ function migrateLegacy(P, opts = {}) {
     }
   }
   appendAuditRow(store, 'migrate', `md→json one-time migration (${parsed.entries.length} entries, legacy line-hash ids kept)`, { count: parsed.entries.length });
-  saveStore(P, store); // ② json atomic → ③ sidecar → ④ md (pinned order inside)
-  writeSentinel(P); // ⑤ last, idempotent
+  saveStore(P, store); // ② json atomic → ③ sidecar → ④ md (pinned order inside; sentinel write deleted — D-09)
   // sidecar-era global .bak retired (truth-bak replaced it)
   if (P.global) {
     try { fs.unlinkSync(path.join(path.dirname(P.truth), '.lessons-anchors.bak')); } catch { /* absent */ }
@@ -691,9 +714,9 @@ module.exports = {
   ensureLessonsMdFresh,
   parseLegacyMd,
   readOldAnchor,
+  genesisHistoryCount,
+  globalMigrationBackups,
   migrateLegacy,
   ensureMigrated,
-  readSentinel,
-  writeSentinel,
   lessonsAttribution,
 };

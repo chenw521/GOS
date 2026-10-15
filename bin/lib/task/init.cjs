@@ -168,8 +168,22 @@ function cmdInit(args) {
 
   if (isProject) {
     fs.mkdirSync(core.PROJECT_DIR, { recursive: true });
+    // D-06/R-33: PROJECT.md sections seed with TODO guidance lines — the
+    // approve-archive gate and brownfield detection both key on them.
     const files = {
-      'PROJECT.md': '# Project\n\n## What This Is\n\n## Core Value\n\n## Requirements Evolution\n',
+      'PROJECT.md': [
+        '# Project',
+        '',
+        '## What This Is',
+        'TODO: describe the product in a few sentences — what it is, for whom, and the problem it solves.',
+        '',
+        '## Core Value',
+        'TODO: state the core value proposition — why this project exists and what it guarantees.',
+        '',
+        '## Requirements Evolution',
+        'TODO: summarize how requirements evolve — phase claims, decision records, and truth-backed closure.',
+        '',
+      ].join('\n'),
       'ROADMAP.md': '# Roadmap\n\n| Phase | Goal | Status |\n|:---|:---|:---|\n',
       'DECISIONS.md': '# Decision Index (GENERATED view — project.json is the truth source; >50 entries → advisory prune)\n\n',
       'REQUIREMENTS.md': '# Requirements\n\n| ID | Requirement | Phase |\n|:---|:---|:---|\n',

@@ -184,12 +184,13 @@ function main() {
     case 'lessons': knowledge.cmdLessons(args); break;
     case 'gap': nav.cmdGap(args); break;
     case 'truth': knowledge.cmdTruth(args); break;
+    case 'logs': ops.cmdLogs(args); break; // R-35/D-02: runtime ledger view (READ-class)
     case 'map': map.cmdMap(args); break;
     case 'concerns': knowledge.cmdConcerns(args); break;
     case 'changelog': task.cmdChangelog(args); break;
     case 'feedback': ops.cmdFeedback(args); break;
     case 'push': ops.cmdPush(args); break;
-    case 'render': render.cmdRender(); break;
+    case 'render': render.cmdRender(args); break; // T8/D-03: --force bypasses the manifest refusal
     case 'auto': nav.cmdAuto(args); break;
     case 'approve': nav.cmdApprove(args); break;
     case 'help': case '--help': case '-h': nav.cmdHelp(args); break;

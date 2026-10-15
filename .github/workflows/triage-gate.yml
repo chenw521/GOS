@@ -1,0 +1,231 @@
+# Triage gate (D-10 / R-37): every issue must carry a `bug` or
+# `enhancement` type label (the .github/ISSUE_TEMPLATE forms attach one
+# automatically and the blank form is disabled, so the web channel is
+# already constrained). This workflow is the fail-closed backstop for the
+# CLI channel and transferred-in issues:
+#   - open issue without a type label -> close ONCE with pinned guidance;
+#     the guidance comment is the marker (the gate never closes twice and
+#     never fights a human reopen)
+#   - issue closed BY THIS GATE that now carries a valid type label
+#     (labeled/closed triggers) -> auto-reopen
+# Which label applies (bug vs enhancement) stays human triage - the gate
+# only checks presence. Decisions re-fetch LIVE state and labels via the
+# API; the event payload is never trusted (kills the label-then-close
+# race). Foreign labels on transferred-in issues map to the canonical type
+# first: kind/bug + type/bug -> bug; kind/enhancement + type/enhancement +
+# feat -> enhancement.
+# workflow_dispatch is a dry run: pass an issue number, get the decision
+# printed, nothing mutated (T13 replayable evidence - no live issue spam).
+name: Triage gate
+
+on:
+  issues:
+    types: [opened, reopened, transferred, labeled, closed]
+  workflow_dispatch:
+    inputs:
+      issue-number:
+        description: 'Issue number to evaluate (dry run: prints the decision, mutates nothing)'
+        required: true
+        type: number
+
+# Serialize per issue and queue instead of cancel: a cancelled run would
+# skip a close/reopen that the label history still expects.
+concurrency:
+  group: triage-gate-${{ github.event.issue.number || inputs.issue-number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  gate:
+    name: Type-label gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Decide and act
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue-number }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          set -euo pipefail
+
+          marker_tag='<!-- gos-triage-gate -->'
+
+          # Decision core (D-10): a pure function of (live labels, live
+          # state, marker bool). Inline and verbatim on purpose - local
+          # fixture tests extract exactly this block (between the
+          # GATE_DECIDE_EOF markers) and drive it without GitHub.
+          cat > "$RUNNER_TEMP/gate-decide.cjs" <<'GATE_DECIDE_EOF'
+          // GOS triage-gate decision core (D-10 / R-37).
+          // Pure function of three explicit inputs, so the exact shipped
+          // code runs both in the workflow (live API data) and locally
+          // (fixture tests):
+          //   node gate-decide.cjs --labels '<json-array>' --state open|closed --marker true|false
+          // Output: "decision=close|skip|reopen" plus an English reason.
+          // The gate checks label PRESENCE only - whether `bug` vs
+          // `enhancement` is the right type stays human triage.
+          'use strict';
+
+          const TYPE_LABELS = new Set(['bug', 'enhancement']);
+
+          // Foreign labels seen on transferred-in issues, normalized to
+          // the canonical type label BEFORE the gate decides (D-10
+          // equivalence set).
+          const LABEL_EQUIVALENCE = new Map([
+            ['kind/bug', 'bug'],
+            ['type/bug', 'bug'],
+            ['kind/enhancement', 'enhancement'],
+            ['type/enhancement', 'enhancement'],
+            ['feat', 'enhancement'],
+          ]);
+
+          function parseArgs(argv) {
+            const args = {};
+            for (let i = 2; i < argv.length; i += 2) {
+              args[argv[i].replace(/^--/, '')] = argv[i + 1];
+            }
+            return args;
+          }
+
+          function die(message) {
+            console.error('gate-decide: ' + message);
+            process.exit(2);
+          }
+
+          function decide(labels, state, marker) {
+            const effective = labels.map((name) => LABEL_EQUIVALENCE.get(name) || name);
+            const hasTypeLabel = effective.some((name) => TYPE_LABELS.has(name));
+
+            if (hasTypeLabel) {
+              if (state === 'closed' && marker) {
+                return {
+                  decision: 'reopen',
+                  reason: 'valid type label on an issue this gate closed',
+                };
+              }
+              return { decision: 'skip', reason: 'valid type label present' };
+            }
+            if (state === 'open') {
+              if (marker) {
+                return {
+                  decision: 'skip',
+                  reason: 'guidance already posted; the gate closes once and never fights a human reopen',
+                };
+              }
+              return {
+                decision: 'close',
+                reason: 'no bug/enhancement label (after equivalence mapping) on an open issue',
+              };
+            }
+            if (marker) {
+              return { decision: 'skip', reason: 'closed by this gate; still no type label' };
+            }
+            return { decision: 'skip', reason: 'closed without the gate marker (human close)' };
+          }
+
+          const args = parseArgs(process.argv);
+          for (const flag of ['labels', 'state', 'marker']) {
+            if (args[flag] === undefined) die('--' + flag + ' is required');
+          }
+          let labels;
+          try {
+            const parsed = JSON.parse(args.labels);
+            if (!Array.isArray(parsed) || parsed.some((x) => typeof x !== 'string')) {
+              die('--labels must be a JSON array of strings');
+            }
+            labels = parsed;
+          } catch {
+            die('--labels must be a JSON array of strings');
+          }
+          if (args.state !== 'open' && args.state !== 'closed') {
+            die('--state must be open or closed');
+          }
+          if (args.marker !== 'true' && args.marker !== 'false') {
+            die('--marker must be true or false');
+          }
+
+          const verdict = decide(labels, args.state, args.marker === 'true');
+          console.log('decision=' + verdict.decision);
+          console.log('reason=' + verdict.reason);
+          GATE_DECIDE_EOF
+
+          # Live data only: state AND labels are re-fetched via the API;
+          # the event payload is never trusted (label-then-close race).
+          issue_json="$(gh api "repos/$REPO/issues/$ISSUE_NUMBER")"
+          state="$(printf '%s' "$issue_json" | jq -r .state)"
+          labels_json="$(printf '%s' "$issue_json" | jq -c '[.labels[].name]')"
+
+          # Marker = this gate's guidance comment already present
+          # (close-once semantics). grep -F: the marker is bracketed text.
+          bodies="$(gh api --paginate "repos/$REPO/issues/$ISSUE_NUMBER/comments" \
+            | jq -r '.[].body // empty')"
+          if printf '%s\n' "$bodies" | grep -F -- "$marker_tag" >/dev/null; then
+            marker=true
+          else
+            marker=false
+          fi
+
+          echo "gate input: issue=#$ISSUE_NUMBER state=$state marker=$marker labels=$labels_json"
+          verdict="$(node "$RUNNER_TEMP/gate-decide.cjs" \
+            --labels "$labels_json" --state "$state" --marker "$marker")"
+          echo "$verdict"
+          action="$(printf '%s\n' "$verdict" | sed -n 's/^decision=//p')"
+          test -n "$action"
+
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "dry run: decision=$action, nothing mutated"
+            exit 0
+          fi
+
+          # Pinned guidance copy (D-10): English, carries the marker, and
+          # names the no-permission path ("ask a maintainer to relabel").
+          read -r -d '' guidance <<'GUIDANCE_EOF' || true
+          <!-- gos-triage-gate -->
+          **Closed automatically: this issue has no type label.**
+
+          Every issue in this repository must carry a `bug` or `enhancement`
+          label so triage can route it; the .github/ISSUE_TEMPLATE forms
+          attach one automatically.
+
+          To get this issue reopened: add the `bug` or `enhancement` label
+          and the triage gate reopens it automatically. If you cannot add
+          labels in this repository, ask a maintainer to relabel — the
+          issue reopens on its own once a valid type label is present.
+
+          Which of the two labels applies is a human triage call; this gate
+          only checks that one is present
+          (workflow: .github/workflows/triage-gate.yml).
+          GUIDANCE_EOF
+          case "$guidance" in
+            *"$marker_tag"*) ;;
+            *) echo "guidance lost its marker tag - refusing to act" >&2; exit 1 ;;
+          esac
+
+          case "$action" in
+            close)
+              gh api -X POST "repos/$REPO/issues/$ISSUE_NUMBER/comments" \
+                -f body="$guidance" >/dev/null
+              gh api -X PATCH "repos/$REPO/issues/$ISSUE_NUMBER" \
+                -f state=closed >/dev/null
+              echo "gate action: guidance posted, issue #$ISSUE_NUMBER closed (once)"
+              ;;
+            reopen)
+              gh api -X PATCH "repos/$REPO/issues/$ISSUE_NUMBER" \
+                -f state=open >/dev/null
+              echo "gate action: issue #$ISSUE_NUMBER reopened (valid type label present)"
+              ;;
+            skip)
+              echo "gate action: skip"
+              ;;
+            *)
+              echo "unknown decision: $action" >&2
+              exit 1
+              ;;
+          esac

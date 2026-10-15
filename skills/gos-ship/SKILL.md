@@ -24,7 +24,7 @@ gos archive    # moves spec/plan to .gos/archive/, writes delta.md, marks DONE
 | Write change record | `CHANGELOG.md` via `gos changelog add` (D-NN/R-NN trace refs derived from the task) | `../../templates/trace-template.md` |
 | **Before `gos archive`** | **Ensure `CHANGELOG.md` [Unreleased] has a bullet stamped with today's UTC date — `gos changelog add` writes it (archive gate blocks otherwise; tests use GOS_SKIP_SHIP_CHECK=1) + package.json version bumped if this is a version-level iteration. Lv4 rendered views (DECISIONS/ROADMAP/REQUIREMENTS) auto-generate at archive — never edit them by hand.** | — |
 | **Gap or user-challenge occurred** | **Record via `gos lessons add --type project\|model --text "…"` (scene → lesson). VERIFY gaps and user pushback that changed design BOTH count. Alternative: `gos lessons skip --reason` (D-34 exemption, audited + mirrored to .changes.md)** | `reference/artifact-lifecycle.md` |
-| Never archived/cleaned | `.gos/logs/truth-receipts.md` (replay receipts stay forever, tracked) + `.gos/lessons.md` + sidecar `.gos/cache/.lessons-anchors.json` (cache zone, machine-regenerated) | `reference/artifact-lifecycle.md` |
+| Never archived/cleaned | `.gos/logs/truth-receipts.md` (replay receipts stay forever, machine-local) + `.gos/lessons.md` + sidecar `.gos/cache/.lessons-anchors.json` (cache zone, machine-regenerated) | `reference/artifact-lifecycle.md` |
 | Cleanup checklist | **RUN `scripts/cleanup-scan.sh`** (exit 1 = findings block archive) | `reference/artifact-lifecycle.md` |
 | Archive | Present delivery summary → user accepts → `gos approve archive` → `gos archive` | `reference/artifact-lifecycle.md` |
 | Retrospective (Lv3+) | 3 questions ≤5 bullets each | — |

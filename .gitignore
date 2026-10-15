@@ -59,9 +59,6 @@ build/
 
 # Logs
 *.log
-# [Phase D T2] audit receipts are tracked (cross-machine auditable)
-# [Phase D T9] network.md refresh backups (keep 5, machine-local)
-# [Phase D T10] exemptions are tracked + audited (R2-F11)
 npm-debug.log*
 
 # GOS concurrency lock (machine-local)
@@ -81,8 +78,6 @@ test/out/
 .gos/cache/
 # [P12] feedback drafts stay untracked (feedstock; only .gos/FEEDBACK.md publishes)
 .gos/project/feedback/
-# [Phase W T16] audit logs stay tracked (truth-receipts/exemptions/edge-audit) — reverse the global *.log
-!.gos/logs/**
 .gos/codebase/edge-history.ndjson
 .playwright-mcp/
 

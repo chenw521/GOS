@@ -2,6 +2,7 @@
 'use strict';
 
 const core = require('../core/index.cjs');
+const clcore = require('./changelog-core.cjs');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -21,6 +22,103 @@ const VALID_PROFILES = Object.freeze(['team', 'solo', 'elite', 'lean']);
 const MODEL_NAME_RE = /^[a-zA-Z0-9._/-]+$/; // F-2 whitelist
 
 const CONFIG_PATH = path.join(core.GOS_DIR, 'config.json');
+
+// D-09 two-layer system: GLOBAL layer (~/.config/gos/config.json — physical
+// path pinned, precedent i18n.cjs/persistLocale) is the seeded base; PROJECT
+// layer (.gos/config.json, tracked) overrides per-repo. Merge: scalars
+// project-wins; DEEP_MERGE_KEYS merge per sub-key so a project {checker} pin
+// never erases a global {thinker} pin.
+function globalConfigFile() { return path.join(os.homedir(), '.config', 'gos', 'config.json'); }
+
+const DEEP_MERGE_KEYS = Object.freeze(['models']);
+const SENTINEL_KEY = 'lessons_migrated'; // deleted outright (D-09) — legacy key only ever stripped
+
+// Corrupt layer → rename <path>.corrupt-<ts> + self-describing die — never a
+// silent fallback to defaults (the next save would overwrite recoverable
+// content). A MISSING layer is a legal empty base and returns {}.
+function quarantineCorrupt(p, layer, why) {
+  const to = `${p}.corrupt-${Date.now()}`;
+  try { fs.renameSync(p, to); }
+  catch (e) { core.die(`config: ${layer} layer (${p}) is corrupt (${why}) AND quarantine failed (${e.message}) — fix the file manually, then re-run`); }
+  core.die(`config: ${layer} layer is corrupt (${why}) — moved to ${to}; fix it (project layer: git restore ${path.relative(process.cwd(), p) || p}) or delete it deliberately, then re-run. Refusing to fall back to defaults silently.`);
+}
+
+function readLayer(p, layer) {
+  if (!fs.existsSync(p)) return {};
+  let raw;
+  try { raw = fs.readFileSync(p, 'utf8'); }
+  catch (e) { quarantineCorrupt(p, layer, `unreadable: ${e.message}`); }
+  let obj;
+  try { obj = JSON.parse(raw); }
+  catch (e) { quarantineCorrupt(p, layer, `JSON parse failed: ${e.message}`); }
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) quarantineCorrupt(p, layer, 'not a JSON object');
+  return obj;
+}
+
+function plainObject(v) {
+  return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+}
+
+function loadConfig() {
+  const g = readLayer(globalConfigFile(), 'global');
+  const p = readLayer(CONFIG_PATH, 'project');
+  const merged = { model_profile: 'team', models: {}, ...g, ...p }; // scalars: project wins
+  for (const k of DEEP_MERGE_KEYS) {
+    merged[k] = { ...plainObject(g[k]), ...plainObject(p[k]) }; // per-key deep merge
+  }
+  return merged;
+}
+
+// One-time lessons_migrated strip for a layer (D-09 R2-6iii). Surgical: the
+// layer file is re-read fresh and only the sentinel key is removed, so a
+// concurrent `config models set` update to the other layer is never lost
+// (R3-F10: the strip lives ONLY inside this single locked write path;
+// loadConfig never writes).
+function stripSentinelFromLayer(p, layerObj, layer) {
+  if (!layerObj || layerObj[SENTINEL_KEY] === undefined) return false;
+  const next = { ...layerObj };
+  delete next[SENTINEL_KEY];
+  core.writeAtomicJson(p, next);
+  console.error(`⚠ config: removed obsolete '${SENTINEL_KEY}' key from ${layer} config (${p}) — one-time self-heal (D-09)`);
+  return true;
+}
+
+// Layer-separating project write: a value equal to the global base is not
+// re-pinned into the tracked project layer (machine-local choices never leak
+// into the repo file); models separate per agent key. The sentinel key is
+// never persisted — the project-side strip is implicit in this view.
+function projectWriteView(cfg, g) {
+  const out = {};
+  const src = plainObject(cfg);
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  for (const k of Object.keys(src)) {
+    if (k === SENTINEL_KEY) continue;
+    if (k === 'models') {
+      const own = {};
+      const gm = plainObject(g.models);
+      for (const a of Object.keys(plainObject(src.models))) {
+        if (!Object.prototype.hasOwnProperty.call(gm, a) || src.models[a] !== gm[a]) own[a] = src.models[a];
+      }
+      if (Object.keys(own).length) out.models = own;
+      continue;
+    }
+    if (Object.prototype.hasOwnProperty.call(g, k) && same(src[k], g[k])) continue; // base already provides it
+    out[k] = src[k];
+  }
+  return out;
+}
+
+function saveConfig(cfg) {
+  const gPath = globalConfigFile();
+  const g = readLayer(gPath, 'global'); // corrupt global fails closed on the write path too
+  stripSentinelFromLayer(gPath, g, 'global');
+  const pRaw = readLayer(CONFIG_PATH, 'project');
+  const out = projectWriteView(cfg, g);
+  core.writeAtomicJson(CONFIG_PATH, out); // REVIEW F-4 (D-18): ALL json writes atomic — config included
+  if (pRaw[SENTINEL_KEY] !== undefined) {
+    console.error(`⚠ config: removed obsolete '${SENTINEL_KEY}' key from project config (${CONFIG_PATH}) — one-time self-heal (D-09)`);
+  }
+}
 
 const SEMANTIC_RUNTIME_BASE = {
   skipNotGit: 'semantic diff skip: not a git repo — diff-hit check unavailable here',
@@ -42,16 +140,6 @@ const SEMANTIC_RUNTIME = core.CONTRACTS.semantic_checks;
 // first; absent → live task.parsePlanMd() fallback [B-2 source-of-truth rule]. null = no plan.
 
 // ① B-2 bidirectional: plan Covers ∪D-NN == state.decisions ids EXACT (both directions);
-
-function loadConfig() {
-  if (!fs.existsSync(CONFIG_PATH)) return { model_profile: 'team', models: {} };
-  try { return { model_profile: 'team', models: {}, ...JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')) }; }
-  catch { return { model_profile: 'team', models: {} }; }
-}
-
-function saveConfig(cfg) {
-  core.writeAtomicJson(CONFIG_PATH, cfg); // REVIEW F-4 (D-18): ALL json writes atomic — config included
-}
 
 function resolveSemanticTier(tier) {
   if (tier === 'inherit' || tier === 'current') return { model: 'inherit' };
@@ -113,6 +201,68 @@ function cmdResolveModel(args) {
   if (r.hint) console.error(`hint: ${r.hint}`);
 }
 
+// `gos config changelog-path <rel>` — D-07/R-32: record the changelog location
+// in the PROJECT layer (tracked, clone-consistent) and move any existing file
+// there atomically. Lock order pinned .gos/.lock (held by write-class dispatch
+// since guardCwd) → changelog.lock, both held across the whole mv+save so a
+// concurrent `changelog add` can never rebuild the old path mid-move (R2-4).
+// mv three-state idempotency: same-path = no-op; source AND target both exist
+// = die (no overwrite — .git/index-shaped targets die in validation anyway);
+// target exists but is not a regular file = die; parent dirs mkdir -p; EXDEV
+// dies naming EXDEV (no silent copy+delete).
+function cmdConfigChangelogPath(rest, cfg) {
+  if (rest.length !== 1 || !String(rest[0] || '').trim()) {
+    core.die('Usage: gos config changelog-path <repo-relative .md path>  (e.g. docs/CHANGELOG.md)');
+  }
+  const root = clcore.changelogProjectRoot();
+  const v = clcore.validateChangelogRelPath(rest[0], root);
+  if (!v.ok) core.die(`config: changelog-path '${rest[0]}' rejected — ${v.reason}`);
+  clcore.acquireChangelogLock();
+  try {
+    const currentAbs = clcore.resolveChangelogMd();
+    const currentRel = path.relative(root, currentAbs).split(path.sep).join('/');
+    if (currentAbs === v.abs) {
+      console.log(`✓ changelog-path already ${v.rel} — nothing to do`);
+      return;
+    }
+    let srcStat = null;
+    try { srcStat = fs.statSync(currentAbs); } catch { /* absent: no file to move */ }
+    let dstStat = null;
+    try { dstStat = fs.lstatSync(v.abs); } catch { /* absent: free target */ }
+    if (dstStat !== null && !dstStat.isFile()) {
+      core.die(`config: changelog-path target ${v.rel} exists but is not a regular file (${dstStat.isDirectory() ? 'directory' : 'symlink or other'}) — refusing; resolve it manually, then re-run`);
+    }
+    if (srcStat !== null && dstStat !== null) {
+      core.die(`config: both ${currentRel} and ${v.rel} exist — refusing to overwrite; move or delete one deliberately, then re-run`);
+    }
+    if (srcStat !== null) {
+      fs.mkdirSync(path.dirname(v.abs), { recursive: true });
+      try {
+        fs.renameSync(currentAbs, v.abs);
+      } catch (e) {
+        if (e.code === 'EXDEV') {
+          core.die(`config: moving ${currentRel} → ${v.rel} crosses a filesystem boundary (EXDEV) — no silent copy+delete; relocate the file manually, then re-run to record the path`);
+        }
+        core.die(`config: moving ${currentRel} → ${v.rel} failed (${e.message})`);
+      }
+      cfg.changelog_path = v.rel;
+      saveConfig(cfg);
+      console.log(`✓ changelog moved atomically: ${currentRel} → ${v.rel} (changelog_path recorded in the project layer)`);
+      console.log('⚠ git records the relocation only at your next commit (old path deleted + new path untracked until then)');
+      return;
+    }
+    cfg.changelog_path = v.rel;
+    saveConfig(cfg);
+    if (dstStat !== null) {
+      console.log(`✓ changelog-path = ${v.rel} (existing file adopted; nothing moved)`);
+    } else {
+      console.log(`✓ changelog-path = ${v.rel} (no changelog at ${currentRel} — the next 'gos changelog add' bootstraps at the new path)`);
+    }
+  } finally {
+    clcore.releaseChangelogLock();
+  }
+}
+
 function cmdConfig(args) {
   const sub = (args[0] || '').toLowerCase();
   const cfg = loadConfig();
@@ -146,9 +296,13 @@ function cmdConfig(args) {
       console.log(`✓ models.${agent} = ${model === 'inherit' ? '(cleared → profile applies)' : model}`);
       return;
     }
-    core.die('Usage: gos config models [show | profile <name> | set <agent> <model>]');
+    core.die('Usage: gos config models [show | profile <name> | set <agent> <model>] | gos config changelog-path <repo-relative .md path>');
   }
-  console.log('Usage: gos config models [show | profile <name> | set <agent> <model>]');
+  if (sub === 'changelog-path') {
+    cmdConfigChangelogPath(args.slice(1), cfg);
+    return;
+  }
+  console.log('Usage: gos config models [show | profile <name> | set <agent> <model>] | gos config changelog-path <repo-relative .md path>');
 }
 
 module.exports = { MODEL_NAME_RE, SEMANTIC_RUNTIME, loadConfig, saveConfig, resolveSemanticTier, probeModels, cmdResolveModel, cmdConfig };

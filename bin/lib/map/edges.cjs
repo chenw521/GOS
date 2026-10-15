@@ -4,8 +4,6 @@
 
 const anchor = require('./anchor.cjs');
 
-const { execFileSync } = require('node:child_process');
-
 const fs = require('node:fs');
 const path = require('node:path');
 const core = require('../core/index.cjs');
@@ -41,14 +39,7 @@ function loadEdges(root) {
 }
 
 function writeEdges(root, edgesL, existed) {
-  core.writeAtomicJson(edgesPath(root), { schema_version: 1, note: EDGES_NOTE, edges: edgesL });   // frozen key: edges.json schema keeps `edges` (edgesL is a shadow-defense rename)
-  if (!existed) {   // first add forces git add (closes the pre-add window — §5.2, B-9 lesson)
-    const targets = [path.join('.gos', core.GOS_PATHS.edge_audit.rel)].filter((p2) => fs.existsSync(path.join(root, p2))); // T16: edges.json now cache/ignored — audit receipt is the only tracked target
-    if (targets.length) {
-      try { execFileSync('git', ['-C', root, 'add', '--', ...targets]); }
-      catch { /* not a git repo — skip staging */ }
-    }
-  }
+  core.writeAtomicJson(edgesPath(root), { schema_version: 1, note: EDGES_NOTE, edges: edgesL });   // frozen key: edges.json schema keeps `edges` (edgesL is a shadow-defense rename); logs staging removed (D-01: machine-local)
 }
 
 function auditEdge(root, action, from, to, type) {

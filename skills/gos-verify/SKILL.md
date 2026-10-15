@@ -29,7 +29,7 @@ gos gate all               # hard gate: must exit 0 before SHIP
 
 - `must-check set (regex-extracted ... NOT exhaustive ...)` — semantic dependents of your diff (calls/contracts/hand edges). Each line names a file + the edge family that links it. Read EVERY line: these files are co-responsible for your change's correctness.
 - `must-run test sections (...)` — sections whose commands you touched (hunk→function→cmd mapping). If a section is absent from the last run, `bash test/run-sections.sh <section>` BEFORE claiming verification; the gate manifest check will FAIL on mismatch.
-- `run-manifest stale` (gate all FAIL) — sections last ran against a different content tree. Re-run the suite; only use `gos gate --exempt <section>` when you can justify the exemption in your verify notes (one-shot, audited in .gos/exemptions.log).
+- `run-manifest stale` (gate all FAIL) — sections last ran against a different content tree. Re-run the suite; only use `gos gate --exempt <section> --reason "<why>"` (reason mandatory, ≥10 chars) when you can justify the exemption in your verify notes (one-shot, audited in .gos/logs/exemptions.log).
 - Machine consumers: `gos map closure <path> --json` (strict envelope, byte-0 JSON) is the sole structured mode; `--print0` stays paths-only.
 
 ### Truth recording (Phase B D-25/D-30)
