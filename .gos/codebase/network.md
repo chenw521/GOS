@@ -9,7 +9,7 @@ Nodes = path anchors (human and machine share the same key); edges = semantic de
 
 | family | count |
 |:--|:--|
-| calls (② call sites → cmd anchors) | 626 |
+| calls (② call sites → cmd anchors) | 632 |
 | contracts (③ contract-string consumers) | 81 |
 | switch (④case↔cmdXxx) | 36 |
 | testof (⑤ section annotations → cmd) | 128 |
@@ -510,6 +510,7 @@ graph TD
   n376["test/sections/T9-contract.test.sh"]
   n377["test/sections/T90-projectmd-gate.test.sh"]
   n378["test/sections/T91-ledger-reconcile.test.sh"]
+  n379["test/sections/T92-logs-cmd.test.sh"]
   n1 -->|"calls"| n88
   n1 -->|"calls"| n91
   n2 -->|"calls"| n88
@@ -734,6 +735,7 @@ graph TD
   n54 -->|"calls"| n86
   n55 -->|"calls"| n89
   n12 -->|"calls"| n61
+  n12 -->|"calls"| n77
   n12 -->|"calls"| n78
   n12 -->|"calls"| n82
   n57 -->|"dispatches"| n94
@@ -1382,6 +1384,11 @@ graph TD
   n378 -->|"calls"| n72
   n378 -->|"calls"| n74
   n378 -->|"calls"| n80
+  n379 -->|"calls"| n72
+  n379 -->|"calls"| n73
+  n379 -->|"calls"| n74
+  n379 -->|"calls"| n77
+  n379 -->|"calls"| n93
 ```
 
 <!-- MANUAL:notes -->
