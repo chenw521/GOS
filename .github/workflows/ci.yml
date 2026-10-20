@@ -149,3 +149,31 @@ jobs:
           git rev-parse --verify --quiet "${PUSH_BEFORE}^{commit}" >/dev/null \
             || git fetch origin "$PUSH_BEFORE"
           bash test/checks/aggregate-guard.sh "${args[@]}" "$PUSH_BEFORE" "$PUSH_AFTER"
+
+  # A3 (2026-10-20): main is PR-only while branch protection waits for the
+  # public/Pro gate. PR squash-merges carry committer GitHub <noreply@github.com>
+  # (web-flow creates the merge commit); local direct pushes carry the user.
+  # This alarm is the visibility backstop for the local pre-push ban.
+  direct-push-alarm:
+    name: Direct push discipline
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+      - name: Committer must be GitHub (PR merges only)
+        run: |
+          committer="$(git log -1 --format='%cn <%ce>' '${{ github.event.after }}')"
+          echo "HEAD committer: ${committer}"
+          case "$committer" in
+            GitHub\<*noreply@github.com>*|GitHub\ \<*noreply@github.com>*)
+              echo "PR squash-merge detected — discipline holds"
+              ;;
+            *)
+              echo "::error::direct push to main detected (committer: ${committer}) — use the PR flow: raw-push a feature branch, open a PR, squash-merge; local emergency bypass: GOS_ALLOW_MAIN_PUSH=1"
+              exit 1
+              ;;
+          esac

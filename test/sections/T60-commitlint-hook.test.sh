@@ -194,5 +194,42 @@ set +e; MC=$(grep -c "gos-managed" "$GOS_ROOT/hooks/commit-msg.sh"); MP=$(grep -
 assert_eq "F4 commit-msg.sh master is gos-managed (exactly one marker)" "1" "$MC"
 assert_eq "F5 pre-push.sh master is gos-managed (exactly one marker)" "1" "$MP"
 
+# --- G: PR-only main discipline (A3 ruling 2026-10-20) — real pushes through
+# the installed hook against a bare origin ---
+G_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-t60g"
+mkdir -p "$G_DIR"
+git init -q --bare "$G_DIR/origin.git"
+mkdir "$G_DIR/work"
+cd "$G_DIR/work" || exit 1
+git init -q . && git -c user.email=g@t -c user.name=g commit -q --allow-empty -m "chore: root"
+set +e; GINST=$(node "$GOS" setup --commitlint 2>&1); GIRC=$?; set -e
+assert_exit "G0 hook installed in push sandbox" 0 "$GIRC"
+git remote add origin "$G_DIR/origin.git"
+set +e; GOUT1=$(git push -q origin HEAD:refs/heads/main 2>&1); GRC1=$?; set -e
+assert_exit "G1 bootstrap push creating main is allowed" 0 "$GRC1"
+echo more > m.txt && git add m.txt && git -c user.email=g@t -c user.name=g commit -q --no-verify -m "chore: second"
+set +e; GOUT2=$(git push -q origin HEAD:refs/heads/main 2>&1); GRC2=$?; set -e
+assert_exit "G2 second direct push to main rejected (PR-only)" 1 "$GRC2"
+assert_contains "G2 rejection names PR-only" "PR-only" "$GOUT2"
+assert_contains "G2 rejection carries the PR path" "pull request" "$GOUT2"
+assert_contains "G2 rejection names the emergency escape" "GOS_ALLOW_MAIN_PUSH" "$GOUT2"
+set +e; GOUT3=$(GOS_ALLOW_MAIN_PUSH=1 git push -q origin HEAD:refs/heads/main 2>&1); GRC3=$?; set -e
+assert_exit "G3 GOS_ALLOW_MAIN_PUSH=1 lands the single commit" 0 "$GRC3"
+echo more2 > m2.txt && git add m2.txt && git -c user.email=g@t -c user.name=g commit -q --no-verify -m "chore: third"
+echo more3 > m3.txt && git add m3.txt && git -c user.email=g@t -c user.name=g commit -q --no-verify -m "chore: fourth"
+set +e; GOUT4=$(GOS_ALLOW_MAIN_PUSH=1 git push -q origin HEAD:refs/heads/main 2>&1); GRC4=$?; set -e
+assert_exit "G4 escape hatch still enforces 1-commit discipline" 1 "$GRC4"
+set +e; GOUT5=$(git push -q origin HEAD:refs/heads/feature-x 2>&1); GRC5=$?; set -e
+assert_exit "G5 feature-branch pushes are unguarded" 0 "$GRC5"
+cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$G_DIR"
+
+# G6: CI carries the direct-push alarm (committer must be GitHub = PR merges only)
+set +e; GA=$(grep -c 'Direct push discipline' "$GOS_ROOT/.github/workflows/ci.yml"); GB=$(grep -c "github.event_name == 'push' && github.ref == 'refs/heads/main'" "$GOS_ROOT/.github/workflows/ci.yml"); GC=$(grep -c '%cn' "$GOS_ROOT/.github/workflows/ci.yml"); set -e
+if [ "$GA" -ge 1 ] && [ "$GB" -ge 1 ] && [ "$GC" -ge 1 ]; then
+  echo "  ✓ G6 CI direct-push alarm job present (push+main gate, committer check)"; PASS=$((PASS+1))
+else
+  echo "  ✗ G6 CI direct-push alarm job missing"; FAIL=$((FAIL+1))
+fi
+
 echo "--- T60 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]

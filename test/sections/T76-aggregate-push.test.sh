@@ -117,16 +117,23 @@ echo one > one.txt && git add one.txt && git commit -q --no-verify -m "feat: one
 echo two > two.txt && git add two.txt && git commit -q --no-verify -m "feat: two" || exit 1
 set +e; OUT=$(git push origin HEAD:refs/heads/main 2>&1); RC=$?; set -e
 if [ "$RC" -ne 0 ]; then echo "  ✓ multi-commit raw push to main rejected (exit $RC)"; PASS=$((PASS+1)); else echo "  ✗ multi-commit raw push to main must fail"; FAIL=$((FAIL+1)); fi
-assert_contains "rejection hints at gos push" "gos push" "$OUT"
-assert_contains "rejection names the one-commit discipline" "discipline allows 1" "$OUT"
+assert_contains "default rejection is the PR-only ban (A3)" "PR-only" "$OUT"
+assert_contains "default rejection names the escape" "GOS_ALLOW_MAIN_PUSH" "$OUT"
 assert_eq "remote main unchanged after rejection" "$REMOTE_TIP" "$(git ls-remote origin refs/heads/main | cut -f1)"
+set +e; OUT=$(GOS_ALLOW_MAIN_PUSH=1 git push origin HEAD:refs/heads/main 2>&1); RC=$?; set -e
+if [ "$RC" -ne 0 ]; then echo "  ✓ escape hatch still rejects multi-commit chains"; PASS=$((PASS+1)); else echo "  ✗ escape hatch must keep the 1-commit discipline"; FAIL=$((FAIL+1)); fi
+assert_contains "escape rejection hints at gos push" "gos push" "$OUT"
+assert_contains "escape rejection names the one-commit discipline" "discipline allows 1" "$OUT"
 
-# --- T76.8: single clean commit passes the raw-push guard ---
+# --- T76.8: single clean commit passes via the escape hatch (A3: raw default is PR-only) ---
 git reset -q --hard origin/main || exit 1
 echo solo > solo.txt && git add solo.txt && git commit -q --no-verify -m "feat: solo semantic change" || exit 1
 LOCAL_TIP=$(git rev-parse HEAD)
 set +e; OUT=$(git push origin HEAD:refs/heads/main 2>&1); RC=$?; set -e
-assert_exit "single clean commit push passes" 0 "$RC"
+assert_exit "raw default push is PR-only rejected" 1 "$RC"
+assert_contains "raw rejection names the PR path" "pull request" "$OUT"
+set +e; OUT=$(GOS_ALLOW_MAIN_PUSH=1 git push origin HEAD:refs/heads/main 2>&1); RC=$?; set -e
+assert_exit "single clean commit passes via escape" 0 "$RC"
 assert_eq "remote main advanced to the pushed commit" "$LOCAL_TIP" "$(git ls-remote origin refs/heads/main | cut -f1)"
 
 # --- T76.9: feature-branch pushes are untouched by the guard ---
@@ -143,7 +150,7 @@ git checkout -q main
 t76_teardown; t76_setup
 node "$GOS" setup --commitlint >/dev/null 2>&1 || exit 1
 echo adv > adv.txt && git add adv.txt && git commit -q --no-verify -m "chore(task): advance P15" || exit 1
-set +e; OUT=$(git push origin HEAD:refs/heads/main 2>&1); RC=$?; set -e
+set +e; OUT=$(GOS_ALLOW_MAIN_PUSH=1 git push origin HEAD:refs/heads/main 2>&1); RC=$?; set -e
 if [ "$RC" -ne 0 ]; then echo "  ✓ advance-template push rejected (exit $RC)"; PASS=$((PASS+1)); else echo "  ✗ advance-template push must fail"; FAIL=$((FAIL+1)); fi
 assert_contains "advance rejection hints at gos push" "gos push" "$OUT"
 assert_contains "rejection names the advance template" "advance-template" "$OUT"
@@ -151,7 +158,7 @@ assert_contains "rejection names the advance template" "advance-template" "$OUT"
 # --- T76.11: tree-empty commit rejected even as a single commit ---
 git reset -q --hard origin/main || exit 1
 git commit -q --no-verify --allow-empty -m "chore: empty marker" || exit 1
-set +e; OUT=$(git push origin HEAD:refs/heads/main 2>&1); RC=$?; set -e
+set +e; OUT=$(GOS_ALLOW_MAIN_PUSH=1 git push origin HEAD:refs/heads/main 2>&1); RC=$?; set -e
 if [ "$RC" -ne 0 ]; then echo "  ✓ tree-empty push rejected (exit $RC)"; PASS=$((PASS+1)); else echo "  ✗ tree-empty push must fail"; FAIL=$((FAIL+1)); fi
 assert_contains "tree-empty rejection hints at gos push" "gos push" "$OUT"
 assert_contains "rejection names the tree-empty rule" "tree-empty" "$OUT"
@@ -213,10 +220,10 @@ git reset -q --hard origin/main
 echo t15 > t15.txt && git add t15.txt && git commit -q --no-verify -m "feat: t15 content" || exit 1
 T15TREE=$(git rev-parse 'HEAD^{tree}')
 R=$(git commit-tree "$T15TREE" -p "$(git rev-parse origin/main)" -m "chore: rebuilt history placeholder") || exit 1
-git push -q origin "$R:refs/heads/main" || exit 1
+GOS_ALLOW_MAIN_PUSH=1 git push -q origin "$R:refs/heads/main" || exit 1
 git fetch -q origin
 echo t16 > t16.txt && git add t16.txt && git commit -q --no-verify -m "feat: t16 content" || exit 1
-set +e; OUT15=$(node "$GOS" push --message "feat(ops): topology divergence case" 2>&1); RC15=$?; set -e
+set +e; OUT15=$(GOS_ALLOW_MAIN_PUSH=1 node "$GOS" push --message "feat(ops): topology divergence case" 2>&1); RC15=$?; set -e
 assert_exit "rebuild-topology divergence push exits 0" 0 "$RC15"
 assert_contains "notice names topology-only divergence" "topology-only divergence" "$OUT15"
 git fetch -q origin

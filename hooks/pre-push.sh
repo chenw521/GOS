@@ -4,11 +4,14 @@
 # Removed by `gos setup --commitlint --teardown`.
 # gos-managed: GOS hook master - local edits are overwritten by re-running gos setup.
 #
-# Policy: a raw push that would land more than one commit on refs/heads/main,
-# or land a tree-empty commit, or land an advance-template subject, is
-# rejected with a hint pointing at `gos push` (the aggregation command).
-# Deleting refs/heads/main is rejected outright. Non-main refs are never
-# inspected.
+# Policy: refs/heads/main is PR-only (A3 ruling 2026-10-20 — branch-protection
+# parity during the private period): direct raw pushes are rejected with the
+# PR path; GOS_ALLOW_MAIN_PUSH=1 is the auditable emergency escape, beneath
+# which the aggregate discipline still applies (1 commit per push, no
+# tree-empty, no advance-template subjects). Bootstrap pushes that CREATE
+# refs/heads/main and pushes whose remote tip is unavailable locally are not
+# banned. Deleting refs/heads/main is rejected outright. Non-main refs are
+# never inspected.
 set -u
 
 ADVANCE_RE='^chore\(task\): advance( |$)'
@@ -58,6 +61,17 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   if ! git rev-parse --quiet --verify "$remote_sha^{commit}" >/dev/null 2>&1; then
     echo "gos pre-push: remote tip $remote_sha not available locally — push-range checks skipped" >&2
     continue
+  fi
+
+  # PR-only main (A3): direct pushes rejected unless the explicit escape is set.
+  if [ "${GOS_ALLOW_MAIN_PUSH:-0}" != "1" ]; then
+    echo "gos pre-push: rejected — refs/heads/main is PR-only (direct pushes disabled)" >&2
+    echo "PR path:" >&2
+    echo "  1. git push origin HEAD:refs/heads/<branch>  (feature branches are unguarded)" >&2
+    echo "  2. open a pull request into main from that branch (PR template carries Closes #N)" >&2
+    echo "  3. squash-merge it — one semantic commit lands on main, CI gates the merge" >&2
+    echo "emergency direct path: GOS_ALLOW_MAIN_PUSH=1 (auditable; the 1-commit aggregate discipline still applies)" >&2
+    exit 1
   fi
 
   count=$(git rev-list --count "$remote_sha..$local_sha" 2>/dev/null)
