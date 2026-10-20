@@ -168,12 +168,11 @@ jobs:
         run: |
           committer="$(git log -1 --format='%cn <%ce>' '${{ github.event.after }}')"
           echo "HEAD committer: ${committer}"
-          case "$committer" in
-            GitHub\<*noreply@github.com>*|GitHub\ \<*noreply@github.com>*)
-              echo "PR squash-merge detected — discipline holds"
-              ;;
-            *)
-              echo "::error::direct push to main detected (committer: ${committer}) — use the PR flow: raw-push a feature branch, open a PR, squash-merge; local emergency bypass: GOS_ALLOW_MAIN_PUSH=1"
-              exit 1
-              ;;
-          esac
+          # case patterns cannot carry literal < > (parse-level redirection
+          # tokens) — grep is the portable discriminator
+          if printf '%s' "$committer" | grep -qi '^GitHub *<noreply@github\.com>$'; then
+            echo "PR squash-merge detected — discipline holds"
+          else
+            echo "::error::direct push to main detected (committer: ${committer}) — use the PR flow: raw-push a feature branch, open a PR, squash-merge; local emergency bypass: GOS_ALLOW_MAIN_PUSH=1"
+            exit 1
+          fi
