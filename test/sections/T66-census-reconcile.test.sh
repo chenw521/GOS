@@ -131,6 +131,20 @@ t66_census_add "$T66_DIR/sb-g" "path/that/never/exists" "true" "false"
 t66_run_pack "$T66_DIR/sb-g"
 t66_assert_labeled "g dead entry rejected by validator" 1 "$PACK_RC" "dead entry" "$PACK_OUT"
 
+# --- g2: lifecycle entries stay alive when absent (idle/archived/fresh clone) ---
+t66_mksandbox "$T66_DIR/sb-g2"
+rm -rf "$T66_DIR/sb-g2/.gos/task"   # fresh-clone parity: the dir is legally absent post-archive
+t66_census_add "$T66_DIR/sb-g2" ".gos/task" "true" "false"
+node -e '
+  const fs = require("fs");
+  const p = process.argv[1] + "/census.json";
+  const c = JSON.parse(fs.readFileSync(p, "utf8"));
+  c.entries[".gos/task"].lifecycle = true; // tracked while in flight, legally absent after archive
+  fs.writeFileSync(p, JSON.stringify(c, null, 2) + "\n");
+' "$T66_DIR/sb-g2"
+t66_run_pack "$T66_DIR/sb-g2"
+t66_assert_labeled "g2 lifecycle entry alive when absent" 0 "$PACK_RC" "all checks passed" "$PACK_OUT"
+
 # --- h: tracked symlink under npm:true entry → source ① red ---
 t66_mksandbox "$T66_DIR/sb-h"
 ln -s ../../README.md "$T66_DIR/sb-h/skills/gos-link.md"

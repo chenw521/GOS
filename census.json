@@ -75,7 +75,8 @@
     ".gos/task": {
       "git": true,
       "npm": false,
-      "note": "active task dir tracked — spec/plan artifacts land in stage commits (English process state)"
+      "note": "active task dir tracked while in flight — spec/plan artifacts land in stage commits; legally absent post-archive/fresh-clone (lifecycle)",
+      "lifecycle": true
     },
     ".gos/archive": {
       "git": false,

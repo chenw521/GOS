@@ -120,8 +120,11 @@ for (const k of rawKeys) {
   // Transient machine-local entries (git:false + covered by .gitignore) may
   // legitimately be absent on an idle tree — e.g. .gos/.lock exists only while
   // a gos process runs. They are never dead; their existence check is the
-  // gitignore reconciliation (source 3), not presence here.
-  const transient = !e.git && ignored(kk);
+  // gitignore reconciliation (source 3), not presence here. Lifecycle entries
+  // (lifecycle:true) are the tracked counterpart: present while a task is in
+  // flight, legally absent on idle/archived trees and fresh clones (the dir
+  // never travels once archived).
+  const transient = (!e.git && ignored(kk)) || e.lifecycle === true;
   const alive = transient
     || ls.some((f) => f === kk || f.startsWith(kk + '/'))
     || packList.some((f) => f === kk || f.startsWith(kk + '/'))

@@ -562,7 +562,7 @@
     ],
     "audit": []
   },
-  "changelog_user_summary": "push aggregate subject-case parity and machine-local evidence zones fix the red CI commitlint and gate audit lines",
+  "changelog_user_summary": "census lifecycle entries fix the dead-task-dir false red on fresh checkouts",
   "checkpoints": [],
   "semantic": {
     "allowlist": [

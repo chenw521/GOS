@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add census lifecycle entries fix the dead-task-dir false red on fresh checkouts (R-01) [2026-10-20]
 - Add push aggregate subject-case parity and machine-local evidence zones fix the red CI commitlint and gate audit lines (R-01) [2026-10-20]
 - Add P1 verify pass: all 13 observable truths replay-verified against the post-review tree with enriched receipts (R-01) [2026-10-20]
 - Add P1 review fixes seal security tokenizer escapes with dotfile-glob and glued-separator rows plus fail-closed pin, and harden changelog lock, render backup, exemptions symlink guard and evidence veto sets (D-11/D-02) [2026-10-19]
