@@ -628,7 +628,15 @@ function validateEvidenceObject(ev, repoRoot) {
     if (path.isAbsolute(ap)) errs.push('evidence.artifact_path: must be relative to repo root');
     if (ap.split('/').includes('..')) errs.push('evidence.artifact_path: no .. segments');
     if (/[\n\r]/.test(ap)) errs.push('evidence.artifact_path: newline rejected');
-    if (repoRoot && !fs.existsSync(path.resolve(repoRoot, ap))) {
+    // Machine-local zones (gitignored by design — D-01/D-08 logs/cache, census
+    // audit for archive): evidence artifacts there are guaranteed on the
+    // AUTHORING machine at verify time (receipt-logged) but never travel with
+    // git — a fresh clone must not fail schema validation for their absence.
+    // NOTE: the registry archive key says tracked:true while gitignore+census
+    // say local — that divergence is DI-6 territory, so the zone list is
+    // explicit here instead of derived.
+    const ARTIFACT_LOCAL_ZONES = ['.gos/archive/', '.gos/logs/', '.gos/cache/'];
+    if (repoRoot && !fs.existsSync(path.resolve(repoRoot, ap)) && !ARTIFACT_LOCAL_ZONES.some((z) => ap.startsWith(z))) {
       errs.push(`evidence.artifact_path: not found on disk (${CONTRACTS.semantic_checks.pathExists})`);
     }
   }

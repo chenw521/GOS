@@ -233,6 +233,16 @@ set +e; OUT16=$(node "$GOS" push 2>&1); RC16=$?; set -e
 [ "$RC16" -ne 0 ] && { echo "  ✓ non-conventional subject refused"; PASS=$((PASS+1)); } || { echo "  ✗ non-conventional subject must fail"; FAIL=$((FAIL+1)); }
 assert_contains "refusal names the format contract" "conventional-format contract" "$OUT16"
 assert_contains "refusal hints at an explicit subject" "one-liner" "$OUT16"
+
+# --- T76.16b: subject-case violations refused (CI commitlint parity — the
+# aggregate bypasses the commit-msg hook, push is the last local line) ---
+set +e; OUT16B=$(node "$GOS" push --message "feat(ops): P1 style uppercase subject" 2>&1); RC16B=$?; set -e
+[ "$RC16B" -ne 0 ] && { echo "  ✓ sentence-case subject refused"; PASS=$((PASS+1)); } || { echo "  ✗ sentence-case subject must fail (CI commitlint rejects it)"; FAIL=$((FAIL+1)); }
+assert_contains "refusal names subject-case" "subject-case" "$OUT16B"
+set +e; OUT16C=$(node "$GOS" push --message "feat(ops): ALL CAPS SUBJECT LINE" 2>&1); RC16C=$?; set -e
+[ "$RC16C" -ne 0 ] && { echo "  ✓ upper-case subject refused"; PASS=$((PASS+1)); } || { echo "  ✗ upper-case subject must fail"; FAIL=$((FAIL+1)); }
+set +e; OUT16D=$(node "$GOS" push --message "feat(ops): subject ends with period." 2>&1); RC16D=$?; set -e
+[ "$RC16D" -ne 0 ] && { echo "  ✓ full-stop subject refused"; PASS=$((PASS+1)); } || { echo "  ✗ trailing period must fail (subject-full-stop)"; FAIL=$((FAIL+1)); }
 git fetch -q origin
 assert_eq "origin untouched by the refused push" "$PRE16" "$(git rev-parse origin/main)"
 

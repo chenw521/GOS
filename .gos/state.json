@@ -562,7 +562,7 @@
     ],
     "audit": []
   },
-  "changelog_user_summary": "P1 verify pass: all 13 observable truths replay-verified against the post-review tree with enriched receipts",
+  "changelog_user_summary": "push aggregate subject-case parity and machine-local evidence zones fix the red CI commitlint and gate audit lines",
   "checkpoints": [],
   "semantic": {
     "allowlist": [

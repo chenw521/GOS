@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add push aggregate subject-case parity and machine-local evidence zones fix the red CI commitlint and gate audit lines (R-01) [2026-10-20]
 - Add P1 verify pass: all 13 observable truths replay-verified against the post-review tree with enriched receipts (R-01) [2026-10-20]
 - Add P1 review fixes seal security tokenizer escapes with dotfile-glob and glued-separator rows plus fail-closed pin, and harden changelog lock, render backup, exemptions symlink guard and evidence veto sets (D-11/D-02) [2026-10-19]
 - Add P1 stop-bleed batch: depth-aware security rm gate, widened truth replay evidence with --timeout cap, two-layer config with sentinel deletion, auto-rendered views with manifest reconciliation, changelog-path resolver, render-backup cache relocation, PROJECT.md archive gate, machine-local ledgers with gos logs, issue triage gate (D-11/D-09/D-03/D-02) [2026-10-15]

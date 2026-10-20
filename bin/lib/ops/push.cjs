@@ -67,6 +67,17 @@ function validateSubject(subject) {
   } else {
     if (!rules.types.includes(m[1])) errors.push(`type '${m[1]}' not in type-enum (${rules.types.join('|')}) — from ${path.basename(rules.source)}`);
     if (rules.scopes && m[2] && !rules.scopes.includes(m[2])) errors.push(`scope '${m[2]}' not in scope-enum (${rules.scopes.join('|')}) — from ${path.basename(rules.source)}`);
+    // CI-parity case rules (commitlint.config.yaml): aggregates bypass the
+    // commit-msg hook (commit-tree), so push is the last local line of defense
+    // — the push-range lint in CI rejects exactly these shapes.
+    const subj = subject.replace(/^(\w+)(?:\([^)]+\))?:\s+/, '');
+    const hasLetter = /[A-Za-z]/.test(subj);
+    const isUpper = hasLetter && subj === subj.toUpperCase();
+    const isSentence = hasLetter && /^[A-Z][^A-Z]*$/.test(subj);
+    const isStart = hasLetter && subj.split(/\s+/).every((w) => /^[A-Z]/.test(w));
+    const isPascal = hasLetter && /^[A-Z][a-z0-9]*([A-Z][a-z0-9]+)+$/.test(subj);
+    if (isUpper || isSentence || isStart || isPascal) errors.push('subject must not be sentence-case, start-case, pascal-case, upper-case [subject-case] — start lowercase');
+    if (subj.endsWith('.')) errors.push('subject must not end with a full stop [subject-full-stop]');
   }
   return { ok: errors.length === 0, errors };
 }

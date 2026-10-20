@@ -61,6 +61,21 @@ set +e; OUT=$(node "$GOS" gate truths 2>&1); RC=$?; set -e
 assert_exit "A4 artifact missing on disk → exit 1" 1 "$RC"
 assert_contains "A4 names disk existence" "not found on disk" "$OUT"
 
+# --- A4b: machine-local zones (.gos/archive/ .gos/logs/ .gos/cache/) are
+# clone-absent by design (D-01/D-08 + census audit) — the on-disk leg is an
+# authoring-machine guarantee; clones must not fail schema validation ---
+python3 -c "
+import json; s=json.load(open('.gos/state.json'))
+s['observable_truths'][0]['evidence']['artifact_path']='.gos/archive/gone-task/evi.log'
+json.dump(s,open('.gos/state.json','w'),indent=2)"
+set +e; OUT=$(node "$GOS" gate truths 2>&1); RC=$?; set -e
+assert_exit "A4b archive-zone artifact skips disk check → exit 0" 0 "$RC"
+if printf '%s' "$OUT" | grep -q 'not found on disk'; then
+  echo "  ✗ A4b no not-found error for archive zone"; FAIL=$((FAIL+1))
+else
+  echo "  ✓ A4b no not-found error for archive zone"; PASS=$((PASS+1))
+fi
+
 # --- A5: command over 200 codepoints → exit 1 ---
 python3 -c "
 import json; s=json.load(open('.gos/state.json'))
