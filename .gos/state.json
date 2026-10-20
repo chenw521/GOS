@@ -562,7 +562,7 @@
     ],
     "audit": []
   },
-  "changelog_user_summary": "census lifecycle entries fix the dead-task-dir false red on fresh checkouts",
+  "changelog_user_summary": "main becomes PR-only locally with GOS_ALLOW_MAIN_PUSH emergency escape plus a CI direct-push alarm job",
   "checkpoints": [],
   "semantic": {
     "allowlist": [
