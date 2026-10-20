@@ -570,8 +570,8 @@ const EVIDENCE_FEATURE_RES_REPLAY = [
 // non-forgeable leg) — spec D-04 honest note.
 function replayEvidenceHit(stdoutText) {
   const normLhs = (s) => s.toLowerCase().replace(/[_\s-]/g, '');
-  const VETO = new Set(['exit', 'exitcode', 'rc', 'returncode', 'code', 'status', 'ret']);
-  const ENV_NOISE = new Set(['path', 'home', 'pwd', 'shell', 'lang', 'lscolors']);
+  const VETO = new Set(['exit', 'exitcode', 'rc', 'returncode', 'returned', 'code', 'status', 'ret']);
+  const ENV_NOISE = new Set(['path', 'home', 'pwd', 'shell', 'lang', 'lscolors', 'nodepath', 'pythonpath', 'gemhome']);
   const vetoShape = /^([A-Za-z][\w\s-]*?)\s*(?:[=:]|\s)\s*\d+/;
   const kvShape = EVIDENCE_FEATURE_RES_REPLAY[3];
   const lines = String(stdoutText == null ? '' : stdoutText)

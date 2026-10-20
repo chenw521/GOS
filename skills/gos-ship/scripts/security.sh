@@ -32,6 +32,7 @@ RM_DANGER_AWK='
 function issep(t) { return (t ~ /^(&&|\|\||;|&|\||>>|>|<<|<|2>|2>&1)$/) ? 1 : 0 }
 function clean(t) {            # strip shell punctuation glued to the token
   sub(/^\(+/, "", t)
+  sub(/^[;&|]+/, "", t)        # glued command separators (hi;rm is split earlier; &&rm lands here)
   sub(/[;,)]+$/, "", t)
   return t
 }
@@ -51,7 +52,7 @@ function danger(t,   rest, seg, n, k, d, root) {
   else if (substr(t, 1, 6) == "$HOME/") rest = substr(t, 7)
   else rest = ""
   if (rest != "")                                        # var-root subpath:
-    return (rest ~ /^[/*]+$/) ? 1 : 0                    #   wholesale = DANGER, real segment = post-expansion depth, passes
+    return (rest ~ /^[.*\/]+$/) ? 1 : 0                  #   wholesale (incl. ~/.* dotfile glob) = DANGER, real segment = post-expansion depth, passes
   if (substr(t, 1, 1) != "/") return 0                   # relative / unknown $VAR: residual, passes
   n = split(t, seg, "/")
   d = 0; root = ""
@@ -77,6 +78,7 @@ BEGIN {
     sub(/\\$/, "", line)
     line = line " " nxt
   }
+  gsub(/[;&|]+/, " ", line)                               # command separators are token boundaries (hi;rm / x&&rm)
   n = split(line, tok, /[ \t]+/)
   for (i = 1; i <= n; i++) {
     if (clean(tok[i]) != "rm") continue

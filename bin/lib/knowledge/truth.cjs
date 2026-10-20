@@ -170,7 +170,6 @@ function cmdTruth(args) {
   console.log('Usage: gos truth <add|verify|waive>');
   console.log('  add "<desc>"                    register observable truth (auto id T1/T2…)');
   console.log('  waive <id> --reason "<why>"     park a blocked truth (external dependency) — gate warns, never silently passes');
-  console.log('  add "<desc>"                    register observable truth (auto id T1/T2…)');
   console.log('  verify <id> --command <c> --excerpt <e> --artifact <a>          manual evidence');
   console.log('  verify <id> --replay --command \'<JSON argv>\' --artifact <a>    execute & capture stdout');
   console.log('                                              [--timeout <ms>]  exec budget 1..600000 (default 30000)');

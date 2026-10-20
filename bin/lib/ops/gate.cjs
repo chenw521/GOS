@@ -249,7 +249,7 @@ function parseLogsLine(kind, line) {
     const m = line.match(/^(\S+)\s+(\S+)\s+replay-verified:\s+(.*)$/);
     if (!m) return { a: '', b: '', c: line, d: '' };
     let cmd = m[3]; let truth = '';
-    const idx = cmd.lastIndexOf(' :: ');
+    const idx = cmd.indexOf(' :: '); // writer emits cmd-then-separator: the FIRST boundary is authoritative
     if (idx >= 0) { truth = cmd.slice(idx + 4); cmd = cmd.slice(0, idx); }
     return { a: m[1], b: m[2], c: cmd, d: truth };
   }
@@ -664,7 +664,14 @@ function cmdGate(args) {
     }
     const root = core.mapRootDir();
     core.acquireEdgeLock();
-    try { fs.appendFileSync(path.join(root, '.gos', EXEMPT_LOG_REL), `${new Date().toISOString()} ${sec} :: ${reason}\n`); } catch (e) { core.die(`cannot write exemptions.log: ${e.message}`); }
+    // B-18-class hardening (mirrors appendTruthReceipt): a planted symlink at
+    // the ledger path must not redirect exemption content in cloned repos.
+    const exemptPath = path.join(root, '.gos', EXEMPT_LOG_REL);
+    if (fs.existsSync(exemptPath) && !fs.lstatSync(exemptPath).isFile()) {
+      core.die(`gate exempt: ${exemptPath} is not a regular file (symlink?) — write refused (B-18)`);
+    }
+    try { fs.appendFileSync(exemptPath, `${new Date().toISOString()} ${sec} :: ${reason}\n`,
+      { flag: fs.constants.O_APPEND | fs.constants.O_CREAT | fs.constants.O_WRONLY | fs.constants.O_NOFOLLOW }); } catch (e) { core.die(`cannot write exemptions.log: ${e.message}`); }
     console.log(`✓ exemption recorded: ${sec} — ${reason} (consumed + cleared at next gos commit — one-shot by design)`);
     return;
   }

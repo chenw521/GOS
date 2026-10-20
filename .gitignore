@@ -1,9 +1,9 @@
-# GOS session state (machine-managed, local)
-.gos/state.json
+# GOS session state and task dirs are TRACKED: stage-advance commits carry
+# the lifecycle diff (stage pointer, spec/plan artifacts) — local history stays
+# meaningful. Remote pushes keep the aggregate mode (gos push).
 
-# GOS process artifacts stay machine-local (public repo ships product only):
-# task dirs, archives, retrospectives, milestone/feedback feedstock
-.gos/task/
+# GOS process artifacts that stay machine-local (audit: 80% CJK + privacy
+# findings in archives; public repo ships product + English process state):
 .gos/archive/
 .gos/project/RETROSPECTIVE.md
 .gos/project/milestones/
@@ -60,6 +60,9 @@ build/
 # Logs
 *.log
 npm-debug.log*
+# truth-evidence logs inside tracked task dirs travel with state.json
+# (schema validation requires artifact_path on disk in clones)
+!.gos/task/**/*.log
 
 # GOS concurrency lock (machine-local)
 .gos/.lock

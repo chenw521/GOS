@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add P1 verify pass: all 13 observable truths replay-verified against the post-review tree with enriched receipts (R-01) [2026-10-20]
+- Add P1 review fixes seal security tokenizer escapes with dotfile-glob and glued-separator rows plus fail-closed pin, and harden changelog lock, render backup, exemptions symlink guard and evidence veto sets (D-11/D-02) [2026-10-19]
 - Add P1 stop-bleed batch: depth-aware security rm gate, widened truth replay evidence with --timeout cap, two-layer config with sentinel deletion, auto-rendered views with manifest reconciliation, changelog-path resolver, render-backup cache relocation, PROJECT.md archive gate, machine-local ledgers with gos logs, issue triage gate (D-11/D-09/D-03/D-02) [2026-10-15]
 - Add Milestone trust-repair intake completed: 23 open issues triaged and labelled, 24 requirements mapped across three phases, seeded-asset lifecycle audit filed as issues 18 to 23, milestone archives documented (R-01) [2026-10-14]
 - Change Milestone v1.0.0-dev closed with roadmap and requirements archived to milestones and an annotated tag cut, and the successor milestone initialized for the 17 open self-hosting issues across three phases (R-01) [2026-10-13]

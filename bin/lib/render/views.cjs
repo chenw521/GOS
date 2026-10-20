@@ -423,8 +423,11 @@ function renderProjectViews(project, opts = {}) {
     return { rendered: [], skipped: true };
   }
   // D-03 R1-F4: backup AFTER the diff decision — a no-change render never
-  // churns the backup history.
-  if (names.every((n) => prev[n] !== null)) backupRenderedViews(names);
+  // churns the backup history. Partial view sets back up what EXISTS: an
+  // all-or-nothing gate would leave a handwritten sibling view unbacked and
+  // silently destroyed by the first render (review #5).
+  const existingViews = names.filter((n) => prev[n] !== null);
+  if (existingViews.length) backupRenderedViews(existingViews);
   const manifest = { schema_version: 1, views: {} };
   for (const n of names) {
     manifest.views[n] = { body_hash: core.sha16(bodies[n]), manual: !!(prevStripped[n] && prevStripped[n].manual) };

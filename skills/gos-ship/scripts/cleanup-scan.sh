@@ -10,7 +10,9 @@ echo "── debug artifacts ──"
 # 'console-dot-log' is PRODUCT output in CLI tools (bin/) — only flag in app source.
 # Also exempt *.sh: shell scripts embedding node one-liners use console.log functionally
 # (e.g. prune-decisions.sh prints the count) — same class as bin/, not debug litter.
-SCANFILES=$(echo "$FILES" | grep -v '^bin/' | grep -v '\.sh$' | grep -v 'cleanup-scan.sh$' || true)
+# Same for workflow yml: embedded node decision cores print machine-parsed output
+# (triage-gate.yml decision=/reason= lines feed the next workflow step).
+SCANFILES=$(echo "$FILES" | grep -v '^bin/' | grep -v '\.sh$' | grep -v '^\.github/workflows/' | grep -v 'cleanup-scan.sh$' || true)
 HITS=$(echo "$SCANFILES" | xargs grep -ln "console\.log(\|print(\s*debug\|debugger\b" 2>/dev/null || true)
 [ -n "$HITS" ] && { echo "⚠ $HITS"; F=1; } || echo "✓ none"
 

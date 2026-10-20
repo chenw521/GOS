@@ -1,0 +1,664 @@
+{
+  "version": "0.5",
+  "schema_version": 3,
+  "level": 3,
+  "current_stage": "DONE",
+  "completed_stages": [
+    "INTENT",
+    "THINK",
+    "PLAN",
+    "BUILD",
+    "REVIEW",
+    "VERIFY"
+  ],
+  "intent": {
+    "summary": "Stop mechanical trust-bleeds and clear quick wins: anchor security.sh DANGER regex to root deletion only, widen truth-replay evidence patterns and make its timeout overridable, keep generated views in sync after mutations, move render-backups out of the archive namespace, document the full codebase/ contract, unsquat config.json, make changelog location configurable, gate empty PROJECT.md skeletons, reconcile the audit-trail ledger contradiction, fix the stale skill exemptions path, add the unlabelled-issue needs-triage guard. Issues #12 #4 #5 #2 #6 #11 #9 #10 #7 #18 #19 #23",
+    "confirmed": true
+  },
+  "approvals": {
+    "THINK": "2026-10-14T12:25:19.653Z",
+    "PLAN": "2026-10-15T09:46:57.486Z",
+    "ARCHIVE": "2026-10-20T05:11:55.982Z"
+  },
+  "spec_path": null,
+  "plan_path": null,
+  "project": true,
+  "project_root": "/work/run/projects/bio-06/GOS",
+  "requirements": [
+    {
+      "id": "R-01",
+      "text": "Stop mechanical trust-bleeds and clear quick wins: anchor security.sh DANGER regex to root deletion only, widen truth...",
+      "phase": null,
+      "level": 3
+    },
+    {
+      "id": "R-25",
+      "text": "security.sh DANGER regex anchored to root deletion only: rm -rf /tmp/... passes, rm -rf / and /* stay blocked (close #12)",
+      "phase": "P1: stop-bleed + quick cleanup",
+      "status": "active"
+    },
+    {
+      "id": "R-26",
+      "text": "truth replay evidence features widened: digit-after-word enum + KV family (exit/rc/code excluded), tiered hit selection keeps count/path priority (close #4)",
+      "phase": "P1: stop-bleed + quick cleanup",
+      "status": "active"
+    },
+    {
+      "id": "R-27",
+      "text": "truth verify --timeout flag (positive int, 600000 cap, no env); timeout error copy names the flag (close #5)",
+      "phase": "P1: stop-bleed + quick cleanup",
+      "status": "active"
+    },
+    {
+      "id": "R-28",
+      "text": "decision/requirement/phase mutations auto-render project views inline; diff-skip on no-change (close #2)",
+      "phase": "P1: stop-bleed + quick cleanup",
+      "status": "active"
+    },
+    {
+      "id": "R-29",
+      "text": "render-backup relocated to .gos/cache/render-backup (registry key), full-history with 14d expiry; old snapshots migrated; archive/ holds task triples only (close #6)",
+      "phase": "P1: stop-bleed + quick cleanup",
+      "status": "active"
+    },
+    {
+      "id": "R-30",
+      "text": "codebase-mapping.md documents the full .gos/codebase/ contract (7 files: think codemap 3 + map products 4) (close #11)",
+      "phase": "P1: stop-bleed + quick cleanup",
+      "status": "active"
+    },
+    {
+      "id": "R-31",
+      "text": "config two-layer system: global seeded base, project override wins; lessons_migrated sentinel deleted; checker pin fixed to a model the user has (close #9)",
+      "phase": "P1: stop-bleed + quick cleanup",
+      "status": "active"
+    },
+    {
+      "id": "R-32",
+      "text": "changelog location configurable via gos config changelog-path; single resolver folds changelog.cjs+archive.cjs paths; config set moves file atomically (close #10)",
+      "phase": "P1: stop-bleed + quick cleanup",
+      "status": "active"
+    },
+    {
+      "id": "R-33",
+      "text": "PROJECT.md skeleton carries TODO markers (brownfield predicate excludes them); approve archive refuses unfilled skeleton; filled file joins THINK read_files (close #7)",
+      "phase": "P1: stop-bleed + quick cleanup",
+      "status": "active"
+    },
+    {
+      "id": "R-34",
+      "text": "audit-ledger reconciliation: logs registry tracked:true->false with runtime purge note, dead git-add calls removed (gate.cjs:566, edges.cjs:46), T16 .gitignore comment cleaned (close #18)",
+      "phase": "P1: stop-bleed + quick cleanup",
+      "status": "active"
+    },
+    {
+      "id": "R-35",
+      "text": "logs presentation: write-side enrichment (receipts carry truth text; exemptions carry reason, gate reader compat) + gos logs <receipts|exemptions|audit> view command (close #18)",
+      "phase": "P1: stop-bleed + quick cleanup",
+      "status": "active"
+    },
+    {
+      "id": "R-36",
+      "text": "gos-verify SKILL.md exemptions path fixed to .gos/logs/exemptions.log (close #19)",
+      "phase": "P1: stop-bleed + quick cleanup",
+      "status": "active"
+    },
+    {
+      "id": "R-37",
+      "text": "issue gate: AGENTS.md routing clause (read .github/ISSUE_TEMPLATE forms) + workflow auto-closes issues lacking bug/enhancement type label (close #23)",
+      "phase": "P1: stop-bleed + quick cleanup",
+      "status": "active"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D-01",
+      "title": "logs trio = product capability (runtime audit/exemption/receipts), machine-local; readable presentation required",
+      "rationale": "User ruling: capability positioning correct, but visualization experience is poor — append-only feed unreadable. P1 fixes metadata + minimal readable surface.",
+      "birth_phase": "P1: stop-bleed + quick cleanup",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-02",
+      "title": "logs presentation = write-side enrichment + gos logs view command (C)",
+      "rationale": "User picked C. Receipts carry truth text; exemptions carry reason with gate.cjs:214 reader compat in same change; new READ-class cmd gos logs <receipts|exemptions|audit> [--last N].",
+      "birth_phase": "P1: stop-bleed + quick cleanup",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-03",
+      "title": "generated views auto-render after mutations, skip write on no-change",
+      "rationale": "User picked A. Mutation cmds (decision/requirement/phase families) re-render views inline via existing pipeline; diff-skip when unchanged protects keep-5 backup window.",
+      "birth_phase": "P1: stop-bleed + quick cleanup",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-04",
+      "title": "widen evidence features: enumerated word-list + KV family, tiered selection",
+      "rationale": "User picked A1. Digit-after-word enum + KV (exit/rc/code excluded in replay); tiered selection keeps count/path priority. Sync contract string+T14+truth copy atomically. B deferred.",
+      "birth_phase": "P1: stop-bleed + quick cleanup",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-05",
+      "title": "truth verify --timeout flag only (no env), 10min hard cap",
+      "rationale": "User: replay is AI-consumed — flag explicit+auditable in receipts, env serves human convenience that does not exist here. Timeout error copy names --timeout as exit. Cap 600000 guards agent typos.",
+      "birth_phase": "P1: stop-bleed + quick cleanup",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-06",
+      "title": "PROJECT.md: TODO markers + approve-archive gate + context distribution (A+E)",
+      "rationale": "Deep-dive: PROJECT.md has zero machine consumers — pure gate is ceremony. TODO lines (predicate excludes them), approve archive refuses empty, filled file joins THINK read_files. User confirmed.",
+      "birth_phase": "P1: stop-bleed + quick cleanup",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-07",
+      "title": "changelog location: gos config changelog-path + single resolver + atomic mv (A+mv)",
+      "rationale": "One resolver folds both hardcoded paths; config set moves the file atomically; default root unchanged; assessment-mode overkill.",
+      "birth_phase": "P1: stop-bleed + quick cleanup",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-08",
+      "title": "render-backup: relocate to .gos/cache/render-backup, full history, 14d expiry (A+G1)",
+      "rationale": "Deep-dive: only manual regions non-derivable; keep-5 collapses intra-session under D-03. Relocate + registry key + migrate old snapshots + T7 assert move; 14d expiry bounds storage.",
+      "birth_phase": "P1: stop-bleed + quick cleanup",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-09",
+      "title": "config: two-layer system (global=seeded base, project=override, project wins); sentinel deleted",
+      "rationale": "Install choices seed GLOBAL; project layer overrides per-repo; loadConfig merges base+overlay; lessons_migrated sentinel removed (md-header guard survives); checker fixed to glm-5.3flash.",
+      "birth_phase": "P1: stop-bleed + quick cleanup",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-10",
+      "title": "issue gate: AGENTS.md routing clause + auto-close backstop for type-label-less issues (G1+)",
+      "rationale": "Forms carry the rules; AGENTS.md only routes. G1+ closes issues lacking bug/enhancement label; correctness via phase triage. needs-triage label dropped.",
+      "birth_phase": "P1: stop-bleed + quick cleanup",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-11",
+      "title": "security DANGER = tokenized rm + depth-aware default-deny (safe roots)",
+      "rationale": "Prior forms disproven both directions. Depth-1 DANGER unless SAFE_ROOTS; depth-2 only mount roots; deeper passes. Flags tokenized; quotes/continuations normalized.",
+      "birth_phase": "P1: stop-bleed + quick cleanup",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    }
+  ],
+  "observable_truths": [
+    {
+      "id": "T1",
+      "description": "Dockerfile rm -rf /tmp/build-cache passes security.sh; rm -rf / and rm -rf /* still FAIL",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T85\"]",
+        "output_excerpt": "--- T85 summary: 49 passed, 0 failed ---",
+        "artifact_path": "test/sections/T85-security-depth.test.sh",
+        "replay": true
+      }
+    },
+    {
+      "id": "T2",
+      "description": "truth verify --replay accepts URL=DISABLE and total 165 stdout lines; synthetic exit=0 stays rejected",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T86\"]",
+        "output_excerpt": "✓ A1 KV line 'push URL=DISABLE' accepted as replay hit (exit 0)",
+        "artifact_path": "test/sections/T86-truth-replay-surface.test.sh",
+        "replay": true
+      }
+    },
+    {
+      "id": "T3",
+      "description": "truth verify --timeout 120000 succeeds on >30s command; flagless 31s command fails with error naming --timeout",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T86\"]",
+        "output_excerpt": "✓ A1 KV line 'push URL=DISABLE' accepted as replay hit (exit 0)",
+        "artifact_path": "test/sections/T86-truth-replay-surface.test.sh",
+        "replay": true
+      }
+    },
+    {
+      "id": "T4",
+      "description": "decision add makes the decision appear in .gos/project/DECISIONS.md immediately",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T88\"]",
+        "output_excerpt": "✓ decision add exits 0 (exit 0)",
+        "artifact_path": "test/sections/T88-autorender.test.sh",
+        "replay": true
+      }
+    },
+    {
+      "id": "T5",
+      "description": ".gos/archive/ holds task triples only; render backups live in .gos/cache/render-backup with old snapshots migrated",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T7-render\"]",
+        "output_excerpt": "✓ render exits 0 (exit 0)",
+        "artifact_path": "test/sections/T7-render.test.sh",
+        "replay": true
+      }
+    },
+    {
+      "id": "T6",
+      "description": "codebase-mapping.md names all 7 .gos/codebase/ files and their producers",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"-c\",\"for f in {structure,conventions,concerns,network}.md {edge-baseline,require-allowlist}.json untested-fns.txt;do grep -q $f skills/gos-think/*/codebase-*.md||exit 1;done;echo total 7\"]",
+        "output_excerpt": "total 7",
+        "artifact_path": "skills/gos-think/reference/codebase-mapping.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T7",
+      "description": "config.json (project+global) carries no lessons_migrated key; resolve-model checker returns an environment-real model",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T87\"]",
+        "output_excerpt": "✓ merged config loads (both layers present) (exit 0)",
+        "artifact_path": "test/sections/T87-config-twolayer.test.sh",
+        "replay": true
+      }
+    },
+    {
+      "id": "T8",
+      "description": "gos config changelog-path moves CHANGELOG.md atomically; changelog add and archive obligation follow the configured path",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T89\"]",
+        "output_excerpt": "✓ W1 config changelog-path rc (exit 0)",
+        "artifact_path": "test/sections/T89-changelog-path.test.sh",
+        "replay": true
+      }
+    },
+    {
+      "id": "T9",
+      "description": "approve archive refuses a TODO-only PROJECT.md with fix hint; filled PROJECT.md joins THINK read_files",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T90\"]",
+        "output_excerpt": "✓ T90.2a TODO-only skeleton refuses archive (exit 1)",
+        "artifact_path": "test/sections/T90-projectmd-gate.test.sh",
+        "replay": true
+      }
+    },
+    {
+      "id": "T10",
+      "description": "registry logs trio tracked:false; no git add calls for logs in gate.cjs/edges.cjs; no dead T16 comment in .gitignore",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T91\"]",
+        "output_excerpt": "--- T91 summary: 6 passed, 0 failed ---",
+        "artifact_path": "test/sections/T91-ledger-reconcile.test.sh",
+        "replay": true
+      }
+    },
+    {
+      "id": "T11",
+      "description": "gos logs receipts --last 5 shows formatted entries with truth text; logs exemptions/audit render their ledgers",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T92\"]",
+        "output_excerpt": "✓ L3 receipts: <iso> <id> replay-verified: <cmd> :: <truth 80cp> + echo names registry rel",
+        "artifact_path": "test/sections/T92-logs-cmd.test.sh",
+        "replay": true
+      }
+    },
+    {
+      "id": "T12",
+      "description": "gos-verify SKILL.md references .gos/logs/exemptions.log which resolves on disk",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"-c\",\"grep -c .gos/exemptions.log skills/gos-verify/SKILL.md|grep -qx 0&&grep -Fq .gos/logs/exemptions.log skills/gos-verify/SKILL.md&&echo matches: 1\"]",
+        "output_excerpt": "matches: 1",
+        "artifact_path": "skills/gos-verify/SKILL.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T13",
+      "description": "unlabelled issue gets auto-closed with relabel guidance; type-labelled issue stays open; AGENTS.md carries the form-reading routing clause",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"-c\",\"gh run view 38737801215 --log|grep -a decision=skip|grep -av console|tr -d \\\\\\\\t\\\\\\\\r|head -2\"]",
+        "output_excerpt": "Type-label gateDecide and act2026-10-15T12:51:05.2460462Z decision=skip",
+        "artifact_path": ".gos/archive/2026-10-20-v1.0.0-dev-phase-p1-stop-mechanical-trust-bleeds-a/task/p1/truth13-dispatch.log",
+        "replay": true
+      }
+    }
+  ],
+  "gaps": [
+    {
+      "id": "G-1792069310317",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
+    }
+  ],
+  "phase_name": "P1: stop-bleed + quick cleanup",
+  "task_head": "6274dafa79b3933a7c4ec2a60d7f209b13454875",
+  "task_head_history": [
+    {
+      "sha": "6274dafa79b3933a7c4ec2a60d7f209b13454875",
+      "at": "2026-10-14T03:10:14.353Z",
+      "what": "claim"
+    }
+  ],
+  "spec_sha256": "d249b744e6db4872c976ccb07d6ebff916bd32bed058dc57058b7905b47bc40b",
+  "spec_gate_version": 2,
+  "plan_snapshot": {
+    "tasks": [
+      {
+        "id": "T1",
+        "covers": [
+          "D-11",
+          "R-25"
+        ],
+        "files": [
+          "skills/gos-ship/scripts/security.sh",
+          "test/sections/T85-security-depth.test.sh"
+        ]
+      },
+      {
+        "id": "T2",
+        "covers": [
+          "D-04",
+          "D-05",
+          "R-26",
+          "R-27"
+        ],
+        "files": [
+          "bin/lib/core/state.cjs",
+          "bin/lib/knowledge/truth.cjs",
+          "test/sections/T14-state-b.test.sh",
+          "test/sections/T86-truth-replay-surface.test.sh",
+          "test/sections/T46-module-structure.test.sh"
+        ]
+      },
+      {
+        "id": "T3",
+        "covers": [
+          "R-30"
+        ],
+        "files": [
+          "skills/gos-think/reference/codebase-mapping.md"
+        ]
+      },
+      {
+        "id": "T4",
+        "covers": [
+          "R-36"
+        ],
+        "files": [
+          "skills/gos-verify/SKILL.md"
+        ]
+      },
+      {
+        "id": "T5",
+        "covers": [
+          "D-09",
+          "R-31"
+        ],
+        "files": [
+          "bin/lib/ops/config.cjs",
+          "bin/lib/knowledge/lessons-json.cjs",
+          ".gos/config.json",
+          "test/sections/T15-lessons.test.sh",
+          "test/sections/T13-semantic-contracts.test.sh",
+          "test/sections/T87-config-twolayer.test.sh"
+        ]
+      },
+      {
+        "id": "T6",
+        "covers": [
+          "D-10",
+          "R-37"
+        ],
+        "files": [
+          ".github/workflows/triage-gate.yml",
+          "AGENTS.md"
+        ]
+      },
+      {
+        "id": "T7",
+        "covers": [
+          "D-08",
+          "R-29"
+        ],
+        "files": [
+          "bin/lib/render/views.cjs",
+          "bin/lib/core/fsio.cjs",
+          "test/sections/T7-render.test.sh"
+        ]
+      },
+      {
+        "id": "T8",
+        "covers": [
+          "D-03",
+          "R-28"
+        ],
+        "files": [
+          "bin/lib/render/views.cjs",
+          "bin/lib/knowledge/decisions.cjs",
+          "bin/lib/knowledge/requirements.cjs",
+          "bin/lib/knowledge/phase.cjs",
+          "bin/lib/task/index.cjs",
+          "test/sections/T88-autorender.test.sh"
+        ]
+      },
+      {
+        "id": "T9",
+        "covers": [
+          "D-07",
+          "R-32"
+        ],
+        "files": [
+          "bin/lib/ops/config.cjs",
+          "bin/lib/ops/changelog-core.cjs",
+          "bin/lib/task/changelog.cjs",
+          "bin/lib/task/archive.cjs",
+          "test/sections/T89-changelog-path.test.sh"
+        ]
+      },
+      {
+        "id": "T11",
+        "covers": [
+          "D-01",
+          "R-34"
+        ],
+        "files": [
+          "bin/lib/core/fsio.cjs",
+          "bin/lib/ops/gate.cjs",
+          "bin/lib/map/edges.cjs",
+          ".gitignore",
+          "skills/gos-ship/SKILL.md",
+          "test/sections/T31-map-gate.test.sh",
+          "test/sections/T33-map-manifest.test.sh",
+          "test/sections/T91-ledger-reconcile.test.sh"
+        ]
+      },
+      {
+        "id": "T10",
+        "covers": [
+          "D-06",
+          "R-33"
+        ],
+        "files": [
+          "bin/lib/task/init.cjs",
+          "bin/lib/knowledge/phase.cjs",
+          "bin/lib/task/archive.cjs",
+          "bin/lib/task/context.cjs",
+          "test/sections/T90-projectmd-gate.test.sh",
+          "test/sections/T39-render-park.test.sh"
+        ]
+      },
+      {
+        "id": "T12",
+        "covers": [
+          "D-02",
+          "R-35"
+        ],
+        "files": [
+          "bin/gos.cjs",
+          "bin/lib/nav/registry-consts.cjs",
+          "bin/lib/core/state.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs",
+          "bin/lib/knowledge/truth.cjs",
+          "bin/lib/ops/gate.cjs",
+          "test/sections/T92-logs-cmd.test.sh"
+        ]
+      },
+      {
+        "id": "T13",
+        "covers": [
+          "R-01"
+        ],
+        "files": [
+          ".changes.md",
+          "CHANGELOG.md"
+        ]
+      }
+    ],
+    "audit": []
+  },
+  "changelog_user_summary": "P1 verify pass: all 13 observable truths replay-verified against the post-review tree with enriched receipts",
+  "checkpoints": [],
+  "semantic": {
+    "allowlist": [
+      ".gos/state.json",
+      ".gos/task/**",
+      "census.json"
+    ]
+  },
+  "review_findings": [
+    {
+      "id": 1,
+      "severity": "major",
+      "category": "security",
+      "issue": "security.sh dotfile-glob wholesale bypass (~/.* $HOME/.*)",
+      "location": "skills/gos-ship/scripts/security.sh:54",
+      "status": "fixed"
+    },
+    {
+      "id": 2,
+      "severity": "major",
+      "category": "security",
+      "issue": "glued-separator bypass (;rm / &&rm invisible to tokenizer)",
+      "location": "skills/gos-ship/scripts/security.sh:80",
+      "status": "fixed"
+    },
+    {
+      "id": 3,
+      "severity": "major",
+      "category": "functional",
+      "issue": "acquireChangelogLock deadline crashes on corrupt-young lock (null info TypeError)",
+      "location": "bin/lib/ops/changelog-core.cjs:517",
+      "status": "fixed"
+    },
+    {
+      "id": 4,
+      "severity": "major",
+      "category": "security",
+      "issue": "exemptions ledger append lacks lstat/O_NOFOLLOW symlink guard (B-18 family)",
+      "location": "bin/lib/ops/gate.cjs:667",
+      "status": "fixed"
+    },
+    {
+      "id": 5,
+      "severity": "major",
+      "category": "functional",
+      "issue": "backup all-or-nothing: partial view sets skip backup, handwritten view destroyed",
+      "location": "bin/lib/render/views.cjs:427",
+      "status": "fixed"
+    },
+    {
+      "id": 6,
+      "severity": "major",
+      "category": "tests",
+      "issue": "T85 missing awk fail-closed branch + adversarial dotfile/glued rows",
+      "location": "test/sections/T85-security-depth.test.sh",
+      "status": "fixed"
+    },
+    {
+      "id": 7,
+      "severity": "minor",
+      "category": "quality",
+      "issue": "truth usage block duplicates add line",
+      "location": "bin/lib/knowledge/truth.cjs:171",
+      "status": "fixed"
+    },
+    {
+      "id": 8,
+      "severity": "minor",
+      "category": "functional",
+      "issue": "VETO missing returned; ENV_NOISE missing NODE_PATH/PYTHONPATH/GEM_HOME",
+      "location": "bin/lib/core/state.cjs:573",
+      "status": "fixed"
+    },
+    {
+      "id": 9,
+      "severity": "minor",
+      "category": "quality",
+      "issue": "receipts parse lastIndexOf splits wrong on embedded :: separator",
+      "location": "bin/lib/ops/gate.cjs:252",
+      "status": "fixed"
+    },
+    {
+      "id": 10,
+      "severity": "minor",
+      "category": "quality",
+      "issue": "divergent PROJECT.md-filled notions (detectBrownfield vs projectMdFilled)",
+      "location": "bin/lib/knowledge/phase.cjs:20",
+      "status": "deferred"
+    }
+  ],
+  "build_summary": {
+    "files_changed": 31,
+    "waves": "W1 T1-T7 parallel | W2 T8/T9/T11 parallel | W3 T10 | W4 T12 + T13 main-session closeout",
+    "sections": "T85-T92 new (8), T7/T13/T14/T15/T31/T33/T39/T46 updated",
+    "suite": "2752 passed / 0 failed (full run after review fixes)",
+    "known_issues": "finding #10 deferred (divergent PROJECT.md-filled notions in phase.cjs — logged for a follow-up batch)"
+  },
+  "completed_at": "2026-10-20T05:12:37.662Z"
+}

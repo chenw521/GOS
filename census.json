@@ -73,9 +73,9 @@
       "note": "product mechanism files only: gates, config, map-ignore, README, cjk-whitelist"
     },
     ".gos/task": {
-      "git": false,
+      "git": true,
       "npm": false,
-      "note": "active task dir — machine-local process artifact (gitignored)"
+      "note": "active task dir tracked — spec/plan artifacts land in stage commits (English process state)"
     },
     ".gos/archive": {
       "git": false,
@@ -98,9 +98,9 @@
       "note": "feedback drafts feedstock (gitignored)"
     },
     ".gos/state.json": {
-      "git": false,
+      "git": true,
       "npm": false,
-      "note": "machine-local session state (gitignored)"
+      "note": "session state tracked — stage-advance commits carry the lifecycle diff"
     },
     ".gos/cache": {
       "git": false,

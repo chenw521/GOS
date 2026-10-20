@@ -515,7 +515,9 @@ function acquireChangelogLock() {
         continue;
       }
       if (Date.now() > deadline) {
-        core.die(`changelog lock: held by live pid ${info.pid} (since ${info.started_at}) — waited ${CHANGELOG_LOCK_WAIT_MS}ms; inspect ${lockPath}`);
+        core.die(info
+          ? `changelog lock: held by live pid ${info.pid} (since ${info.started_at}) — waited ${CHANGELOG_LOCK_WAIT_MS}ms; inspect ${lockPath}`
+          : `changelog lock: ${lockPath} unreadable (corrupt-but-young holder info) for over ${CHANGELOG_LOCK_WAIT_MS}ms — verify no writer is active, then remove it manually`);
       }
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, CHANGELOG_LOCK_RETRY_MS);
       continue;

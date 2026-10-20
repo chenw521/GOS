@@ -100,6 +100,14 @@ t85_check "FAIL: rm -rf /etc && rm -rf /tmp/x (second invocation after separator
 t85_check "PASS: rm -rf ./build (relative target — documented residual)" pass 'rm -rf ./build'
 t85_check "FAIL: rm -rf /etc/../../ (traversal — depth unknowable, default-deny)" fail 'rm -rf /etc/../..'
 
+# --- review #1/#2 adversarial rows: wholesale dotfile glob + glued separators ---
+t85_check "FAIL: rm -rf ~/.* (dotfile-glob wholesale)" fail 'rm -rf ~/.*'
+t85_check "FAIL: rm -rf \"\$HOME/.*\" (dotfile-glob wholesale, quoted var)" fail 'rm -rf "$HOME/.*"'
+t85_check "FAIL: echo hi;rm -rf /etc (mid-token separator)" fail 'echo hi;rm -rf /etc'
+t85_check "FAIL: x &&rm -rf / (glued leading separator)" fail 'x &&rm -rf /'
+t85_check "FAIL: cp a b&rm -fr /run (background separator)" fail 'cp a b&rm -fr /run'
+t85_check "PASS: rm -rf ~/.config (real dot segment — post-expansion depth-2)" pass 'rm -rf ~/.config'
+
 # --- regression: the three non-rm DANGER alternations stay live ---
 t85_check "FAIL: eval(\" alternation untouched"        fail 'var x = eval("rm -rf /tmp")'
 t85_check "FAIL: child_process shell:true untouched"   fail 'exec("child_process", {shell: true})'
@@ -120,6 +128,18 @@ if grep -q 'SAFE_ROOTS' "$SEC"; then
   echo "  ✓ SAFE_ROOTS table present in security.sh"; PASS=$((PASS+1))
 else
   echo "  ✗ SAFE_ROOTS table missing from security.sh"; FAIL=$((FAIL+1))
+fi
+
+# --- D-11 fail-closed: classifier failure must FAIL the gate, never pass (review #6) ---
+FC_BIN="$T85_DIR/fcbin"; mkdir -p "$FC_BIN"
+printf '#!/usr/bin/env bash\nexit 3\n' > "$FC_BIN/awk"; chmod +x "$FC_BIN/awk"
+printf 'rm -rf /tmp/x\n' > "$FIX"
+git add "$FIX" >/dev/null 2>&1
+OUT_FC="$(PATH="$FC_BIN:$PATH" bash "$SEC" 2>&1)"; RC_FC=$?
+if [ "$RC_FC" -eq 2 ] && printf '%s' "$OUT_FC" | grep -q 'failing closed'; then
+  echo "  ✓ FAIL: awk classifier failure fails closed"; PASS=$((PASS+1))
+else
+  echo "  ✗ FAIL: awk classifier failure fails closed (got exit $RC_FC)"; echo "    out: ${OUT_FC:0:160}"; FAIL=$((FAIL+1))
 fi
 
 # --- repo-level: gate stays clean on this repo (plan Done-when #3) ---

@@ -44,7 +44,7 @@ Every artifact under .gos/: who writes it, who reads it, when it can be deleted.
 | `cache/.concerns-anchors.bak` | cli | recovery shadow | regen | no |
 | `cache/.lessons-anchors.json` | cli | lessons derived cache (live_ids; rebuildable via lessons anchor-rebuild) | regen | no |
 
-## logs/ — audit receipts (tracked)
+## logs/ — runtime state, machine-local
 
 | Path | Producer | Readers | Purge policy | Tracked |
 |:--|:--|:--|:--|:--|
