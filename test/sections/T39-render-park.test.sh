@@ -162,6 +162,8 @@ assert_contains "T4.e teaching: cross-phase pointer" "gos requirement list --all
 node "$GOS" init --force 1 "t39 reset" >/dev/null 2>&1
 OUT=$(node "$GOS" phase claim B 2>&1)
 assert_contains "T6.b parked predecessor lets claim pass" "Phase claimed: B-beta: second" "$OUT"
+assert_contains "T6.b2 claim output recommends a fresh session" "fresh session" "$OUT"
+assert_contains "T6.b3 claim output carries the resume handoff" "gos resume" "$OUT"
 
 # ===== T7: parked/done target allowlist =====
 OUT=$(node "$GOS" phase park C 2>&1)
