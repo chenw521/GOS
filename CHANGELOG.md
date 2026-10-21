@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add claim-boundary output and seeded-intent status now carry the fresh-session handoff block (R-01) [2026-10-21]
 - Add main becomes PR-only locally with GOS_ALLOW_MAIN_PUSH emergency escape plus a CI direct-push alarm job (R-01) [2026-10-20]
 - Add census lifecycle entries fix the dead-task-dir false red on fresh checkouts (R-01) [2026-10-20]
 - Add push aggregate subject-case parity and machine-local evidence zones fix the red CI commitlint and gate audit lines (R-01) [2026-10-20]
