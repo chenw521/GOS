@@ -225,6 +225,13 @@ function cmdPhase(args) {
     core.saveProject(project);
     console.log(`${core.CONTRACTS.command_contracts.phaseClaimed}${phases[n].name}`);
     console.log('Next: THINK (intent = phase goal)');
+    // Issue #28: the claim boundary is the highest-value session-rotation
+    // moment — a new task's THINK must not inherit a stale conversation.
+    console.log('');
+    console.log('── Next-session handoff ─────────────────');
+    console.log('  this claim is the best moment to start a FRESH session (new task, stale context):');
+    console.log('  paste into a fresh session: `gos resume`');
+    console.log('  confirm the seeded intent → then load skill `gos-think` · first command: `gos instructions think`');
     decisions.autoRenderViews(project); // D-03: views stay fresh after the mutation
     return;
   }

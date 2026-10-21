@@ -43,12 +43,17 @@ function nextHint(state) {
 function handoffBlock(state, skillMap) {
   skillMap = skillMap || { THINK: 'gos-think', PLAN: 'gos-plan', BUILD: 'gos-build', REVIEW: 'gos-review', VERIFY: 'gos-verify', SHIP: 'gos-ship', INTENT: 'gos-router' };
   const stage = state.current_stage;
-  if (stage === 'DONE' || stage === 'INTENT') return [];   // DONE handled by doneHint; INTENT has no skill to load yet
+  if (stage === 'DONE') return [];   // DONE handled by doneHint
+  // INTENT with a seeded intent (phase claim / restated summary) is a live
+  // stage with work to do: confirm the intent, then THINK — a fresh session
+  // here protects the new task's design from stale context (issue #28).
+  if (stage === 'INTENT' && !(state.intent && state.intent.summary)) return [];
+  const first = stage === 'INTENT' ? 'confirm the intent, then `gos instructions think`' : `\`gos instructions ${stage.toLowerCase()}\``;
   return [
     '',
     '── Next-session handoff ─────────────────',
     '  paste into a fresh session: `gos resume`',
-    `  then load skill \`${skillMap[stage] || 'gos-router'}\` · first command: \`gos instructions ${stage.toLowerCase()}\``,
+    `  then load skill \`${skillMap[stage] || 'gos-router'}\` · first command: ${first}`,
   ];
 }
 
