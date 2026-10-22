@@ -2,6 +2,7 @@
 'use strict';
 
 const core = require('../core/index.cjs');
+const clcore = require('../ops/changelog-core.cjs'); // issue-close neutralization (R-01)
 const nav = require('../nav/status.cjs');   // direct aspect require (dependency DAG)
 const ops = require('../ops/gate.cjs');     // direct aspect require (dependency DAG)
 const map = require('../map/index.cjs');
@@ -296,7 +297,10 @@ function cmdCommit(argv) {
   else {
     const dList = state.decisions.map(d => d.id).join(', ') || 'none';
     const rList = state.requirements.map(r => r.id).join(', ') || 'none';
-    const msg = `chore(task): advance ${stage.toLowerCase()} — ${commitSubject}\n\nDecisions: ${dList}\nRequirements: ${rList}\nLevel: Lv${state.level ?? '?'}`;
+    // R-01 choke point: the whole message (subject + body) passes through the
+    // shared neutralizer so a close/fix keyword before `#N` never ships in a
+    // gos commit (GitHub would close the issue on push).
+    const msg = clcore.neutralizeIssueTriggers(`chore(task): advance ${stage.toLowerCase()} — ${commitSubject}\n\nDecisions: ${dList}\nRequirements: ${rList}\nLevel: Lv${state.level ?? '?'}`);
     try {
       // Tolerant add: each path may be missing or gitignored — never fail the whole chain.
       // Phase C (R-fix): add-list was hardcoded to 5 dirs — bin/, .opencode/ and root

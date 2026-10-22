@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add self-repo guide trio refreshed to current tree truth with born-at stamps recorded in the evidence ledger (D-19/D-20) [2026-10-22]
+- Add changelog validator accepts issue-ref tokens with commit-time neutralization of close-keyword triggers in both commit channels (R-01) [2026-10-22]
+- Add navigator bundle renamed to unmapped-fns with generated-at provenance header and THINK context hint (D-19/D-20) [2026-10-22]
 - Add gate flip-reconcile leg enforcing census and manifest agreement on tracked dot-gos files (D-15/D-14) [2026-10-22]
 - Add gos track flip transaction with validation, census-aware surgery, rollback backups, manifest, adopt and knowledge preset (D-15/D-14) [2026-10-22]
 - Add project_root consumers re-pointed to runtime-derived root with anchor fix re-deriving repo_id (D-12) [2026-10-22]

@@ -252,6 +252,11 @@
       "git": true,
       "npm": false,
       "note": "public edge baseline (drop detection)"
+    },
+    ".gos/codebase/unmapped-fns.txt": {
+      "git": false,
+      "npm": false,
+      "note": "gate codemap byproduct — regenerable, first line carries generated-at + HEAD provenance (renamed from untested-fns.txt, D-20)"
     }
   },
   "dispositions": []

@@ -72,6 +72,10 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const STAMP_TAIL_RE = /\s*\[(\d{4}-\d{2}-\d{2})\]\s*$/;
 const TRACE_GROUP_RE = /\(([^()]*)\)/g;
 const TRACE_WELL_FORMED_RE = /^(?:[DR]-\d+)(?:\s*[,/]\s*(?:[DR]-\d+))*$/;
+// (#24) / (#24, #31) groups are GitHub issue references, not trace refs: the
+// R-01 relaxation makes them legal bullet content, but they never satisfy the
+// trace-ref obligation and never enter the D-nn/R-nn well-formedness check.
+const ISSUE_REF_GROUP_RE = /^#\d+(?:\s*[,/]\s*#\d+)*$/;
 const BARE_DI_RE = /\bDI-\d+/;
 const BARE_T_RE = /\bT-\d+/;
 const CIRCLED_RE = /[\u2460-\u24FF]/;
@@ -103,6 +107,19 @@ function hasMultiSentence(body) {
 // resolves through this function so UTC semantics can never drift per caller.
 function utcToday() {
   return new Date().toISOString().slice(0, 10);
+}
+
+// Commit-time issue-close neutralization (R-01): a GitHub close/fix keyword
+// (case-insensitive: fix/fixes/fixed, close/closes/closed,
+// resolve/resolves/resolved) directly adjacent to an issue reference `#N`
+// would let a gos-built commit message close the issue by accident. The
+// keyword becomes the non-closing `refs`; the whitespace and the `#N` token
+// stay byte-identical, and an already-neutral `refs #N` never re-matches.
+// Shared choke-point primitive — consumed by task/commit.cjs (stage commit
+// subject + body) and ops/push.cjs (aggregate message subject + body).
+const ISSUE_CLOSE_TRIGGER_RE = /\b(fix(?:es|ed)?|clos(?:e|es|ed)|resolv(?:e|es|ed))(\s+)(#\d+)/gi;
+function neutralizeIssueTriggers(text) {
+  return String(text == null ? '' : text).replace(ISSUE_CLOSE_TRIGGER_RE, 'refs$2$3');
 }
 
 // Tolerant parse of a Keep-a-Changelog-style document. Never throws; a missing
@@ -171,10 +188,11 @@ function validateEntry(entry) {
   let g;
   const groupRe = new RegExp(TRACE_GROUP_RE.source, 'g');
   while ((g = groupRe.exec(body)) !== null) groups.push(g[1].trim());
-  if (groups.length === 0) {
+  const traceGroups = groups.filter((gr) => !ISSUE_REF_GROUP_RE.test(gr));
+  if (traceGroups.length === 0) {
     errors.push("structure: missing required trace refs — add a group like '(D-42)' or '(R-05, D-42)'");
   }
-  for (const gr of groups) {
+  for (const gr of traceGroups) {
     if (!TRACE_WELL_FORMED_RE.test(gr)) {
       errors.push(`structure: malformed trace refs '(${gr})' — only D-nn/R-nn tokens separated by ',' or '/' are allowed`);
     }
@@ -548,6 +566,7 @@ module.exports = {
   validateStructure,
   promoteUnreleased,
   utcToday,
+  neutralizeIssueTriggers,
   changelogProjectRoot,
   validateChangelogRelPath,
   configuredChangelogRel,

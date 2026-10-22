@@ -94,6 +94,14 @@ function cmdContext(args) {
       out.has_codebase_map = false;
       out.suggest = 'existing repo without .gos/codebase/ map — offer one-time mapping (see skills/gos-think/reference/codebase-mapping.md)';
     }
+    // D-19/D-20: navigator tiers — tell THINK which map knowledge travels with
+    // clones (git-tracked tier) vs regenerates per machine (byproduct carries
+    // its own provenance header). Additive field; consumers keep working.
+    out.navigator = {
+      hint: 'codebase navigator tiers: guide trio (structure/conventions/concerns.md) is static per machine; map data (network.md, edge-baseline.json, require-allowlist.json) is git-tracked and travels with clones; full directory contract: skills/gos-think/reference/codebase-mapping.md',
+      map_data: 'travels with clones (git-tracked): network.md, edge-baseline.json, require-allowlist.json',
+      provenance: 'regenerable byproduct .gos/codebase/unmapped-fns.txt (rewritten by gate codemap) — first line: generated-at: <ISO> @ <HEAD[0:8]> (unborn repo: @ unborn)',
+    };
     out.produce = `${path.relative(process.cwd(), core.specPathOf(state))} (decisions D-NN + requirements R-NN + truths T-NN)`;
     out.template = `${path.join(core.GOS_SELF_ROOT, 'templates', 'spec-template.md')} (readonly skeleton — copy it to the produce path, never edit the in-package original; examples at ${path.join(core.GOS_SELF_ROOT, 'skills', 'gos-think', 'examples')}/)`;
     out.gates = ['Red Team rounds (see skills/gos-think/reference/red-team.md)', 'user approval (HARD GATE)'];

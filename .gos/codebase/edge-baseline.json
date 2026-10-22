@@ -1,9 +1,9 @@
 {
   "current": {
-    "total": 921,
+    "total": 927,
     "callgraph": 459,
-    "testof_fn": 104,
-    "fn_count": 492,
+    "testof_fn": 107,
+    "fn_count": 493,
     "fns": [
       "acornCtx",
       "acquireChangelogLock",
@@ -298,6 +298,7 @@
       "mintId",
       "mostSpecificCensusKey",
       "networkBackupDir",
+      "neutralizeIssueTriggers",
       "nextFeedbackId",
       "nextHint",
       "nextStage",
@@ -805,6 +806,7 @@
       "bfRenderHuman": "bin/lib/ops/brownfield.cjs",
       "hasMultiSentence": "bin/lib/ops/changelog-core.cjs",
       "utcToday": "bin/lib/ops/changelog-core.cjs",
+      "neutralizeIssueTriggers": "bin/lib/ops/changelog-core.cjs",
       "parseChangelog": "bin/lib/ops/changelog-core.cjs",
       "validateEntry": "bin/lib/ops/changelog-core.cjs",
       "validateStructure": "bin/lib/ops/changelog-core.cjs",
@@ -992,14 +994,14 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "3aa643bbd870999e",
-    "at": "2026-10-22T15:30:59.290Z"
+    "fp": "b14285d8a5392586",
+    "at": "2026-10-22T15:52:27.654Z"
   },
   "peak": {
-    "total": 921,
+    "total": 927,
     "callgraph": 459,
-    "testof_fn": 104,
-    "fn_count": 492,
+    "testof_fn": 107,
+    "fn_count": 493,
     "fns": [
       "acornCtx",
       "acquireChangelogLock",
@@ -1294,6 +1296,7 @@
       "mintId",
       "mostSpecificCensusKey",
       "networkBackupDir",
+      "neutralizeIssueTriggers",
       "nextFeedbackId",
       "nextHint",
       "nextStage",
@@ -1801,6 +1804,7 @@
       "bfRenderHuman": "bin/lib/ops/brownfield.cjs",
       "hasMultiSentence": "bin/lib/ops/changelog-core.cjs",
       "utcToday": "bin/lib/ops/changelog-core.cjs",
+      "neutralizeIssueTriggers": "bin/lib/ops/changelog-core.cjs",
       "parseChangelog": "bin/lib/ops/changelog-core.cjs",
       "validateEntry": "bin/lib/ops/changelog-core.cjs",
       "validateStructure": "bin/lib/ops/changelog-core.cjs",
@@ -1988,8 +1992,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "3aa643bbd870999e",
-    "at": "2026-10-22T15:27:29.199Z"
+    "fp": "b14285d8a5392586",
+    "at": "2026-10-22T15:41:13.342Z"
   },
   "note": "peak rotates ONLY via gos map baseline reset --reason (approve-gated); scan is peak-monotonic (D-30/R-34)"
 }

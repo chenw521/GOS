@@ -870,16 +870,22 @@ function cmdGate(args) {
       if (untestedCmdFns.length) console.log(`⚠ codemap: ${untestedCmdFns.length} cmd-entry fn(s) without any gos-map:fn annotation — cmd-level drill-down relies on annotations: [${untestedCmdFns.slice(0, 8).join(', ')}${untestedCmdFns.length > 8 ? ', …' : ''}]`);
       else console.log('✓ codemap: all cmd-entry fns annotated');
       // ---- [Phase R/D-01] DI-5: fn test-coverage report (advisory; full list on disk) ----
+      // D-20: byproduct renamed unmapped-fns.txt — the list is "callgraph fns the
+      // test-annotation map does not cover", i.e. unmapped, not "untested".
       const cgFns = new Set();
       for (const e of (sem.callgraph || [])) { cgFns.add(`${e.file}#fn:${e.from}`); cgFns.add(`${e.file}#fn:${e.to}`); }
       const covFns = new Set((sem.testof_fn || []).map((t) => `${t.file}#fn:${t.fn}`));
-      const untestedFns = [...cgFns].filter((k) => !covFns.has(k)).sort();
+      const unmappedFns = [...cgFns].filter((k) => !covFns.has(k)).sort();
       if (!cgFns.size) console.log('⚠ codemap: no callgraph fns — fn coverage report unavailable');
-      else if (!untestedFns.length) { console.log('✓ codemap: all fns test-covered'); semanticPass++; }
+      else if (!unmappedFns.length) { console.log('✓ codemap: all fns test-covered'); semanticPass++; }
       else {
-        const covPct = Math.round(((cgFns.size - untestedFns.length) * 100) / cgFns.size);
-        try { fs.mkdirSync(path.join(cmRoot, '.gos', 'codebase'), { recursive: true }); fs.writeFileSync(path.join(cmRoot, '.gos', 'codebase', 'untested-fns.txt'), untestedFns.join('\n') + '\n'); } catch { /* list file is best-effort */ }
-        console.log(`⚠ codemap: ${untestedFns.length}/${cgFns.size} fn untested (${covPct}% coverage) — full list: .gos/codebase/untested-fns.txt: [${untestedFns.slice(0, 8).join(', ')}${untestedFns.length > 8 ? ', …' : ''}]`);
+        const covPct = Math.round(((cgFns.size - unmappedFns.length) * 100) / cgFns.size);
+        // D-20 provenance header: first line = generated-at + HEAD[0:8] anchor; unborn
+        // repo degrades to the literal 'unborn' marker (mapGitInfo precedent).
+        const headSha = core.gitHeadSha();
+        const provHeader = `generated-at: ${new Date().toISOString().replace(/\.\d+Z$/, 'Z')} @ ${headSha ? headSha.slice(0, 8) : 'unborn'}`;
+        try { fs.mkdirSync(path.join(cmRoot, '.gos', 'codebase'), { recursive: true }); fs.writeFileSync(path.join(cmRoot, '.gos', 'codebase', 'unmapped-fns.txt'), `${provHeader}\n${unmappedFns.join('\n')}\n`); } catch { /* list file is best-effort */ }
+        console.log(`⚠ codemap: ${unmappedFns.length}/${cgFns.size} unmapped fn(s) without test annotation (${covPct}% coverage) — full list: .gos/codebase/unmapped-fns.txt: [${unmappedFns.slice(0, 8).join(', ')}${unmappedFns.length > 8 ? ', …' : ''}]`);
       }
       // ---- C4 baseline alerts (advisory): peak comparison + tiered missing list + fingerprint; all advisory ----
       const blPath = path.join(cmRoot, '.gos', 'codebase', 'edge-baseline.json');
