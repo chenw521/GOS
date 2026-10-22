@@ -218,7 +218,7 @@
 
 #### T12: wiring checklist + census/gitignore lifecycle + docs
 - **Covers**: D-14, R-01
-- **Files**: README.md, AGENTS.md, skills/gos-think/reference/codebase-mapping.md, .gos/README.md, census.json, .gitignore, test/pack-check.sh, test/checks/gitprobe-monopoly.sh, bin/lib/task/plansnap.cjs, test/sections/T14-state-b.test.sh
+- **Files**: README.md, AGENTS.md, skills/gos-think/reference/codebase-mapping.md, .gos/README.md, census.json, .gitignore, test/pack-check.sh, test/checks/gitprobe-monopoly.sh, bin/lib/task/plansnap.cjs, test/sections/T14-state-b.test.sh, test/sections/T25-map-selfcheck.test.sh, test/sections/T46-module-structure.test.sh, test/sections/T51-commit-guard.test.sh
 - **Read first**: §3.7, gos paths --markdown flow
 - **Approach**: GOS_PATHS registry audit (creators registered their own keys —
   R4-F11; here: README regen no-drift); doc routing rows; pack-check +
