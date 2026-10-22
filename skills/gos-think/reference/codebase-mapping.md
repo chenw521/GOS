@@ -88,6 +88,20 @@ live only on the machine that ran THINK. `gos context think`
 auto-includes them in read_files; a clone without them simply gets no
 codemap context until the pass is re-run.
 
+### `(auto)` mirror lines in concerns.md — route to `gos gap`
+
+Stage-back gaps historically left `(auto)` mirror lines in concerns.md;
+the single live source is `state.gaps` (state.json). Mirror lines are
+legacy residue and are never hand-edited:
+
+- `gos gap migrate` — cures `(auto)` lines into the append-only ledger
+  `.gos/logs/gap-history.ndjson` (machine-local, gitignored; idempotent,
+  deduped by text); concerns.md anchors rebuild in the same transaction.
+- `gos gap history` — fail-closed ledger view (reads the ledger, not
+  task state; run post-archive).
+- `gos gap rewrite <G-id> --text "<t>"` — rewrites a gap's text through
+  the language boundary (CJK-safe for tracked stores).
+
 ## map 2.0 files (CLI-generated, git-tracked)
 
 ### network.md

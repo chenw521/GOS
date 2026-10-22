@@ -233,7 +233,7 @@
 
 #### T13: deferred parking + self-repo migrate + full-suite verification
 - **Covers**: D-13, D-16 (self-repo first caller), R-01
-- **Files**: .gos/concerns.md, .gos/logs/gap-history.ndjson
+- **Files**: .gos/concerns.md, .gos/logs/gap-history.ndjson, .gos/task/p4/evidence/t13-selfrepo-migrate.md
 - **Read first**: lesson d1d02a55, T6
 - **Approach**: `gos concerns add` two deferred anchors (rt2-f9 shared-lock
   redesign; d-13 P5 handoff); run `gos gap migrate` on self-repo; full suite

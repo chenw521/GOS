@@ -137,6 +137,12 @@
       "type": "major",
       "description": "Fluid back to PLAN: discovered during PLAN",
       "status": "open"
+    },
+    {
+      "id": "G-1792686126655",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
     }
   ],
   "phase_name": "P4: repo content policy",
@@ -344,7 +350,10 @@
           "test/pack-check.sh",
           "test/checks/gitprobe-monopoly.sh",
           "bin/lib/task/plansnap.cjs",
-          "test/sections/T14-state-b.test.sh"
+          "test/sections/T14-state-b.test.sh",
+          "test/sections/T25-map-selfcheck.test.sh",
+          "test/sections/T46-module-structure.test.sh",
+          "test/sections/T51-commit-guard.test.sh"
         ]
       },
       {

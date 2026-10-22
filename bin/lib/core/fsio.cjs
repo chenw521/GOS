@@ -89,6 +89,7 @@ const GOS_PATHS = {
   truth_receipts:   { rel: 'logs/truth-receipts.md', producer: 'cli (truth verify)', readers: 'verify/audit', purge: 'runtime state, machine-local', tracked: false, granularity: 'file' },
   exemptions:       { rel: 'logs/exemptions.log', producer: 'cli (gate --exempt)', readers: 'exempt audit', purge: 'runtime state, machine-local', tracked: false, granularity: 'file' },
   edge_audit:       { rel: 'logs/edge-audit.log', producer: 'cli (commit gate)', readers: 'edge audit', purge: 'runtime state, machine-local', tracked: false, granularity: 'file' },
+  gap_history:      { rel: 'logs/gap-history.ndjson', producer: 'cli (gap migrate)', readers: 'gap history audit', purge: 'runtime state, machine-local', tracked: false, granularity: 'file' },
   // --- task/<id>/: per-phase in-flight artifacts (dynamic) ---
   spec:             { rel: 'task/<task_id>/spec.md', producer: 'agent (THINK)', readers: 'plan/review/verify', purge: 'archived at commit ship', tracked: true, granularity: 'file' },
   plan:             { rel: 'task/<task_id>/plan.md', producer: 'agent (PLAN)', readers: 'build/review', purge: 'archived at commit ship', tracked: true, granularity: 'file' },

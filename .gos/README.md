@@ -53,6 +53,7 @@ Every artifact under .gos/: who writes it, who reads it, when it can be deleted.
 | `logs/truth-receipts.md` | cli (truth verify) | verify/audit | runtime state, machine-local | no |
 | `logs/exemptions.log` | cli (gate --exempt) | exempt audit | runtime state, machine-local | no |
 | `logs/edge-audit.log` | cli (commit gate) | edge audit | runtime state, machine-local | no |
+| `logs/gap-history.ndjson` | cli (gap migrate) | gap history audit | runtime state, machine-local | no |
 
 ## task/&lt;id&gt;/ — per-phase in-flight artifacts (dynamic, resolved per active task)
 
