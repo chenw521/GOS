@@ -125,6 +125,12 @@
       "type": "major",
       "description": "Fluid back to PLAN: discovered during PLAN",
       "status": "open"
+    },
+    {
+      "id": "G-1792685246106",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
     }
   ],
   "phase_name": "P4: repo content policy",
@@ -188,6 +194,68 @@
       },
       {
         "id": "T6",
+        "covers": [
+          "D-16"
+        ],
+        "files": [
+          "bin/lib/nav/cmds.cjs",
+          "bin/lib/knowledge/concerns.cjs",
+          "bin/lib/core/state.cjs",
+          "bin/lib/core/locales/{en",
+          "zh}.cjs",
+          ".gitignore",
+          "census.json",
+          "test/sections/T97-gap-migrate.test.sh",
+          "test/sections/T23-concerns.test.sh"
+        ]
+      },
+      {
+        "id": "T4a",
+        "covers": [
+          "D-12",
+          "D-18"
+        ],
+        "files": [
+          "bin/lib/core/lock.cjs",
+          "test/sections/T95-repo-id-guard.test.sh",
+          "test/sections/T5-guard.test.sh",
+          "test/sections/T82-*.test.sh"
+        ]
+      },
+      {
+        "id": "T4b",
+        "covers": [
+          "D-12"
+        ],
+        "files": [
+          "bin/lib/map/anchor.cjs",
+          "bin/lib/task/init.cjs",
+          "bin/lib/knowledge/phase.cjs",
+          "bin/lib/ops/paths.cjs",
+          "test/sections/T2-project.test.sh",
+          "test/sections/T10-security-e2e.test.sh",
+          "test/golden/pre-split/help.txt",
+          "test/golden/pre-split/contract.txt"
+        ]
+      },
+      {
+        "id": "T7a",
+        "covers": [
+          "D-15",
+          "D-14"
+        ],
+        "files": [
+          "bin/lib/ops/track.cjs",
+          "bin/lib/core/state.cjs",
+          "bin/lib/nav/registry-consts.cjs",
+          "bin/gos.cjs",
+          "bin/lib/core/locales/{en",
+          "zh}.cjs",
+          "test/sections/T98a-track-core.test.sh"
+        ]
+      },
+      {
+        "id": "T7b",
         "covers": [
           "D-15",
           "D-14"
@@ -281,7 +349,12 @@
         ]
       }
     ],
-    "audit": []
+    "audit": [
+      {
+        "at": "2026-10-22T16:05:47.895Z",
+        "what": "snapshot-force"
+      }
+    ]
   },
   "repo_id": "85af56a090a78924",
   "checkpoints": [
@@ -292,5 +365,10 @@
       "remaining": "T12,T13",
       "at": "2026-10-22T16:00:31.457Z"
     }
-  ]
+  ],
+  "semantic": {
+    "allowlist": [
+      "bin/lib/nav/status.cjs"
+    ]
+  }
 }

@@ -40,7 +40,7 @@
 
 #### T1: gitprobe fail-closed probe module
 - **Covers**: (§3.0 primitive for D-14/D-15/D-17)
-- **Files**: bin/lib/core/gitprobe.cjs, test/sections/T93-gitprobe.test.sh
+- **Files**: bin/lib/core/gitprobe.cjs, bin/lib/core/index.cjs, test/sections/T93-gitprobe.test.sh
 - **Read first**: bin/lib/core/fsio.cjs (execFileSync patterns, sanitizeEcho), bin/lib/core/state.cjs
 - **Approach**: isTracked = ls-files --cached ∪ cat-file -e HEAD; git failure
   (rc≠0/stderr/exception/GIT_DIR poison) → returns true + cached-failure
@@ -95,7 +95,7 @@
 
 #### T6: gap migrate product command + history + anchor bootstrap
 - **Covers**: D-16
-- **Files**: bin/lib/nav/cmds.cjs, bin/lib/knowledge/concerns.cjs, bin/lib/core/state.cjs, bin/lib/core/locales/{en,zh}.cjs, .gitignore, census.json, test/sections/T97-gap-migrate.test.sh, test/sections/T23-concerns.test.sh
+- **Files**: bin/lib/nav/cmds.cjs, bin/lib/knowledge/concerns.cjs, bin/lib/core/state.cjs, bin/lib/task/stage.cjs, bin/lib/core/locales/{en,zh}.cjs, .gitignore, census.json, test/sections/T97-gap-migrate.test.sh, test/sections/T23-concerns.test.sh
 - **Read first**: concerns.cjs:38-90 (anchors + write order), stage.cjs:23-31, concernsRootLock, T5's dispatch shape
 - **Approach**: `gos gap migrate` in concernsRootLock: ledger appends
   (per-line JSON.stringify, {ts,text} dedupe, sentinel), edit concerns.md
@@ -135,7 +135,7 @@
 
 #### T7a: gos track — validation + surgery + flip core
 - **Covers**: D-15, D-14
-- **Files**: bin/lib/ops/track.cjs, bin/lib/core/state.cjs, bin/lib/nav/registry-consts.cjs, bin/gos.cjs, bin/lib/core/locales/{en,zh}.cjs, test/sections/T98a-track-core.test.sh
+- **Files**: bin/lib/ops/track.cjs, bin/lib/core/state.cjs, bin/lib/nav/registry-consts.cjs, bin/gos.cjs, bin/lib/ops/index.cjs, bin/lib/core/locales/{en,zh}.cjs, test/sections/T98a-track-core.test.sh
 - **Read first**: T1 gitprobe, T5 boundary (pre-scan reuse), census _doc, scripts/census-dispose.sh
 - **Approach**: steps 1-5: canonical path + lstat no-symlink + never-track
   zones + unborn die + NOT-tracked precondition + case-variant die;
@@ -218,7 +218,7 @@
 
 #### T12: wiring checklist + census/gitignore lifecycle + docs
 - **Covers**: D-14, R-01
-- **Files**: README.md, AGENTS.md, skills/gos-think/reference/codebase-mapping.md, .gos/README.md, census.json, .gitignore, test/pack-check.sh, test/checks/gitprobe-monopoly.sh
+- **Files**: README.md, AGENTS.md, skills/gos-think/reference/codebase-mapping.md, .gos/README.md, census.json, .gitignore, test/pack-check.sh, test/checks/gitprobe-monopoly.sh, bin/lib/task/plansnap.cjs, test/sections/T14-state-b.test.sh
 - **Read first**: §3.7, gos paths --markdown flow
 - **Approach**: GOS_PATHS registry audit (creators registered their own keys —
   R4-F11; here: README regen no-drift); doc routing rows; pack-check +
