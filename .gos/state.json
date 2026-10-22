@@ -2,16 +2,18 @@
   "version": "0.5",
   "schema_version": 3,
   "level": 3,
-  "current_stage": "THINK",
+  "current_stage": "PLAN",
   "completed_stages": [
-    "INTENT"
+    "INTENT",
+    "THINK"
   ],
   "intent": {
     "summary": "Sanitized tracked state as an opt-in product capability (clone-resume for private collaborative repos) with self-repo opt-out and schema v4 cleanup dropping the dead version field and re-anchoring project_root without machine paths; a tracked-flip transaction gate enforcing language check plus census plus gitignore reconciliation at the ignored-to-tracked boundary; codebase knowledge files (structure/conventions/concerns/untested-fns) travel with clones through the gate; stage-back gap exhaust de-duplicated into state.gaps as the single source with concerns.md cured of 88 auto mirrors. Issues #11 file-availability half, #24 re-triage",
     "confirmed": true
   },
   "approvals": {
-    "THINK": "2026-10-22T03:41:02.328Z"
+    "THINK": "2026-10-22T03:41:02.328Z",
+    "PLAN": "2026-10-22T05:03:34.213Z"
   },
   "spec_path": null,
   "plan_path": null,
@@ -128,5 +130,7 @@
       "what": "claim"
     }
   ],
-  "changelog_user_summary": "claim-boundary output and seeded-intent status now carry the fresh-session handoff block"
+  "changelog_user_summary": "claim-boundary output and seeded-intent status now carry the fresh-session handoff block",
+  "spec_sha256": "d16f93ade7480ebf90098bf51197c24aec25858f7504e381b542760b6b7e2f59",
+  "spec_gate_version": 2
 }
