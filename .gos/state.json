@@ -2,13 +2,17 @@
   "version": "0.5",
   "schema_version": 3,
   "level": 3,
-  "current_stage": "INTENT",
-  "completed_stages": [],
+  "current_stage": "THINK",
+  "completed_stages": [
+    "INTENT"
+  ],
   "intent": {
     "summary": "Sanitized tracked state as an opt-in product capability (clone-resume for private collaborative repos) with self-repo opt-out and schema v4 cleanup dropping the dead version field and re-anchoring project_root without machine paths; a tracked-flip transaction gate enforcing language check plus census plus gitignore reconciliation at the ignored-to-tracked boundary; codebase knowledge files (structure/conventions/concerns/untested-fns) travel with clones through the gate; stage-back gap exhaust de-duplicated into state.gaps as the single source with concerns.md cured of 88 auto mirrors. Issues #11 file-availability half, #24 re-triage",
     "confirmed": true
   },
-  "approvals": {},
+  "approvals": {
+    "THINK": "2026-10-22T03:41:02.328Z"
+  },
   "spec_path": null,
   "plan_path": null,
   "project": true,
@@ -21,7 +25,98 @@
       "level": 3
     }
   ],
-  "decisions": [],
+  "decisions": [
+    {
+      "id": "D-12",
+      "title": "A-1 identity de-pathed: v4 drops version+project_root; repo_id=origin-URL hash; root runtime-derived",
+      "rationale": "version: zero readers. project_root conflates identity with location; tracked-state ruling changed its premise. repo_id keeps guard, kills paths. No-remote: advisory.",
+      "birth_phase": "P4: repo content policy",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-13",
+      "title": "D-G dialogue governance to an independent small phase before P2, not absorbed into P4",
+      "rationale": "Session relapse (B card lost table, no standing deepen option) proves parked concerns have no teeth. P4 keeps content-policy scope; new small phase ships contract upgrade + thin-gate extension early.",
+      "birth_phase": "P4: repo content policy",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-14",
+      "title": "B obligations attach to tracked files: no repo-mode flag; self-repo opt-out = negative assertion",
+      "rationale": "census + cjk-whitelist are the complete file-attached signal surface. Knowledge files are agent-crafted: flip preset covers UX; mode flag only serves a circular forgot-warning. #20 precedent.",
+      "birth_phase": "P4: repo content policy",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-15",
+      "title": "C flip gate = gos track command + gos gate reconcile leg, census-if-present, no hook layer",
+      "rationale": "Executor: atomic surgery (backup+rollback). Detection: shipped gate leg. Census leg runs only when census.json exists. Hook layer deferred until a rogue flip costs more than a gate round-trip.",
+      "birth_phase": "P4: repo content policy",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-16",
+      "title": "D-1 cure: migrate 88 auto mirrors to local gap-history ledger, then cure concerns.md",
+      "rationale": "User final ruling (revised from delete): mirrors move to .gos/logs/gap-history.ndjson (untracked); concerns.md returns to curated-only. If no consumer in 6 months, downgrade to delete.",
+      "birth_phase": "P4: repo content policy",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-17",
+      "title": "D-2 language boundary at the state write path (single point), tracked-conditional",
+      "rationale": "One check covers all text fields. Fires only when state.json is git-tracked (obligations attach to files, D-14). Fail-closed with bilingual guidance; cache git status in-process.",
+      "birth_phase": "P4: repo content policy",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-18",
+      "title": "E repo_id = normalized-URL hash matched against all remotes; no-remote = advisory null",
+      "rationale": "https/ssh heterogeneity makes origin-exact a false-positive machine eroding guard credibility. sha256(canonical)[:16] keeps tokens out. Six-form test matrix; anchor fix re-derives on misses.",
+      "birth_phase": "P4: repo content policy",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-19",
+      "title": "P4 BUILD additions: self-repo knowledge refresh + THINK navigator hint (blast/closure discoverability at design time)",
+      "rationale": "Drift is live poison (4800-line claims injected every task). THINK lacks BUILD's D-65 blast wiring; design-time impact awareness closes the navigator gap. User ruling: both in P4.",
+      "birth_phase": "P4: repo content policy",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-20",
+      "title": "F navigator tiers: guide trio flips w/ stamp; map data tracked; byproduct regenerates w/ provenance header",
+      "rationale": "codebase/ = AI dependency navigator (user ruling). Tiers: data (map trio, gate inputs, tracked); guide (hand-written trio, flips w/ born-at stamp); byproduct (unmapped-fns, regen, header).",
+      "birth_phase": "P4: repo content policy",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    }
+  ],
   "observable_truths": [],
   "gaps": [],
   "phase_name": "P4: repo content policy",
