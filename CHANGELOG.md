@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add self-repo gap migrate cured 88 auto mirrors into the ledger with two deferred anchors parked and full suite green (D-16/D-13) [2026-10-22]
+- Add wiring docs and census lifecycle audit with gap-history GOS_PATHS registration and suffixed task-id plan parsing fix (D-14/R-01) [2026-10-22]
 - Add self-repo guide trio refreshed to current tree truth with born-at stamps recorded in the evidence ledger (D-19/D-20) [2026-10-22]
 - Add changelog validator accepts issue-ref tokens with commit-time neutralization of close-keyword triggers in both commit channels (R-01) [2026-10-22]
 - Add navigator bundle renamed to unmapped-fns with generated-at provenance header and THINK context hint (D-19/D-20) [2026-10-22]
