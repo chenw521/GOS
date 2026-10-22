@@ -1,7 +1,7 @@
 {
   "schema_version": 4,
   "level": 3,
-  "current_stage": "BUILD",
+  "current_stage": "PLAN",
   "completed_stages": [
     "INTENT",
     "THINK",
@@ -119,7 +119,14 @@
     }
   ],
   "observable_truths": [],
-  "gaps": [],
+  "gaps": [
+    {
+      "id": "G-1792685107955",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
+    }
+  ],
   "phase_name": "P4: repo content policy",
   "task_head": "8cccc4ad1dd5fb3a40a4c40a805eff95c92b662e",
   "task_head_history": [
@@ -276,5 +283,14 @@
     ],
     "audit": []
   },
-  "repo_id": "85af56a090a78924"
+  "repo_id": "85af56a090a78924",
+  "checkpoints": [
+    {
+      "stage": "BUILD",
+      "unit": "wave4",
+      "done": "T1,T3,T14,T5,T6,T4a,T4b,T7a,T7b,T8,T9,T10,T11",
+      "remaining": "T12,T13",
+      "at": "2026-10-22T16:00:31.457Z"
+    }
+  ]
 }
