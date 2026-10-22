@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd setup,doctor
-# T10: security test pack (hostile-string canaries / execSync-git static audit / version tripwire / anchor rescue)
+# T10: security test pack (hostile-string canaries / execSync-git static audit / version tripwire / repo identity rescue)
 #      + E2E full scenario (Lv3 full cycle → Lv4 dual storage/archive → init --force unarchived guard → P2 claim / same-day -2 dir)
 # Env: GOS (CLI path), TESTBASE (scratch root), assert helpers exported by runner.
 # This section only echoes ✓/✗ lines — the runner counts pass/fail from the output.
@@ -77,22 +77,27 @@ PAT2='execSync\(\`git|execSync\('"'"'git|execSync\("git'
 C2=$(grep -cE "$PAT2" "$GOS" || true)
 assert_eq "static: no literal execSync-git forms (backtick/quote)" "0" "$C2"
 
-# --- P1.6: anchor rescue (D-10) — stale anchor blocks writes, `gos anchor fix` re-anchors ---
-# (GIT_CEILING_DIRECTORIES stops git's upward repo search at TESTBASE — with the sandbox's
-#  own .git removed, currentRootRealpath() is genuinely null → realpath('.') fallback)
+# --- P1.6: repo identity rescue (D-12/D-18) — foreign repo_id blocks writes, `gos anchor fix` re-derives ---
+# v4 identity is de-pathed: the state binds via repo_id (remote-URL hash). A
+# cloned/copied state carries a foreign id → write-class dies naming the
+# mismatch; `gos anchor fix` re-derives from THIS repo's remotes and unblocks.
+git remote add origin https://github.com/acme/t10-identity.git
+EXPECTED_ID=$(python3 -c "import hashlib; print(hashlib.sha256(b'github.com:443/acme/t10-identity').hexdigest()[:16])")
 python3 -c "
-import json; s=json.load(open('.gos/state.json')); s['project_root']='/fake/anchor-root'
+import json; s=json.load(open('.gos/state.json')); s['repo_id']='deadbeefdeadbeef'
 json.dump(s,open('.gos/state.json','w'),indent=2)"
-rm -rf .git
-set +e; OUT=$(GIT_CEILING_DIRECTORIES="$TESTBASE" node "$GOS" decision add D-99 "blocked" 2>&1); RC=$?; set -e
-assert_exit "stale anchor blocks write" 1 "$RC"
-assert_contains "blocked message names stored root" "/fake/anchor-root" "$OUT"
-set +e; OUT=$(GIT_CEILING_DIRECTORIES="$TESTBASE" node "$GOS" anchor fix 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" decision add D-99 "blocked" 2>&1); RC=$?; set -e
+assert_exit "foreign repo_id blocks write" 1 "$RC"
+assert_contains "blocked message names repo identity" "repo identity" "$OUT"
+assert_contains "blocked message names stored repo_id" "deadbeefdeadbeef" "$OUT"
+assert_contains "blocked message suggests anchor fix" "anchor fix" "$OUT"
+set +e; OUT=$(node "$GOS" anchor fix 2>&1); RC=$?; set -e
 assert_exit "anchor fix exits 0" 0 "$RC"
 assert_contains "anchor fix contract" "anchor re-fixed to" "$OUT"
-ROOT_NOW=$(python3 -c "import json,os; print(json.load(open('.gos/state.json'))['project_root'])")
-assert_eq "anchor re-fixed to cwd realpath" "$(python3 -c "import os; print(os.path.realpath('.'))")" "$ROOT_NOW"
-set +e; OUT=$(GIT_CEILING_DIRECTORIES="$TESTBASE" node "$GOS" decision add D-99 "post rescue" 2>&1); RC=$?; set -e
+ID_NOW=$(python3 -c "import json; print(json.load(open('.gos/state.json')).get('repo_id'))")
+assert_eq "anchor fix re-derived repo_id from remotes" "$EXPECTED_ID" "$ID_NOW"
+assert_not_contains "state carries no project_root after fix" "project_root" "$(cat .gos/state.json)"
+set +e; OUT=$(node "$GOS" decision add D-99 "post rescue" 2>&1); RC=$?; set -e
 assert_exit "write works after anchor fix" 0 "$RC"
 
 # --- P1.7: version trip — project.json schema 999 → write-class exit 3 (checkpoint save) ---

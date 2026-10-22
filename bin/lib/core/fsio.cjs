@@ -57,6 +57,11 @@ const GOS_PATHS = {
   lessons:          { rel: 'lessons.md', producer: 'cli (regenerated view of lessons.json)', readers: 'lessons/status/red-team', purge: 'regen any time (json is truth)', tracked: true, granularity: 'file' },
   lessons_json:     { rel: 'lessons.json', producer: 'cli (lessons family)', readers: 'lessons/gate/commit/archive', purge: 'never (audit chain lives here)', tracked: true, granularity: 'file' },
   lessons_backup:   { rel: 'lessons-migration-backup-<ymd>.md', producer: 'cli (lessons migrate)', readers: 'migration rollback runbook', purge: 'latest generation only', tracked: true, granularity: 'file' },
+  // [P4 T7b/D-15] flip transaction zones (spec §3.4): the tracked NDJSON flip
+  // ledger ({ts,path,head} per line, GOS_PATHS key track_manifest) and the
+  // rename-style backup staging dir (key track_backup — exists only inside a
+  // transaction window; rollback = rename back, ENOSPC-safe).
+  track_manifest:   { rel: 'track-manifest.json', producer: 'cli (gos track flip transaction)', readers: 'gate flip-reconcile leg + adopt/no-op resolver', purge: 'never (flip audit ledger)', tracked: true, granularity: 'file' },
   map_ignore:       { rel: 'map-ignore', producer: 'cli', readers: 'map', purge: 'never', tracked: true, granularity: 'file' },
   gitignore:        { rel: '.gitignore', producer: 'cli (brownfield adoption)', readers: 'git', purge: 'never', tracked: true, granularity: 'file' },
   readme:           { rel: 'README.md', producer: 'cli (gos paths --markdown)', readers: 'human+agent navigation', purge: 'regen any time', tracked: true, granularity: 'file' },
@@ -76,6 +81,7 @@ const GOS_PATHS = {
   edges:            { rel: 'cache/edges.json', producer: 'cli', readers: 'map', purge: 'regen', tracked: false, granularity: 'file' },
   backups_dir:      { rel: 'cache/backups', producer: 'cli (network.md refresh)', readers: 'none (rolling keep-5 recovery)', purge: 'rolling', tracked: false, granularity: 'dir' },
   render_backup:    { rel: 'cache/render-backup', producer: 'cli (render)', readers: 'recovery (pre-write view snapshots)', purge: 'rolling (14d expiry, full history)', tracked: false, granularity: 'dir' },
+  track_backup:     { rel: 'cache/track-backup', producer: 'cli (gos track flip transaction)', readers: 'transaction rollback only (rename-back staging)', purge: 'regen each transaction (deleted on success, renamed back on failure)', tracked: false, granularity: 'dir' },
   concerns_anchors: { rel: 'cache/.concerns-anchors.json', producer: 'cli', readers: 'concerns anchor guard', purge: 'regen', tracked: false, granularity: 'file' },
   concerns_anchors_bak: { rel: 'cache/.concerns-anchors.bak', producer: 'cli', readers: 'recovery shadow', purge: 'regen', tracked: false, granularity: 'file' },
   lessons_anchors:  { rel: 'cache/.lessons-anchors.json', producer: 'cli', readers: 'lessons derived cache (live_ids; rebuildable via lessons anchor-rebuild)', purge: 'regen', tracked: false, granularity: 'file' },

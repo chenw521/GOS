@@ -15,6 +15,7 @@ Every artifact under .gos/: who writes it, who reads it, when it can be deleted.
 | `lessons.md` | cli (regenerated view of lessons.json) | lessons/status/red-team | regen any time (json is truth) | yes |
 | `lessons.json` | cli (lessons family) | lessons/gate/commit/archive | never (audit chain lives here) | yes |
 | `lessons-migration-backup-<ymd>.md` | cli (lessons migrate) | migration rollback runbook | latest generation only | yes |
+| `track-manifest.json` | cli (gos track flip transaction) | gate flip-reconcile leg + adopt/no-op resolver | never (flip audit ledger) | yes |
 | `map-ignore` | cli | map | never | yes |
 | `README.md` | cli (gos paths --markdown) | human+agent navigation | regen any time | yes |
 | `FEEDBACK.md` | cli (feedback push backfill) | paths render + humans | regen any time (rendered) | yes |
@@ -40,6 +41,7 @@ Every artifact under .gos/: who writes it, who reads it, when it can be deleted.
 | `cache/edges.json` | cli | map | regen | no |
 | `cache/backups` | cli (network.md refresh) | none (rolling keep-5 recovery) | rolling | no |
 | `cache/render-backup` | cli (render) | recovery (pre-write view snapshots) | rolling (14d expiry, full history) | no |
+| `cache/track-backup` | cli (gos track flip transaction) | transaction rollback only (rename-back staging) | regen each transaction (deleted on success, renamed back on failure) | no |
 | `cache/.concerns-anchors.json` | cli | concerns anchor guard | regen | no |
 | `cache/.concerns-anchors.bak` | cli | recovery shadow | regen | no |
 | `cache/.lessons-anchors.json` | cli | lessons derived cache (live_ids; rebuildable via lessons anchor-rebuild) | regen | no |

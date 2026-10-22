@@ -15,9 +15,9 @@ const SUBCLASS_OVERRIDES = {
 // Same read-class dispatch for `push`: it mutates only the git remote (one
 // aggregate commit), never local .gos state, and git itself serializes
 // remote updates — the shared die-on-contention .gos/.lock must not gate it.
-const KNOWN_CASES = ['', 'next', 'instructions', 'status', 'init', 'resume', 'stage', 'context', 'checkpoint', 'commit', 'archive', 'setup', 'teardown', 'doctor', '_contract', 'paths', 'gate', 'section', 'resolve-model', 'config', 'trace', 'decision', 'requirement', 'phase', 'anchor', 'render', 'auto', 'approve', 'lessons', 'truth', 'logs', 'gap', 'map', 'concerns', 'changelog', 'feedback', 'push', 'brownfield', 'help', '--help', '-h', '--version', '-v'];
+const KNOWN_CASES = ['', 'next', 'instructions', 'status', 'init', 'resume', 'stage', 'context', 'checkpoint', 'commit', 'archive', 'setup', 'teardown', 'doctor', '_contract', 'paths', 'gate', 'section', 'resolve-model', 'config', 'trace', 'decision', 'requirement', 'phase', 'anchor', 'render', 'auto', 'approve', 'lessons', 'truth', 'logs', 'gap', 'map', 'concerns', 'changelog', 'feedback', 'push', 'track', 'brownfield', 'help', '--help', '-h', '--version', '-v'];
 
-const WRITE_CMDS = new Set(['init', 'commit', 'archive', 'approve', 'checkpoint', 'config', 'auto', 'stage', 'requirement', 'decision', 'render', 'phase', 'anchor', 'lessons', 'truth', 'gap', 'paths', 'feedback']);
+const WRITE_CMDS = new Set(['init', 'commit', 'archive', 'approve', 'checkpoint', 'config', 'auto', 'stage', 'requirement', 'decision', 'render', 'phase', 'anchor', 'lessons', 'truth', 'gap', 'paths', 'feedback', 'track']);
 
 const READ_CMDS = new Set(['', 'next', 'instructions', 'status', 'resume', 'context', 'trace', 'resolve-model', 'map', 'concerns', 'changelog', 'push', 'logs']);
 

@@ -1,6 +1,5 @@
 {
-  "version": "0.5",
-  "schema_version": 3,
+  "schema_version": 4,
   "level": 3,
   "current_stage": "BUILD",
   "completed_stages": [
@@ -16,10 +15,9 @@
     "THINK": "2026-10-22T03:41:02.328Z",
     "PLAN": "2026-10-22T05:03:34.213Z"
   },
-  "spec_path": null,
-  "plan_path": null,
+  "spec_path": "/work/run/projects/bio-06/GOS/.gos/task/p4/spec.md",
+  "plan_path": "/work/run/projects/bio-06/GOS/.gos/task/p4/plan.md",
   "project": true,
-  "project_root": "/work/run/projects/bio-06/GOS",
   "requirements": [
     {
       "id": "R-01",
@@ -131,7 +129,7 @@
       "what": "claim"
     }
   ],
-  "changelog_user_summary": "claim-boundary output and seeded-intent status now carry the fresh-session handoff block",
+  "changelog_user_summary": "gate flip-reconcile leg enforcing census and manifest agreement on tracked dot-gos files",
   "spec_sha256": "d16f93ade7480ebf90098bf51197c24aec25858f7504e381b542760b6b7e2f59",
   "spec_gate_version": 2,
   "plan_snapshot": {
@@ -277,5 +275,6 @@
       }
     ],
     "audit": []
-  }
+  },
+  "repo_id": "85af56a090a78924"
 }

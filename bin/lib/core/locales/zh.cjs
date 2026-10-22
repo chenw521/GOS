@@ -97,6 +97,58 @@ module.exports = {
   'gap.history.skipped': '⚠ 已跳过 {n} 行格式错误的台账行（.gos/logs/gap-history.ndjson）',
   'concerns.err.anchorMissingDirty': 'concerns.md 受 git 跟踪但 .concerns-anchors.json 缺失，且文件与 HEAD blob 不一致——疑似手改；请用 git checkout 恢复，或先提交该改动（禁止借此重建，防止洗白）',
 
+  // ---- T7a/D-15 gos track——校验过的 忽略→跟踪 翻转（校验失败、预扫描报告、手术验证、成功行）----
+  'track.err.notRepo': 'track: 不是 git 仓库——gos track 只在 git 工作树内翻转文件',
+  'track.err.notFound': 'track: {path} 无法解析为本仓库内的常规文件（不存在、是目录、或在工作树之外）',
+  'track.err.scope': 'track: {path} 在 .gos/ 范围之外——gos track 只翻转 .gos/ 下的文件',
+  'track.err.symlink': 'track: {path} 未解析到自身（argv 含符号链接或穿越段；规范路径: {canon}）——受跟踪的 GOS 存储必须是常规文件；请指向真实文件',
+  'track.err.caseArg': 'track: 大小写不匹配——argv 为 {arg}，规范路径为 {canon}；请用规范拼写重跑（大小写不敏感的克隆会让二者分叉）',
+  'track.err.caseDisk': 'track: 磁盘上存在大小写冲突——{other} 与 {path} 仅大小写不同；大小写不敏感的克隆会覆盖其一，请先重命名其中一个',
+  'track.err.zone': 'track: {path} 位于永不跟踪区 {zone}——该区设计为机器本地，任何文件都不可翻转',
+  'track.err.env': 'track: {path} 是机密文件（.env 家族）——机密绝不能被 git 跟踪',
+  'track.err.unborn': 'track: 本仓库尚无提交（HEAD 未诞生）——翻转需要与 HEAD blob 对账；请先完成首次提交再重跑',
+  'track.err.tracked': 'track: {path} 已被跟踪——无需翻转（待翻转清单事务落地后，对已跟踪目标的重跑将成为经验证的无操作，历史跟踪文件也可获得 adopt 记录）',
+  'track.err.gitignoreUnsafe': 'track: {path} 含 gitignore 模式无法原样表达的路径段（以 ! 或 # 开头、尾部空格）——请先重命名该文件',
+  'track.err.gitAdd': 'track: {path} 的 git add 失败: {err}——已暂存的翻转未改动其他内容；请解决 git 错误后重跑',
+  'track.prescan.storeCjk': 'track: 语言预扫描——受跟踪存储 {file} 在 {where} 携带 CJK: {text}——跟踪态的 GOS 存储仅允许英文；请先改写内容（所有存储清理干净之前，翻转不做任何改动）',
+  'track.prescan.targetCjk': 'track: 目标 {path} 第 {line} 行携带 CJK: {text}——跟踪态存储仅允许英文；请先用英文改写该文件再重跑',
+  'track.prescan.sanitize': 'track: 净化预扫描在 {path} 第 {line} 行命中（{pattern}）: {text}——机器本地数据不得随仓库流转；请清除泄漏后重跑',
+  'track.surgery.verifyFail': 'track: gitignore 手术验证失败——忽略集差异为 [{diff}]，应恰好等于目标；已回滚，未做任何更改',
+  'track.done.surgery': '✓ 已跟踪 {path}——.gos/.gitignore 否定规则 {negation} 验证通过（忽略集差异 == 目标），{census}，已通过 git add 暂存',
+  'track.done.noSurgery': '✓ 已跟踪 {path}——目标未被忽略（无需 gitignore 手术），{census}，已通过 git add 暂存',
+  // ---- T7b/D-15 翻转事务：清单、adopt/无操作（RT3-F7）、预设 ----
+  'track.done.manifest': '  翻转清单：{path} 已记录于 HEAD {head}（随翻转一并暂存）',
+  'track.adopt.done': '✓ 已收编 {path}——已被 git 跟踪但缺清单记录；adopt 记录已追加至 .gos/track-manifest.json（{census}），已通过 git add 暂存',
+  'track.noop.done': '✓ {path} 已被跟踪——清单记录存在，{census}；经验证的无操作，零改动',
+  'track.err.censusContradiction': 'track: {path} 已被 git 跟踪，但 census 条目 {key} 标记为 git:false——矛盾需人工裁决：先修正 census.json（或取消跟踪该文件）再重跑',
+  'track.preset.err.missing': 'track --knowledge: {path} 缺失——预设要求三份导览文件齐备（.gos/codebase/structure.md、conventions.md、concerns.md）',
+  'track.knowledge.done': '✓ knowledge 预设完成：{n} 个文件已加 born-at: {head} 戳',
+
+  // ---- T8/D-15 gate 翻转对账腿（tracked .gos 文件的 census/git/清单三方
+  // 一致；失败码接入 D-66 本地化渲染器）----
+  'gate.flip-git-probe-failed': {
+    what: '翻转对账腿无法确立 git 事实',
+    why: '故障关闭：没有探测事实时 gate 拒绝对账，绝不猜测',
+  },
+  'gate.flip-census-corrupt': {
+    what: 'census.json 在 gate 时无法解析为 JSON',
+    why: '处置台账就是对账源——台账损坏即整体判负',
+  },
+  'gate.flip-census-contradicts': {
+    what: '某个已跟踪的 .gos 文件被 git:false 的 census 条目覆盖',
+    why: 'census 与 git 对跟踪集合各执一词——必有一方不再描述现实',
+  },
+  'gate.flip-census-phantom': {
+    what: '某个 census .gos 条目声明 git:true 但其下没有任何被跟踪文件',
+    why: '声明为已跟踪却无跟踪实体的区域属于台账漂移',
+  },
+  'gate.flip-manifest-missing': {
+    what: '某个已跟踪的 .gos 文件既无 census git:true 认可，也无翻转清单记录',
+    why: '义务附着于被跟踪文件——没有台账踪迹的被跟踪文件是未经记账的翻转',
+  },
+  'gate.flip.pass': '✓ flip-reconcile：{n} 个被跟踪 .gos 文件——census/git 取值一致，清单义务满足',
+  'gate.flip.skipNoGit': 'flip-reconcile：不是 git 工作树——无从对账跟踪集合，本腿跳过',
+
   // ---- CONTRACTS frozen-string aliases (reference, never copy; zh == en) ----
   'contract.gateFailedPrefix': CONTRACTS.gate_verdicts.gateFailedPrefix,
   'contract.allPass': CONTRACTS.gate_verdicts.allPass,

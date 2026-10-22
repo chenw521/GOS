@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add gate flip-reconcile leg enforcing census and manifest agreement on tracked dot-gos files (D-15/D-14) [2026-10-22]
+- Add gos track flip transaction with validation, census-aware surgery, rollback backups, manifest, adopt and knowledge preset (D-15/D-14) [2026-10-22]
+- Add project_root consumers re-pointed to runtime-derived root with anchor fix re-deriving repo_id (D-12) [2026-10-22]
+- Add gos gap migrate and history cure auto-mirror concerns lines into a local NDJSON ledger (D-16) [2026-10-22]
+- Add repo_id lock guard with remote-set matching and linked-worktree detection (D-12/D-18) [2026-10-22]
+- Add English-only language boundary at the write path of the three GOS text stores with gos gap rewrite (D-17) [2026-10-22]
+- Add gitprobe fail-closed probe primitive plus schema v4 repo_id identity with lazy migration dropping version and project_root (D-12/D-18) [2026-10-22]
 - Add claim-boundary output and seeded-intent status now carry the fresh-session handoff block (R-01) [2026-10-21]
 - Add main becomes PR-only locally with GOS_ALLOW_MAIN_PUSH emergency escape plus a CI direct-push alarm job (R-01) [2026-10-20]
 - Add census lifecycle entries fix the dead-task-dir false red on fresh checkouts (R-01) [2026-10-20]

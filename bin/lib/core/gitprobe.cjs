@@ -166,6 +166,21 @@ function ignoredSet() {
   return out;
 }
 
+// Tracked-under-prefix enumeration (T8 gate flip-reconcile leg): the sorted
+// tracked path set under a repo-relative prefix ('.gos/' — the same set
+// `git ls-files -z -- .gos` returns, quotepath off), served from the cached
+// index universe with no second spawn. null when git truth is unavailable
+// (fail-closed marker cached — callers must refuse, never guess a subset).
+function trackedUnder(prefix) {
+  if (_failure) return null;
+  const set = indexSet();
+  if (_failure || !set) return null;
+  const raw = String(prefix == null ? '' : prefix);
+  if (!raw) return [...set.exact].sort();
+  const pfx = raw.endsWith('/') ? raw : raw + '/';
+  return [...set.exact].filter((p) => p.startsWith(pfx)).sort();
+}
+
 function canonicalRepoRel(p) {
   const raw = String(p == null ? '' : p).trim();
   if (!raw) return null;
@@ -180,4 +195,4 @@ function canonicalRepoRel(p) {
   return rel;
 }
 
-module.exports = { isTracked, ignoredSet, canonicalRepoRel, lastFailure };
+module.exports = { isTracked, ignoredSet, canonicalRepoRel, trackedUnder, lastFailure };

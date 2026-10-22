@@ -7,6 +7,7 @@ const knowledge = require('../knowledge/index.cjs');
 const task = require('../task/plansnap.cjs');
 const sibConfig = require('./config.cjs');  // direct aspect require (acyclic)
 const sibDoctor = require('./doctor.cjs');
+const sibTrack = require('./track.cjs');    // T8 flip-reconcile leg consumes the T7b exports (manifest read, never-zones/files, census key rule)
 const render = require('../render/views.cjs');
 const fs = require('fs');
 const path = require('path');
@@ -686,8 +687,9 @@ function cmdGate(args) {
   // --audit changes nothing — identical to a plain gate all.
   // Structural subcommand: gate codemap inspects map data only and never
   // consumes task state — it must run on stateless trees (CI checkouts),
-  // same philosophy as `gate all --audit`.
-  const structuralOnly = which === 'codemap';
+  // same philosophy as `gate all --audit`. gate flip (T8) is the same shape:
+  // the flip-reconcile leg reads census/git/manifest, never task state.
+  const structuralOnly = which === 'codemap' || which === 'flip';
   if (!state && !(auditMode && which === 'all') && !structuralOnly) {
     core.die(`${core.CONTRACTS.state_semantics.noActiveTask} \`gos init\` first.`);
   }
@@ -917,6 +919,16 @@ function cmdGate(args) {
         } catch { /* corrupt baseline — best-effort advisory layer */ }
       }
     }
+  }
+
+  // ---- [P4 T8 / D-15 / D-14] flip-reconcile leg: census/git/manifest
+  // agreement on every tracked .gos file (structural — stateless-tree
+  // capable, same registration shape as codemap above) ----
+  if (which === 'all' || which === 'flip') {
+    checked++;
+    const flipRes = flipReconcileLeg();
+    if (flipRes.skipped) checked--;   // not a git worktree: capability off, ⚠ printed
+    else if (flipRes.failures.length) failures.push(...flipRes.failures);
   }
 
   // ---- B-19 [R3-F4]: builtin layer done → release lock before user-script layers ----
@@ -1184,6 +1196,121 @@ function cmdGate(args) {
   emitSemanticDowngradeBanner();
 }
 
+// ---------------------------------------------------------------------------
+// [P4 T8 / D-15 / D-14] flip-reconcile leg — census/git/manifest agreement
+// on every tracked .gos file at gate time. File-granular (RT2-F4): the
+// tracked set is enumerated under .gos via the gitprobe cache (trackedUnder
+// — the same set a plain tracked listing of .gos returns); per file the
+// expected value comes from the most-specific census key (census-if-present:
+// no census.json → value checks skip, the manifest check stays); lifecycle
+// keys are exempt from existence and value assertions (.gos/task is legally
+// absent post-archive / fresh-clone); mismatch FAILs in BOTH directions
+// (census git:true + nothing tracked; census git:false + tracked); every
+// tracked non-zone .gos file carries either census git:true sanction or a
+// flip-manifest record — manifest-less FAIL in census-less repos too (the
+// manifest is product-shipped). Fail-closed on gitprobe failure (§3.0).
+// ---------------------------------------------------------------------------
+
+// Flip-transaction artifacts exempt from the manifest-record requirement on
+// top of TRACK_NEVER_FILES (the manifest itself is already a never-file):
+// .gos/.gitignore is the surgery store every flip stages alongside its
+// target — machine-managed by the transaction, never hand-flipped content.
+const FLIP_TXN_STORES = ['.gos/.gitignore'];
+
+function flipReconcileLeg() {
+  const failures = [];
+  if (!core.gitInWorkTree()) {
+    console.log(`⚠ ${core.t('gate.flip.skipNoGit')}`);
+    return { failures, skipped: true };
+  }
+  const tracked = core.trackedUnder('.gos/');
+  if (tracked == null) {
+    failures.push(core.gateFail('flip-git-probe-failed', {
+      verdict: 'flip-reconcile: git truth unavailable (fail-closed) — tracked-set enumeration failed',
+      evidence: [String(core.lastFailure() || 'git probe failed')],
+      fix: 'resolve the git probe failure above (poisoned env, broken repo, spawn error) — the leg refuses to reconcile on unknown git truth',
+    }));
+    return { failures };
+  }
+  const top = core.gitToplevelRealpath();
+  if (!top) {
+    failures.push(core.gateFail('flip-git-probe-failed', {
+      verdict: 'flip-reconcile: repository toplevel could not be resolved (fail-closed)',
+      evidence: ['rev-parse --show-toplevel'],
+      fix: 'run the gate from inside the git worktree — flip-reconcile refuses on an unknown repo root',
+    }));
+    return { failures };
+  }
+  // census-if-present; a corrupt census fails closed (it IS the ledger)
+  let entries = null;
+  const censusPath = path.join(top, 'census.json');
+  if (fs.existsSync(censusPath)) {
+    let census = null;
+    try { census = JSON.parse(fs.readFileSync(censusPath, 'utf8')); }
+    catch (e) {
+      return { failures: [core.gateFail('flip-census-corrupt', {
+        verdict: `census.json is corrupted: ${e.message}`,
+        evidence: [censusPath],
+        fix: 'fix census.json (parseable JSON with an entries object) — flip-reconcile fails closed on a broken ledger',
+      })] };
+    }
+    if (census && typeof census.entries === 'object' && census.entries != null && !Array.isArray(census.entries)) entries = census.entries;
+  }
+  const manifestPaths = new Set(sibTrack.manifestRead(top).records.map((r) => r.path));
+  const coverOf = (rel) => {
+    if (!entries) return null;
+    const key = sibTrack.mostSpecificCensusKey(entries, rel);
+    if (key == null) return null;
+    return { key, entry: (entries[key] && typeof entries[key] === 'object') ? entries[key] : {} };
+  };
+  // per tracked file: value agreement + manifest obligation
+  for (const f of tracked) {
+    if (sibTrack.TRACK_NEVER_ZONES.some((z) => f.startsWith(z))) continue;
+    if (sibTrack.TRACK_NEVER_FILES.includes(f)) continue;   // manifest itself included
+    if (FLIP_TXN_STORES.includes(f)) continue;              // flip-transaction surgery store
+    const cover = coverOf(f);
+    if (cover && cover.entry.lifecycle === true) continue;  // lifecycle zones exempt
+    if (cover && cover.entry.git === false) {
+      failures.push(core.gateFail('flip-census-contradicts', {
+        verdict: `${f} is git-tracked but census entry ${cover.key} says git:false`,
+        evidence: [f, cover.key],
+        fix: core.gateCmd('node bin/gos.cjs track', f) + ' — re-run the flip so census and manifest agree, or untrack the file / fix the census entry (the ledger must describe reality)',
+      }));
+      continue;   // the contradiction is the repair surface for this file
+    }
+    const sanctioned = !!(cover && cover.entry.git === true);
+    if (!sanctioned && !manifestPaths.has(f)) {
+      failures.push(core.gateFail('flip-manifest-missing', {
+        verdict: `${f} is git-tracked with neither census git:true sanction nor a flip-manifest record`,
+        evidence: [f],
+        fix: core.gateCmd('node bin/gos.cjs track', f) + ' — adopt the legacy-tracked file into .gos/track-manifest.json (manifest missing — re-run the flip)',
+      }));
+    }
+  }
+  // per census key under .gos: git:true (non-lifecycle) must match tracked reality
+  if (entries) {
+    for (const k of Object.keys(entries)) {
+      const kk = k.endsWith('/') ? k.slice(0, -1) : k;
+      if (!(kk === '.gos' || kk.startsWith('.gos/'))) continue;
+      const entry = (entries[k] && typeof entries[k] === 'object') ? entries[k] : {};
+      if (entry.git !== true || entry.lifecycle === true) continue;
+      // existence = enumeration hit OR the isTracked probe (index ∪ HEAD —
+      // a `git rm --cached` straggler stays tracked through the HEAD blob)
+      const exists = tracked.some((f) => f === kk || f.startsWith(kk + '/'))
+        || core.isTracked(path.join(top, kk));
+      if (!exists) {
+        failures.push(core.gateFail('flip-census-phantom', {
+          verdict: `census entry ${k} says git:true but nothing under it is tracked`,
+          evidence: [kk],
+          fix: core.gateCmd('node bin/gos.cjs track', kk) + ' — flip the file into git, or fix the census entry (git:true zones must be tracked reality)',
+        }));
+      }
+    }
+  }
+  if (!failures.length) console.log(core.t('gate.flip.pass', { n: String(tracked.length) }));
+  return { failures };
+}
+
 // D-66/N6 switch renderer: 3-part block, fail-closed on non-object failures —
 // a half-migrated site must crash loudly, never silently degrade (unit-tested
 // by section T73: injecting a string failure throws).
@@ -1205,4 +1332,4 @@ function renderGateFailures(failures, opts = {}) {
   return out.join('\n');
 }
 
-module.exports = { getSemanticPlanTasks, checkBidirectional, loadSemanticAllowlist, semanticAllowlisted, semanticBaselineShas, diffHitCheck, semanticDiffPhase, readExemptions, consumeExemptions, checkManifest, impactClosurePhase, semanticChecks, loadTrustStore, cmdGateTrust, cmdGate, cmdLogs, specCardFloorFailures, projectDecisionIds, stripSpecForScan, renderGateFailures };
+module.exports = { getSemanticPlanTasks, checkBidirectional, loadSemanticAllowlist, semanticAllowlisted, semanticBaselineShas, diffHitCheck, semanticDiffPhase, readExemptions, consumeExemptions, checkManifest, impactClosurePhase, semanticChecks, loadTrustStore, cmdGateTrust, cmdGate, cmdLogs, specCardFloorFailures, projectDecisionIds, stripSpecForScan, flipReconcileLeg, renderGateFailures };

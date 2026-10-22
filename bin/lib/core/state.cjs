@@ -1001,8 +1001,8 @@ const COMMANDS = {
     contractKeys: ['command_contracts.readmeGenerated', 'command_contracts.readmeHeader'],
   },
   'gate': {
-    desc: 'hard gates: coverage|truths|requirements|lessons|semantic|codemap|all + hash-trust-verified custom gates (--json failures: object-only {code,verdict,evidence[],fix} since P15)', class: 'exec', aliases: [], core: true,
-    subs: ['coverage', 'truths', 'requirements', 'lessons', 'semantic', 'codemap', 'all', 'trust <name>', '<custom-gate>'],
+    desc: 'hard gates: coverage|truths|requirements|lessons|semantic|codemap|flip|all + hash-trust-verified custom gates (--json failures: object-only {code,verdict,evidence[],fix} since P15)', class: 'exec', aliases: [], core: true,
+    subs: ['coverage', 'truths', 'requirements', 'lessons', 'semantic', 'codemap', 'flip', 'all', 'trust <name>', '<custom-gate>'],
     flags: [],
     usage: 'gos gate <name>',
     next: ['gos gate all', 'gos map closure <file>'],
@@ -1063,7 +1063,7 @@ const COMMANDS = {
     contractKeys: ['command_contracts.phaseAdded', 'command_contracts.phaseAmended', 'command_contracts.amendRefuseActive', 'command_contracts.amendRefuseDone', 'command_contracts.amendRefuseParked', 'command_contracts.phaseClaimed', 'command_contracts.phaseUnclaimed', 'command_contracts.claimGatedPrev', 'command_contracts.claimDeferredHint', 'command_contracts.claimCrossPhaseHint', 'command_contracts.claimTargetDone', 'command_contracts.claimAllClosed', 'command_contracts.claimTargetParked', 'command_contracts.doneHintParkedLine', 'command_contracts.doneHintAllDone', 'command_contracts.phaseParked', 'command_contracts.parkBlocksMilestone', 'command_contracts.parkUndo', 'command_contracts.parkIdempotent', 'command_contracts.parkUndoIdempotent', 'command_contracts.parkRefuseActive', 'command_contracts.parkRefuseDone', 'command_contracts.parkOrphanWarn', 'command_contracts.markDoneCloseOut', 'command_contracts.milestoneBlockedHeader'],
   },
   'anchor': {
-    desc: 're-anchor state.project_root (rescue)', class: 'write', aliases: [], core: false,
+    desc: 're-derive state.repo_id from remotes (rescue)', class: 'write', aliases: [], core: false,
     subs: ['fix'], flags: [],
     usage: 'gos anchor fix',
     next: ['gos doctor'],
@@ -1187,6 +1187,26 @@ const COMMANDS = {
     ],
     usage: 'gos push [--message "<one-liner>"]',
     next: ['gos push', 'gos changelog add'],
+    contractKeys: [],
+  },
+  // [P4 T7a/T7b D-15] tracked-flip transaction gate: validated atomic surgery
+  // flipping an ignored .gos file to tracked (pre-scan + .gos/.gitignore
+  // negation + census-if-present + flip manifest + git add; rename-style
+  // backups roll everything back on mid-transaction failure; already-tracked
+  // targets divert to adopt/no-op bookkeeping; --knowledge presets the guide
+  // trio with born-at stamps). Registry zones live in fsio.cjs GOS_PATHS:
+  // keys track_manifest (.gos/track-manifest.json — tracked flip ledger,
+  // {ts,path,head} per line) and track_backup (.gos/cache/track-backup —
+  // machine-local rollback staging).
+  'track': {
+    desc: 'flip an ignored .gos file to tracked (atomic transaction: pre-scan + .gos/.gitignore negation + census-if-present + manifest record + git add; rollback restores every store; adopt/no-op for already-tracked targets)',
+    class: 'write', aliases: [], core: false,
+    subs: ['<path-under-.gos>'], flags: [
+      { name: '--json', scope: 'track', effect: 'machine envelope (no-target help form, or flip/adopt/no-op result on success)', risk: 'safe' },
+      { name: '--knowledge', scope: 'track', effect: 'preset: flip the .gos/codebase guide trio + idempotent born-at: <HEAD[0:8]> first-line stamps', risk: 'mutating' },
+    ],
+    usage: 'gos track <path-under-.gos> [--json] | gos track --knowledge [--json]',
+    next: ['gos gate all', 'gos help track'],
     contractKeys: [],
   },
   'help': {
