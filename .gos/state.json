@@ -2,10 +2,11 @@
   "version": "0.5",
   "schema_version": 3,
   "level": 3,
-  "current_stage": "PLAN",
+  "current_stage": "BUILD",
   "completed_stages": [
     "INTENT",
-    "THINK"
+    "THINK",
+    "PLAN"
   ],
   "intent": {
     "summary": "Sanitized tracked state as an opt-in product capability (clone-resume for private collaborative repos) with self-repo opt-out and schema v4 cleanup dropping the dead version field and re-anchoring project_root without machine paths; a tracked-flip transaction gate enforcing language check plus census plus gitignore reconciliation at the ignored-to-tracked boundary; codebase knowledge files (structure/conventions/concerns/untested-fns) travel with clones through the gate; stage-back gap exhaust de-duplicated into state.gaps as the single source with concerns.md cured of 88 auto mirrors. Issues #11 file-availability half, #24 re-triage",
@@ -132,5 +133,149 @@
   ],
   "changelog_user_summary": "claim-boundary output and seeded-intent status now carry the fresh-session handoff block",
   "spec_sha256": "d16f93ade7480ebf90098bf51197c24aec25858f7504e381b542760b6b7e2f59",
-  "spec_gate_version": 2
+  "spec_gate_version": 2,
+  "plan_snapshot": {
+    "tasks": [
+      {
+        "id": "T1",
+        "covers": [],
+        "files": [
+          "bin/lib/core/gitprobe.cjs",
+          "test/sections/T93-gitprobe.test.sh"
+        ]
+      },
+      {
+        "id": "T3",
+        "covers": [
+          "D-12",
+          "D-18"
+        ],
+        "files": [
+          "bin/lib/core/state.cjs",
+          "test/sections/T94-schemav4.test.sh",
+          "test/sections/T1-schema.test.sh"
+        ]
+      },
+      {
+        "id": "T14",
+        "covers": [],
+        "files": [
+          "test/checks/gitprobe-monopoly.sh",
+          "bin/lib/task/archive.cjs",
+          "bin/lib/ops/doctor.cjs"
+        ]
+      },
+      {
+        "id": "T5",
+        "covers": [
+          "D-17"
+        ],
+        "files": [
+          "bin/lib/core/state.cjs",
+          "bin/lib/core/fsio.cjs",
+          "bin/lib/knowledge/concerns.cjs",
+          "bin/lib/knowledge/lessons-json.cjs",
+          "bin/lib/nav/cmds.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs",
+          "test/sections/T96-lang-boundary.test.sh"
+        ]
+      },
+      {
+        "id": "T6",
+        "covers": [
+          "D-15",
+          "D-14"
+        ],
+        "files": [
+          "bin/lib/ops/track.cjs",
+          "bin/lib/core/state.cjs",
+          "test/sections/T98b-track-txn.test.sh"
+        ]
+      },
+      {
+        "id": "T8",
+        "covers": [
+          "D-15",
+          "D-14"
+        ],
+        "files": [
+          "bin/lib/ops/gate.cjs",
+          "bin/lib/core/locales/{en",
+          "zh}.cjs",
+          "test/sections/T99-gate-flip-leg.test.sh"
+        ]
+      },
+      {
+        "id": "T9",
+        "covers": [
+          "D-19",
+          "D-20"
+        ],
+        "files": [
+          "bin/lib/ops/gate.cjs",
+          "bin/lib/task/context.cjs",
+          "skills/gos-think/reference/codebase-mapping.md",
+          "census.json",
+          "test/sections/T35-codemap-coverage.test.sh",
+          "test/sections/T100-navigator.test.sh"
+        ]
+      },
+      {
+        "id": "T10",
+        "covers": [
+          "R-01"
+        ],
+        "files": [
+          "bin/lib/ops/changelog-core.cjs",
+          "bin/lib/task/commit.cjs",
+          "bin/lib/ops/push.cjs",
+          "test/sections/T101-issue-tokens.test.sh"
+        ]
+      },
+      {
+        "id": "T11",
+        "covers": [
+          "D-19",
+          "D-20"
+        ],
+        "files": [
+          ".gos/codebase/structure.md",
+          ".gos/codebase/conventions.md",
+          ".gos/codebase/concerns.md",
+          ".gos/task/p4/evidence/knowledge-refresh.md"
+        ]
+      },
+      {
+        "id": "T12",
+        "covers": [
+          "D-14",
+          "R-01"
+        ],
+        "files": [
+          "README.md",
+          "AGENTS.md",
+          "skills/gos-think/reference/codebase-mapping.md",
+          ".gos/README.md",
+          "census.json",
+          ".gitignore",
+          "test/pack-check.sh",
+          "test/checks/gitprobe-monopoly.sh"
+        ]
+      },
+      {
+        "id": "T13",
+        "covers": [
+          "D-13",
+          "D-16",
+          "R-01"
+        ],
+        "files": [
+          ".gos/concerns.md",
+          ".gos/logs/gap-history.ndjson"
+        ]
+      }
+    ],
+    "audit": []
+  }
 }

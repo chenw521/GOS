@@ -5,12 +5,13 @@
 const { execSync } = require('node:child_process');
 const { execFileSync } = require('node:child_process');
 const os = require('node:os');
+const crypto = require('node:crypto');
 
 const fs = require('node:fs');
 const path = require('node:path');
 const fsio = require('./fsio.cjs');
 
-const STATE_SCHEMA_VERSION = 3;
+const STATE_SCHEMA_VERSION = 4;
 
 const PROJECT_SCHEMA_VERSION = 1;
 
@@ -78,8 +79,111 @@ function validatePhase(p, where) {
   return errs;
 }
 
+// [D-12/D-18] repo identity is de-pathed: a raw remote URL is canonicalized to
+// `host:port/path` and hashed — the URL itself is never persisted. Canonical
+// rules: host lowercase (IPv6 bracketed, hex lowercase), default ports 22
+// (ssh + scp-style) / 443 (https) / 9418 (git://), explicit ports kept,
+// path case-preserved with one trailing `.git` and trailing slashes stripped,
+// embedded credentials (user:pass@) stripped, scp-style `host:path` →
+// `host:22/path` (scp syntax carries no port — git semantics: everything after
+// the first colon is the path). Non-URL inputs (local paths, garbage) → null.
+const REPO_URL_DEFAULT_PORTS = { ssh: 22, git: 9418, https: 443, http: 80 };
+
+function canonicalRepoUrl(rawUrl) {
+  if (typeof rawUrl !== 'string') return null;
+  const input = rawUrl.trim();
+  if (!input || /\s/.test(input)) return null;
+  const schemeM = /^([A-Za-z][A-Za-z0-9+.-]*):\/\/(.*)$/.exec(input);
+  let host;
+  let port;
+  let pathPart;
+  if (schemeM) {
+    const scheme = schemeM[1].toLowerCase();
+    let rest = schemeM[2].replace(/^[^/@]+@/, ''); // strip credentials (user[:pass]@)
+    const slashAt = rest.indexOf('/');
+    let authority = slashAt === -1 ? rest : rest.slice(0, slashAt);
+    pathPart = slashAt === -1 ? '' : rest.slice(slashAt);
+    let portText = null;
+    if (authority.startsWith('[')) {
+      // IPv6 literal: [hex:groups] with optional :port after the closing bracket
+      const closeAt = authority.indexOf(']');
+      if (closeAt === -1) return null;
+      host = '[' + authority.slice(1, closeAt).toLowerCase() + ']';
+      const tail = authority.slice(closeAt + 1);
+      if (tail.startsWith(':')) portText = tail.slice(1);
+      else if (tail !== '') return null;
+    } else {
+      const colonAt = authority.lastIndexOf(':');
+      if (colonAt === -1) {
+        host = authority;
+      } else {
+        host = authority.slice(0, colonAt);
+        portText = authority.slice(colonAt + 1);
+      }
+      host = host.toLowerCase();
+      if (host === '') return null;
+    }
+    if (portText === null || portText === '') {
+      port = REPO_URL_DEFAULT_PORTS[scheme];
+      if (port === undefined) return null; // scheme without a known default port and no explicit port
+    } else {
+      if (!/^\d+$/.test(portText)) return null;
+      port = parseInt(portText, 10);
+    }
+  } else {
+    // scp-style: [user@]host:path — port is always the ssh default, never parsed
+    const scpM = /^(?:[^/@\s]+@)?([^:@/\s]+):(\S+)$/.exec(input);
+    if (!scpM) return null;
+    host = scpM[1].toLowerCase();
+    // host must look like a hostname (dot or localhost) — kills drive letters like C:\x
+    if (!host.includes('.') && host !== 'localhost') return null;
+    if (!/^[a-z0-9.-]+$/.test(host)) return null;
+    port = 22;
+    pathPart = '/' + scpM[2];
+  }
+  let p = pathPart.replace(/\/+$/, '');
+  if (p.endsWith('.git') && p.length > '/.git'.length) p = p.slice(0, -'.git'.length);
+  p = p.replace(/\/+$/, '');
+  return `${host}:${port}${p}`;
+}
+
+function deriveRepoId(rawUrl) {
+  const canonical = canonicalRepoUrl(rawUrl);
+  if (canonical == null) return null;
+  return crypto.createHash('sha256').update(canonical).digest('hex').slice(0, 16);
+}
+
+// Read the repo's remotes (argv-only git calls — never a shell string) and
+// derive one repo_id: origin wins when identifiable; otherwise all remotes
+// must agree on a single id; no remotes / disagreement / unidentifiable URLs
+// → advisory null (D-18).
+function repoIdFromRemotes(rootDir) {
+  const root = rootDir || currentRootRealpath() || process.cwd();
+  let names;
+  try {
+    names = execFileSync('git', ['-C', root, 'remote'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).split(/\s+/).filter(Boolean);
+  } catch { return null; }
+  if (!names.length) return null;
+  let originId = null;
+  const ids = new Set();
+  for (const n of names) {
+    let url;
+    try {
+      url = execFileSync('git', ['-C', root, 'remote', 'get-url', n], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    } catch { continue; }
+    const id = deriveRepoId(url);
+    if (id == null) continue;
+    ids.add(id);
+    if (n === 'origin') originId = id;
+  }
+  if (originId != null) return originId;
+  if (ids.size === 1) return [...ids][0];
+  return null;
+}
+
 function migrateState(s) {
   const wasLegacy = s.schema_version === undefined;
+  const fromV = wasLegacy ? 0 : s.schema_version;
   s.schema_version = STATE_SCHEMA_VERSION;
   // [Phase W T9] v2→v3: pin spec_path/plan_path to task/<id>/ when absent (legacy
   // states predate path pinning). Root-level legacy spec.md/plan.md — if still on
@@ -93,7 +197,16 @@ function migrateState(s) {
       }
     } catch { /* leave null — context supplies lazily */ }
   }
-  if (wasLegacy) console.error('⚠ state migrated to schema v3 (Phase W layout: task/<id>/ paths pinned)');
+  // [T94/D-12] v3→v4: identity de-pathed — drop the dead `version` field and the
+  // machine-path `project_root` anchor (repo root is runtime-derived from here
+  // on); stamp repo_id from the origin remote URL hash (advisory null without
+  // remotes, D-18 — the raw URL is never persisted).
+  if (fromV < 4) {
+    delete s.version;
+    delete s.project_root;
+    if (s.repo_id == null) s.repo_id = repoIdFromRemotes();
+  }
+  if (wasLegacy) console.error('⚠ state migrated to schema v4 (task/<id>/ paths pinned; identity de-pathed — repo_id derived, version/project_root dropped)');
   if (!Array.isArray(s.decisions)) s.decisions = [];
   s.decisions = s.decisions.map((d) => {
     const m = { ...d };
@@ -155,8 +268,8 @@ function readState() {
     fsio.die(`state.json is corrupted: ${e.message}. Fix it or delete and gos init again.`);
   }
   const mode = (readState._mode === 'write') ? 'fail' : 'warn';
-  if (s.schema_version === undefined) {
-    // legacy → migrate once (both read and write paths migrate in-memory; only write persists)
+  if (s.schema_version === undefined || s.schema_version < STATE_SCHEMA_VERSION) {
+    // legacy/v3 → migrate in-memory (both read and write paths migrate; only write persists)
     s = migrateState(s);
   }
   const errs = validateState(s, mode);
@@ -172,7 +285,7 @@ function readState() {
 
 function writeState(stateL) {
   fs.mkdirSync(fsio.GOS_DIR, { recursive: true });
-  if (stateL.schema_version === undefined) stateL = migrateState(stateL);
+  if (stateL.schema_version === undefined || stateL.schema_version < STATE_SCHEMA_VERSION) stateL = migrateState(stateL);
   validateState(stateL, 'fail');
   fsio.writeAtomicJson(fsio.STATE_PATH, stateL);
 }
@@ -653,8 +766,8 @@ function extractRequirement(intentText, level) {
 
 function defaultState(level, intentText) {
   return {
-    version: '0.5',
     schema_version: STATE_SCHEMA_VERSION,
+    repo_id: repoIdFromRemotes(), // D-12/D-18: origin-URL hash identity; advisory null without remotes
     level: level ?? null,
     current_stage: 'INTENT',
     completed_stages: [],
@@ -663,7 +776,6 @@ function defaultState(level, intentText) {
     spec_path: null,   // T5: backfilled below via ensureTaskDir resolution
     plan_path: null,
     project: false,          // true when init --project (Lv4 truth-source mode)
-    project_root: null,      // anchor: git toplevel realpath (lazy-migrated by write-class cmds, D-10)
     requirements: extractRequirement(intentText, level),
     decisions: [],
     observable_truths: [],
@@ -1074,6 +1186,9 @@ module.exports = {
   idNum,
   STATE_SCHEMA_VERSION,
   PROJECT_SCHEMA_VERSION,
+  canonicalRepoUrl,
+  deriveRepoId,
+  repoIdFromRemotes,
   ID_RE,
   DECISION_STATUS,
   REQ_STATUS,

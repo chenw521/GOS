@@ -108,15 +108,24 @@ function cmdDoctor() {
   // only checked when a lock file actually exists in this repo (avoids noise in fresh clones)
   const repoRoot = (() => { try { return execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8', stdio: ['ignore','pipe','ignore'] }).trim(); } catch { return null; } })();
   if (repoRoot && fs.existsSync(path.join(repoRoot, '.gos', '.lock'))) {
-    let ignored = false;
-    try { execFileSync('git', ['check-ignore', '-q', '.gos/.lock'], { stdio: 'ignore', cwd: repoRoot }); ignored = true; } catch { ignored = false; }
+    // D-14/D-15 (§3.7, RT3-F11): the ignore verdict goes through gitprobe's
+    // ignoredSet() (its truth source collapses covered directories to a
+    // single trailing-slash entry, so a wholesale `.gos/` rule counts too —
+    // the same recursive verdict the retired one-shot probe gave). Any git
+    // failure yields an empty set → not-ignored → warn + fix, the exact
+    // direction the old catch → false took.
+    const ign = core.ignoredSet();
+    const ignored = ign.has('.gos/.lock') || ign.has('.gos/.lock/')
+      || [...ign].some((e) => e.endsWith('/') && '.gos/.lock/'.startsWith(e));
     if (!ignored) { warn('MISSING: .gos/.lock not gitignored — add ".gos/.lock" to .gitignore (concurrency lock is machine-local)'); fix('lock_gitignore'); }
     else console.log('  ✓ OK: .gos/.lock gitignored');
   }
   // [0b] R3-F1: lessons sidecar must be in git index once it exists (tracked → deletable/recoverable)
   if (repoRoot && fs.existsSync(path.join(repoRoot, '.gos', core.GOS_PATHS.lessons_anchors.rel))) {
-    let inIndex = false;
-    try { execFileSync('git', ['ls-files', '--error-unmatch', '.gos/cache/.lessons-anchors.json'], { stdio: 'ignore', cwd: repoRoot }); inIndex = true; } catch { inIndex = false; }
+    // D-14/D-15 (§3.7, RT3-F11): trackedness goes through gitprobe's isTracked
+    // (index UNION HEAD blob). Fail-closed: any git failure reports tracked —
+    // strictly more conservative than the old one-shot probe's catch → false.
+    const inIndex = core.isTracked('.gos/cache/.lessons-anchors.json');
     if (!inIndex) warn('MISSING: .gos/.lessons-anchors.json not in git index — run `git add .gos/.lessons-anchors.json` (deletion detection requires tracking)');
     else console.log('  ✓ OK: lessons sidecar tracked in git index');
   }
