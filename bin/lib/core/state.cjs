@@ -10,6 +10,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const fsio = require('./fsio.cjs');
+const gitprobe = require('./gitprobe.cjs');
 
 const STATE_SCHEMA_VERSION = 4;
 
@@ -287,7 +288,62 @@ function writeState(stateL) {
   fs.mkdirSync(fsio.GOS_DIR, { recursive: true });
   if (stateL.schema_version === undefined || stateL.schema_version < STATE_SCHEMA_VERSION) stateL = migrateState(stateL);
   validateState(stateL, 'fail');
+  // [T5/D-17] language boundary: recursive leaf walk — any CJK string leaf under
+  // a git-tracked state.json dies at the write path (knowledge files travel
+  // with clones). Cheap-first: the git probe fires only when a CJK leaf exists.
+  const cjkLeaf = firstCJKLeaf(stateL);
+  if (cjkLeaf !== null) dieTrackedStoreCJK(fsio.STATE_PATH, cjkLeaf.text);
   fsio.writeAtomicJson(fsio.STATE_PATH, stateL);
+}
+
+// Depth-first leaf walk over the state object; returns { path, text } of the
+// first string leaf carrying CJK, null when clean. Pure detection — the
+// tracked probe lives in dieTrackedStoreCJK.
+function firstCJKLeaf(v, p = 'state') {
+  if (v == null) return null;
+  if (typeof v === 'string') return fsio.hasCJK(v) ? { path: p, text: v } : null;
+  if (Array.isArray(v)) {
+    for (let i = 0; i < v.length; i++) {
+      const hit = firstCJKLeaf(v[i], `${p}[${i}]`);
+      if (hit !== null) return hit;
+    }
+    return null;
+  }
+  if (typeof v === 'object') {
+    for (const k of Object.keys(v)) {
+      const hit = firstCJKLeaf(v[k], `${p}.${k}`);
+      if (hit !== null) return hit;
+    }
+  }
+  return null;
+}
+
+// [T5/D-17] shared write-path guard for the git-trackable GOS text stores
+// (state.json / concerns.md / lessons.json — and gap text, which flows into
+// concerns.md via stage-back write-back): tracked stores are English-only
+// because knowledge files travel with clones. Fires only when the candidate
+// text carries CJK AND gitprobe.isTracked(<store file>) — the T1 primitive is
+// fail-closed (ANY git failure counts as tracked), so the boundary never falls
+// open. Guidance is bilingual by design, rendered through t() from the locale
+// dot-key 'langBoundary.trackedStore' (en.cjs + zh.cjs); the zh line is forced
+// via a GOS_LANG flip on the die path (the process exits immediately, so the
+// env mutation cannot leak). i18n is required lazily same-directory — the
+// locale catalogs themselves must NOT be required from here: locales → state
+// is a banned cross-directory cycle edge (T46 DAG).
+function dieTrackedStoreCJK(file, text) {
+  if (!fsio.hasCJK(text)) return false;
+  if (!gitprobe.isTracked(file)) return false;
+  const i18n = require('./i18n.cjs');
+  const prevLang = process.env.GOS_LANG;
+  const line = (locale) => {
+    process.env.GOS_LANG = locale;
+    i18n.effectiveLocale(true);
+    return i18n.t('langBoundary.trackedStore', { file: path.basename(String(file)) });
+  };
+  const enLine = line('en');
+  const zhLine = line('zh-CN');
+  if (prevLang === undefined) delete process.env.GOS_LANG; else process.env.GOS_LANG = prevLang;
+  fsio.die(`${enLine}\n  ${zhLine}`);
 }
 
 function emptyProject() {
@@ -1059,8 +1115,8 @@ const COMMANDS = {
     contractKeys: [],
   },
   'gap': {
-    desc: 'state gaps: list | resolve <G-id> --resolution "<r>" (fail-closed)', class: 'write', aliases: [], core: false,
-    subs: ['list', 'resolve <G-id> --resolution "<r>"'], flags: [],
+    desc: 'state gaps: list | resolve <G-id> --resolution "<r>" | rewrite <G-id> --text "<t>" | migrate (cure (auto) mirrors into the ledger) | history (fail-closed)', class: 'write', aliases: [], core: false,
+    subs: ['list', 'resolve <G-id> --resolution "<r>"', 'rewrite <G-id> --text "<t>"', 'migrate', 'history'], flags: [],
     usage: 'gos gap <sub> [args]',
     next: ['gos gap list'],
     contractKeys: [],
@@ -1165,6 +1221,8 @@ module.exports = {
   migrateState,
   readState,
   writeState,
+  firstCJKLeaf,
+  dieTrackedStoreCJK,
   currentTaskId,
   ensureTaskDir,
   specPathOf,

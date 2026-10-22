@@ -28,11 +28,23 @@ function concernsLineHash(line) {
   return core.sha16(String(line).replace(/\r+$/, ''));
 }
 
+// [T6/D-14] tracked probe = the fail-closed core primitive (T1 gitprobe), never
+// an ad-hoc `ls-files` shell-out — probe semantics stay monopoly-owned.
 function concernsFileTracked(P) {
-  try {
-    const out = execFileSync('git', ['ls-files', '--', path.relative(P.root, P.file)], { cwd: P.root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-    return !!out;
-  } catch { return false; }
+  return core.isTracked(P.file);
+}
+
+// [T6/D-16] bootstrap predicate helper: blob id of the working file vs the HEAD
+// blob. argv-only git (never a shell string); null on ANY git failure — callers
+// treat null as divergence (fail-closed, no laundering without git truth).
+function concernsBlobIds(P) {
+  const rel = path.relative(P.root, P.file).split(path.sep).join('/');
+  const run = (args) => {
+    try {
+      return execFileSync('git', args, { cwd: P.root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    } catch { return null; }
+  };
+  return { head: run(['rev-parse', `HEAD:${rel}`]), disk: run(['hash-object', '--', P.file]) };
 }
 
 function loadConcernsAnchor(P, opts = {}) {
@@ -41,9 +53,23 @@ function loadConcernsAnchor(P, opts = {}) {
   let fileText = '';
   try { fileText = fs.readFileSync(P.file, 'utf8'); } catch { /* absent */ }
   if (!fs.existsSync(P.anchor)) {
-    const nonEmpty = concernsEntryLines(fileText).length > 0;
-    if (nonEmpty && concernsFileTracked(P)) {
-      core.die(`✗ concerns.md is git-tracked with entries but .concerns-anchors.json is missing — out-of-band deletion suspected; restore via git checkout (bootstrap forbidden, no laundering)`);
+    const entryLines = concernsEntryLines(fileText);
+    if (entryLines.length > 0 && concernsFileTracked(P)) {
+      // [T6/D-16] bootstrap predicate — tracked file + missing sidecar splits in two:
+      // working file byte-identical to the HEAD blob → benign cache loss (the sidecar
+      // is a rebuildable .gos/cache zone) → rebuild anchors SILENTLY; any divergence
+      // (or unverifiable git truth) → hand-edited tracked file → die. Bootstrap must
+      // never launder a tampered tracked file.
+      const ids = concernsBlobIds(P);
+      if (ids.head == null || ids.disk == null || ids.head !== ids.disk) {
+        core.die(`✗ ${core.t('concerns.err.anchorMissingDirty')}`);
+      }
+      const anchor = { hashes: entryLines.map(concernsLineHash) };
+      try { core.writeAtomicJson(P.anchor, anchor); }
+      catch (e) { core.die(`✗ .concerns-anchors.json write failed: ${e.message}`); }
+      try { core.writeAtomicJson(P.bak, anchor); }
+      catch (e) { core.die(`✗ .concerns-anchors.bak write failed: ${e.message} — sidecar written, shadow not; inspect before proceeding`); }
+      return { anchor, bootstrapped: true };   // silent rebuild — no banner
     }
     if (!quiet) console.log(`⚠ ${SC.concernsBootstrap}`);
     return { anchor: { hashes: [] }, bootstrapped: true };
@@ -65,6 +91,10 @@ function appendConcernsLine(P, text, opts = {}) {
   if (!c.ok) core.die(`✗ ${c.reason}`);
   if (!opts.auto && c.value.includes('(auto)')) core.die(`✗ concern text: '(auto)' is a reserved write-back marker — manual entries may not carry it`);
   if (opts.auto && c.value.includes('(auto)')) core.die(`✗ concern text: '(auto)' may not appear in the source text (system appends it)`);
+  // [T5/D-17] language boundary at the write path: the new line is the payload;
+  // CJK + tracked concerns.md dies (fail-closed via the T1 git probe — checked
+  // before the anchor load so the boundary wording wins the failure).
+  core.dieTrackedStoreCJK(P.file, c.value);
   const { anchor } = loadConcernsAnchor(P);
   const date = new Date().toISOString().slice(0, 10);
   const display = core.sha16(`${date}|${c.value}`).slice(0, 8);
@@ -83,6 +113,77 @@ function appendConcernsLine(P, text, opts = {}) {
   try { core.writeAtomicJson(P.bak, anchor); }
   catch (e) { core.die(`✗ .concerns-anchors.bak write failed: ${e.message} — sidecar written, shadow not; inspect before proceeding`); }
   return line;
+}
+
+// [T6/D-16] gap-history ledger — append-only ndjson at .gos/logs/gap-history.ndjson
+// (machine-local zone; one JSON {ts,text} per line, JSON.stringify guarantees no
+// raw newlines → line integrity by construction, the (auto) sentinel rides inside
+// text). state.gaps is the single live source; this ledger is the durable record
+// of what the stage-back write-back era mirrored into concerns.md before D-16.
+function gapHistoryLedgerPath(P) {
+  return path.join(P.root, '.gos', 'logs', 'gap-history.ndjson');
+}
+
+function readGapHistoryLedger(P) {
+  let raw = '';
+  try { raw = fs.readFileSync(gapHistoryLedgerPath(P), 'utf8'); } catch { return { entries: [], skipped: 0 }; }
+  const entries = [];
+  let skipped = 0;
+  for (const line of raw.split('\n')) {
+    const t = line.trim();
+    if (!t) continue;
+    try {
+      const o = JSON.parse(t);
+      if (o && typeof o.ts === 'string' && typeof o.text === 'string') entries.push(o);
+      else skipped++;
+    } catch { skipped++; }
+  }
+  return { entries, skipped };
+}
+
+function appendGapHistoryLedger(P, texts) {
+  if (!texts.length) return;
+  const file = gapHistoryLedgerPath(P);
+  fs.mkdirSync(path.dirname(file), { recursive: true });   // logs/ may not exist yet
+  let needsNl = false;
+  try { const prev = fs.readFileSync(file, 'utf8'); needsNl = prev.length > 0 && !prev.endsWith('\n'); } catch { /* first row */ }
+  const ts = new Date().toISOString();
+  const chunk = texts.map((text) => JSON.stringify({ ts, text }) + '\n').join('');
+  fs.appendFileSync(file, (needsNl ? '\n' : '') + chunk);
+}
+
+// Cure legacy stage-back mirrors: ledger append FIRST (the durable copy lands
+// before the destructive edit; {text} dedupe makes a crash between the two
+// retry-safe — a re-run removes the still-present mirror without duplicating
+// ledger rows), then concerns.md edit, then anchor + .bak rebuild from the
+// kept lines in the same transaction (prune's fail-closed shadow pattern).
+// No pre-verification of the old anchor: the sidecar is derived cache
+// (census: purge regen) — it is REBUILT from the post-edit file, which also
+// retires any mirror hashes the legacy writer minted into it.
+function migrateGapMirrors(P) {
+  let fileText = '';
+  try { fileText = fs.readFileSync(P.file, 'utf8'); } catch { /* absent → no-op */ }
+  const lines = String(fileText).replace(/\r\n/g, '\n').split('\n');
+  const mirrors = [];
+  const kept = [];
+  for (const l of lines) {
+    const bare = l.replace(/\r+$/, '');
+    if (bare.startsWith('- [') && bare.endsWith(' (auto)')) mirrors.push(bare);
+    else kept.push(l);
+  }
+  if (!mirrors.length) return { removed: 0, deduped: 0 };
+  const { entries } = readGapHistoryLedger(P);
+  const seen = new Set(entries.map((e) => e.text));
+  const fresh = mirrors.filter((t) => !seen.has(t));
+  appendGapHistoryLedger(P, fresh);
+  while (kept.length && !kept[kept.length - 1].trim()) kept.pop();
+  core.writeAtomicText(P.file, kept.join('\n') + (kept.length ? '\n' : ''));
+  const anchor = { hashes: kept.filter((l) => l.startsWith('- [')).map(concernsLineHash) };
+  try { core.writeAtomicJson(P.anchor, anchor); }
+  catch (e) { core.die(`✗ .concerns-anchors.json write failed: ${e.message}`); }
+  try { core.writeAtomicJson(P.bak, anchor); }
+  catch (e) { core.die(`✗ .concerns-anchors.bak write failed: ${e.message} — sidecar written, shadow not; inspect before proceeding`); }
+  return { removed: mirrors.length, deduped: mirrors.length - fresh.length };
 }
 
 function cmdConcerns(args) {
@@ -145,6 +246,9 @@ Object.assign(module.exports, {
   concernsFileTracked,
   loadConcernsAnchor,
   appendConcernsLine,
+  gapHistoryLedgerPath,
+  readGapHistoryLedger,
+  migrateGapMirrors,
   cmdConcerns,
   CONCERNS_HEADER,
 });   // assignment (not reassignment): sibling modules hold live references to this export

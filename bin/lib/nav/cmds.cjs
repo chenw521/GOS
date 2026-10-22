@@ -5,6 +5,7 @@ const core = require('../core/index.cjs');
 const task = require('../task/plansnap.cjs');  // direct aspect require (dependency DAG)
 const sibStatus = require('./status.cjs');
 const knowledge = require('../knowledge/lessons-json.cjs');  // nav→knowledge (D-67 attribution; display-load, never throws)
+const concernsMod = require('../knowledge/concerns.cjs');    // nav→knowledge (T5 gap rewrite boundary trigger path)
 const fs = require('fs');
 const path = require('path');
 
@@ -161,6 +162,36 @@ function cmdGap(args) {
   // explicit resolution semantics (a gap is never closed without a resolution).
   const sub = (args[0] || 'list').toLowerCase();
   const rest = args.slice(1);
+  // [T6/D-16] migrate/history operate on repo-level stores (concerns.md + the
+  // gap-history ledger), NOT task state — they must run post-archive (the cure
+  // for a repo whose mirrors outlived its task), so they sit BEFORE the
+  // readState gate. Serialization: the write-class dispatch guard already holds
+  // the root .gos/.lock for this process (acquireEdgeLock's re-entrancy
+  // precedent) — only take concernsRootLock when it does not.
+  if (sub === 'migrate') {
+    for (const a of rest) core.die(`gap migrate: unknown argument '${a}'`);
+    const P = concernsMod.concernsPaths();
+    let ownLock = false;
+    if (core.holdsLock()) {
+      try { ownLock = JSON.parse(fs.readFileSync(path.join(P.root, '.gos', '.lock'), 'utf8')).pid === process.pid; } catch { ownLock = false; }
+    }
+    const run = () => concernsMod.migrateGapMirrors(P);
+    const res = ownLock ? run() : core.concernsRootLock(P, run);
+    if (!res.removed) console.log(core.t('gap.migrate.none'));
+    else {
+      console.log(core.t('gap.migrate.removed', { n: res.removed }));
+      if (res.deduped) console.log(core.t('gap.migrate.dupes', { n: res.deduped }));
+    }
+    return;
+  }
+  if (sub === 'history') {
+    for (const a of rest) core.die(`gap history: unknown argument '${a}'`);
+    const { entries, skipped } = concernsMod.readGapHistoryLedger(concernsMod.concernsPaths());
+    if (!entries.length) console.log(core.t('gap.history.empty'));
+    for (const e of entries) console.log(`${e.ts} ${e.text}`);
+    if (skipped) console.log(core.t('gap.history.skipped', { n: skipped }));
+    return;
+  }
   const state = core.readState();
   if (!state) core.die(`${core.CONTRACTS.state_semantics.noActiveTask} \`gos init\` first.`);
   if (!Array.isArray(state.gaps)) state.gaps = [];
@@ -189,7 +220,32 @@ function cmdGap(args) {
     console.log(`✓ gap ${id} fixed: ${g.resolution}`);
     return;
   }
-  core.die('Usage: gos gap <list|resolve>');
+  if (sub === 'rewrite') {
+    // [T5/D-17] gap rewrite: replaces a gap description (the sanctioned path to
+    // clear legacy zh descriptions). Text passes the tracked-store boundary
+    // with concerns.md as the trigger file — gap descriptions flow into
+    // concerns.md via the stage-back (auto) write-back, so tracked concerns.md
+    // means gap text is clone-traveling content too.
+    const id = rest[0];
+    let text = null;
+    for (let i = 1; i < rest.length; i++) {
+      if (rest[i] === '--text') text = rest[++i];
+      else core.die(`gap rewrite: unknown argument '${rest[i]}'`);
+    }
+    if (!id || id.startsWith('--')) core.die('Usage: gos gap rewrite <G-id> --text "<text>"');
+    if (!text || !text.trim()) core.die('gap rewrite: --text is required (fail-closed: rewriting without text = silent history edit)');
+    const c = core.checkInputConstraint({ value: text, maxCp: 300, label: 'gap text', noNewlineListPrefix: true });
+    if (!c.ok) core.die(`✗ ${c.reason}`);
+    core.dieTrackedStoreCJK(concernsMod.concernsPaths().file, c.value);
+    const g = state.gaps.find((x) => x.id === id);
+    if (!g) core.die(`gap rewrite: ${id} not found (gos gap list)`);
+    g.description = c.value;
+    g.rewritten_at = new Date().toISOString();
+    core.writeState(state);
+    console.log(`✓ gap ${id} description rewritten`);
+    return;
+  }
+  core.die('Usage: gos gap <list|resolve|rewrite|migrate|history>');
 }
 
 module.exports = { cmdInstructions, cmdResume, cmdApprove, cmdTrace, cmdAuto, cmdGap };

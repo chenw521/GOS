@@ -10,17 +10,13 @@
 # (spread from bin/lib/core/index.cjs) instead.
 #
 # Fail-closed in every direction:
-#   - hit outside the allowed homes            -> exit 1
+#   - hit outside the allowed home            -> exit 1
 #   - bin/lib or the primitive home missing    -> exit 1
 #   - scan infrastructure error (grep rc > 1)  -> exit 1
 #
-# Temporary allowlist (REMOVE WITH T6):
-#   bin/lib/knowledge/concerns.cjs — its legacy `ls-files` probe migrates to
-#   gitprobe in T6 (wave 2, same serial chain; see plan.md T6). Hits there are
-#   printed as warnings but do not fail this check while T6 is pending.
-#   TODO(T6, allowlisted 2026-10-22): T6's executor MUST delete the ALLOWLIST
-#   line below together with the concerns.cjs migration — full monopoly is
-#   enforced the moment the entry is gone.
+# The T14-era temporary allowlist (concerns.cjs legacy ls-files probe) was
+# removed with T6: concerns.cjs now uses core.isTracked (gitprobe), so full
+# monopoly is enforced unconditionally.
 #
 # Usage:
 #   bash test/checks/gitprobe-monopoly.sh
@@ -33,7 +29,6 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$REPO_ROOT"
 
 PRIMITIVE="bin/lib/core/gitprobe.cjs"
-ALLOWLIST="bin/lib/knowledge/concerns.cjs"   # TODO(T6, 2026-10-22): remove with T6 — see header
 
 [ -d bin/lib ] || { echo "✗ gitprobe-monopoly: bin/lib missing — cannot scan (fail-closed)" >&2; exit 1; }
 [ -f "$PRIMITIVE" ] || { echo "✗ gitprobe-monopoly: primitive home $PRIMITIVE missing (fail-closed)" >&2; exit 1; }
@@ -50,22 +45,14 @@ if [ "$rc" -gt 1 ]; then
   exit 1
 fi
 
-# strip the primitive's own home, then split remaining hits into the
-# temporary allowlist bucket (warn) and hard violations (fail)
+# strip the primitive's own home — every remaining hit is a hard violation
 all=$(printf '%s\n' "$raw" | grep -v '^$' || true)
 viol=$(printf '%s\n' "$all" | grep -v "^${PRIMITIVE}:" || true)
-concerns=$(printf '%s\n' "$viol" | grep "^${ALLOWLIST}:" || true)
-hard=$(printf '%s\n' "$viol" | grep -v "^${ALLOWLIST}:" || true)
 
-if [ -n "$concerns" ]; then
-  echo "⚠ gitprobe-monopoly: temporary allowlist still covering $ALLOWLIST (TODO(T6), wave 2 — remove with T6):"
-  printf '%s\n' "$concerns" | sed 's/^/    /'
-fi
-
-if [ -n "$hard" ]; then
+if [ -n "$viol" ]; then
   echo "✗ gitprobe-monopoly: probe-family git call(s) outside $PRIMITIVE — migrate to core.isTracked / core.ignoredSet:" >&2
-  printf '%s\n' "$hard" >&2
+  printf '%s\n' "$viol" >&2
   exit 1
 fi
 
-echo "✓ gitprobe-monopoly: no probe-family git calls outside $PRIMITIVE (concerns.cjs allowlist pending T6)"
+echo "✓ gitprobe-monopoly: no probe-family git calls outside $PRIMITIVE"

@@ -86,6 +86,17 @@ module.exports = {
   'lessons.projectLabel': '仓库知识 · 永不过期',
   'lessons.modelLabel': '跨仓库行为 · 到期自动过期',
 
+  // ---- T5/D-17 语言边界（受跟踪存储仅限英文）----
+  'langBoundary.trackedStore': '语言边界：{file} 受 git 跟踪——跟踪态的 GOS 知识文件仅允许英文，保存前请将内容改写为英文（未跟踪的存储不受语言限制）',
+
+  // ---- T6/D-16 缺口迁移/历史 + concerns 锚点自助重建谓词 ----
+  'gap.migrate.removed': '✓ 已将 {n} 条 stage-back 镜像行从 concerns.md 迁入缺口历史台账——state.gaps 仍是唯一事实源',
+  'gap.migrate.none': 'concerns.md 中没有 (auto) 镜像行——无需迁移',
+  'gap.migrate.dupes': '⚠ {n} 条镜像行已在台账中（按文本去重）——从 concerns.md 清除但不再重复追加',
+  'gap.history.empty': '（暂无缺口历史——stage-back 镜像经由 {cmd:gap} migrate 落入此处）',
+  'gap.history.skipped': '⚠ 已跳过 {n} 行格式错误的台账行（.gos/logs/gap-history.ndjson）',
+  'concerns.err.anchorMissingDirty': 'concerns.md 受 git 跟踪但 .concerns-anchors.json 缺失，且文件与 HEAD blob 不一致——疑似手改；请用 git checkout 恢复，或先提交该改动（禁止借此重建，防止洗白）',
+
   // ---- CONTRACTS frozen-string aliases (reference, never copy; zh == en) ----
   'contract.gateFailedPrefix': CONTRACTS.gate_verdicts.gateFailedPrefix,
   'contract.allPass': CONTRACTS.gate_verdicts.allPass,

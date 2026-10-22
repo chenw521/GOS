@@ -48,10 +48,11 @@ assert_eq "B3 HEAD unchanged" "$HEAD_B0" "$(git rev-parse HEAD)"
 assert_eq "B4 state.stage not advanced" "$STAGE_B0" "$(t51_state_field current_stage)"
 assert_eq "B5 state file untouched" "$SHA_B0" "$(t51_state_sha)"
 
-# --- C: --subject english escape hatch succeeds on a CJK intent ---
+# --- C: --subject english escape hatch succeeds (english intent: D-17 boundary
+# forbids CJK state content once the store is tracked by the commit flip) ---
 t51_teardown; t51_setup
 git init -q . && git commit -q --allow-empty -m root
-node "$GOS" init 1 "中文意图逃生通道验证" >/dev/null 2>&1
+node "$GOS" init 1 "english intent escape hatch t51" >/dev/null 2>&1
 HEAD_C0=$(git rev-parse HEAD); STAGE_C0=$(t51_state_field current_stage)
 set +e; COUT=$(node "$GOS" commit intent --subject "english escape subject t51" 2>&1); CRC=$?; set -e
 assert_exit "C1 --subject english → exit 0" 0 "$CRC"

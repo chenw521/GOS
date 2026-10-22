@@ -3,7 +3,6 @@
 
 const core = require('../core/index.cjs');
 const nav = require('../nav/status.cjs');   // direct aspect require (dependency DAG)
-const knowledge = require('../knowledge/index.cjs');
 
 function cmdStage(args) {
   const state = core.readState();
@@ -20,15 +19,16 @@ function cmdStage(args) {
     state.current_stage = target;
     // Record gap that triggered the back
     const reason = args.slice(2).join(' ') || 'discovered during ' + state.current_stage;
-    // D-41 + R2-F8: gap reason passes the SAME sanitized concerns entry (injection
-    // '\n- [' / isolated CR / '(auto)' forgery → exit 1 BEFORE the gap is recorded).
+    // D-41 + R2-F8: the gap reason is sanitized (injection '\n- [' / isolated CR /
+    // '(auto)' forgery → exit 1 BEFORE the gap is recorded).
     const rc_ = core.checkInputConstraint({ value: reason, maxCp: 400, label: 'stage back reason', noNewlineListPrefix: true });
     if (!rc_.ok) core.die(`✗ ${rc_.reason}`);
     if (rc_.value.includes('(auto)')) core.die(`✗ stage back reason: '(auto)' is reserved for the automated write-back`);
-    // REVIEW #11: ordering — concern append BEFORE state regression, so a core.die on
-    // anchor mismatch aborts stage back with BOTH stores untouched.
+    // [T6/D-16] state.gaps is the single source: stage back NEVER mirrors into
+    // concerns.md anymore (legacy mirrors are cured via `gos gap migrate` into
+    // the .gos/logs/gap-history.ndjson ledger). The write path below stays
+    // ordering-fatal — a die on the boundary leaves BOTH stores untouched.
     state.gaps.push({ id: `G-${Date.now()}`, type: 'major', description: `Fluid back to ${target}: ${reason}`, status: 'open' });
-    knowledge.appendConcernsLine(knowledge.concernsPaths(), `[gap] Fluid back to ${target}: ${reason}`, { auto: true });
     core.writeState(state);
     console.log(`⏮ Fluid back: → ${target} (gap recorded)`);
     console.log(`Next:\n${nav.nextHint(state)}`);

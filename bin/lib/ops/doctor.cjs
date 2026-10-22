@@ -115,8 +115,9 @@ function cmdDoctor() {
     // failure yields an empty set → not-ignored → warn + fix, the exact
     // direction the old catch → false took.
     const ign = core.ignoredSet();
-    const ignored = ign.has('.gos/.lock') || ign.has('.gos/.lock/')
-      || [...ign].some((e) => e.endsWith('/') && '.gos/.lock/'.startsWith(e));
+    const lockIgn = '.gos/.lock';
+    const ignored = ign.has(lockIgn) || ign.has(lockIgn + '/')
+      || [...ign].some((e) => e.endsWith('/') && (lockIgn + '/').startsWith(e));
     if (!ignored) { warn('MISSING: .gos/.lock not gitignored — add ".gos/.lock" to .gitignore (concurrency lock is machine-local)'); fix('lock_gitignore'); }
     else console.log('  ✓ OK: .gos/.lock gitignored');
   }

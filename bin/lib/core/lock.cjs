@@ -6,8 +6,10 @@ const os = require('node:os');
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 const fsio = require('./fsio.cjs');
 const state = require('./state.cjs');
+const gitprobe = require('./gitprobe.cjs');
 
 function withGlobalAnchorsLock(fn) {
   const lockPath = state.lessonsPaths('model').lock;
@@ -146,9 +148,49 @@ function releaseLock() {
   _lockHeld = false;
 }
 
+// [T4a/D-12/D-18] identity-guard probes — argv-only git calls (never a shell
+// string), state.cjs probe style. Null on any git failure: callers degrade to
+// advisory, never die on git breakage alone.
+function gitFact(args, rootDir) {
+  try {
+    return execFileSync('git', rootDir ? ['-C', rootDir, ...args] : args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  } catch { return null; }
+}
+
+// Linked-worktree predicate: git-dir ≠ git-common-dir (both realpath'd; the
+// common dir may come back relative — resolve against the probe cwd).
+function inLinkedWorktree() {
+  const gd = gitFact(['rev-parse', '--absolute-git-dir']);
+  const cd = gitFact(['rev-parse', '--git-common-dir']);
+  if (!gd || !cd) return false;
+  const cdAbs = path.isAbsolute(cd) ? cd : path.resolve('.', cd);
+  try { return fs.realpathSync(gd).toString() !== fs.realpathSync(cdAbs).toString(); } catch { return false; }
+}
+
+// repo_id of every identifiable remote URL (D-18 canonicalization per remote).
+// Membership is a SET question — origin preference only governs STAMPING.
+function remoteRepoIds(rootDir) {
+  const names = (gitFact(['remote'], rootDir) || '').split(/\s+/).filter(Boolean);
+  const ids = new Set();
+  for (const n of names) {
+    const url = gitFact(['remote', 'get-url', n], rootDir);
+    if (!url) continue;
+    const id = state.deriveRepoId(url);
+    if (id != null) ids.add(id);
+  }
+  return [...ids];
+}
+
 function guardCwd(cls, cmdName, breakLock) {
   if (cls === 'global') return;
   const here = fs.realpathSync('.');
+  // [T4a/T-03] linked worktree ∧ tracked state.json → die (every class):
+  // worktrees share one state file — tracked state in a worktree is unsupported.
+  if (fs.existsSync(fsio.STATE_PATH) && inLinkedWorktree() && gitprobe.isTracked(fsio.STATE_PATH)) {
+    console.error('✗ tracked .gos/state.json inside a linked git worktree is unsupported (worktrees share one state file — concurrent writers would fork the task state)');
+    console.error('  run GOS from the main checkout, or untrack the state file in this worktree.');
+    process.exit(1);
+  }
   if (cls === 'read') {
     console.error(`${state.CONTRACTS.state_semantics.cwdBanner}${here}`); // stderr banner — stdout stays machine-clean
     return;
@@ -183,22 +225,37 @@ function guardCwd(cls, cmdName, breakLock) {
   }
   let stateL = null;
   try { stateL = JSON.parse(fs.readFileSync(fsio.STATE_PATH, 'utf8')); } catch { return; } // corrupt → schema validation handles
-  let root = stateL.project_root;
-  if (!root) {
-    // lazy migration: re-anchor before write (D-10) — same call, atomic
-    root = state.currentRootRealpath() || here;
-    stateL.project_root = root;
-    try { fsio.writeAtomicJson(fsio.STATE_PATH, stateL); } catch { /* command will rewrite anyway */ }
-  } else if (root !== here) {
-    const top = state.currentRootRealpath();
-    if (top !== here) {
-      console.error(`✗ this .gos state belongs to project root: ${root}`);
-      console.error(`  you are in: ${here}. cd to the project root first.`);
-      releaseLock(); process.exit(1);
+  // [T4a/D-12/D-18] identity guard: the state binds to the repo it lands in via
+  // repo_id (remote-URL hash set). The legacy path-anchor write-back is
+  // REMOVED — no read-class or guard path writes state.json (T-01 byte-stability);
+  // the ONE sanctioned opportunistic write is the null+remotes stamp below.
+  const root = state.currentRootRealpath();
+  const ids = remoteRepoIds(root);
+  const stamped = stateL.repo_id == null ? null : String(stateL.repo_id);
+  if (!ids.length) {
+    // D-18: no usable remotes → identity unverifiable → advisory pass (no die).
+    // repo_id null IS the recorded advisory (stamped at init) — silent pass; a
+    // STAMPED binding that cannot be verified is the case worth one warning
+    // (stderr only — stdout stays machine-clean).
+    if (stamped != null) {
+      console.error(`⚠ repo identity advisory: no usable git remotes — state repo_id ${stamped} binding not verifiable (D-18)`);
     }
-    // here === toplevel but ≠ stored root: repo moved or fresh worktree → toplevel is truth, re-anchor
-    stateL.project_root = here;
-    try { fsio.writeAtomicJson(fsio.STATE_PATH, stateL); } catch { /* command will rewrite anyway */ }
+  } else if (stamped == null) {
+    // null + remotes → derive + store (sanctioned). Conservative: v4 states only —
+    // pre-v4 states get repo_id from their own write-class migration (never a
+    // hybrid v3+repo_id write), and the stamp is the ONLY field touched.
+    if (stateL.schema_version === state.STATE_SCHEMA_VERSION) {
+      const id = state.repoIdFromRemotes(root);
+      if (id != null) {
+        stateL.repo_id = id;
+        try { fsio.writeAtomicJson(fsio.STATE_PATH, stateL); } catch { /* command's own write follows */ }
+      }
+    }
+  } else if (!ids.includes(stamped) && !ids.includes(stamped.toLowerCase())) {
+    console.error(`✗ repo identity mismatch: .gos/state.json repo_id ${stamped} matches none of this repository's remote identities (D-12)`);
+    console.error('  this state was cloned or copied from a different repository.');
+    console.error("  deliberate re-bind: `gos anchor fix` re-derives repo_id from this repo's remotes; otherwise remove .gos/ and `gos init` again.");
+    releaseLock(); process.exit(1);
   }
 }
 

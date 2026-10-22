@@ -84,6 +84,17 @@ module.exports = {
   'lessons.projectLabel': 'repo knowledge · never expires',
   'lessons.modelLabel': 'cross-repo behavior · expires on date',
 
+  // ---- T5/D-17 language boundary (tracked stores are English-only) ----
+  'langBoundary.trackedStore': 'language boundary: {file} is git-tracked — tracked GOS stores are English-only; rewrite the content in English before saving (untracked stores accept any language)',
+
+  // ---- T6/D-16 gap migrate/history + concerns anchor bootstrap predicate ----
+  'gap.migrate.removed': '✓ migrated {n} stage-back mirror line(s) from concerns.md to the gap-history ledger — state.gaps stays the single source',
+  'gap.migrate.none': 'no (auto) mirror lines in concerns.md — nothing to migrate',
+  'gap.migrate.dupes': '⚠ {n} mirror line(s) already in the ledger (deduped by text) — cured from concerns.md without re-appending',
+  'gap.history.empty': '(no gap history — stage-back mirrors land here via {cmd:gap} migrate)',
+  'gap.history.skipped': '⚠ skipped {n} malformed ledger line(s) (.gos/logs/gap-history.ndjson)',
+  'concerns.err.anchorMissingDirty': 'concerns.md is git-tracked but .concerns-anchors.json is missing and the file differs from the HEAD blob — hand edit suspected; restore via git checkout, or commit the change first (bootstrap forbidden, no laundering)',
+
   // ---- CONTRACTS aliases (frozen strings — reference, never copy) ----
   'contract.gateFailedPrefix': CONTRACTS.gate_verdicts.gateFailedPrefix,
   'contract.allPass': CONTRACTS.gate_verdicts.allPass,

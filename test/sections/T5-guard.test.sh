@@ -45,29 +45,33 @@ assert_exit "init blocked in subdir" 1 "$RC"
 assert_contains "hint prints toplevel" "$T5_DIR" "$OUT"
 cd "$T5_DIR"
 
-# --- T5.4: worktree allowed (write-class runs inside worktree) ---
+# --- T5.4: worktree allowed while state.json is UNTRACKED (tracked → T95 die) ---
 git worktree add -q "$T5_DIR-wt" -b wt5 2>/dev/null || true
 if [ -d "$T5_DIR-wt" ]; then
   cd "$T5_DIR-wt"
-  # state lives in main tree (gitignored) — write-class here must NOT be blocked by anchor mismatch
+  # state lives in main tree (gitignored) — untracked state in a worktree stays writable;
+  # identity is de-pathed (D-12): no root anchoring, repo_id advisory-null without remotes
   node "$GOS" init 3 "wt task" >/dev/null 2>&1   # init in worktree: toplevel = worktree → allowed
-  ROOT_WT=$(python3 -c "import json; print(json.load(open('.gos/state.json')).get('project_root'))" 2>/dev/null)
-  assert_eq "worktree init anchors to worktree root" "$(cd "$T5_DIR-wt" && pwd -P)" "$ROOT_WT"
+  WT_REPO_ID=$(python3 -c "import json; print(json.load(open('.gos/state.json')).get('repo_id'))" 2>/dev/null)
+  assert_eq "worktree init stamps advisory-null repo_id (no remotes, D-18)" "None" "$WT_REPO_ID"
   node "$GOS" checkpoint save --stage BUILD --unit w --done x >/dev/null 2>&1
   CKPT_OK=$(python3 -c "import json; print(len(json.load(open('.gos/state.json')).get('checkpoints',[])) > 0)" 2>/dev/null)
-  assert_eq "write-class works inside worktree" "True" "$CKPT_OK"
+  assert_eq "write-class works inside worktree (untracked state)" "True" "$CKPT_OK"
   cd "$T5_DIR"; git worktree remove --force "$T5_DIR-wt" 2>/dev/null || true
 else
   echo "  (skip worktree: add failed)"; PASS=$((PASS+2))
 fi
 
-# --- T5.5: unanchored legacy state → write-class auto-anchors (lazy migration) ---
-python3 -c "
-import json; s=json.load(open('.gos/state.json')); s['project_root']=None
-json.dump(s,open('.gos/state.json','w'),indent=2)"
+# --- T5.5 [T4a/D-18]: repo_id null + remotes → guard derives and stores on write ---
+# (the lazy project_root re-anchor is REMOVED — the derive+store stamp is the
+# guard's one sanctioned state write; T95 covers clone/worktree/foreign cases)
+git remote add origin https://github.com/octocat/widget.git
 node "$GOS" checkpoint save --stage BUILD --unit re --done anchor >/dev/null 2>&1
-ROOT2=$(python3 -c "import json; print(json.load(open('.gos/state.json')).get('project_root'))")
-assert_eq "lazy re-anchor on write" "$T5_DIR" "$ROOT2"
+EXPECT_ID=$(node -e '
+  const s = require(process.env.GOS_ROOT + "/bin/lib/core/state.cjs");
+  console.log(s.deriveRepoId("https://github.com/octocat/widget.git")); ' 2>/dev/null)
+RID=$(python3 -c "import json; print(json.load(open('.gos/state.json')).get('repo_id'))")
+assert_eq "guard stamps repo_id from remotes on write (D-18)" "$EXPECT_ID" "$RID"
 
 # --- T5.6: lock — concurrent write blocked; stale lock (dead pid) gets break-lock hint ---
 node "$GOS" init 3 "auth2" --force >/dev/null 2>&1

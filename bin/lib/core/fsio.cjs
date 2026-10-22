@@ -160,6 +160,15 @@ function sha16(s) {
   return crypto.createHash('sha256').update(String(s), 'utf8').digest('hex').slice(0, 16);
 }
 
+// [T5/D-17] wide CJK class — the repo's established detection range (mirrors
+// test/checks/cjk-lint.sh and test/checks/i18n-inventory.sh): CJK radicals
+// through unified ideographs, fullwidth forms, CJK punctuation.
+const CJK_RE = /[\u2e80-\u9fff\uff00-\uffef\u3000-\u303f]/;
+
+function hasCJK(s) {
+  return typeof s === 'string' && CJK_RE.test(s);
+}
+
 function globMatch(pattern, p) {   // minimal fnmatch: '*' wildcard only
   const parts = pattern.split('*');
   if (parts.length === 1) return p === pattern;
@@ -345,6 +354,7 @@ module.exports = {
   writeAtomicText,
   sha256FileSync,
   sha16,
+  hasCJK,
   resolvePath,
   sanitizeSingleLine,
   sanitizeEcho,
