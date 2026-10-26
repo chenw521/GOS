@@ -1156,6 +1156,38 @@ function cmdGate(args) {
         const lastA = String(ascOut).trim().split('\n').filter(Boolean).pop();
         console.log(`✓ ${lastA || 'ascii filenames: tracked names clean'}`);
       }
+      // ai-trace lint (AI-process artifact boundary): content-lineage peer of
+      // cjk-lint. Tracked files must describe WHAT the code does, never WHY a
+      // task decided it — new lineage markers hard-fail; the legacy stock
+      // rides the curated whitelist and shrinks via the sweep. Failure
+      // evidence quotes counts only; anchor excerpts stay behind the lint's
+      // --json machine view.
+      checked++;
+      let traceOut = '';
+      let traceRc = 0;
+      try {
+        traceOut = execFileSync('bash',
+          [path.join(core.GOS_SELF_ROOT, 'test', 'checks', 'ai-trace-lint.sh')],
+          { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 120000 });
+      } catch (e) {
+        traceRc = e.status == null ? 1 : e.status;
+        traceOut = `${e.stdout || ''}${e.stderr || ''}`;
+      }
+      const traceLines = String(traceOut)
+        .replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '') // ANSI CSI strip — evidence lines print clean
+        .trim().split('\n').filter(Boolean);
+      if (traceRc !== 0) {
+        const countM = traceLines.join('\n').match(/(\d+) violation\(s\)/);
+        const traceSummary = traceLines.filter((l) => l.includes('ai-trace lint:')).slice(-3);
+        failures.push(core.gateFail('ai-trace-lint', {
+          verdict: `ai-trace lint: ${countM ? `${countM[1]} violation(s)` : `exited ${traceRc}`} — machine view: bash test/checks/ai-trace-lint.sh --json`,
+          evidence: traceSummary.length ? traceSummary : [`ai-trace lint: exited ${traceRc} without a summary`],
+          fix: 'remove the anchor / rewrite the comment to WHAT — lineage belongs in the commit body or CHANGELOG.md',
+        }));
+      } else {
+        const traceOk = traceLines.slice(-2).join('\n');
+        console.log(traceOk || '✓ ai-trace lint: tracked tree clean');
+      }
     }
   }
 

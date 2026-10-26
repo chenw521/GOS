@@ -217,7 +217,7 @@ lines.
 | Option | Premise | Pros | Cons | Risks |
 |:---|:---|:---|:---|:---|
 | single-master-hint | seeding delivered; only discoverability lags | one locale key pair; zero duplication | user types one extra command | none material |
-| wizard-step | users expect one-stop onboarding | strongest discoverability | unlisted ops→task require; longer wizard | architecture松动 for a hint |
+| wizard-step | users expect one-stop onboarding | strongest discoverability | unlisted ops→task require; longer wizard | architecture loosens for a hint |
 | migrate-entry | phase text letter | matches phase wording | breaks T69 and init verb symmetry | command compatibility break |
 
 why-not: wizard-step — needs an unlisted cross-domain require for one

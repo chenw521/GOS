@@ -206,7 +206,20 @@
       "evidence": null
     }
   ],
-  "gaps": [],
+  "gaps": [
+    {
+      "id": "G-1793018821628",
+      "type": "major",
+      "description": "Fluid back to BUILD: spec sha refreeze via commit think fast-forwarded past the in-flight BUILD stage; BUILD waves 4-7 still pending",
+      "status": "open"
+    },
+    {
+      "id": "G-1793018890724",
+      "type": "major",
+      "description": "Fluid back to BUILD: spec sha refreeze after removing two stray CJK strings from the frozen spec",
+      "status": "open"
+    }
+  ],
   "phase_name": "P6: comment hygiene and coding standards",
   "task_head": "9a0327a78d699b7ab8166396f935290ba5be0c0e",
   "task_head_history": [
@@ -216,7 +229,7 @@
       "what": "claim"
     }
   ],
-  "spec_sha256": "7614ca5963d3779c95322b92f31f17d2bc4c8751ae0f1d3365c5c3e1bad51370",
+  "spec_sha256": "4f649e9801b4adb6bed7fcd97b4eb9e938e00fd8a6071fc1c0d07f09595a74f6",
   "spec_gate_version": 2,
   "plan_snapshot": {
     "tasks": [

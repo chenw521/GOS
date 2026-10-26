@@ -102,7 +102,8 @@
 - **Read first**: bin/lib/ops/setup.cjs onboarding() step-4 tail, bin/lib/core/locales/en.cjs `setup.onboard.*`
 - **Approach**: add one key pair `setup.onboard.codingHint` (en + zh) whose text names
   the seeding verb verbatim: "Seed the coding-standards book set into this repo: gos
-  init coding" (zh: 种子命令不变，仅提示文案). Print it once in onboarding() after the
+  init coding" (zh copy mirrors the sentence; the command spelling stays verbatim).
+  Print it once in onboarding() after the
   gates step. Rendering goes through a small exported helper `renderCodingHint()` in
   setup.cjs (returns the locale-resolved hint line; onboarding() consumes it) so the
   output path is assertable without a TTY. No wizard step, no new prompts — single
