@@ -21,14 +21,17 @@ function cmdAnchor(args) {
   const sub = (args[0] || '').toLowerCase();
   if (sub !== 'fix') {
     console.log('Usage: gos anchor fix');
-    console.log('  fix   re-anchor state.project_root to this checkout (rescue)');
+    console.log("  fix   re-derive state.repo_id from this checkout's remotes (rescue after clone/copy mismatch)");
     return;
   }
   const state = core.readState();
   if (!state) core.die(core.CONTRACTS.state_semantics.noActiveTask);
-  state.project_root = core.currentRootRealpath() || fs.realpathSync('.');
+  // [T4b/D-12] v4 identity is de-pathed: rescue re-binds repo_id to THIS
+  // checkout (remote-URL hash, D-18 canonicalization). The v3 project_root
+  // re-anchor died with the field — the repo root is runtime-derived now.
+  state.repo_id = core.repoIdFromRemotes();
   core.writeState(state);
-  console.log(`${core.CONTRACTS.command_contracts.anchorFixed}${state.project_root}`);
+  console.log(`${core.CONTRACTS.command_contracts.anchorFixed}${state.repo_id == null ? '(no usable remotes — repo_id advisory null, D-18)' : state.repo_id}`);
 }
 
 function parseAnchor(spec) {

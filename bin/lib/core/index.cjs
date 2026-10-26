@@ -6,4 +6,5 @@ module.exports = {
   ...require('./state.cjs'),
   ...require('./lock.cjs'),
   ...require('./i18n.cjs'),
+  ...require('./gitprobe.cjs'),
 };

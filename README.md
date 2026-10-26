@@ -188,6 +188,11 @@ gos gate semantic                 # bidirectional coverage + diff-hit + impact c
 gos map closure <file> --semantic # what your change co-determines (fn call-graph)
 gos lessons add --type project "..." # repo memory that survives sessions
 gos truth verify T1 --replay      # evidence from real stdout, not claims
+gos track <path-under-.gos>       # atomic ignored->tracked flip (gitignore negation + census + manifest; rollback-safe)
+gos track --knowledge             # preset: flip the .gos/codebase guide trio + born-at stamps
+gos gap migrate                   # cure stage-back (auto) mirrors into the gap-history ledger
+gos gap history                   # fail-closed view of the gap ledger (.gos/logs/gap-history.ndjson)
+gos gap rewrite <G-id> --text "..." # rewrite a gap (language-boundary checked)
 gos render                        # regenerate DECISIONS/ROADMAP/REQUIREMENTS views
 gos setup --local                 # dev mode: symlink from a git checkout
 gos teardown                      # remove skill links

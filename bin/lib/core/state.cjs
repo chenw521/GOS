@@ -5,12 +5,14 @@
 const { execSync } = require('node:child_process');
 const { execFileSync } = require('node:child_process');
 const os = require('node:os');
+const crypto = require('node:crypto');
 
 const fs = require('node:fs');
 const path = require('node:path');
 const fsio = require('./fsio.cjs');
+const gitprobe = require('./gitprobe.cjs');
 
-const STATE_SCHEMA_VERSION = 3;
+const STATE_SCHEMA_VERSION = 4;
 
 const PROJECT_SCHEMA_VERSION = 1;
 
@@ -78,22 +80,164 @@ function validatePhase(p, where) {
   return errs;
 }
 
+// [D-12/D-18] repo identity is de-pathed: a raw remote URL is canonicalized to
+// `host:port/path` and hashed — the URL itself is never persisted. Canonical
+// rules: host lowercase (IPv6 bracketed, hex lowercase), default ports 22
+// (ssh + scp-style) / 443 (https) / 9418 (git://), explicit ports kept,
+// path case-preserved with one trailing `.git` and trailing slashes stripped,
+// embedded credentials (user:pass@) stripped, scp-style `host:path` →
+// `host:22/path` (scp syntax carries no port — git semantics: everything after
+// the first colon is the path). Non-URL inputs (local paths, garbage) → null.
+const REPO_URL_DEFAULT_PORTS = { ssh: 22, git: 9418, https: 443, http: 80 };
+
+function canonicalRepoUrl(rawUrl) {
+  if (typeof rawUrl !== 'string') return null;
+  const input = rawUrl.trim();
+  if (!input || /\s/.test(input)) return null;
+  const schemeM = /^([A-Za-z][A-Za-z0-9+.-]*):\/\/(.*)$/.exec(input);
+  let host;
+  let port;
+  let pathPart;
+  if (schemeM) {
+    const scheme = schemeM[1].toLowerCase();
+    let rest = schemeM[2].replace(/^[^/@]+@/, ''); // strip credentials (user[:pass]@)
+    const slashAt = rest.indexOf('/');
+    let authority = slashAt === -1 ? rest : rest.slice(0, slashAt);
+    pathPart = slashAt === -1 ? '' : rest.slice(slashAt);
+    let portText = null;
+    if (authority.startsWith('[')) {
+      // IPv6 literal: [hex:groups] with optional :port after the closing bracket
+      const closeAt = authority.indexOf(']');
+      if (closeAt === -1) return null;
+      host = '[' + authority.slice(1, closeAt).toLowerCase() + ']';
+      const tail = authority.slice(closeAt + 1);
+      if (tail.startsWith(':')) portText = tail.slice(1);
+      else if (tail !== '') return null;
+    } else {
+      const colonAt = authority.lastIndexOf(':');
+      if (colonAt === -1) {
+        host = authority;
+      } else {
+        host = authority.slice(0, colonAt);
+        portText = authority.slice(colonAt + 1);
+      }
+      host = host.toLowerCase();
+      if (host === '') return null;
+    }
+    if (portText === null || portText === '') {
+      port = REPO_URL_DEFAULT_PORTS[scheme];
+      if (port === undefined) return null; // scheme without a known default port and no explicit port
+    } else {
+      if (!/^\d+$/.test(portText)) return null;
+      port = parseInt(portText, 10);
+    }
+  } else {
+    // scp-style: [user@]host:path — port is always the ssh default, never parsed
+    const scpM = /^(?:[^/@\s]+@)?([^:@/\s]+):(\S+)$/.exec(input);
+    if (!scpM) return null;
+    host = scpM[1].toLowerCase();
+    // host must look like a hostname (dot or localhost) — kills drive letters like C:\x
+    if (!host.includes('.') && host !== 'localhost') return null;
+    if (!/^[a-z0-9.-]+$/.test(host)) return null;
+    port = 22;
+    pathPart = '/' + scpM[2];
+  }
+  let p = pathPart.replace(/\/+$/, '');
+  if (p.endsWith('.git') && p.length > '/.git'.length) p = p.slice(0, -'.git'.length);
+  p = p.replace(/\/+$/, '');
+  return `${host}:${port}${p}`;
+}
+
+function deriveRepoId(rawUrl) {
+  const canonical = canonicalRepoUrl(rawUrl);
+  if (canonical == null) return null;
+  return crypto.createHash('sha256').update(canonical).digest('hex').slice(0, 16);
+}
+
+// Read the repo's remotes (argv-only git calls — never a shell string) and
+// derive one repo_id: origin wins when identifiable; otherwise all remotes
+// must agree on a single id; no remotes / disagreement / unidentifiable URLs
+// → advisory null (D-18).
+function repoIdFromRemotes(rootDir) {
+  const root = rootDir || currentRootRealpath() || process.cwd();
+  let names;
+  try {
+    names = execFileSync('git', ['-C', root, 'remote'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).split(/\s+/).filter(Boolean);
+  } catch { return null; }
+  if (!names.length) return null;
+  let originId = null;
+  const ids = new Set();
+  for (const n of names) {
+    let url;
+    try {
+      url = execFileSync('git', ['-C', root, 'remote', 'get-url', n], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    } catch { continue; }
+    const id = deriveRepoId(url);
+    if (id == null) continue;
+    ids.add(id);
+    if (n === 'origin') originId = id;
+  }
+  if (originId != null) return originId;
+  if (ids.size === 1) return [...ids][0];
+  return null;
+}
+
+// Tracked-state path discipline (D-12): task path fields are stored
+// repo-relative so a tracked state.json never carries machine paths. A path
+// outside the repo root cannot be relativized and is dropped to null (the
+// lazy resolvers re-derive it); null/relative values pass through unchanged.
+function taskPathRel(v) {
+  if (typeof v !== 'string' || !path.isAbsolute(v)) return v;
+  const root = currentRootRealpath();
+  if (!root || !v.startsWith(root + path.sep)) return null;
+  const rel = path.relative(root, v);
+  return rel || null;
+}
+
+// Pin spec_path/plan_path to task/<id>/ (stored repo-relative). Shared by the
+// v2→v3 legacy backfill inside migrateState and task init.
+function pinTaskPaths(s) {
+  try {
+    const tid = currentTaskId(s);
+    if (tid != null) {
+      s.spec_path = taskPathRel(fsio.resolvePath('spec', { task_id: tid }));
+      s.plan_path = taskPathRel(fsio.resolvePath('plan', { task_id: tid }));
+    }
+  } catch { /* leave null — context supplies lazily */ }
+}
+
+// Normalize any already-stored task path fields to repo-relative form. Runs
+// unconditionally on read (not only at schema migration) so legacy absolute
+// values — including states already at v4 — are cured at the next write.
+function normalizeTaskPaths(s) {
+  if (!s || typeof s !== 'object') return s;
+  for (const f of STATE_PATH_FIELDS.direct) {
+    if (s[f] != null) s[f] = taskPathRel(s[f]);
+  }
+  return s;
+}
+
 function migrateState(s) {
   const wasLegacy = s.schema_version === undefined;
+  const fromV = wasLegacy ? 0 : s.schema_version;
   s.schema_version = STATE_SCHEMA_VERSION;
   // [Phase W T9] v2→v3: pin spec_path/plan_path to task/<id>/ when absent (legacy
   // states predate path pinning). Root-level legacy spec.md/plan.md — if still on
   // disk — are migrated by the T5 batch, NOT here (no dual-read window, D-14).
+  // Values are stored repo-relative (D-12: no machine paths in tracked state).
   if (!s.spec_path) {
-    try {
-      const tid = currentTaskId(s);
-      if (tid != null) {
-        s.spec_path = fsio.resolvePath('spec', { task_id: tid });
-        s.plan_path = fsio.resolvePath('plan', { task_id: tid });
-      }
-    } catch { /* leave null — context supplies lazily */ }
+    pinTaskPaths(s);
   }
-  if (wasLegacy) console.error('⚠ state migrated to schema v3 (Phase W layout: task/<id>/ paths pinned)');
+  // [T94/D-12] v3→v4: identity de-pathed — drop the dead `version` field and the
+  // machine-path `project_root` anchor (repo root is runtime-derived from here
+  // on); stamp repo_id from the origin remote URL hash (advisory null without
+  // remotes, D-18 — the raw URL is never persisted).
+  if (fromV < 4) {
+    delete s.version;
+    delete s.project_root;
+    if (s.repo_id == null) s.repo_id = repoIdFromRemotes();
+  }
+  if (wasLegacy) console.error('⚠ state migrated to schema v4 (task/<id>/ paths pinned; identity de-pathed — repo_id derived, version/project_root dropped)');
   if (!Array.isArray(s.decisions)) s.decisions = [];
   s.decisions = s.decisions.map((d) => {
     const m = { ...d };
@@ -155,10 +299,14 @@ function readState() {
     fsio.die(`state.json is corrupted: ${e.message}. Fix it or delete and gos init again.`);
   }
   const mode = (readState._mode === 'write') ? 'fail' : 'warn';
-  if (s.schema_version === undefined) {
-    // legacy → migrate once (both read and write paths migrate in-memory; only write persists)
+  if (s.schema_version === undefined || s.schema_version < STATE_SCHEMA_VERSION) {
+    // legacy/v3 → migrate in-memory (both read and write paths migrate; only write persists)
     s = migrateState(s);
   }
+  // D-12 path discipline: cure absolute task paths on every read (v4 states
+  // migrated before this normalization existed still carry machine paths);
+  // persisted only by the next write-class command.
+  normalizeTaskPaths(s);
   const errs = validateState(s, mode);
   if (errs.length && mode === 'warn' && errs[0] !== '__FUTURE__') {
     // read-class degradation: sanitize corrupt collections so consumers don't crash (banner already warned)
@@ -172,9 +320,64 @@ function readState() {
 
 function writeState(stateL) {
   fs.mkdirSync(fsio.GOS_DIR, { recursive: true });
-  if (stateL.schema_version === undefined) stateL = migrateState(stateL);
+  if (stateL.schema_version === undefined || stateL.schema_version < STATE_SCHEMA_VERSION) stateL = migrateState(stateL);
   validateState(stateL, 'fail');
+  // [T5/D-17] language boundary: recursive leaf walk — any CJK string leaf under
+  // a git-tracked state.json dies at the write path (knowledge files travel
+  // with clones). Cheap-first: the git probe fires only when a CJK leaf exists.
+  const cjkLeaf = firstCJKLeaf(stateL);
+  if (cjkLeaf !== null) dieTrackedStoreCJK(fsio.STATE_PATH, cjkLeaf.text);
   fsio.writeAtomicJson(fsio.STATE_PATH, stateL);
+}
+
+// Depth-first leaf walk over the state object; returns { path, text } of the
+// first string leaf carrying CJK, null when clean. Pure detection — the
+// tracked probe lives in dieTrackedStoreCJK.
+function firstCJKLeaf(v, p = 'state') {
+  if (v == null) return null;
+  if (typeof v === 'string') return fsio.hasCJK(v) ? { path: p, text: v } : null;
+  if (Array.isArray(v)) {
+    for (let i = 0; i < v.length; i++) {
+      const hit = firstCJKLeaf(v[i], `${p}[${i}]`);
+      if (hit !== null) return hit;
+    }
+    return null;
+  }
+  if (typeof v === 'object') {
+    for (const k of Object.keys(v)) {
+      const hit = firstCJKLeaf(v[k], `${p}.${k}`);
+      if (hit !== null) return hit;
+    }
+  }
+  return null;
+}
+
+// [T5/D-17] shared write-path guard for the git-trackable GOS text stores
+// (state.json / concerns.md / lessons.json — and gap text, which flows into
+// concerns.md via stage-back write-back): tracked stores are English-only
+// because knowledge files travel with clones. Fires only when the candidate
+// text carries CJK AND gitprobe.isTracked(<store file>) — the T1 primitive is
+// fail-closed (ANY git failure counts as tracked), so the boundary never falls
+// open. Guidance is bilingual by design, rendered through t() from the locale
+// dot-key 'langBoundary.trackedStore' (en.cjs + zh.cjs); the zh line is forced
+// via a GOS_LANG flip on the die path (the process exits immediately, so the
+// env mutation cannot leak). i18n is required lazily same-directory — the
+// locale catalogs themselves must NOT be required from here: locales → state
+// is a banned cross-directory cycle edge (T46 DAG).
+function dieTrackedStoreCJK(file, text) {
+  if (!fsio.hasCJK(text)) return false;
+  if (!gitprobe.isTracked(file)) return false;
+  const i18n = require('./i18n.cjs');
+  const prevLang = process.env.GOS_LANG;
+  const line = (locale) => {
+    process.env.GOS_LANG = locale;
+    i18n.effectiveLocale(true);
+    return i18n.t('langBoundary.trackedStore', { file: path.basename(String(file)) });
+  };
+  const enLine = line('en');
+  const zhLine = line('zh-CN');
+  if (prevLang === undefined) delete process.env.GOS_LANG; else process.env.GOS_LANG = prevLang;
+  fsio.die(`${enLine}\n  ${zhLine}`);
 }
 
 function emptyProject() {
@@ -507,15 +710,23 @@ function ensureTaskDir(stateL) {
   return { tid, dir };
 }
 
+// Stored values are repo-relative (D-12); resolve against the runtime repo
+// root so every consumer receives an absolute path it can stat directly.
+function absTaskPath(v) {
+  if (typeof v !== 'string' || !v) return v;
+  if (path.isAbsolute(v)) return v;
+  return path.join(currentRootRealpath() || process.cwd(), v);
+}
+
 function specPathOf(stateL) {
-  if (stateL && stateL.spec_path) return stateL.spec_path;
+  if (stateL && stateL.spec_path) return absTaskPath(stateL.spec_path);
   const tid = currentTaskId(stateL);
   if (tid == null) return fsio.resolvePath('spec', { task_id: 'ts-0' }); // unreachable for valid states (init always anchors one)
   return fsio.resolvePath('spec', { task_id: tid });
 }
 
 function planPathOf(stateL) {
-  if (stateL && stateL.plan_path) return stateL.plan_path;
+  if (stateL && stateL.plan_path) return absTaskPath(stateL.plan_path);
   const tid = currentTaskId(stateL);
   if (tid == null) return fsio.resolvePath('plan', { task_id: 'ts-0' });
   return fsio.resolvePath('plan', { task_id: tid });
@@ -653,8 +864,8 @@ function extractRequirement(intentText, level) {
 
 function defaultState(level, intentText) {
   return {
-    version: '0.5',
     schema_version: STATE_SCHEMA_VERSION,
+    repo_id: repoIdFromRemotes(), // D-12/D-18: origin-URL hash identity; advisory null without remotes
     level: level ?? null,
     current_stage: 'INTENT',
     completed_stages: [],
@@ -663,7 +874,6 @@ function defaultState(level, intentText) {
     spec_path: null,   // T5: backfilled below via ensureTaskDir resolution
     plan_path: null,
     project: false,          // true when init --project (Lv4 truth-source mode)
-    project_root: null,      // anchor: git toplevel realpath (lazy-migrated by write-class cmds, D-10)
     requirements: extractRequirement(intentText, level),
     decisions: [],
     observable_truths: [],
@@ -833,8 +1043,8 @@ const COMMANDS = {
     contractKeys: ['command_contracts.readmeGenerated', 'command_contracts.readmeHeader'],
   },
   'gate': {
-    desc: 'hard gates: coverage|truths|requirements|lessons|semantic|codemap|all + hash-trust-verified custom gates (--json failures: object-only {code,verdict,evidence[],fix} since P15)', class: 'exec', aliases: [], core: true,
-    subs: ['coverage', 'truths', 'requirements', 'lessons', 'semantic', 'codemap', 'all', 'trust <name>', '<custom-gate>'],
+    desc: 'hard gates: coverage|truths|requirements|lessons|semantic|codemap|flip|all + hash-trust-verified custom gates (--json failures: object-only {code,verdict,evidence[],fix} since P15)', class: 'exec', aliases: [], core: true,
+    subs: ['coverage', 'truths', 'requirements', 'lessons', 'semantic', 'codemap', 'flip', 'all', 'trust <name>', '<custom-gate>'],
     flags: [],
     usage: 'gos gate <name>',
     next: ['gos gate all', 'gos map closure <file>'],
@@ -895,7 +1105,7 @@ const COMMANDS = {
     contractKeys: ['command_contracts.phaseAdded', 'command_contracts.phaseAmended', 'command_contracts.amendRefuseActive', 'command_contracts.amendRefuseDone', 'command_contracts.amendRefuseParked', 'command_contracts.phaseClaimed', 'command_contracts.phaseUnclaimed', 'command_contracts.claimGatedPrev', 'command_contracts.claimDeferredHint', 'command_contracts.claimCrossPhaseHint', 'command_contracts.claimTargetDone', 'command_contracts.claimAllClosed', 'command_contracts.claimTargetParked', 'command_contracts.doneHintParkedLine', 'command_contracts.doneHintAllDone', 'command_contracts.phaseParked', 'command_contracts.parkBlocksMilestone', 'command_contracts.parkUndo', 'command_contracts.parkIdempotent', 'command_contracts.parkUndoIdempotent', 'command_contracts.parkRefuseActive', 'command_contracts.parkRefuseDone', 'command_contracts.parkOrphanWarn', 'command_contracts.markDoneCloseOut', 'command_contracts.milestoneBlockedHeader'],
   },
   'anchor': {
-    desc: 're-anchor state.project_root (rescue)', class: 'write', aliases: [], core: false,
+    desc: 're-derive state.repo_id from remotes (rescue)', class: 'write', aliases: [], core: false,
     subs: ['fix'], flags: [],
     usage: 'gos anchor fix',
     next: ['gos doctor'],
@@ -947,8 +1157,8 @@ const COMMANDS = {
     contractKeys: [],
   },
   'gap': {
-    desc: 'state gaps: list | resolve <G-id> --resolution "<r>" (fail-closed)', class: 'write', aliases: [], core: false,
-    subs: ['list', 'resolve <G-id> --resolution "<r>"'], flags: [],
+    desc: 'state gaps: list | resolve <G-id> --resolution "<r>" | rewrite <G-id> --text "<t>" | migrate (cure (auto) mirrors into the ledger) | history (fail-closed)', class: 'write', aliases: [], core: false,
+    subs: ['list', 'resolve <G-id> --resolution "<r>"', 'rewrite <G-id> --text "<t>"', 'migrate', 'history'], flags: [],
     usage: 'gos gap <sub> [args]',
     next: ['gos gap list'],
     contractKeys: [],
@@ -1021,6 +1231,26 @@ const COMMANDS = {
     next: ['gos push', 'gos changelog add'],
     contractKeys: [],
   },
+  // [P4 T7a/T7b D-15] tracked-flip transaction gate: validated atomic surgery
+  // flipping an ignored .gos file to tracked (pre-scan + .gos/.gitignore
+  // negation + census-if-present + flip manifest + git add; rename-style
+  // backups roll everything back on mid-transaction failure; already-tracked
+  // targets divert to adopt/no-op bookkeeping; --knowledge presets the guide
+  // trio with born-at stamps). Registry zones live in fsio.cjs GOS_PATHS:
+  // keys track_manifest (.gos/track-manifest.json — tracked flip ledger,
+  // {ts,path,head} per line) and track_backup (.gos/cache/track-backup —
+  // machine-local rollback staging).
+  'track': {
+    desc: 'flip an ignored .gos file to tracked (atomic transaction: pre-scan + .gos/.gitignore negation + census-if-present + manifest record + git add; rollback restores every store; adopt/no-op for already-tracked targets)',
+    class: 'write', aliases: [], core: false,
+    subs: ['<path-under-.gos>'], flags: [
+      { name: '--json', scope: 'track', effect: 'machine envelope (no-target help form, or flip/adopt/no-op result on success)', risk: 'safe' },
+      { name: '--knowledge', scope: 'track', effect: 'preset: flip the .gos/codebase guide trio + idempotent born-at: <HEAD[0:8]> first-line stamps', risk: 'mutating' },
+    ],
+    usage: 'gos track <path-under-.gos> [--json] | gos track --knowledge [--json]',
+    next: ['gos gate all', 'gos help track'],
+    contractKeys: [],
+  },
   'help': {
     desc: 'this help (rendered from COMMANDS registry)', class: 'global', aliases: ['--help', '-h'], core: true,
     subs: ['<cmd>'], flags: [{ name: '--json', scope: 'help', effect: 'machine-readable envelope (sole legal machine mode)', risk: 'safe' }],
@@ -1051,8 +1281,13 @@ module.exports = {
   validateState,
   validateProject,
   migrateState,
+  normalizeTaskPaths,
+  taskPathRel,
+  pinTaskPaths,
   readState,
   writeState,
+  firstCJKLeaf,
+  dieTrackedStoreCJK,
   currentTaskId,
   ensureTaskDir,
   specPathOf,
@@ -1074,6 +1309,9 @@ module.exports = {
   idNum,
   STATE_SCHEMA_VERSION,
   PROJECT_SCHEMA_VERSION,
+  canonicalRepoUrl,
+  deriveRepoId,
+  repoIdFromRemotes,
   ID_RE,
   DECISION_STATUS,
   REQ_STATUS,

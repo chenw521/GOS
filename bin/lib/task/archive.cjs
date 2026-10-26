@@ -337,13 +337,25 @@ function cmdArchive(opts = {}) {
   // commit. Idempotent re-entry: leftover staging from a crashed run is restored first.
   const staging = core.resolvePath('ship_staging');
   let moved = 0; // hoisted for the final archived summary line
+  // D-14/D-15 (§3.7, RT3-F11): gitprobe is the only fail-closed probing
+  // primitive. Its ignored-scan truth source lists exact files and collapses
+  // covered directories to a single trailing-slash entry, so "rel is ignored"
+  // = rel itself listed, or rel living under a listed directory — the same
+  // recursive verdict the retired one-shot probe gave.
+  const isIgnoredRel = (ignored, rel) => ignored.has(rel) || ignored.has(rel + '/')
+    || [...ignored].some((e) => e.endsWith('/') && (rel + '/').startsWith(e));
   const gitMvOrRename = (src, dst) => {
     const trackedSrc = core.safeGitArgv(['ls-files', '--error-unmatch', path.relative(process.cwd(), src)]) !== '';
     // Machine-local archive policy: when the destination is gitignored, a
     // tracked source must leave the index (rm --cached) instead of git-mv —
     // `git mv` stages the target explicitly and would smuggle archive
     // content back into the index past the ignore rule.
-    const dstIgnored = core.safeGitArgv(['check-ignore', path.relative(process.cwd(), dst)]) !== '';
+    // dst never exists yet (only its parent does, created just above), so the
+    // repo-relative spelling rides the parent's canonical form. Any git
+    // failure fails closed the same way the old probe's '' → false did:
+    // canonicalRepoRel → null, ignoredSet → empty set → dstIgnored false.
+    const parentRel = core.canonicalRepoRel(path.dirname(dst));
+    const dstIgnored = parentRel != null && isIgnoredRel(core.ignoredSet(), `${parentRel}/${path.basename(dst)}`);
     if (trackedSrc && !dstIgnored) {
       try {
         execFileSync('git', ['mv', path.relative(process.cwd(), src), path.relative(process.cwd(), dst)], { stdio: ['ignore', 'pipe', 'ignore'] });

@@ -103,7 +103,8 @@ assert_eq "G2g git sees no worktree changes after the self guard" "" "$(git -C "
 # --- G3: in-flight task — adoption proceeds, task state byte-identical ---
 t82_repo inflight
 mkdir -p "$T82_DIR/inflight/.gos/task/abc123" "$T82_DIR/inflight/.gos/cache"
-printf '{"version":"0.5","schema_version":3,"level":2,"current_stage":"BUILD","intent":{"summary":"x","confirmed":true},"completed_stages":["INTENT","THINK"],"decisions":[],"observable_truths":[]}' > "$T82_DIR/inflight/.gos/state.json"
+# [T4a/T94] v4 in-flight fixture — schema 4, repo_id advisory null (no remotes)
+printf '{"schema_version":4,"repo_id":null,"level":2,"current_stage":"BUILD","intent":{"summary":"x","confirmed":true},"completed_stages":["INTENT","THINK"],"decisions":[],"observable_truths":[]}' > "$T82_DIR/inflight/.gos/state.json"
 printf '# task notes in flight\n' > "$T82_DIR/inflight/.gos/task/abc123/notes.md"
 G3_STATE=$(t82_sha "$T82_DIR/inflight/.gos/state.json")
 G3_NOTES=$(t82_sha "$T82_DIR/inflight/.gos/task/abc123/notes.md")

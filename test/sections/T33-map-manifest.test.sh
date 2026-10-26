@@ -42,6 +42,16 @@ printf '# Plan\n\n### Wave 1\n\n#### T1: impl\n- **Covers**: D-01\n- **Files**: 
 node "$GOS" approve plan >/dev/null 2>&1
 node "$GOS" commit plan >/dev/null 2>&1
 node "$GOS" map edge adopt >/dev/null 2>&1
+# flip-reconcile leg (P4 §3.4): the commit chain above git-commits .gos files
+# (lessons, task/<id>/…) whose ids are one-shot; record them as adopted flips
+# (the exact record shape `gos track` appends) so the leg sees an accounted trail
+git ls-files -- .gos | while read -r f; do
+  case "$f" in
+    .gos/cache/*|.gos/logs/*|.gos/archive/*|.gos/.lock|.gos/.ship-staging/*) continue ;;
+  esac
+  printf '{"ts":"%s","path":"%s","head":"%s","adopted":true}\n' \
+    "$(date -u +%FT%TZ)" "$f" "$(git rev-parse HEAD)" >> .gos/track-manifest.json
+done
 git add -A >/dev/null 2>&1 && git commit -qm frozen >/dev/null 2>&1
 
 WTH_H() { git rev-parse 'HEAD^{tree}'; }

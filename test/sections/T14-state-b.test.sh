@@ -213,6 +213,29 @@ assert_exit "D3 empty Files value = undeclared, no crash" 0 "$RC"
 D3=$(python3 -c "import json; print(json.dumps(json.load(open('.gos/state.json'))['plan_snapshot']['tasks']))")
 assert_eq "D3 snapshot files == []" '[{"id": "T1", "covers": ["D-01"], "files": []}]' "$D3"
 
+# --- D4: letter-suffixed task ids (T4a/T7b style) must parse with their Files ---
+t14_teardown; t14_setup
+node "$GOS" init 3 "suffixed ids" >/dev/null 2>&1
+cat > "$(gos_plan)" <<'PLANEOF'
+# Plan
+
+### Wave 1
+
+#### T4a: suffixed block
+- **Covers**: D-01
+- **Files**: core/lock.cjs
+
+#### T7b: second suffixed
+- **Covers**: D-01
+- **Files**: ops/track.cjs
+PLANEOF
+node "$GOS" approve plan >/dev/null 2>&1
+set +e; OUT=$(node "$GOS" commit plan 2>&1); RC=$?; set -e
+assert_exit "D4 suffixed ids parse, commit plan exit 0" 0 "$RC"
+D4=$(python3 -c "import json; print(json.dumps(json.load(open('.gos/state.json'))['plan_snapshot']['tasks']))")
+assert_eq "D4 snapshot keeps T4a/T7b with files" '[{"id": "T4a", "covers": ["D-01"], "files": ["core/lock.cjs"]}, {"id": "T7b", "covers": ["D-01"], "files": ["ops/track.cjs"]}]' "$D4"
+
+
 # ============================================================
 echo "--- T14.E: task_head + history append-only [D-31/B-4] ---"
 t14_teardown; t14_setup

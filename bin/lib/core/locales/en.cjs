@@ -84,6 +84,71 @@ module.exports = {
   'lessons.projectLabel': 'repo knowledge · never expires',
   'lessons.modelLabel': 'cross-repo behavior · expires on date',
 
+  // ---- T5/D-17 language boundary (tracked stores are English-only) ----
+  'langBoundary.trackedStore': 'language boundary: {file} is git-tracked — tracked GOS stores are English-only; rewrite the content in English before saving (untracked stores accept any language)',
+
+  // ---- T6/D-16 gap migrate/history + concerns anchor bootstrap predicate ----
+  'gap.migrate.removed': '✓ migrated {n} stage-back mirror line(s) from concerns.md to the gap-history ledger — state.gaps stays the single source',
+  'gap.migrate.none': 'no (auto) mirror lines in concerns.md — nothing to migrate',
+  'gap.migrate.dupes': '⚠ {n} mirror line(s) already in the ledger (deduped by text) — cured from concerns.md without re-appending',
+  'gap.history.empty': '(no gap history — stage-back mirrors land here via {cmd:gap} migrate)',
+  'gap.history.skipped': '⚠ skipped {n} malformed ledger line(s) (.gos/logs/gap-history.ndjson)',
+  'concerns.err.anchorMissingDirty': 'concerns.md is git-tracked but .concerns-anchors.json is missing and the file differs from the HEAD blob — hand edit suspected; restore via git checkout, or commit the change first (bootstrap forbidden, no laundering)',
+
+  // ---- T7a/D-15 gos track — validated ignored→tracked flip (validation dies,
+  // pre-scan reports, surgery verify, success lines) ----
+  'track.err.notRepo': 'track: not a git repository — gos track flips files inside a git worktree only',
+  'track.err.notFound': 'track: {path} cannot be resolved to a regular file inside this repository (missing, a directory, or outside the worktree)',
+  'track.err.scope': 'track: {path} is outside the .gos/ scope — gos track flips ignored files under .gos/ only',
+  'track.err.symlink': 'track: {path} does not resolve to itself (symlinked or traversed argv; canonical: {canon}) — tracked GOS stores must be regular files; point at the real file',
+  'track.err.caseArg': 'track: case mismatch — argv says {arg}, the canonical path is {canon}; re-run with the canonical spelling (case-insensitive clones would fork the two)',
+  'track.err.caseDisk': 'track: case collision on disk — {other} differs from {path} only by letter case; a case-insensitive clone would clobber one of them, rename one file first',
+  'track.err.zone': 'track: {path} is inside the never-track zone {zone} — machine-local by design, nothing there may ever be flipped',
+  'track.err.env': 'track: {path} is a secrets file (.env family) — secrets must never be git-tracked',
+  'track.err.unborn': 'track: this repository has no commits yet (unborn HEAD) — the flip reconciles against the HEAD blob; make the first commit, then re-run',
+  'track.err.tracked': 'track: {path} is already tracked — nothing to flip (re-runs on tracked targets become a verified no-op, and legacy-tracked files get adopt bookkeeping, once the flip manifest transaction lands)',
+  'track.err.gitignoreUnsafe': 'track: {path} contains a path component gitignore patterns cannot express verbatim (leading ! or #, trailing space) — rename the file first',
+  'track.err.gitAdd': 'track: git add failed for {path}: {err} — the flip was rolled back: worktree files restored byte-identical and the git index swept clean; resolve the git error and re-run',
+  'track.err.rollbackIncomplete': 'track: rollback incomplete — {items}; pre-transaction bytes are kept under {dir} (rename them back manually before re-running)',
+  'track.prescan.storeCjk': 'track: language pre-scan — tracked store {file} carries CJK at {where}: {text} — tracked GOS stores are English-only; rewrite the content first (the flip touches nothing until every store is clean)',
+  'track.prescan.targetCjk': 'track: target {path} carries CJK at line {line}: {text} — tracked stores are English-only; write the file in English, then re-run',
+  'track.prescan.sanitize': 'track: sanitize pre-scan hit in {path} at line {line} ({pattern}): {text} — machine-local data must not travel with the repo; remove the leak, then re-run',
+  'track.surgery.verifyFail': 'track: gitignore surgery failed verification — the ignored-set diff was [{diff}], expected exactly the target; rolled back, nothing was changed',
+  'track.done.surgery': '✓ tracked {path} — .gos/.gitignore negation {negation} verified (ignored-set diff == target), {census}, staged via git add',
+  'track.done.noSurgery': '✓ tracked {path} — target not ignored (no gitignore surgery needed), {census}, staged via git add',
+  // ---- T7b/D-15 flip transaction: manifest, adopt/no-op (RT3-F7), preset ----
+  'track.done.manifest': '  flip manifest: {path} recorded at HEAD {head} (staged with the flip)',
+  'track.adopt.done': '✓ adopted {path} — already git-tracked without a manifest record; adopt record appended to .gos/track-manifest.json ({census}), staged via git add',
+  'track.noop.done': '✓ {path} already tracked — manifest record present, {census}; verified no-op, zero mutations',
+  'track.err.censusContradiction': 'track: {path} is git-tracked but census entry {key} says git:false — contradiction needs human eyes: fix census.json (or untrack the file), then re-run',
+  'track.preset.err.missing': 'track --knowledge: {path} is missing — the preset requires all three guide-trio files (.gos/codebase/structure.md, conventions.md, concerns.md)',
+  'track.knowledge.done': '✓ knowledge preset complete: {n} file(s) stamped born-at: {head}',
+
+  // ---- T8/D-15 gate flip-reconcile leg (census/git/manifest agreement on
+  // tracked .gos files; failure codes join the D-66 locale renderer) ----
+  'gate.flip-git-probe-failed': {
+    what: 'git truth could not be established for the flip-reconcile leg',
+    why: 'fail-closed: with no probe truth the gate refuses to reconcile rather than guess',
+  },
+  'gate.flip-census-corrupt': {
+    what: 'census.json is not parseable JSON at gate time',
+    why: 'the disposition ledger is the reconciliation source — a broken ledger fails closed',
+  },
+  'gate.flip-census-contradicts': {
+    what: 'a tracked .gos file is covered by a census entry saying git:false',
+    why: 'census and git disagree about the tracked set — one of them no longer describes reality',
+  },
+  'gate.flip-census-phantom': {
+    what: 'a census .gos entry declares git:true but nothing under it is tracked',
+    why: 'a declared-tracked zone with no tracked files is ledger drift',
+  },
+  'gate.flip-manifest-missing': {
+    what: 'a tracked .gos file has neither census git:true sanction nor a flip-manifest record',
+    why: 'obligations attach to tracked files — a tracked file with no ledger trail is an unaccounted flip',
+  },
+  'gate.flip.pass': '✓ flip-reconcile: {n} tracked .gos file(s) — census/git values agree, manifest obligations met',
+  'gate.flip.skipNoGit': 'flip-reconcile: not a git worktree — no tracked-set truth to reconcile, leg skipped',
+
   // ---- CONTRACTS aliases (frozen strings — reference, never copy) ----
   'contract.gateFailedPrefix': CONTRACTS.gate_verdicts.gateFailedPrefix,
   'contract.allPass': CONTRACTS.gate_verdicts.allPass,

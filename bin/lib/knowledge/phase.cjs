@@ -206,7 +206,8 @@ function cmdPhase(args) {
     const fresh = core.defaultState(3, goal);
     fresh.intent.confirmed = true;
     fresh.project = true;
-    fresh.project_root = core.currentRootRealpath() || fs.realpathSync('.');
+    // [T4b/D-12] no project_root stamp — v4 identity is de-pathed (repo_id via
+    // defaultState; repo root runtime-derived where needed).
     fresh.phase_name = phases[n].name;
     fresh.requirements = core.extractRequirement(goal, 3);
     // Diff baseline at claim; history is append-only — re-claiming the SAME phase

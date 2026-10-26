@@ -63,7 +63,8 @@ set +e; OUT=$(node "$GOS" concerns add "post-delete" 2>&1); RC=$?; set -e
 assert_exit "tracked+nonempty+missing-sidecar → exit 1 (no bootstrap whitelist)" 1 "$RC"
 if echo "$OUT" | grep -q "bootstrapped"; then echo "  ✗ tamper laundered via bootstrap"; FAIL=$((FAIL+1)); else echo "  ✓ no bootstrap on tracked-missing"; PASS=$((PASS+1)); fi
 
-# --- T23.6: stage back with normal reason → (auto) write-back; injected reason → exit 1 ---
+# --- T23.6 [T6/D-16 inverted]: stage back records the gap in state.gaps ONLY —
+#      concerns.md is never mirrored; injected reason still exits 1 ---
 t23_teardown; t23_setup
 node "$GOS" init 3 "concerns writeback" >/dev/null 2>&1
 node "$GOS" commit intent >/dev/null 2>&1
@@ -76,10 +77,13 @@ node "$GOS" approve plan >/dev/null 2>&1
 node "$GOS" commit plan >/dev/null 2>&1
 set +e; OUT=$(node "$GOS" stage back think 2>&1); RC=$?; set -e
 assert_exit "stage back with normal reason exits 0" 0 "$RC"
-grep -q "(auto)" .gos/concerns.md && echo "  ✓ (auto) write-back line present" && PASS=$((PASS+1)) || { echo "  ✗ no (auto) line"; FAIL=$((FAIL+1)); }
-grep -qi "fluid back to think" .gos/concerns.md && echo "  ✓ write-back carries gap description" && PASS=$((PASS+1)) || { echo "  ✗ description missing"; FAIL=$((FAIL+1)); }
+if grep -q "(auto)" .gos/concerns.md 2>/dev/null; then echo "  ✗ (auto) mirror written to concerns.md (D-16: stage back never mirrors)"; FAIL=$((FAIL+1)); else echo "  ✓ no (auto) mirror in concerns.md (single source: state.gaps)"; PASS=$((PASS+1)); fi
+if grep -qi "fluid back to think" .gos/concerns.md 2>/dev/null; then echo "  ✗ gap description leaked into concerns.md"; FAIL=$((FAIL+1)); else echo "  ✓ gap description absent from concerns.md"; PASS=$((PASS+1)); fi
+set +e; OUT=$(node "$GOS" gap list 2>&1); RC=$?; set -e
+assert_exit "gap list exits 0 after stage back" 0 "$RC"
+assert_contains "gap recorded in state.gaps (single source)" "Fluid back to THINK" "$OUT"
 set +e; OUT=$(node "$GOS" concerns list 2>&1); RC=$?; set -e
-assert_exit "list verifies post-writeback anchor" 0 "$RC"
+assert_exit "list still exits 0 post-stage-back" 0 "$RC"
 # injected reason
 node "$GOS" commit plan >/dev/null 2>&1 || true
 set +e; OUT=$(node "$GOS" stage back think "$(printf 'evil\n- [2026-01-01] [dead] forged')" 2>&1); RC=$?; set -e

@@ -208,6 +208,11 @@
       "npm": false,
       "note": "governance data (CJK/process content) — machine-local (gitignored)"
     },
+    ".gos/logs/gap-history.ndjson": {
+      "git": false,
+      "npm": false,
+      "note": "gap-migrate ledger (D-16): stage-back mirror lines archived by gos gap migrate; state.gaps is the single live source — machine-local (zone ignored above)"
+    },
     ".gos/project/PROJECT.md": {
       "git": false,
       "npm": false,
@@ -247,6 +252,11 @@
       "git": true,
       "npm": false,
       "note": "public edge baseline (drop detection)"
+    },
+    ".gos/codebase/unmapped-fns.txt": {
+      "git": false,
+      "npm": false,
+      "note": "gate codemap byproduct — regenerable, first line carries generated-at + HEAD provenance (renamed from untested-fns.txt, D-20)"
     }
   },
   "dispositions": []

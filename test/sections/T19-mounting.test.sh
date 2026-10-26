@@ -131,9 +131,20 @@ assert_contains "spec frozen check line present" "spec frozen" "$OUT"
 
 # --- T19.5: gate all includes semantic chain + downgrade banner last line [D-33] ---
 rm -rf .gos && t19_semok
+# flip-reconcile leg (P4 §3.4): earlier `commit build` runs git-committed .gos
+# files whose task ids are one-shot — init never reseeds them, so the product
+# adopt path cannot run on a rebuilt tree. Record them as adopted flips (the
+# exact record shape `gos track` appends) so the leg sees an accounted trail.
+git ls-files -- .gos | while read -r f; do
+  case "$f" in
+    .gos/cache/*|.gos/logs/*|.gos/archive/*|.gos/.lock|.gos/.ship-staging/*) continue ;;
+  esac
+  printf '{"ts":"%s","path":"%s","head":"%s","adopted":true}\n' \
+    "$(date -u +%FT%TZ)" "$f" "$(git rev-parse HEAD)" >> .gos/track-manifest.json
+done
 OUT=$(node "$GOS" gate all 2>&1); RC=$?
 # [Phase W T6 debug-keep] show failures inline when red (temporary diagnosis aid)
-if [ "$RC" -ne 0 ]; then printf '%s\n' "$OUT" | grep -E "✗|README drift|orphan" | head -5 >&2; fi
+if [ "$RC" -ne 0 ]; then printf '%s\n' "$OUT" | grep -E "✗|evidence|fix:|README drift|orphan" | head -16 >&2; git ls-files -- .gos >&2; fi
 assert_exit "gate all green on passable semantics" "0" "$RC"
 assert_contains "gate all runs bidirectional check" "bidirectional" "$OUT"
 LAST=$(printf '%s\n' "$OUT" | grep -v '^\s*$' | tail -1)

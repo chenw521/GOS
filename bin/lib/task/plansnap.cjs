@@ -15,7 +15,7 @@ function parsePlanMd() {
   for (const line of raw.split('\n')) {
     const waveMatch = line.match(/^###\s+Wave\s+(\d+)/i);
     if (waveMatch) { currentWave = parseInt(waveMatch[1]); continue; }
-    const taskMatch = line.match(/^####\s+(T\d+):\s*(.*)/);
+    const taskMatch = line.match(/^####\s+(T\d+[a-z]?):\s*(.*)/);
     if (taskMatch) {
       // B-21 [R2-14]: same task id in two blocks → reject (fail-closed, all consumers core.die)
       if (seenIds.has(taskMatch[1])) {

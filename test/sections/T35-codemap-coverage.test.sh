@@ -15,14 +15,14 @@ echo "--- T34: codemap coverage report + edge baseline drop detection ---"
 
 git init -q . && git commit -q --allow-empty -m root
 mkdir -p bin test/sections
-# three real js fns: cmdAlpha (section-tested) / cmdBeta / helperOne (untested) — acorn-parseable, all called (enter the callgraph node set)
+# three real js fns: cmdAlpha (section-tested) / cmdBeta / helperOne (unmapped) — acorn-parseable, all called (enter the callgraph node set)
 cat > bin/gos.cjs << 'EOF'
 function cmdAlpha(){ return 1; }
 function cmdBeta(){ return cmdAlpha(); }
 function helperOne(){ return 2; }
 switch (sub) { case 'a': cmdAlpha(); break; case 'b': cmdBeta(); break; case 'c': helperOne(); break; }
 EOF
-# section annotations: only cmdAlpha is covered -> untested = cmdBeta, helperOne
+# section annotations: only cmdAlpha is covered -> unmapped = cmdBeta, helperOne
 cat > test/sections/TX-alpha.test.sh << 'EOF'
 # gos-map:fn cmdAlpha
 echo ok
@@ -42,20 +42,21 @@ if [ "$GRC" -eq 0 ] && ! printf '%s\n' "$G" | grep -q "edge count drop"; then
   echo "  ✓ T35.4 fresh baseline: no false drop warning"; PASS=$((PASS+1))
 else echo "  ✗ T35.4 false drop or gate failed (rc=$GRC)"; FAIL=$((FAIL+1)); fi
 
-# --- T35.1 coverage: summary line + untested-fns.txt list (number consistent with deps) ---
+# --- T35.1 coverage: summary line + unmapped-fns.txt list (number consistent with deps) ---
 set +e; G=$(node "$GOS" gate codemap 2>&1); GRC=$?; set -e
-if printf '%s\n' "$G" | grep -q "fn untested" && printf '%s\n' "$G" | grep -q "untested-fns.txt"; then
+if printf '%s\n' "$G" | grep -qF "unmapped fn(s) without test annotation" && printf '%s\n' "$G" | grep -q "unmapped-fns.txt"; then
   echo "  ✓ T35.1a coverage summary + full-list pointer present"; PASS=$((PASS+1))
 else echo "  ✗ T35.1a coverage summary missing"; printf '%s\n' "$G" | head -5; FAIL=$((FAIL+1)); fi
-# untested count = unique fn count - testof_fn covered count (computed from deps for cross-check)
+# unmapped count = unique fn count - testof_fn covered count (computed from deps for cross-check);
+# file lines = 1 provenance header (generated-at @ HEAD, D-20) + one line per unmapped fn
 UT=$(node -e "
 const d=require('./.gos/cache/deps.json');const s=d.semantic||{};
 const all=new Set();(s.callgraph||[]).forEach(e=>{all.add(e.file+'#fn:'+e.from);all.add(e.file+'#fn:'+e.to)});
 const t=new Set((s.testof_fn||[]).map(x=>x.file+'#fn:'+x.fn));
 console.log([...all].filter(f=>!t.has(f)).length)")
-test -f .gos/codebase/untested-fns.txt && [ "$(wc -l < .gos/codebase/untested-fns.txt | tr -d ' ')" = "$UT" ] \
-  && echo "  ✓ T35.1b untested-fns.txt lines ($UT) match deps math" && PASS=$((PASS+1)) \
-  || { echo "  ✗ T35.1b list lines != computed untested ($UT)"; FAIL=$((FAIL+1)); }
+test -f .gos/codebase/unmapped-fns.txt && [ "$(wc -l < .gos/codebase/unmapped-fns.txt | tr -d ' ')" = "$((UT + 1))" ] \
+  && echo "  ✓ T35.1b unmapped-fns.txt lines (header + $UT) match deps math" && PASS=$((PASS+1)) \
+  || { echo "  ✗ T35.1b list lines != computed unmapped + header ($UT + 1)"; FAIL=$((FAIL+1)); }
 
 # --- T35.2 drop: forged oversized peak -> edge count drop advisory ---
 node -e "

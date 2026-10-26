@@ -16,11 +16,17 @@ t2_teardown() { cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$T2_DIR"; }
 t2_setup
 echo "--- T2: project.json layer + anchor ---"
 
-# --- T2.1: init writes project_root anchor (git toplevel realpath) ---
+# --- T2.1: init stamps de-pathed v4 identity (repo_id from remotes; NO project_root) ---
+git remote add origin https://github.com/acme/t2-auth.git
 node "$GOS" init 3 "auth" >/dev/null 2>&1
-ROOT=$(python3 -c "import json; print(json.load(open('.gos/state.json')).get('project_root'))")
-TOP=$(cd "$(git rev-parse --show-toplevel)" && pwd -P)
-assert_eq "project_root anchored to toplevel" "$TOP" "$ROOT"
+READ=$(python3 -c "
+import json
+s = json.load(open('.gos/state.json'))
+print('%s|%s|%s' % (s.get('schema_version'), 'project_root' in s, s.get('repo_id')))")
+WANT=$(python3 -c "
+import hashlib
+print('4|False|%s' % hashlib.sha256(b'github.com:443/acme/t2-auth').hexdigest()[:16])")
+assert_eq "init: v4 + de-pathed (no project_root) + repo_id from origin remote" "$WANT" "$READ"
 
 # --- T2.2: init --project sets project flag + creates project.json + four files ---
 t2_teardown; t2_setup
@@ -52,7 +58,7 @@ json.dump(p,open('.gos/project/project.json','w'),indent=2)"
 set +e; OUT=$(node "$GOS" checkpoint save --stage BUILD --unit x --done y 2>&1); RC=$?; set -e
 assert_exit "project future version exit 3" 3 "$RC"
 
-# --- T2.5: non-git dir: anchor falls back to cwd realpath ---
+# --- T2.5: non-git dir: no path identity stored — init succeeds, repo_id advisory null ---
 t2_teardown
 T2_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-t2ng"
 mkdir -p "$T2_DIR" && cd "$T2_DIR" || exit 1
@@ -61,8 +67,11 @@ if git rev-parse --git-dir >/dev/null 2>&1; then
   echo "  (skip: ceiling ineffective in this git version)"; PASS=$((PASS+1))
 else
   node "$GOS" init 2 "no git" >/dev/null 2>&1
-  ROOT=$(python3 -c "import json; print(json.load(open('.gos/state.json')).get('project_root'))")
-  assert_eq "non-git anchor = cwd realpath" "$(cd "$T2_DIR" && pwd -P)" "$ROOT"
+  READ=$(python3 -c "
+import json
+s = json.load(open('.gos/state.json'))
+print('%s|%s|%s' % (s.get('schema_version'), 'project_root' in s, s.get('repo_id')))")
+  assert_eq "non-git init: v4, de-pathed, repo_id advisory null" "4|False|None" "$READ"
 fi
 unset GIT_CEILING_DIRECTORIES
 

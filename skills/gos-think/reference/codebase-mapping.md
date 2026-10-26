@@ -23,7 +23,7 @@ can appear there, its producer command, and its tracked status:
 | network.md | `node bin/gos.cjs map scan` | tracked |
 | edge-baseline.json | `node bin/gos.cjs map scan` | tracked |
 | require-allowlist.json | `node bin/gos.cjs map allowlist init` | tracked |
-| untested-fns.txt | `node bin/gos.cjs gate codemap` | machine-local |
+| unmapped-fns.txt | `node bin/gos.cjs gate codemap` | machine-local |
 
 Tracked status is enforced by `.gitignore`: `.gos/codebase/*` is
 ignored, with whitelist negations for exactly network.md,
@@ -34,6 +34,22 @@ machine-local files are per-clone views or drafts and never enter git.
 An eighth artifact can appear after a baseline rotation:
 `edge-history.ndjson` (append-only, gitignored) — see edge-baseline.json
 below.
+
+## Travel tiers (D-20) — what a fresh clone actually has
+
+File availability is tiered; never assume a file exists because it
+existed on the machine that wrote it:
+
+| Tier | Files | Present on a fresh clone? |
+|---|---|---|
+| Static guides | structure.md, conventions.md, concerns.md | No — hand-written, machine-local; regenerate by re-running the THINK codemap pass |
+| Map data | network.md, edge-baseline.json, require-allowlist.json | Yes — git-tracked; the ONLY tier that travels with clones |
+| Regenerable byproducts | unmapped-fns.txt, edge-history.ndjson | No — rebuilt by the next `gate codemap` / baseline rotation; unmapped-fns.txt carries its own provenance header (`generated-at: <ISO> @ <HEAD[0:8]>`) so a stale copy is detectable |
+
+A clone with no `.gos/codebase/` has guides absent and map data absent
+until someone commits the tracked tier and runs the producers; `gos
+context think` reports this via `has_codebase_map`/`suggest` and the
+`navigator` hint (tier contract in one field).
 
 ## THINK codemap files (hand-written, no CLI producer)
 
@@ -71,6 +87,20 @@ agent during the THINK codemap pass (no command generates them) and
 live only on the machine that ran THINK. `gos context think`
 auto-includes them in read_files; a clone without them simply gets no
 codemap context until the pass is re-run.
+
+### `(auto)` mirror lines in concerns.md — route to `gos gap`
+
+Stage-back gaps historically left `(auto)` mirror lines in concerns.md;
+the single live source is `state.gaps` (state.json). Mirror lines are
+legacy residue and are never hand-edited:
+
+- `gos gap migrate` — cures `(auto)` lines into the append-only ledger
+  `.gos/logs/gap-history.ndjson` (machine-local, gitignored; idempotent,
+  deduped by text); concerns.md anchors rebuild in the same transaction.
+- `gos gap history` — fail-closed ledger view (reads the ledger, not
+  task state; run post-archive).
+- `gos gap rewrite <G-id> --text "<t>"` — rewrites a gap's text through
+  the language boundary (CJK-safe for tracked stores).
 
 ## map 2.0 files (CLI-generated, git-tracked)
 
@@ -111,12 +141,19 @@ codemap context until the pass is re-run.
 
 ## Coverage file (CLI-generated, machine-local)
 
-### untested-fns.txt
+### unmapped-fns.txt
 
 - Producer: `node bin/gos.cjs gate codemap` (best-effort; rewritten on
   each run).
-- Purpose: full list of callgraph fns with no test coverage, backing
-  the gate's coverage summary line.
+- Purpose: full list of callgraph fns with no test annotation coverage
+  (unmapped — the annotation map does not cover them), backing the
+  gate's coverage summary line.
+- Provenance header: the first line is
+  `generated-at: <ISO> @ <HEAD[0:8]>` (e.g.
+  `generated-at: 2026-10-22T14:08:49Z @ 63273690`); in an unborn repo
+  the anchor degrades to `@ unborn`. A copy whose header sha does not
+  match the checked-out HEAD predates (or postdates) the working tree —
+  regenerate before trusting it.
 - Regeneration semantics: disposable view — safe to delete, recreated
   by the next `gate codemap` run.
 

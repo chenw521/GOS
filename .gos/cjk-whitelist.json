@@ -93,5 +93,15 @@
     "path": "test/checks/commitlint-charset.sh",
     "category": "fixture",
     "reason": "Deliberate CJK commit-subject literal exercising the charset rejection path."
+  },
+  {
+    "path": "test/sections/T96-lang-boundary.test.sh",
+    "category": "fixture",
+    "reason": "Deliberate CJK test data (language-boundary zh payloads; mirrored reason from sibling fixtures)."
+  },
+  {
+    "path": "test/sections/T98a-track-core.test.sh",
+    "category": "fixture",
+    "reason": "Deliberate CJK test data (track pre-scan CJK payloads; mirrored reason from sibling fixtures)."
   }
 ]

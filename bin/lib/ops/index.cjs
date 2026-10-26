@@ -10,4 +10,5 @@ module.exports = {
   ...require('./push.cjs'),
   ...require('./section.cjs'),
   ...require('./setup.cjs'),
+  ...require('./track.cjs'),
 };

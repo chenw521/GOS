@@ -74,7 +74,20 @@ function sha16Of(entry) {
 // membership test. Collision → ordinal salt field + rehash (§8: salt joins the
 // canonical string, so salted ids recompute stably; same-text-different-id is
 // intended semantics). Returns { id, salt } — salt null when unsalted.
+// [T5/D-17] mint is the sole new-payload chokepoint shared by add + amend
+// (legacy migration keeps line-hash ids and never passes through here), so the
+// tracked-store language boundary hangs off it; entries already in the store
+// are NOT new payloads and stay loadable untouched.
+function assertPayloadLanguageBoundary(entry) {
+  const e = entry || {};
+  const texts = [e.scene, e.text, e.lesson, ...(Array.isArray(e.tags) ? e.tags : [])];
+  const hit = texts.find((s) => typeof s === 'string' && core.hasCJK(s));
+  if (hit == null) return;
+  core.dieTrackedStoreCJK(core.lessonsPaths(e.type === 'model' ? 'model' : 'project').truth, hit);
+}
+
 function mintId(entry, hasId) {
+  assertPayloadLanguageBoundary(entry);
   const has = typeof hasId === 'function' ? hasId : () => false;
   for (let n = 0; n < 1000; n++) {
     const salt = n === 0 ? null : String(n);
