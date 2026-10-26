@@ -162,6 +162,7 @@ module.exports = {
   "setup.onboard.agentsWritten": "┃ ✓ wrote {path}",
   "setup.onboard.checkerDesc": "┃  checker (reviewer, the soul of the team profile): cross-validate with a model different from your main one",
   "setup.onboard.checkerPrompt": "    checker model [Enter={suggestion}]: ",
+  "setup.onboard.codingHint": "┃ Seed the coding-standards book set into this repo: gos init coding",
   "setup.onboard.doneRestart": "│ Restart your AI assistant, then:                             │",
   "setup.onboard.doneStart": "│   Start: say \"help me with GOS ...\" or type /gos             │",
   "setup.onboard.doneTitle": "╭─ Done ───────────────────────────────────────────────────────╮",

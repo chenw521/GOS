@@ -138,8 +138,10 @@ Before writing any comment in a shell script, apply the judgment test from
 ❌
 
 ```bash
-# Added the -f flag because the release job kept failing (see incident 47)
+# Added the -f flag because the release job kept failing (see incident nn)
 # v2: we now rsync instead of cp
+# [REVIEW Mn] quieted the shellcheck warning here
+# this task adds the stale-lock cleanup for the nightly job
 rm -rf "${build_dir}"
 ```
 
@@ -147,6 +149,7 @@ rm -rf "${build_dir}"
 
 ```bash
 # Must not fail on a missing dir: the clean step runs before the first build.
+# Stale locks are removed up front: a lock outliving its process is garbage.
 rm -rf "${build_dir}"
 ```
 

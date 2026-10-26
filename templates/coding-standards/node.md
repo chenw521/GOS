@@ -157,8 +157,9 @@ applies with full force: delete the comment — what does the reader lose?
 // As per the requirement, we now sort before dedup
 // Let's cache the parsed result for performance
 // v2 switched to async iterators
-// [REVIEW M1] narrowed the type here
-// T-123: added the guard clause
+// [REVIEW Mn] narrowed the type here
+// T-nnn: added the guard clause
+// this phase adds a retry guard around the upload
 ```
 
 ✅
@@ -166,6 +167,7 @@ applies with full force: delete the comment — what does the reader lose?
 ```js
 // Sort before dedup: dedup only drops adjacent duplicates.
 // Parsed ASTs are cached because parse is 40x the cost of the cache hit.
+// Uploads retry once: the endpoint drops idle connections mid-transfer.
 ```
 
 ### 2.5 Error messages name the operation

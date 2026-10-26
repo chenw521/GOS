@@ -163,6 +163,7 @@ module.exports = {
   "setup.onboard.agentsWritten": "┃ ✓ 已写入 {path}",
   "setup.onboard.checkerDesc": "┃  checker（审查员，team 编制的灵魂）：用与主力不同的模型交叉验证",
   "setup.onboard.checkerPrompt": "    checker 模型 [回车={suggestion}]: ",
+  "setup.onboard.codingHint": "┃ 把 coding-standards 书集种入本仓库：gos init coding（命令原样，各语言一致）",
   "setup.onboard.doneRestart": "│ 重启你的 AI 助手，然后：                                        │",
   "setup.onboard.doneStart": "│   开始：对它说 \"用 GOS 帮我 ...\"  或输入 /gos                  │",
   "setup.onboard.doneTitle": "╭─ 完成 ────────────────────────────────────────────────────────╮",

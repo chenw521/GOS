@@ -2,9 +2,10 @@
   "schema_version": 4,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "PLAN",
+  "current_stage": "BUILD",
   "completed_stages": [
-    "THINK"
+    "THINK",
+    "PLAN"
   ],
   "intent": {
     "summary": "Root-cure AI-process artifacts in file content: mechanized ai-trace lint (anchor patterns, spec-section citations, task narrative) wired into gate all as blocking; sweep the ~300 legacy anchor comments across 40 files in bin/ and test/ in batches; ship mainstream language-specific coding-standard templates (shell/node/python) under templates/coding-standards/ seedable by gos setup; apply the same lint to product-seeded assets so user repositories inherit the discipline. Closes 39dad6a4 59ce99c5 db3d0fd8 FB-4.",
@@ -216,5 +217,198 @@
     }
   ],
   "spec_sha256": "7614ca5963d3779c95322b92f31f17d2bc4c8751ae0f1d3365c5c3e1bad51370",
-  "spec_gate_version": 2
+  "spec_gate_version": 2,
+  "plan_snapshot": {
+    "tasks": [
+      {
+        "id": "T1",
+        "covers": [
+          "D-21",
+          "D-22",
+          "D-28",
+          "R-40"
+        ],
+        "files": [
+          "test/checks/ai-trace-lint.sh"
+        ]
+      },
+      {
+        "id": "T2",
+        "covers": [
+          "D-26",
+          "D-29",
+          "R-44"
+        ],
+        "files": [
+          "templates/coding-standards/00-general.md",
+          "templates/coding-standards/node.md",
+          "templates/coding-standards/python.md",
+          "templates/coding-standards/shell.md"
+        ]
+      },
+      {
+        "id": "T3",
+        "covers": [
+          "D-25",
+          "D-31",
+          "R-44"
+        ],
+        "files": [
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs",
+          "bin/lib/ops/setup.cjs"
+        ]
+      },
+      {
+        "id": "T4",
+        "covers": [
+          "D-22",
+          "D-23",
+          "D-27",
+          "D-28",
+          "R-40",
+          "R-41"
+        ],
+        "files": [
+          "test/checks/ai-trace-lint.sh"
+        ]
+      },
+      {
+        "id": "T5",
+        "covers": [
+          "D-22",
+          "D-23",
+          "D-27",
+          "R-41"
+        ],
+        "files": [
+          ".gos/ai-trace-whitelist.json",
+          "test/checks/ai-trace-shrink.sh",
+          ".github/workflows/ci.yml",
+          "census.json"
+        ]
+      },
+      {
+        "id": "T6",
+        "covers": [
+          "D-23",
+          "R-42"
+        ],
+        "files": [
+          "bin/lib/ops/gate.cjs"
+        ]
+      },
+      {
+        "id": "T7",
+        "covers": [
+          "D-24",
+          "D-29",
+          "D-30",
+          "R-43"
+        ],
+        "files": [
+          "test/checks/ai-trace-sweep.sh"
+        ]
+      },
+      {
+        "id": "T8",
+        "covers": [
+          "D-26",
+          "D-28",
+          "D-23",
+          "R-40",
+          "R-41",
+          "R-42",
+          "R-44"
+        ],
+        "files": [
+          "test/sections/T102-ai-trace.test.sh",
+          "test/fixtures/ai-trace/",
+          ".gos/ai-trace-whitelist.json"
+        ]
+      },
+      {
+        "id": "T9",
+        "covers": [
+          "D-24",
+          "R-43"
+        ],
+        "files": [
+          ".gos/task/p6/disposition.md",
+          ".gos/task/p6/batches/"
+        ]
+      },
+      {
+        "id": "T10",
+        "covers": [
+          "D-24",
+          "D-23",
+          "D-29",
+          "R-43"
+        ],
+        "files": [
+          "bin/lib/core/*.cjs",
+          "bin/lib/task/*.cjs",
+          "bin/lib/knowledge/*.cjs",
+          "CHANGELOG.md",
+          ".gos/ai-trace-whitelist.json",
+          ".gos/ai-trace-sweep-ledger.ndjson"
+        ]
+      },
+      {
+        "id": "T11",
+        "covers": [
+          "D-24",
+          "D-23",
+          "D-29",
+          "R-43"
+        ],
+        "files": [
+          "bin/lib/ops/*.cjs",
+          "bin/*.cjs",
+          "CHANGELOG.md",
+          ".gos/ai-trace-whitelist.json",
+          ".gos/ai-trace-sweep-ledger.ndjson"
+        ]
+      },
+      {
+        "id": "T12",
+        "covers": [
+          "D-24",
+          "D-23",
+          "D-29",
+          "R-43"
+        ],
+        "files": [
+          "test/checks/",
+          "test/fixtures/",
+          "test/golden/",
+          "test/sections/*.test.sh",
+          ".gitattributes",
+          "CHANGELOG.md",
+          ".gos/ai-trace-whitelist.json",
+          ".gos/ai-trace-sweep-ledger.ndjson"
+        ]
+      },
+      {
+        "id": "T13",
+        "covers": [
+          "D-23",
+          "D-24",
+          "D-29",
+          "D-31",
+          "R-01",
+          "R-43"
+        ],
+        "files": [
+          ".gos/concerns.md",
+          ".gos/ai-trace-whitelist.json",
+          ".gos/ai-trace-sweep-ledger.ndjson",
+          "CHANGELOG.md",
+          ".gos/task/p6/"
+        ]
+      }
+    ],
+    "audit": []
+  }
 }

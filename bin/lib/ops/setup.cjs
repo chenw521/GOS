@@ -258,6 +258,12 @@ function seedGatesExamples() {
   return out;
 }
 
+// Locale-resolved onboarding hint naming the coding-standards seeding
+// command; exported so the rendered line is assertable without a TTY.
+function renderCodingHint() {
+  return core.t('setup.onboard.codingHint');
+}
+
 async function onboarding() {
   const W = (s) => console.log(s);
   W('');
@@ -371,6 +377,7 @@ arguments) — it reports task state and what to do next. Slash commands:
     }
   }
   W('');
+  W(renderCodingHint());
   W(core.t('setup.onboard.selfCheck'));
   W('');
   W(core.t('setup.onboard.doneTitle'));
@@ -399,4 +406,4 @@ function cmdTeardown() {
   console.log(`✓ Removed ${removed} symlink(s). (Clone/npm package untouched — uninstall via npm if desired.)`);
 }
 
-module.exports = { GOS_SKILL_NAMES, detectPlatforms, cmdSetup, cmdSetupCommitlint, onboarding, seedGatesExamples, cmdTeardown, COMMITLINT_HOOK_REL, PRE_PUSH_HOOK_REL, COMMITLINT_STATE_REL, COMMITLINT_HOOKS_PATH_VALUE, COMMITLINT_RC_CANDIDATES, COMMITLINT_CONFIG_CANDIDATES };
+module.exports = { GOS_SKILL_NAMES, detectPlatforms, cmdSetup, cmdSetupCommitlint, onboarding, renderCodingHint, seedGatesExamples, cmdTeardown, COMMITLINT_HOOK_REL, PRE_PUSH_HOOK_REL, COMMITLINT_STATE_REL, COMMITLINT_HOOKS_PATH_VALUE, COMMITLINT_RC_CANDIDATES, COMMITLINT_CONFIG_CANDIDATES };
