@@ -26,3 +26,7 @@ this file only tells you where they are.
   type label (bug or enhancement) — the triage-gate workflow
   (.github/workflows/triage-gate.yml) closes unlabelled issues once with
   relabel guidance.
+- Main is PR-only: never develop or commit task work on main. Every batch
+  lands via feature branch → pull request → squash-merge; the pre-push
+  guard rejects direct main pushes (emergency escape `GOS_ALLOW_MAIN_PUSH`
+  requires explicit user approval — never self-serve it).
