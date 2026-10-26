@@ -42,7 +42,10 @@ lesson 4846277e names this as the recurrence root cause). FB-4 concern
   must NOT suggest adding whitelist entries; printed lines are ANSI-stripped.
 - **R-05**: Harness-driven sweep (three dispositions + frozen-string audit)
   in domain batches, with backfill into `CHANGELOG.md` `[Unreleased]`
-  (`.changes.md` is SEALED — never appended).
+  (validator-clean prose entries; deleted anchor ids reconcile through a
+  tracked sweep ledger `.gos/ai-trace-sweep-ledger.ndjson` — the changelog
+  validator bans id-bearing bodies: `§`, `T-nn`, `DI-nn`, wave/phase words,
+  changelog-core.cjs:74-86) (`.changes.md` is SEALED — never appended).
 - **R-06**: Coding-standards books name every banned form in digit-free
   placeholder spelling; setup onboarding prints a `gos init coding` hint
   (both locales); existing digit-bearing quotes in AGENTS.md, `.gitignore`,
@@ -89,16 +92,19 @@ lesson 4846277e names this as the recurrence root cause). FB-4 concern
    check (entries and sum-of-counts may only shrink on main).
 4. **Sweep** (four dispositions per line):
    A) mixed lines → strip anchor, keep WHAT content;
-   B) lineage-only lines → delete + backfill into CHANGELOG.md
-   `[Unreleased]` in the same batch;
+    B) lineage-only lines → delete + backfill into CHANGELOG.md
+  `[Unreleased]` in the same batch (entry stays validator-clean prose;
+  deleted ids ride the tracked sweep ledger the harness reconciles);
    C) whitelisted (drift ledger, meta-doc) → untouched;
    D) string-context anchors → one-time audit: non-contract strings
    rewritten anchor-free; frozen strings pinned under `frozen-string`.
-   The sweep harness (script under test/) is the only legal batch runner:
-   it precomputes the allowed editable line set from the lint classifier,
-   asserts post-codemod `git diff -U0` changes ⊆ allowed set, runs the
-   grep assertions on landed content (lesson 96615604), and reconciles
-   every deleted anchor id against the batch's CHANGELOG entry. Batches
+    The sweep harness (script under test/) is the only legal batch runner:
+    it precomputes the allowed editable line set from the lint classifier
+    (the `--emit-hits` machine view — `--json` violations alone go empty
+    once the baseline lands), asserts post-codemod `git diff -U0` changes ⊆
+    allowed set, runs the grep assertions on landed content (lesson
+    96615604), and reconciles every deleted anchor id against the batch's
+    entry in the tracked sweep ledger. Batches
    run serially in the MAIN SESSION only (lesson 63675448: section runners
    must never run in parallel); per batch `run-sections.sh --affected`;
    full suite once at phase end, main session. Heredoc plan fixtures are
@@ -295,7 +301,7 @@ banned form, tier B keeps it covered where it actually occurs.
 
 | Option | Premise | Pros | Cons | Risks |
 |:---|:---|:---|:---|:---|
-| changelog-backfill | CHANGELOG [Unreleased] is the live log | appendable; lint carve-out compatible | entries must cite deleted ids (harness reconciles) | entry format drift |
+| changelog-backfill | CHANGELOG [Unreleased] is the live log | appendable; lint carve-out compatible | ids must reconcile somewhere assertable (tracked sweep ledger) | entry format drift |
 | changes-md | spec draft's first instinct | single traceability home | the file is SEALED, appends forbidden | violates its own header |
 | no-backfill | deleted lineage lives in git blame | zero extra writes | sweep deletions lose their audit trail | red team R3-F6 verification gap |
 
@@ -412,9 +418,12 @@ traceability home.
 | 1 | misuse/safety | 8 | 7 ACCEPT (baseline D-27, plan-format D-28, capped categories+pins, equality+fix-string+growth check, harness D-30, violationCount, ANSI strip), 1 ACCEPT-PARTIAL (.gos carve-out kept + sidecar count metric) |
 | 2 | edge/exception | 9 | 9 ACCEPT (D-27 generated census, placeholder spellings, D-28 equality, drift-ledger line lists, lint-fixture category, node-helper matching, yml/# default table, README placeholder, gos track + .changes.md note) |
 | 3 | completeness | 10 | 9 ACCEPT (census-first tier-B grammar, D-27, book placeholders + templates-clean test, frozen-string class, D-29 CHANGELOG, D-30 mechanized guards, spec-pinned verify commands, concerns parking, serial execution + json assertions), 1 escalated-to-user → ruled (D-31) |
+| 4 | plan-attack | 11 | 10 ACCEPT (sweep ledger replaces id-bearing changelog bodies F1; lint-fixture registration moves to fixture-creating task F2; `--emit-hits` registered-hit view F3; whitelist entry key = (path, category) F4; batch done-when exact equality F5; shrink check fail-closed on R/D F6; census scope covers meta-doc paths F7; harness self-test embedded not sectioned F8; T2 grep oracle mirrors tier grammar F9; red assertions on unregistered scratch copies F10), 1 ACCEPT-PARTIAL (hint truth asserts renderCodingHint() output path both locales; full TTY capture impractical F11) |
 
-> Verdict: not converged-zero — 27 findings, 26 accepted (several merged
-> into D-27..D-30), 1 escalated-to-user and ruled (D-31).
+> Verdict: not converged-zero — rounds 1-3: 27 findings, 26 accepted (several
+> merged into D-27..D-30), 1 escalated-to-user and ruled (D-31); round 4
+> (plan-attack, on the plan): 11 findings, 10 accepted + 1 accepted-partial,
+> folded into plan rev 2 and the R-05/D-29/§4 mechanism edits above.
 
 ## Risks
 - Tier-B narrative regex is fuzzy → start narrow, extend on real misses;
