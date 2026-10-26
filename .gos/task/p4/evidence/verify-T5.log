@@ -1,0 +1,44 @@
+=== T97-gap-migrate ===
+--- T97: gap migrate + gap history + anchor bootstrap (D-16) ---
+  ✓ M1 fixture carries 2 mirror lines
+  ✓ M1 migrate exits 0 (exit 0)
+  ✓ M1 migrate reports 2 migrated
+  ✓ M1 concerns.md cured (0 (auto) lines)
+  ✓ M1 ledger created
+  ✓ M1 ledger lines == removed mirrors
+  ✓ M1 ledger rows are {ts,text} JSON with full mirror text
+  ✓ M1 concerns list verifies after migrate (exit 0)
+  ✓ M1 curated line survives
+  ✓ M1 sidecar re-anchored to 1 hash
+  ✓ M2 re-run exits 0 (exit 0)
+  ✓ M2 nothing-to-migrate wording
+  ✓ M2 ledger unchanged on no-op
+  ✓ M3 re-migrate of known mirror exits 0 (exit 0)
+  ✓ M3 dedupe advisory shown
+  ✓ M3 concerns.md cured again
+  ✓ M3 ledger still 2 rows (dedupe by text)
+  ✓ M4 history exits 0 (exit 0)
+  ✓ M4 history renders ledger text
+  ✓ M4 history never dies on malformed lines (exit 0)
+  ✓ M4 skip count advisory
+  ✓ M4 good rows still render past malformed
+  ✓ M4 empty ledger exits 0 (exit 0)
+  ✓ M4 empty placeholder
+  ✓ M5 tracked+clean+missing-anchor list exits 0 (exit 0)
+  ✓ M5 anchor rebuilt silently
+  ✓ M5 sidecar recreated
+  ✓ M5 .bak shadow recreated
+  ✓ M5 rebuilt sidecar carries 1 hash
+  ✓ M6 tampered tracked file + missing anchor exits 1 (exit 1)
+  ✓ M6 die names the HEAD divergence
+  ✓ M6 no rebuild on tamper
+  ✓ M7 registry tables carry migrate/history
+  ✓ M7 gos.cjs dispatch routes gap
+  ✓ M7 help renders migrate
+  ✓ M7 help renders history
+  ✓ M7 unknown sub exits 1 (exit 1)
+  ✓ M7 usage die lists all five subs
+--- T97 summary: 38 passed, 0 failed ---
+--- T97-gap-migrate: 38 passed, 0 failed ---
+
+=== Sections total: 38 passed, 0 failed ===

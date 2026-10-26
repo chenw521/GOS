@@ -1,0 +1,11 @@
+=== T100-navigator ===
+--- T100: navigator bundle (rename + provenance header + THINK hint) ---
+  ✓ T100.1 unmapped-fns.txt written, legacy byproduct absent
+  ✓ T100.3 summary wording 'unmapped fn(s) without test annotation' + list pointer
+  ✓ T100.2 header format + HEAD anchor (generated-at: 2026-10-26T02:12:54Z @ ead46c08)
+  ✓ T100.4 line count 2 = header + 1 unmapped (deps math)
+  ✓ T100.5 unborn repo header anchor '@ unborn' (generated-at: 2026-10-26T02:12:55Z @ unborn)
+  ✓ T100.6 THINK context navigator hint {hint, map_data, provenance}
+--- T100-navigator: 6 passed, 0 failed ---
+
+=== Sections total: 6 passed, 0 failed ===

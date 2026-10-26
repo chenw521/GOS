@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Fix review fixes cure machine paths in tracked state by storing task spec and plan paths repo-relative with read-time normalization, and track rollback now sweeps the git index and surfaces incomplete rollbacks (D-12/D-15) [2026-10-26]
 - Add self-repo gap migrate cured 88 auto mirrors into the ledger with two deferred anchors parked and full suite green (D-16/D-13) [2026-10-22]
 - Add wiring docs and census lifecycle audit with gap-history GOS_PATHS registration and suffixed task-id plan parsing fix (D-14/R-01) [2026-10-22]
 - Add self-repo guide trio refreshed to current tree truth with born-at stamps recorded in the evidence ledger (D-19/D-20) [2026-10-22]

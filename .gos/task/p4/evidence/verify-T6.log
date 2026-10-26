@@ -1,0 +1,83 @@
+=== T98b-track-txn ===
+--- T98b: gos track — manifest + backups + adopt/no-op + preset (D-15/D-14) ---
+  ✓ M1 track exits 0 (exit 0)
+  ✓ M1 manifest created
+  ✓ M1 manifest printed on success
+  ✓ M1 record is per-line JSON {ts,path,head} for the target at HEAD
+  ✓ M1 manifest staged by the flip
+  ✓ M1 target staged
+  ✓ M2 fixture: target and manifest both ignored (exit 0)
+  ✓ M2 track exits 0 in a wholesale-ignored repo (exit 0)
+  ✓ M2 target negation present
+  ✓ M2 manifest negation present
+  ✓ M2 manifest no longer ignored (rc=1)
+  ✓ M2 manifest staged
+  ✓ M2 .gos/.gitignore staged
+  ✓ B1 injected 'manifest' failure dies exit 1 (exit 1)
+  ✓ B1 failure wording names the hook
+  ✓ B1 all stores restored byte-identical (gitignore/census/state/target)
+  ✓ B1 manifest absent after rollback
+  ✓ B1 nothing staged after rollback
+  ✓ B1 backup dir swept
+  ✓ B2 injected 'surgery' failure dies exit 1 (exit 1)
+  ✓ B2 failure wording names the hook
+  ✓ B2 all stores restored byte-identical (gitignore/census/state/target)
+  ✓ B2 manifest absent after rollback
+  ✓ B2 nothing staged after rollback
+  ✓ B2 backup dir swept
+  ✓ B3 injected 'census' failure dies exit 1 (exit 1)
+  ✓ B3 failure wording names the hook
+  ✓ B3 all stores restored byte-identical (gitignore/census/state/target)
+  ✓ B3 manifest absent after rollback
+  ✓ B3 nothing staged after rollback
+  ✓ B3 backup dir swept
+  ✓ B4 injected gitAdd failure dies exit 1 (exit 1)
+  ✓ B4 failure wording names the hook
+  ✓ B4 stores restored byte-identical
+  ✓ B4 partially-staged target swept from the index
+  ✓ B4 rollback-incomplete warning catalogued (en+zh)
+  ✓ A1 legacy-tracked target adopts exit 0 (exit 0)
+  ✓ A1 envelope adopted:true
+  ✓ A1 adopt record {ts,path,head,adopted:true} in manifest
+  ✓ A1 manifest staged by the adopt
+  ✓ A2 adopt with consistent census exits 0 (exit 0)
+  ✓ A2 human line says adopted
+  ✓ A2 census bytes untouched by the adopt
+  ✓ A3 census contradiction dies exit 1 (exit 1)
+  ✓ A3 contradiction wording names census
+  ✓ A3 manifest NOT written on contradiction
+  ✓ A4 contradiction with manifest record still dies (exit 1)
+  ✓ A4 manifest untouched by the die
+  ✓ N1 re-run exits 0 (exit 0)
+  ✓ N1 envelope noop:true
+  ✓ N1 .gos/.gitignore unchanged
+  ✓ N1 manifest unchanged (no new record)
+  ✓ N1 staged set unchanged (zero mutations)
+  ✓ K1 knowledge preset exits 0 (exit 0)
+  ✓ K1 structure.md born-at first line == HEAD[0:8]
+  ✓ K1 structure.md staged via git add (exit 0)
+  ✓ K1 conventions.md born-at first line == HEAD[0:8]
+  ✓ K1 conventions.md staged via git add (exit 0)
+  ✓ K1 concerns.md born-at first line == HEAD[0:8]
+  ✓ K1 concerns.md staged via git add (exit 0)
+  ✓ K1 manifest carries all three trio records
+  ✓ K2 knowledge re-run exits 0 (exit 0)
+  ✓ K2 structure.md exactly one born-at line
+  ✓ K2 conventions.md exactly one born-at line
+  ✓ K2 concerns.md exactly one born-at line
+  ✓ K2 trio content untouched below the stamp
+  ✓ K2 manifest record count stable (re-run = no-op)
+  ✓ K3 missing trio file dies exit 1 (exit 1)
+  ✓ K3 die names the missing file
+  ✓ K3 no .gos/.gitignore created
+  ✓ K3 no manifest written
+  ✓ K3 die-before-touch: nothing staged
+  ✓ N2 direct track of the manifest dies exit 1 (exit 1)
+  ✓ N2 never-track wording
+  ✓ G1 GOS_PATHS carries track_manifest + track_backup
+  ✓ G1 wiring grep: track_manifest|track_backup >=2 hits across state.cjs+fsio.cjs (6)
+  ✓ G1 COMMANDS.track registers the --knowledge flag
+--- T98b summary: 77 passed, 0 failed ---
+--- T98b-track-txn: 77 passed, 0 failed ---
+
+=== Sections total: 77 passed, 0 failed ===

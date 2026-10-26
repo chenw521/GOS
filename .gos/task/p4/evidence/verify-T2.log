@@ -1,0 +1,29 @@
+=== T95-repo-id-guard ===
+--- T95: repo-id guard + worktree detection (T4a, D-12/D-18) ---
+  ✓ V1 lock.cjs carries no project_root re-anchor (de-pathed identity)
+  ✓ V2.1 guard passes for origin spelling: https://github.com/octocat/widget.git
+  ✓ V2.2 guard passes for origin spelling: https://user:secret@github.com/octocat/widget.git
+  ✓ V2.3 guard passes for origin spelling: git@github.com:octocat/widget.git
+  ✓ V2.4 guard passes for origin spelling: ssh://git@github.com:22/octocat/widget.git
+  ✓ V2.5 guard passes for origin spelling: git://github.com/octocat/widget.git
+  ✓ V3a read-class (status) works, state.json byte-identical
+  ✓ V3b write-class (stage show, no semantic write) leaves state.json byte-identical
+  ✓ V3c clone worktree stays clean (no stray .gos writes)
+  ✓ V4a https-family state passes with ssh/git-family sibling remotes (set semantics)
+  ✓ V4b origin rotated to scp spelling still passes (membership, not origin-wins)
+  ✓ V4c uppercase-hex repo_id accepted via lowercase retry
+  ✓ V5a foreign-remotes state dies exit 1 on write-class
+  ✓ V5b die names the repo identity mismatch
+  ✓ V5c die carries the anchor-fix hint
+  ✓ V5d state.json byte-identical after the guard die (no rogue write)
+  ✓ V6a worktree+tracked state: read-class dies with guidance
+  ✓ V6b worktree+tracked state: write-class dies with guidance
+  ✓ V7a no remotes + repo_id null → silent advisory pass (null IS the D-18 record), write proceeds
+  ✓ V7b no remotes + stamped repo_id → advisory pass (no die)
+  ✓ V7c advisory warns exactly once per invocation
+  ✓ V8a null+remotes: guard stamps repo_id (origin-wins), v4 clean, no dead version key
+  ✓ V8b tracked state: only delta is the repo_id stamp (conservative minimal write)
+--- T95 summary: 23 passed, 0 failed ---
+--- T95-repo-id-guard: 23 passed, 0 failed ---
+
+=== Sections total: 23 passed, 0 failed ===

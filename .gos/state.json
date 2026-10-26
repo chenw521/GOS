@@ -1,12 +1,13 @@
 {
   "schema_version": 4,
   "level": 3,
-  "current_stage": "REVIEW",
+  "current_stage": "VERIFY",
   "completed_stages": [
     "INTENT",
     "THINK",
     "PLAN",
-    "BUILD"
+    "BUILD",
+    "REVIEW"
   ],
   "intent": {
     "summary": "Sanitized tracked state as an opt-in product capability (clone-resume for private collaborative repos) with self-repo opt-out and schema v4 cleanup dropping the dead version field and re-anchoring project_root without machine paths; a tracked-flip transaction gate enforcing language check plus census plus gitignore reconciliation at the ignored-to-tracked boundary; codebase knowledge files (structure/conventions/concerns/untested-fns) travel with clones through the gate; stage-back gap exhaust de-duplicated into state.gaps as the single source with concerns.md cured of 88 auto mirrors. Issues #11 file-availability half, #24 re-triage",
@@ -16,8 +17,8 @@
     "THINK": "2026-10-22T03:41:02.328Z",
     "PLAN": "2026-10-22T05:03:34.213Z"
   },
-  "spec_path": "/work/run/projects/bio-06/GOS/.gos/task/p4/spec.md",
-  "plan_path": "/work/run/projects/bio-06/GOS/.gos/task/p4/plan.md",
+  "spec_path": ".gos/task/p4/spec.md",
+  "plan_path": ".gos/task/p4/plan.md",
   "project": true,
   "requirements": [
     {
@@ -119,7 +120,118 @@
       "covered_by": null
     }
   ],
-  "observable_truths": [],
+  "observable_truths": [
+    {
+      "id": "T1",
+      "description": "T1 schema: state carries no version/project_root keys, schema_version=4, repo_id is 16-hex or advisory null; fresh clone + one write-class command leaves tracked state.json byte-identical",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T94-schemav4\"]",
+        "output_excerpt": "✓ U6 fresh init: schema 4, no version key, repo_id derived, URL never stored",
+        "artifact_path": ".gos/task/p4/evidence/verify-T1.log",
+        "replay": true
+      }
+    },
+    {
+      "id": "T2",
+      "description": "T2 clone-resume: cloning a repo with tracked .gos state — gos status works, remotes match across protocol variants, worktree stays clean, tracked concerns.md with missing anchors bootstraps silently",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T95-repo-id-guard\"]",
+        "output_excerpt": "✓ V5a foreign-remotes state dies exit 1 on write-class",
+        "artifact_path": ".gos/task/p4/evidence/verify-T2.log",
+        "replay": true
+      }
+    },
+    {
+      "id": "T3",
+      "description": "T3 identity: foreign-remotes state makes write-class die with anchor-fix hint; the 11-form URL matrix (incl. IPv6) derives expected ids; linked worktree + tracked state dies with guidance",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T94-schemav4\"]",
+        "output_excerpt": "✓ U6 fresh init: schema 4, no version key, repo_id derived, URL never stored",
+        "artifact_path": ".gos/task/p4/evidence/verify-T3.log",
+        "replay": true
+      }
+    },
+    {
+      "id": "T4",
+      "description": "T4 language boundary: any tracked store receiving CJK in any string leaf exits 1 with bilingual guidance; GIT_DIR poisoning still fires the boundary; all-untracked accepts; gos gap rewrite clears legacy CJK descriptions",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T96-lang-boundary\"]",
+        "output_excerpt": "✓ L2 tracked state + zh decision → exit 1 (exit 1)",
+        "artifact_path": ".gos/task/p4/evidence/verify-T4.log",
+        "replay": true
+      }
+    },
+    {
+      "id": "T5",
+      "description": "T5 gap single-source: zero (auto) mirror lines remain in concerns.md; ledger_count == removed_count with no hardcoded 88; gos gap migrate is idempotent; gos concerns list and gos gap history work; stage back never touches concerns.md",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T97-gap-migrate\"]",
+        "output_excerpt": "✓ M1 fixture carries 2 mirror lines",
+        "artifact_path": ".gos/task/p4/evidence/verify-T5.log",
+        "replay": true
+      }
+    },
+    {
+      "id": "T6",
+      "description": "T6 flip transaction: gos track flips atomically — relative-anchored negation in .gos/.gitignore, ignored-diff == {target}, census+manifest+stamps updated; root-exclude positive case passes; injected failure restores all stores; sanitize hits die-before-touch with hit-line report; .env/symlink/zone/unborn/case-variant negatives die; re-run on tracked exits 0; legacy-tracked adopts and exits 0",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T98b-track-txn\"]",
+        "output_excerpt": "✓ M1 track exits 0 (exit 0)",
+        "artifact_path": ".gos/task/p4/evidence/verify-T6.log",
+        "replay": true
+      }
+    },
+    {
+      "id": "T7",
+      "description": "T7 gate leg: census git:true but untracked (and the inverse) FAILs the flip-reconcile leg; tracked .gos files without manifest records FAIL in census-less repos; lifecycle:true .gos/task entries post-archive raise no false FAIL",
+      "verified": true,
+      "evidence": {
+        "command": "bash test/run-sections.sh T99-gate-flip-leg",
+        "output_excerpt": "T99 RESULT: 29 passed, 0 failed",
+        "artifact_path": ".gos/task/p4/evidence/verify-T7.log",
+        "manual": true
+      }
+    },
+    {
+      "id": "T8",
+      "description": "T8 navigator: unmapped-fns.txt carries the generated-at header; wording says unmapped; THINK context JSON carries the navigator hint",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T100-navigator\"]",
+        "output_excerpt": "✓ T100.4 line count 2 = header + 1 unmapped (deps math)",
+        "artifact_path": ".gos/task/p4/evidence/verify-T8.log",
+        "replay": true
+      }
+    },
+    {
+      "id": "T9",
+      "description": "T9 knowledge refresh: no 4800-line drift claim remains under .gos/codebase/; guide-trio born-at stamps equal the HEAD recorded in the refresh evidence ledger (not live HEAD)",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/p4/evidence/verify-T9.sh\"]",
+        "output_excerpt": "T9 OK ledger=6327369a stamps=3/3 drift4800=0",
+        "artifact_path": ".gos/task/p4/evidence/verify-T9.log",
+        "replay": true
+      }
+    },
+    {
+      "id": "T10",
+      "description": "T10 issue-token neutralization: a fixes #12 changelog bullet is accepted; committed subject AND body (aggregate push and raw channels) contain no closing trigger sequence",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T101-issue-tokens\"]",
+        "output_excerpt": "✓ C1 commit with trigger subject rc (exit 0)",
+        "artifact_path": ".gos/task/p4/evidence/verify-T10.log",
+        "replay": true
+      }
+    }
+  ],
   "gaps": [
     {
       "id": "G-1792685107955",
@@ -163,7 +275,7 @@
       "what": "claim"
     }
   ],
-  "changelog_user_summary": "self-repo gap migrate cured 88 auto mirrors into the ledger with two deferred anchors parked and full suite green",
+  "changelog_user_summary": "review fixes cure machine paths in tracked state by storing task spec and plan paths repo-relative with read-time normalization, and track rollback now sweeps the git index and surfaces incomplete rollbacks",
   "spec_sha256": "d16f93ade7480ebf90098bf51197c24aec25858f7504e381b542760b6b7e2f59",
   "spec_gate_version": 2,
   "plan_snapshot": {
