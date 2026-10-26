@@ -1,13 +1,14 @@
 {
   "schema_version": 4,
   "level": 3,
-  "current_stage": "VERIFY",
+  "current_stage": "DONE",
   "completed_stages": [
     "INTENT",
     "THINK",
     "PLAN",
     "BUILD",
-    "REVIEW"
+    "REVIEW",
+    "VERIFY"
   ],
   "intent": {
     "summary": "Sanitized tracked state as an opt-in product capability (clone-resume for private collaborative repos) with self-repo opt-out and schema v4 cleanup dropping the dead version field and re-anchoring project_root without machine paths; a tracked-flip transaction gate enforcing language check plus census plus gitignore reconciliation at the ignored-to-tracked boundary; codebase knowledge files (structure/conventions/concerns/untested-fns) travel with clones through the gate; stage-back gap exhaust de-duplicated into state.gaps as the single source with concerns.md cured of 88 auto mirrors. Issues #11 file-availability half, #24 re-triage",
@@ -15,10 +16,11 @@
   },
   "approvals": {
     "THINK": "2026-10-22T03:41:02.328Z",
-    "PLAN": "2026-10-22T05:03:34.213Z"
+    "PLAN": "2026-10-22T05:03:34.213Z",
+    "ARCHIVE": "2026-10-26T02:18:26.071Z"
   },
-  "spec_path": ".gos/task/p4/spec.md",
-  "plan_path": ".gos/task/p4/plan.md",
+  "spec_path": ".gos/archive/2026-10-26-v1.0.0-dev-phase-p4-sanitized-tracked-state-as-an-/task/p4/spec.md",
+  "plan_path": ".gos/archive/2026-10-26-v1.0.0-dev-phase-p4-sanitized-tracked-state-as-an-/task/p4/plan.md",
   "project": true,
   "requirements": [
     {
@@ -128,7 +130,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T94-schemav4\"]",
         "output_excerpt": "✓ U6 fresh init: schema 4, no version key, repo_id derived, URL never stored",
-        "artifact_path": ".gos/task/p4/evidence/verify-T1.log",
+        "artifact_path": ".gos/archive/2026-10-26-v1.0.0-dev-phase-p4-sanitized-tracked-state-as-an-/task/p4/evidence/verify-T1.log",
         "replay": true
       }
     },
@@ -139,7 +141,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T95-repo-id-guard\"]",
         "output_excerpt": "✓ V5a foreign-remotes state dies exit 1 on write-class",
-        "artifact_path": ".gos/task/p4/evidence/verify-T2.log",
+        "artifact_path": ".gos/archive/2026-10-26-v1.0.0-dev-phase-p4-sanitized-tracked-state-as-an-/task/p4/evidence/verify-T2.log",
         "replay": true
       }
     },
@@ -150,7 +152,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T94-schemav4\"]",
         "output_excerpt": "✓ U6 fresh init: schema 4, no version key, repo_id derived, URL never stored",
-        "artifact_path": ".gos/task/p4/evidence/verify-T3.log",
+        "artifact_path": ".gos/archive/2026-10-26-v1.0.0-dev-phase-p4-sanitized-tracked-state-as-an-/task/p4/evidence/verify-T3.log",
         "replay": true
       }
     },
@@ -161,7 +163,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T96-lang-boundary\"]",
         "output_excerpt": "✓ L2 tracked state + zh decision → exit 1 (exit 1)",
-        "artifact_path": ".gos/task/p4/evidence/verify-T4.log",
+        "artifact_path": ".gos/archive/2026-10-26-v1.0.0-dev-phase-p4-sanitized-tracked-state-as-an-/task/p4/evidence/verify-T4.log",
         "replay": true
       }
     },
@@ -172,7 +174,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T97-gap-migrate\"]",
         "output_excerpt": "✓ M1 fixture carries 2 mirror lines",
-        "artifact_path": ".gos/task/p4/evidence/verify-T5.log",
+        "artifact_path": ".gos/archive/2026-10-26-v1.0.0-dev-phase-p4-sanitized-tracked-state-as-an-/task/p4/evidence/verify-T5.log",
         "replay": true
       }
     },
@@ -183,7 +185,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T98b-track-txn\"]",
         "output_excerpt": "✓ M1 track exits 0 (exit 0)",
-        "artifact_path": ".gos/task/p4/evidence/verify-T6.log",
+        "artifact_path": ".gos/archive/2026-10-26-v1.0.0-dev-phase-p4-sanitized-tracked-state-as-an-/task/p4/evidence/verify-T6.log",
         "replay": true
       }
     },
@@ -194,7 +196,7 @@
       "evidence": {
         "command": "bash test/run-sections.sh T99-gate-flip-leg",
         "output_excerpt": "T99 RESULT: 29 passed, 0 failed",
-        "artifact_path": ".gos/task/p4/evidence/verify-T7.log",
+        "artifact_path": ".gos/archive/2026-10-26-v1.0.0-dev-phase-p4-sanitized-tracked-state-as-an-/task/p4/evidence/verify-T7.log",
         "manual": true
       }
     },
@@ -205,7 +207,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T100-navigator\"]",
         "output_excerpt": "✓ T100.4 line count 2 = header + 1 unmapped (deps math)",
-        "artifact_path": ".gos/task/p4/evidence/verify-T8.log",
+        "artifact_path": ".gos/archive/2026-10-26-v1.0.0-dev-phase-p4-sanitized-tracked-state-as-an-/task/p4/evidence/verify-T8.log",
         "replay": true
       }
     },
@@ -216,7 +218,7 @@
       "evidence": {
         "command": "[\"bash\",\".gos/task/p4/evidence/verify-T9.sh\"]",
         "output_excerpt": "T9 OK ledger=6327369a stamps=3/3 drift4800=0",
-        "artifact_path": ".gos/task/p4/evidence/verify-T9.log",
+        "artifact_path": ".gos/archive/2026-10-26-v1.0.0-dev-phase-p4-sanitized-tracked-state-as-an-/task/p4/evidence/verify-T9.log",
         "replay": true
       }
     },
@@ -227,7 +229,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T101-issue-tokens\"]",
         "output_excerpt": "✓ C1 commit with trigger subject rc (exit 0)",
-        "artifact_path": ".gos/task/p4/evidence/verify-T10.log",
+        "artifact_path": ".gos/archive/2026-10-26-v1.0.0-dev-phase-p4-sanitized-tracked-state-as-an-/task/p4/evidence/verify-T10.log",
         "replay": true
       }
     }
@@ -499,26 +501,12 @@
     ]
   },
   "repo_id": "85af56a090a78924",
-  "checkpoints": [
-    {
-      "stage": "BUILD",
-      "unit": "wave4",
-      "done": "T1,T3,T14,T5,T6,T4a,T4b,T7a,T7b,T8,T9,T10,T11",
-      "remaining": "T12,T13",
-      "at": "2026-10-22T16:00:31.457Z"
-    },
-    {
-      "stage": "BUILD",
-      "unit": "all-waves (auto at commit)",
-      "done": "T1,T3,T14,T5,T6,T4a,T4b,T7a,T7b,T8,T9,T10,T11,T12,T13",
-      "remaining": "",
-      "at": "2026-10-22T16:23:30.851Z"
-    }
-  ],
+  "checkpoints": [],
   "semantic": {
     "allowlist": [
       "bin/lib/nav/status.cjs",
       "test/sections/T39-render-park.test.sh"
     ]
-  }
+  },
+  "completed_at": "2026-10-26T02:18:27.333Z"
 }
