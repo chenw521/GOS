@@ -149,13 +149,8 @@ function cmdInit(args) {
   const root = core.currentRootRealpath() || fs.realpathSync('.');
   // T5 (D-11): pin spec/plan to task/<id>/ at birth — single resolution from here on.
   // (project tasks get phase_name later at claim; core.currentTaskId falls to task_head[0:8].)
-  try {
-    const tid = core.currentTaskId(state);
-    if (tid != null) {
-      state.spec_path = core.resolvePath('spec', { task_id: tid });
-      state.plan_path = core.resolvePath('plan', { task_id: tid });
-    }
-  } catch { /* leave null — ts-fallback resolved lazily at first context call */ }
+  // Stored repo-relative (D-12): tracked state must not carry machine paths.
+  if (!state.spec_path) core.pinTaskPaths(state);
   core.writeState(state);
 
   // [Phase D T5] seed the anchor-network sidecar from birth (§14 rollout: missing == anomaly)

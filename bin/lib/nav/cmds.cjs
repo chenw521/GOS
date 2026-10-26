@@ -65,8 +65,12 @@ function cmdResume() {
     const latest = cps[cps.length - 1];
     console.log(`Checkpoint (wave/area level): ${latest.stage}/${latest.unit} — done: ${latest.done}, remaining: ${latest.remaining}`);
   }
-  if (state.spec_path && fs.existsSync(state.spec_path)) console.log(`Spec: ${state.spec_path}`);
-  if (state.plan_path && fs.existsSync(state.plan_path)) console.log(`Plan: ${state.plan_path}`);
+  // D-12: stored paths are repo-relative; resolve for display/stat (the
+  // absolute form is machine-local and never persisted).
+  const specAbs = core.specPathOf(state);
+  const planAbs = core.planPathOf(state);
+  if (specAbs && fs.existsSync(specAbs)) console.log(`Spec: ${specAbs}`);
+  if (planAbs && fs.existsSync(planAbs)) console.log(`Plan: ${planAbs}`);
   if (state.project && fs.existsSync(path.join(core.PROJECT_DIR, 'project.json'))) {
     console.log('→ Lv4: DECISIONS/ROADMAP/REQUIREMENTS are GENERATED views — edit via gos decision/requirement/phase commands.');
   }

@@ -198,6 +198,35 @@ t98b_rollback_case manifest B1
 t98b_rollback_case surgery B2
 t98b_rollback_case census B3
 
+# --- B4: git-add-tail failure → index swept (worktree AND index rollback) ---
+t98b_fresh
+printf ".gos/concerns.md\n" >> .gitignore
+mkdir -p .gos && printf 'rollback fixture content\n' > .gos/concerns.md
+git add -f .gos/.gitignore 2>/dev/null || true
+BEFORE=$(t98b_store_shas)
+set +e; OUT=$(GOS_TEST_BREAK_TRACK="gitAdd" node "$GOS" track .gos/concerns.md 2>&1); RC=$?; set -e
+assert_exit "B4 injected gitAdd failure dies exit 1" "1" "$RC"
+assert_contains "B4 failure wording names the hook" "GOS_TEST_BREAK_TRACK" "$OUT"
+AFTER=$(t98b_store_shas)
+assert_eq "B4 stores restored byte-identical" "$BEFORE" "$AFTER"
+CACHED=$(git diff --cached --name-only | grep -F '.gos/concerns.md' || true)
+assert_eq "B4 partially-staged target swept from the index" "" "$CACHED"
+t98b_teardown
+# rollback-gap visibility contract (i18n, both catalogs)
+I18N=$(node -e '
+const en = require(process.env.GOS_ROOT + "/bin/lib/core/locales/en.cjs");
+const zh = require(process.env.GOS_ROOT + "/bin/lib/core/locales/zh.cjs");
+const need = ["track.err.rollbackIncomplete"];
+const bad = need.filter((k) => !en[k] || !zh[k]);
+if (bad.length) { console.error("missing: " + bad.join(",")); process.exit(1); }
+console.log("OK");
+' 2>&1)
+if [ "$I18N" = "OK" ]; then
+  echo "  ✓ B4 rollback-incomplete warning catalogued (en+zh)"; PASS=$((PASS+1))
+else
+  echo "  ✗ B4 rollback-incomplete i18n: $I18N"; FAIL=$((FAIL+1))
+fi
+
 # --- A1: adopt — legacy-tracked, no census → {adopted:true}, exit 0 ---
 t98b_fresh
 mkdir -p .gos && printf 'legacy tracked content\n' > .gos/concerns.md

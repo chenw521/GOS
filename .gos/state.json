@@ -1,11 +1,12 @@
 {
   "schema_version": 4,
   "level": 3,
-  "current_stage": "BUILD",
+  "current_stage": "REVIEW",
   "completed_stages": [
     "INTENT",
     "THINK",
-    "PLAN"
+    "PLAN",
+    "BUILD"
   ],
   "intent": {
     "summary": "Sanitized tracked state as an opt-in product capability (clone-resume for private collaborative repos) with self-repo opt-out and schema v4 cleanup dropping the dead version field and re-anchoring project_root without machine paths; a tracked-flip transaction gate enforcing language check plus census plus gitignore reconciliation at the ignored-to-tracked boundary; codebase knowledge files (structure/conventions/concerns/untested-fns) travel with clones through the gate; stage-back gap exhaust de-duplicated into state.gaps as the single source with concerns.md cured of 88 auto mirrors. Issues #11 file-availability half, #24 re-triage",
@@ -124,25 +125,33 @@
       "id": "G-1792685107955",
       "type": "major",
       "description": "Fluid back to PLAN: discovered during PLAN",
-      "status": "open"
+      "status": "fixed",
+      "resolution": "plansnap fix + T14-state-b test landed in 5e9e390",
+      "resolved_at": "2026-10-23T10:37:50.768Z"
     },
     {
       "id": "G-1792685246106",
       "type": "major",
       "description": "Fluid back to PLAN: discovered during PLAN",
-      "status": "open"
+      "status": "fixed",
+      "resolution": "T1/T6/T7a Files re-anchored to diff-hit files in 557360d",
+      "resolved_at": "2026-10-23T10:37:50.866Z"
     },
     {
       "id": "G-1792685293110",
       "type": "major",
       "description": "Fluid back to PLAN: discovered during PLAN",
-      "status": "open"
+      "status": "fixed",
+      "resolution": "T12 Files extended with T25/T46/T51 in afc3951",
+      "resolved_at": "2026-10-23T10:37:50.966Z"
     },
     {
       "id": "G-1792686126655",
       "type": "major",
       "description": "Fluid back to PLAN: discovered during PLAN",
-      "status": "open"
+      "status": "fixed",
+      "resolution": "D-19 knowledge refresh + navigator hint landed in 700dc9d",
+      "resolved_at": "2026-10-23T10:37:51.067Z"
     }
   ],
   "phase_name": "P4: repo content policy",
@@ -385,6 +394,13 @@
       "done": "T1,T3,T14,T5,T6,T4a,T4b,T7a,T7b,T8,T9,T10,T11",
       "remaining": "T12,T13",
       "at": "2026-10-22T16:00:31.457Z"
+    },
+    {
+      "stage": "BUILD",
+      "unit": "all-waves (auto at commit)",
+      "done": "T1,T3,T14,T5,T6,T4a,T4b,T7a,T7b,T8,T9,T10,T11,T12,T13",
+      "remaining": "",
+      "at": "2026-10-22T16:23:30.851Z"
     }
   ],
   "semantic": {

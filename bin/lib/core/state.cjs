@@ -182,6 +182,41 @@ function repoIdFromRemotes(rootDir) {
   return null;
 }
 
+// Tracked-state path discipline (D-12): task path fields are stored
+// repo-relative so a tracked state.json never carries machine paths. A path
+// outside the repo root cannot be relativized and is dropped to null (the
+// lazy resolvers re-derive it); null/relative values pass through unchanged.
+function taskPathRel(v) {
+  if (typeof v !== 'string' || !path.isAbsolute(v)) return v;
+  const root = currentRootRealpath();
+  if (!root || !v.startsWith(root + path.sep)) return null;
+  const rel = path.relative(root, v);
+  return rel || null;
+}
+
+// Pin spec_path/plan_path to task/<id>/ (stored repo-relative). Shared by the
+// v2→v3 legacy backfill inside migrateState and task init.
+function pinTaskPaths(s) {
+  try {
+    const tid = currentTaskId(s);
+    if (tid != null) {
+      s.spec_path = taskPathRel(fsio.resolvePath('spec', { task_id: tid }));
+      s.plan_path = taskPathRel(fsio.resolvePath('plan', { task_id: tid }));
+    }
+  } catch { /* leave null — context supplies lazily */ }
+}
+
+// Normalize any already-stored task path fields to repo-relative form. Runs
+// unconditionally on read (not only at schema migration) so legacy absolute
+// values — including states already at v4 — are cured at the next write.
+function normalizeTaskPaths(s) {
+  if (!s || typeof s !== 'object') return s;
+  for (const f of STATE_PATH_FIELDS.direct) {
+    if (s[f] != null) s[f] = taskPathRel(s[f]);
+  }
+  return s;
+}
+
 function migrateState(s) {
   const wasLegacy = s.schema_version === undefined;
   const fromV = wasLegacy ? 0 : s.schema_version;
@@ -189,14 +224,9 @@ function migrateState(s) {
   // [Phase W T9] v2→v3: pin spec_path/plan_path to task/<id>/ when absent (legacy
   // states predate path pinning). Root-level legacy spec.md/plan.md — if still on
   // disk — are migrated by the T5 batch, NOT here (no dual-read window, D-14).
+  // Values are stored repo-relative (D-12: no machine paths in tracked state).
   if (!s.spec_path) {
-    try {
-      const tid = currentTaskId(s);
-      if (tid != null) {
-        s.spec_path = fsio.resolvePath('spec', { task_id: tid });
-        s.plan_path = fsio.resolvePath('plan', { task_id: tid });
-      }
-    } catch { /* leave null — context supplies lazily */ }
+    pinTaskPaths(s);
   }
   // [T94/D-12] v3→v4: identity de-pathed — drop the dead `version` field and the
   // machine-path `project_root` anchor (repo root is runtime-derived from here
@@ -273,6 +303,10 @@ function readState() {
     // legacy/v3 → migrate in-memory (both read and write paths migrate; only write persists)
     s = migrateState(s);
   }
+  // D-12 path discipline: cure absolute task paths on every read (v4 states
+  // migrated before this normalization existed still carry machine paths);
+  // persisted only by the next write-class command.
+  normalizeTaskPaths(s);
   const errs = validateState(s, mode);
   if (errs.length && mode === 'warn' && errs[0] !== '__FUTURE__') {
     // read-class degradation: sanitize corrupt collections so consumers don't crash (banner already warned)
@@ -676,15 +710,23 @@ function ensureTaskDir(stateL) {
   return { tid, dir };
 }
 
+// Stored values are repo-relative (D-12); resolve against the runtime repo
+// root so every consumer receives an absolute path it can stat directly.
+function absTaskPath(v) {
+  if (typeof v !== 'string' || !v) return v;
+  if (path.isAbsolute(v)) return v;
+  return path.join(currentRootRealpath() || process.cwd(), v);
+}
+
 function specPathOf(stateL) {
-  if (stateL && stateL.spec_path) return stateL.spec_path;
+  if (stateL && stateL.spec_path) return absTaskPath(stateL.spec_path);
   const tid = currentTaskId(stateL);
   if (tid == null) return fsio.resolvePath('spec', { task_id: 'ts-0' }); // unreachable for valid states (init always anchors one)
   return fsio.resolvePath('spec', { task_id: tid });
 }
 
 function planPathOf(stateL) {
-  if (stateL && stateL.plan_path) return stateL.plan_path;
+  if (stateL && stateL.plan_path) return absTaskPath(stateL.plan_path);
   const tid = currentTaskId(stateL);
   if (tid == null) return fsio.resolvePath('plan', { task_id: 'ts-0' });
   return fsio.resolvePath('plan', { task_id: tid });
@@ -1239,6 +1281,9 @@ module.exports = {
   validateState,
   validateProject,
   migrateState,
+  normalizeTaskPaths,
+  taskPathRel,
+  pinTaskPaths,
   readState,
   writeState,
   firstCJKLeaf,

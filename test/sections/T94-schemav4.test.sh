@@ -14,6 +14,11 @@
 #     both keys deleted, repo_id present (origin) or null (no remote)
 #   - read-class leaves a v3 disk state untouched; write-class persists v4
 #   - raw URL never stored in state.json bytes
+#   - U7 (D-12 path discipline): spec_path/plan_path stored repo-relative —
+#     taskPathRel relativizes repo-root absolutes, drops outside-repo
+#     absolutes to null; readState normalizes legacy v4 states carrying
+#     machine paths and the next write persists the cure; specPathOf/planPathOf
+#     resolve stored relative values back to absolute at the consumption site
 # Standalone-safe: self-provisions env when not run under test/run-sections.sh.
 
 T94_STANDALONE=0
@@ -247,6 +252,66 @@ EOF
 FRESH=$(node ../t94-fresh.cjs 2>&1)
 if [ "$IRC" -eq 0 ] && [ "$FRESH" = "OK" ]; then
   t94_ok "U6 fresh init: schema 4, no version key, repo_id derived, URL never stored"; else t94_bad "U6 fresh init: rc=$IRC fresh=$FRESH"
+fi
+
+# --- U7: D-12 path discipline — task path fields are repo-relative on disk ---
+cd "$T94_DIR" && mkdir -p repo-paths && cd repo-paths
+git init -q . && git commit -q --allow-empty -m root
+git remote add origin git@github.com:octocat/widget.git
+mkdir -p .gos
+cat > ../t94-paths.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const state = require(path.join(process.env.GOS_ROOT, 'bin/lib/core/state.cjs'));
+const problems = [];
+const root = process.cwd();
+// module semantics
+if (state.taskPathRel('.gos/task/x/spec.md') !== '.gos/task/x/spec.md') problems.push('relative passthrough broken');
+if (state.taskPathRel(path.join(root, '.gos/task/x/spec.md')) !== '.gos/task/x/spec.md') problems.push('repo-root absolute not relativized');
+if (state.taskPathRel('/elsewhere/spec.md') !== null) problems.push('outside-repo absolute not dropped');
+const n = state.normalizeTaskPaths({ spec_path: path.join(root, '.gos/task/y/plan.md'), plan_path: '/other/machine/plan.md' });
+if (n.spec_path !== '.gos/task/y/plan.md') problems.push('normalizeTaskPaths spec_path=' + n.spec_path);
+if (n.plan_path !== null) problems.push('normalizeTaskPaths outside-repo plan_path not nulled');
+const resolved = state.specPathOf({ spec_path: '.gos/task/x/spec.md' });
+if (resolved !== path.join(root, '.gos/task/x/spec.md')) problems.push('specPathOf relative resolution=' + resolved);
+// disk cure: a v4 state carrying machine paths → write-class persists the cure
+const disk = {
+  schema_version: 4, level: 2, repo_id: state.deriveRepoId('git@github.com:octocat/widget.git'),
+  current_stage: 'PLAN', completed_stages: ['INTENT', 'THINK'],
+  intent: { summary: 't94 path cure', confirmed: true },
+  spec_path: path.join(root, '.gos/task/p7/spec.md'), plan_path: '/old/machine/plan.md',
+  requirements: [{ id: 'R-01', text: 't94 path cure', phase: null, level: 2 }],
+  decisions: [], observable_truths: [], gaps: [], checkpoints: [],
+};
+fs.mkdirSync(path.join(root, '.gos/task/p7'), { recursive: true });
+fs.writeFileSync(path.join(root, '.gos/state.json'), JSON.stringify(disk, null, 2));
+const s = state.readState();
+if (s.spec_path !== '.gos/task/p7/spec.md') problems.push('readState in-memory cure spec_path=' + s.spec_path);
+if (s.plan_path !== null) problems.push('readState in-memory cure plan_path=' + s.plan_path);
+state.writeState(s);
+const after = JSON.parse(fs.readFileSync(path.join(root, '.gos/state.json'), 'utf8'));
+if (after.spec_path !== '.gos/task/p7/spec.md') problems.push('disk cure spec_path=' + after.spec_path);
+if (after.plan_path !== null) problems.push('disk cure plan_path=' + after.plan_path);
+const raw = fs.readFileSync(path.join(root, '.gos/state.json'), 'utf8');
+if (raw.includes(root) || raw.includes('/old/machine')) problems.push('machine paths persisted in tracked state bytes');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+process.exit(problems.length ? 1 : 0);
+EOF
+U7=$(node ../t94-paths.cjs 2>&1)
+if [ "$U7" = "OK" ]; then
+  t94_ok "U7 D-12 path discipline: repo-relative storage, outside-repo → null, v4 cure persisted, resolvers absolute"; else t94_bad "U7 path discipline: $U7"
+fi
+# fresh init stores relative paths from birth (no absolute ever hits disk)
+cd "$T94_DIR" && mkdir -p repo-relinit && cd repo-relinit
+git init -q . && git commit -q --allow-empty -m root
+node "$GOS" init 1 "t94 rel init" >/dev/null 2>&1; IRC2=$?
+RELINIT=$(python3 -c "
+import json; s = json.load(open('.gos/state.json'))
+import os
+sp, pp = s.get('spec_path') or '', s.get('plan_path') or ''
+print('OK' if not sp.startswith('/') and not pp.startswith('/') and 'task/' in sp else 'BAD %s|%s' % (sp, pp))")
+if [ "$IRC2" -eq 0 ] && [ "$RELINIT" = "OK" ]; then
+  t94_ok "U7b fresh init pins spec/plan repo-relative from birth"; else t94_bad "U7b fresh init: rc=$IRC2 rel=$RELINIT"
 fi
 
 echo "--- T94 summary: $PASS passed, $FAIL failed ---"

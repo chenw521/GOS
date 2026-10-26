@@ -70,9 +70,12 @@ function gitignoreUnsafeComponent(rel) {
   return rel.split('/').some((c) => /^[!#]/.test(c) || /\s$/.test(c));
 }
 
-function gitRun(args) {
+function gitRun(args, opts) {
   try {
-    execFileSync('git', args, { stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024 });
+    execFileSync('git', args, {
+      stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024,
+      cwd: (opts && opts.cwd) || undefined,
+    });
     return { ok: true, err: '' };
   } catch (e) {
     return { ok: false, err: String((e && e.stderr) || (e && e.message) || 'git failed') };
@@ -267,6 +270,7 @@ function stageTransaction(top, rels) {
   const restore = () => {
     if (done) return;
     done = true;
+    const incomplete = [];
     for (const en of entries) {
       try {
         if (en.existed) {
@@ -277,9 +281,25 @@ function stageTransaction(top, rels) {
         } else if (fs.existsSync(en.abs)) {
           fs.unlinkSync(en.abs);   // created mid-transaction → prior absence
         }
-      } catch { /* best-effort rename-back; cache zone keeps the leftover */ }
+      } catch { incomplete.push(en.rel); }
     }
-    try { fs.rmdirSync(dir); } catch { /* non-empty/raced — cache zone sweeps */ }
+    // The git-add tail may have staged a subset of the transaction set before
+    // failing — sweep the index so "rolled back" covers worktree AND index.
+    // HEAD always exists here (unborn HEAD dies at validation); reset on a
+    // clean index is a harmless no-op for the die-before-touch steps.
+    const reset = gitRun(['reset', '-q', '--', ...rels], { cwd: top });
+    if (!reset.ok) incomplete.push(`index sweep (${reset.err.trim()})`);
+    let stagingLeft = false;
+    try { fs.rmdirSync(dir); } catch { stagingLeft = true; /* non-empty/raced — cache zone sweeps */ }
+    if (stagingLeft) incomplete.push('staging dir');
+    // Rollback gaps are never silent (spec §3.4: failure at ANY step restores
+    // ALL stores): surface what survived and where the backup bytes live.
+    if (incomplete.length) {
+      process.stderr.write(core.t('track.err.rollbackIncomplete', {
+        items: incomplete.join(', '),
+        dir,
+      }) + '\n');
+    }
   };
   process.on('exit', restore);
   const commit = () => {
@@ -474,7 +494,14 @@ function performFlip(ctx, opts) {
   if (result.surgery.ran) addList.push('.gos/.gitignore');
   if (result.census.edited) addList.push('census.json');
   addList.push(...extraStaged);
-  const r = gitRun(['add', '--', ...addList]);
+  // Test seam: simulate a partially-applied add that then fails — part of the
+  // set lands in the index, git reports failure — so restore() must sweep the
+  // index, not just the worktree bytes.
+  if (process.env.GOS_TEST_BREAK_TRACK === 'gitAdd') {
+    gitRun(['add', '--', addList[0]], { cwd: ctx.top });
+    core.die('GOS_TEST_BREAK_TRACK: injected gitAdd failure');
+  }
+  const r = gitRun(['add', '--', ...addList], { cwd: ctx.top });
   if (!r.ok) core.die(core.t('track.err.gitAdd', { path: ctx.rel, err: core.sanitizeEcho(r.err) }));
   result.staged = addList;
   return result;
