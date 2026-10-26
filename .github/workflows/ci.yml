@@ -130,8 +130,7 @@ jobs:
           fi
           git rev-parse --verify --quiet "${PUSH_BEFORE}^{commit}" >/dev/null \
             || git fetch -q origin "$PUSH_BEFORE" || true
-          npx --yes commitlint@19 --config commitlint.config.yaml \
-            --from "$PUSH_BEFORE" --to "$PUSH_AFTER"
+          bash test/checks/push-lint-squash.sh "$PUSH_BEFORE" "$PUSH_AFTER"
       - name: Subject charset policy (ASCII-only)
         if: github.event_name == 'pull_request'
         run: bash test/checks/commitlint-charset.sh
