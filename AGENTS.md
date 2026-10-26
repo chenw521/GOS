@@ -12,7 +12,10 @@ this file only tells you where they are.
   README.zh-CN.md is the only sanctioned Chinese file.
 - Commits: Conventional Commits, functional-domain scope — enforced by
   commitlint (commitlint.config.yaml) + the charset policy
-  (test/checks/commitlint-charset.sh).
+  (test/checks/commitlint-charset.sh). Subjects are imperative verb-object
+  clauses a stranger can parse as an action ("fix stale lock check in push",
+  "add squash-suffix stripping to push lint"), never state summaries or
+  premise fragments ("main is PR-only") — user ruling 2026-10-26.
 - File disposition (git/npm/local): the census ledger is the truth —
   census.json, reconciled by test/pack-check.sh; CJK boundary by
   test/checks/cjk-lint.sh. Run pack-check before touching layout.
