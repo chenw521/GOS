@@ -552,7 +552,9 @@ function cmdTrack(args) {
   const a = args || [];
   const hasJson = a.includes('--json');
   const hasKnowledge = a.includes('--knowledge');
-  const rest = a.filter((x) => x !== '--json' && x !== '--knowledge');
+  // '--' is the end-of-options separator (the gate fix line emits
+  // `gos track -- <path>`); strip it so the path is parsed identically
+  const rest = a.filter((x) => x !== '--json' && x !== '--knowledge' && x !== '--');
   if (hasKnowledge) {
     if (rest.length > 0) core.die('Usage: gos track --knowledge [--json]');
     return knowledgePreset(hasJson);

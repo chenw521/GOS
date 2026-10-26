@@ -265,6 +265,16 @@ set +e; OUT=$(node "$GOS" track .gos/concerns.md 2>&1); RC=$?; set -e
 assert_exit "A2 adopt with consistent census exits 0" "0" "$RC"
 assert_contains "A2 human line says adopted" "adopt" "$OUT"
 assert_eq "A2 census bytes untouched by the adopt" "$CBSHA" "$(sha256sum census.json | cut -d' ' -f1)"
+
+# --- A3: `--` end-of-options separator (the gate fix line emits `gos track -- <path>`) ---
+t98b_fresh
+mkdir -p .gos && printf 'separator form content\n' > .gos/concerns.md
+git add -f .gos/concerns.md && git commit -q -m pretrack
+set +e; OUT=$(node "$GOS" track -- .gos/concerns.md 2>&1); RC=$?; set -e
+assert_exit "A3 track -- <path> adopts (separator parsed, not Usage)" "0" "$RC"
+A3REC=$(test -f .gos/track-manifest.json && grep -c '"path":"\.gos/concerns\.md"' .gos/track-manifest.json || echo 0)
+assert_eq "A3 separator-form adopt recorded in manifest" "1" "$A3REC"
+t98b_teardown
 t98b_teardown
 
 # --- A3: census contradiction (tracked but census git:false) → die ---
