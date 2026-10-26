@@ -19,9 +19,10 @@ const fsio = require('./fsio.cjs');
 
 // cat-file rc!=0 stderr shapes that are CLEAN negatives (path simply absent
 // from HEAD, or HEAD unborn — nothing can be tracked through HEAD there), not
-// git breakage. Both phrasings seen across git versions; anchored at `fatal:`
-// so genuine breakage text never matches.
-const HEAD_NEGATIVE_RE = /^fatal: (?:Not a valid object name|path '.*' does not exist in) /;
+// git breakage. Three phrasings seen across git versions (2.34 "Not a valid
+// object name", classic "does not exist in", 2.55+ "exists on disk, but not
+// in"); anchored at `fatal:` so genuine breakage text never matches.
+const HEAD_NEGATIVE_RE = /^fatal: (?:Not a valid object name|path '.*' does not exist in|path '.*' exists on disk, but not in) /;
 
 let _failure = null;   // cached fail-closed marker; null while every probe is healthy
 let _toplevel;         // realpath'd `rev-parse --show-toplevel`, cached (undefined = not probed)
@@ -195,4 +196,4 @@ function canonicalRepoRel(p) {
   return rel;
 }
 
-module.exports = { isTracked, ignoredSet, canonicalRepoRel, trackedUnder, lastFailure };
+module.exports = { isTracked, ignoredSet, canonicalRepoRel, trackedUnder, lastFailure, HEAD_NEGATIVE_RE };

@@ -62,6 +62,36 @@ else
   echo "  ✗ L1 exports: $R1"; FAIL=$((FAIL+1))
 fi
 
+# --- L1b: HEAD-negative stderr phrasing matrix — every released git wording is
+# a clean negative; genuine breakage text never matches (anchored at fatal:)
+cat > t93-headneg.cjs <<'EOF'
+const gp = require(process.env.GOS_ROOT + '/bin/lib/core/gitprobe.cjs');
+const re = gp.HEAD_NEGATIVE_RE;
+const bad = [];
+const NEG = [
+  "fatal: Not a valid object name HEAD:untracked.txt",                  // git 2.34 era
+  "fatal: path 'untracked.txt' does not exist in 'HEAD'",               // classic
+  "fatal: path 'untracked.txt' exists on disk, but not in 'HEAD'",      // git 2.55+
+];
+for (const s of NEG) if (!re.test(s)) bad.push('negative not recognized: ' + s);
+const POS = [
+  'fatal: not a git repository (or any of the parent directories): .git',
+  'fatal: bad object HEAD',
+  "error: unknown option `-x'",
+  'warning: something else',
+];
+for (const s of POS) if (re.test(s)) bad.push('breakage wrongly matched: ' + s);
+if (!/^fatal: /.test('fatal: Not a valid object name')) bad.push('regex lost its fatal: anchor');
+console.log(bad.length ? 'BAD ' + bad.join('; ') : 'OK');
+process.exit(bad.length ? 1 : 0);
+EOF
+R1B=$(node t93-headneg.cjs 2>&1)
+if [ "$R1B" = "OK" ]; then
+  echo "  ✓ L1b HEAD-negative matrix: 2.34/classic/2.55 phrasings recognized, breakage excluded"; PASS=$((PASS+1))
+else
+  echo "  ✗ L1b HEAD-negative matrix: $R1B"; FAIL=$((FAIL+1))
+fi
+
 # --- sandbox: one seeded worktree with a HEAD commit ---
 git init -q .
 printf 'ignored.log\n' > .gitignore
