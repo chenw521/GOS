@@ -33,3 +33,20 @@ this file only tells you where they are.
   lands via feature branch → pull request → squash-merge; the pre-push
   guard rejects direct main pushes (emergency escape `GOS_ALLOW_MAIN_PUSH`
   requires explicit user approval — never self-serve it).
+
+## Code Style
+
+- No AI-process artifacts in ANY written file — comments, assertion wording,
+  docs, templates, and seeded assets alike. Banned: decision anchors
+  (`[D-NN]`, `[T-NN]`, `[REVIEW M1]`, `[Phase W T5]`, `RT2-F5`, `B-4`),
+  spec-section citations in code comments (`spec §3.4`), task narrative
+  ("this phase adds…"), AI meta-phrasing. Traceability lives in commit
+  bodies and `.changes.md`, never in file content — user rulings
+  2026-09-18 (39dad6a4/59ce99c5) and 2026-10-26 (extended to all file
+  content, both self-repo and product-seeded assets).
+- Comments that stay: section dividers, function purpose, parameter/return
+  notes, invariants a stranger needs to work on the code. When in doubt,
+  describe WHAT the code does, never WHY a task decided it.
+- Existing anchor-style comments are legacy debt (do not imitate, do not
+  add new ones); the mechanized sweep is tracked in the coding-standards
+  phase.
