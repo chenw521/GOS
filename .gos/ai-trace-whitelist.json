@@ -1,0 +1,1242 @@
+[
+  {
+    "path": ".gitattributes",
+    "category": "meta-doc-quoting",
+    "maxHits": 1,
+    "reason": "Header comment quotes the finding ids that motivated the eol policy pin.",
+    "pin": {
+      "type": "region-sha256",
+      "minLine": 1,
+      "regionSha256": "78f1e2d35c9101002e65f22fc147e05d2e7449a2d3bc65df27aebacc29c0fce9"
+    }
+  },
+  {
+    "path": ".github/RELEASE.md",
+    "category": "in-flight-sweep",
+    "maxHits": 3,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": ".github/workflows/ci.yml",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": ".github/workflows/triage-gate.yml",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": ".gitignore",
+    "category": "meta-doc-quoting",
+    "maxHits": 5,
+    "reason": "Anchor-style history quotes in ignore-rule comments document why machine-local zones are ignored.",
+    "pin": {
+      "type": "region-sha256",
+      "minLine": 75,
+      "regionSha256": "96ff79551bf03345bec55a85e6e0c41ebb0564af485387bbed44a6e89e59e70c"
+    }
+  },
+  {
+    "path": ".opencode/commands/gos/gos-brownfield.md",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": ".opencode/commands/gos/gos-init.md",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "AGENTS.md",
+    "category": "meta-doc-quoting",
+    "maxHits": 4,
+    "reason": "Ban-definition quotes: the policy document names the banned forms by example, pinned to the rules section tail.",
+    "pin": {
+      "type": "region-sha256",
+      "minLine": 41,
+      "regionSha256": "ed5ec68230485118158149a0d063420d0db257dacbc39c5b2909fec0eac908c1"
+    }
+  },
+  {
+    "path": "README.md",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "README.zh-CN.md",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/gos.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 59,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/core/fsio.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 12,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/core/gitprobe.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/core/i18n.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/core/locales/en.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 14,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/core/locales/zh.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 16,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/core/lock.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 10,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/core/state.cjs",
+    "category": "frozen-string",
+    "reason": "Contract sidecar-hash table: the lessonsAnchor verdict string is a frozen product contract line asserted by suite sections.",
+    "lines": [
+      {
+        "line": 565,
+        "sha256": "7fcd673dc9ddc9c9c56e250d68b08d2f407dff8f70f2e274d72d520296a99c4e"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/core/state.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 69,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/knowledge/concerns.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 13,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/knowledge/decisions.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/knowledge/lessons-json.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 15,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/knowledge/lessons.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 6,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/knowledge/phase.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/knowledge/requirements.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/knowledge/truth.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 13,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/map/allowlist.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/map/anchor.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 8,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/map/contract.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/map/edges.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 3,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/map/engine.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 27,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/map/index.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 31,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/map/views.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 10,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/nav/cmds.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 7,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/nav/help.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/nav/registry-consts.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/nav/registry.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/nav/status.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 13,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/ops/brownfield-probe.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 5,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/ops/brownfield.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 29,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/ops/changelog-core.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 22,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/ops/config.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 11,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/ops/doctor.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 10,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/ops/feedback.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/ops/gate.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 73,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/ops/gitseed.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/ops/push.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/ops/setup.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 8,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/ops/track.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 23,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/render/views.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 57,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/task/archive.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 28,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/task/changelog.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/task/checkpoint.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/task/commit.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 38,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/task/context.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 11,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/task/index.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/task/init.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 25,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/task/plansnap.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/task/stage.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 5,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "hooks/commit-msg.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "scripts/census-dispose.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-build/reference/build-patterns.md",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-build/scripts/aggregate.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-plan/SKILL.md",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-plan/examples/complete-plan.md",
+    "category": "in-flight-sweep",
+    "maxHits": 13,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-plan/reference/revision-loop.md",
+    "category": "in-flight-sweep",
+    "maxHits": 7,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-plan/reference/task-decomposition.md",
+    "category": "in-flight-sweep",
+    "maxHits": 21,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-plan/reference/thinking-models.md",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-project/reference/evolve.md",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-project/reference/new-project.md",
+    "category": "in-flight-sweep",
+    "maxHits": 3,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-review/prompts/spec-reviewer.md",
+    "category": "in-flight-sweep",
+    "maxHits": 3,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-review/reference/review-checklists.md",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-router/SKILL.md",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-router/reference/gap-closure.md",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-ship/SKILL.md",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-ship/reference/artifact-lifecycle.md",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-ship/scripts/security.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-think/SKILL.md",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-think/examples/spec-with-redteam.md",
+    "category": "in-flight-sweep",
+    "maxHits": 12,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-think/prompts/red-team-attacker.md",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-think/reference/codebase-mapping.md",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-think/reference/dialogue-protocol.md",
+    "category": "in-flight-sweep",
+    "maxHits": 3,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-think/reference/red-team.md",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-think/scripts/prune-decisions.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-verify/SKILL.md",
+    "category": "in-flight-sweep",
+    "maxHits": 5,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "templates/coding-standards/00-general.md",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "templates/coding-standards/node.md",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "templates/coding-standards/python.md",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "templates/coding-standards/shell.md",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "templates/plan-template.md",
+    "category": "in-flight-sweep",
+    "maxHits": 9,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "templates/review-checklist.md",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "templates/spec-template.md",
+    "category": "in-flight-sweep",
+    "maxHits": 8,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "templates/trace-template.md",
+    "category": "in-flight-sweep",
+    "maxHits": 6,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/checks/gitprobe-monopoly.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/checks/stale-verbs.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 3,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/fixtures/gh-stub/gh",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/golden/pre-split/contract.txt",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/gos-cli-tests.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 9,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/pack-check.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/run-sections.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 16,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T1-schema.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 11,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T10-security-e2e.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 16,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T100-navigator.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 3,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T101-issue-tokens.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T12-wiring.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 16,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T13-semantic-contracts.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 23,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T14-state-b.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 24,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T15-lessons.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 29,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T16-truth.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 20,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T17-semantic-engine.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 23,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T18-f1-gate-lessons.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 20,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T19-mounting.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 31,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T2-project.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 8,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T20-map-scan.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 11,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T21-map-closure.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 16,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T22-map-gate-impact.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 14,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T23-concerns.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 16,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T24-map-contracts.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T25-map-selfcheck.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 6,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T26-nav-hints.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 8,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T27-archive-slug.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 6,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T28-router-state-first.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T29-command-registry.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 22,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T3-decision.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 20,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T30-map-edges.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 15,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T31-map-gate.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 18,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T32-map-render.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 11,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T33-map-manifest.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 16,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T34-map-tsection.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 7,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T35-codemap-coverage.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 6,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T35-u-closure-summary.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T35-u-init.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 10,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T35-u-negative.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T35-u-status.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T36-callgraph.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 14,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T37-phase-ux.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T38-annotation-extensions.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 10,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T39-render-park.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 22,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T4-requirement.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 13,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T40-paths-registry.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T41-paths-cmd.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 6,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T42-context-paths.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 7,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T43-orphan-gate.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 9,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T44-static-splice.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 5,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T45-ship-transaction.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 9,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T46-module-structure.test.sh",
+    "category": "drift-ledger",
+    "reason": "Module-structure drift ledger: the expected-count line quotes process ids by design; listed lines are the sanctioned ledger.",
+    "lines": [
+      50
+    ]
+  },
+  {
+    "path": "test/sections/T46-module-structure.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 5,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T47-module-require-direction.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 8,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T48-byname-tiers.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T49-baseline-c4.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 6,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T5-guard.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 17,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T50-archive-transaction.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 5,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T51-commit-guard.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T52-gitseed-render.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 6,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T53-changelog-core.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 3,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T54-changelog-add.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T55-changelog-lint.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 5,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T56-init-git.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T57-archive-single-track.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T6-brownfield.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T60-commitlint-hook.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T61-gate-wiring.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T63-cli-wiring.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 3,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T64-context-template-paths.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 3,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T65-allowlist-product.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 13,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T66-census-reconcile.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T67-gates-trust.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T68-section-run.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T69-init-coding.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T7-render.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 14,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T70-feedback-cmds.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T71-phase-amend-reposlug.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T72-lessons-json.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 17,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T73-gate-evidence.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 8,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T74-i18n.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 13,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T75-blast.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 16,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T76-aggregate-push.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 20,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T77-gitseed-neveroverwrite.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T78-registry-brownfield.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 9,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T79-brownfield-probe.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 5,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T8-phase-archive.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 18,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T80-brownfield-adopt.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 5,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T81-brownfield-handoff.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 13,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T82-brownfield-edges.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T83-delta-decisions.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 5,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T85-security-depth.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 7,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T86-truth-replay-surface.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 6,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T87-config-twolayer.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 14,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T88-autorender.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 15,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T89-changelog-path.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 3,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T9-contract.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 10,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T90-projectmd-gate.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 8,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T91-ledger-reconcile.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 9,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T92-logs-cmd.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 3,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T93-gitprobe.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T94-schemav4.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T95-repo-id-guard.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T96-lang-boundary.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T97-gap-migrate.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 3,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T98a-track-core.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 6,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T98b-track-txn.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T99-gate-flip-leg.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 4,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/workflow-lint.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 5,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  }
+]

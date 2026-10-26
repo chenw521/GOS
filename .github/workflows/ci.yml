@@ -28,6 +28,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
+        with:
+          # the ai-trace shrink guard diffs the whitelist against origin/main
+          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -40,6 +43,9 @@ jobs:
 
       - name: ascii filename guard (tracked names pure ASCII)
         run: bash test/checks/ascii-filenames.sh
+
+      - name: ai-trace whitelist shrink guard (tracker may only shrink)
+        run: bash test/checks/ai-trace-shrink.sh
 
   sections:
     name: Sections (Node ${{ matrix.node-version }})
