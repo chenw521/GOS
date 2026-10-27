@@ -1162,6 +1162,29 @@
   },
   {
     "path": "scripts/census-dispose.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 125,
+        "sha256": "2f00ea2ed313d5e6f78099684f81d6e3dee3a18abdccc56cdb7be62a0c098721"
+      },
+      {
+        "line": 138,
+        "sha256": "6edc984051820ed2831017a483eaca511f1fc188128bf70aa3e9623824f0e15f"
+      },
+      {
+        "line": 144,
+        "sha256": "f7b0a39d32451e6d93d41bbab94df437f7bea2a6fbd2b43874afcab78a24c357"
+      },
+      {
+        "line": 172,
+        "sha256": "b62b79672583e73febef85c101f94c07901bca11b049f4500ca871a7ec31b34b"
+      }
+    ]
+  },
+  {
+    "path": "scripts/census-dispose.sh",
     "category": "in-flight-sweep",
     "maxHits": 4,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -1234,6 +1257,17 @@
   },
   {
     "path": "skills/gos-router/SKILL.md",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 95,
+        "sha256": "d3b957aaea36c815e67149cb59e0eb066e442648095088b382fe99577511376b"
+      }
+    ]
+  },
+  {
+    "path": "skills/gos-router/SKILL.md",
     "category": "in-flight-sweep",
     "maxHits": 4,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -1255,6 +1289,17 @@
     "category": "in-flight-sweep",
     "maxHits": 2,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "skills/gos-ship/scripts/security.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 8,
+        "sha256": "3d0a7b3535d77faef03146e9dac7b113997f6e7f0ef919450a698b8ce148bd7b"
+      }
+    ]
   },
   {
     "path": "skills/gos-ship/scripts/security.sh",
