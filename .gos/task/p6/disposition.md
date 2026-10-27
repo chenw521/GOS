@@ -109,24 +109,24 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 66 | B | D-14 | A | strip anchor, keep the WHAT |
 | 69 | A | R2-F1 | A | strip anchor, keep the WHAT |
 | 71 | B | T3 | A | strip anchor, keep the WHAT |
-| 76 | A | [R2 | A | strip anchor, keep the WHAT |
+| 76 | A | [R2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 77 | B | T3 | A | strip anchor, keep the WHAT |
 | 78 | B | T29 | A | strip anchor, keep the WHAT |
 | 80 | B | T3 | A | strip anchor, keep the WHAT |
 | 82 | A | R1-F9 | A | strip anchor, keep the WHAT |
-| 86 | A | [D-3 | A | strip anchor, keep the WHAT |
+| 86 | A | [D-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 86 | B | T2 | A | strip anchor, keep the WHAT |
-| 88 | A | [R4 | A | strip anchor, keep the WHAT |
+| 88 | A | [R4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 88 | B | T4 | A | strip anchor, keep the WHAT |
 | 93 | B | T7 | A | strip anchor, keep the WHAT |
-| 96 | A | [R2 | A | strip anchor, keep the WHAT |
+| 96 | A | [R2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 97 | B | B-20 | A | strip anchor, keep the WHAT |
 | 101 | A | R1-F1 | B | delete lineage-only line, ids ride the ledger |
 | 101 | B | W1 | B | delete lineage-only line, ids ride the ledger |
 | 103 | A | R3-F5 | A | strip anchor, keep the WHAT |
 | 103 | B | D-36 | A | strip anchor, keep the WHAT |
 | 104 | B | T3 | A | strip anchor, keep the WHAT |
-| 106 | A | [R4 | A | strip anchor, keep the WHAT |
+| 106 | A | [R4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 109 | A | R1-F5 | A | strip anchor, keep the WHAT |
 | 109 | B | D-41 | A | strip anchor, keep the WHAT |
 | 117 | B | T5 | A | strip anchor, keep the WHAT |
@@ -136,7 +136,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 135 | A | R1-F9 | A | strip anchor, keep the WHAT |
 | 135 | B | T3 | A | strip anchor, keep the WHAT |
 | 138 | B | F-8 | A | strip anchor, keep the WHAT |
-| 142 | A | [R2 | A | strip anchor, keep the WHAT |
+| 142 | A | [R2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 143 | B | T3 | A | strip anchor, keep the WHAT |
 | 147 | B | D-01 | A | strip anchor, keep the WHAT |
 | 151 | B | F-8 | A | strip anchor, keep the WHAT |
@@ -145,7 +145,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 222 | B | D-02 | A | strip anchor, keep the WHAT |
 | 223 | B | D-11 | A | strip anchor, keep the WHAT |
 | 224 | B | D-20 | A | strip anchor, keep the WHAT |
-| 230 | A | [D-3 | B | delete lineage-only line, ids ride the ledger |
+| 230 | A | [D-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 230 | B | T5 | B | delete lineage-only line, ids ride the ledger |
 | 236 | B | T5 | A | strip anchor, keep the WHAT |
 | 245 | B | B-5 | A | strip anchor, keep the WHAT |
@@ -157,14 +157,14 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
-| 60 | A | [P4 | A | strip anchor, keep the WHAT |
+| 60 | A | [P4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 60 | B | D-15 | A | strip anchor, keep the WHAT |
 | 88 | B | D-01 | A | strip anchor, keep the WHAT |
 | 112 | A | [REVIEW P2 | A | strip anchor, keep the WHAT |
-| 170 | A | [T5 | A | strip anchor, keep the WHAT |
+| 170 | A | [T5 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 170 | B | T5 | A | strip anchor, keep the WHAT |
-| 215 | A | R2-F9 | A | strip anchor, keep the WHAT |
-| 278 | A | [T1 | A | strip anchor, keep the WHAT |
+| 215 | A | R2-F9 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 278 | A | [T1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 278 | B | T10 | A | strip anchor, keep the WHAT |
 | 297 | B | D-66 | A | strip anchor, keep the WHAT |
 | 316 | B | D-66 | A | strip anchor, keep the WHAT |
@@ -185,7 +185,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 |:--|:--|:--|:--|:--|
 | 1 | B | D-63 | A | strip anchor, keep the WHAT |
 | 61 | B | T74 | A | strip anchor, keep the WHAT |
-| 63 | A | [a-z0 | A | strip anchor, keep the WHAT |
+| 63 | A | [a-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 111 | B | D-63 | A | strip anchor, keep the WHAT |
 
 ### bin/lib/core/locales/en.cjs (14 hit(s))
@@ -232,14 +232,14 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
-| 48 | A | R2-F9 | A | strip anchor, keep the WHAT |
-| 78 | A | [R2 | A | strip anchor, keep the WHAT |
-| 115 | A | [R2 | A | strip anchor, keep the WHAT |
-| 151 | A | [T4 | A | strip anchor, keep the WHAT |
+| 48 | A | R2-F9 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 78 | A | [R2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 115 | A | [R2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 151 | A | [T4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 151 | B | D-12 | A | strip anchor, keep the WHAT |
 | 170 | B | D-18 | A | strip anchor, keep the WHAT |
-| 187 | A | [T4 | A | strip anchor, keep the WHAT |
-| 228 | A | [T4 | A | strip anchor, keep the WHAT |
+| 187 | A | [T4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 228 | A | [T4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 228 | B | D-12 | A | strip anchor, keep the WHAT |
 | 236 | B | D-18 | A | strip anchor, keep the WHAT |
 
@@ -247,90 +247,90 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
-| 83 | A | [D-1 | A | strip anchor, keep the WHAT |
+| 83 | A | [D-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 83 | B | D-12 | A | strip anchor, keep the WHAT |
-| 97 | A | [A-Za-z0 | A | strip anchor, keep the WHAT |
-| 141 | A | [a-z0 | A | strip anchor, keep the WHAT |
+| 97 | A | [A-Za-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 141 | A | [a-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 160 | B | D-18 | B | delete lineage-only line, ids ride the ledger |
 | 185 | B | D-12 | A | strip anchor, keep the WHAT |
 | 224 | A | [Phase W T9 | A | strip anchor, keep the WHAT |
 | 224 | B | T9 | A | strip anchor, keep the WHAT |
 | 226 | B | T5 | A | strip anchor, keep the WHAT |
 | 227 | B | D-12 | A | strip anchor, keep the WHAT |
-| 231 | A | [T9 | A | strip anchor, keep the WHAT |
+| 231 | A | [T9 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 231 | B | T94 | A | strip anchor, keep the WHAT |
 | 234 | B | D-18 | A | strip anchor, keep the WHAT |
-| 265 | A | [D-3 | A | strip anchor, keep the WHAT |
+| 265 | A | [D-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 265 | B | T2 | A | strip anchor, keep the WHAT |
 | 306 | B | D-12 | A | strip anchor, keep the WHAT |
-| 325 | A | [T5 | A | strip anchor, keep the WHAT |
+| 325 | A | [T5 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 325 | B | T5 | A | strip anchor, keep the WHAT |
-| 355 | A | [T5 | A | strip anchor, keep the WHAT |
+| 355 | A | [T5 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 355 | B | T5 | A | strip anchor, keep the WHAT |
 | 359 | B | T1 | A | strip anchor, keep the WHAT |
 | 366 | B | T46 | A | strip anchor, keep the WHAT |
 | 432 | B | F-3 | A | strip anchor, keep the WHAT |
 | 450 | B | T6 | A | strip anchor, keep the WHAT |
-| 479 | A | [D-3 | A | strip anchor, keep the WHAT |
+| 479 | A | [D-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 479 | B | T2 | A | strip anchor, keep the WHAT |
 | 487 | B | T3 | A | strip anchor, keep the WHAT |
 | 488 | B | T29 | A | strip anchor, keep the WHAT |
 | 502 | B | T3 | A | strip anchor, keep the WHAT |
-| 513 | A | [D-0 | A | strip anchor, keep the WHAT |
+| 513 | A | [D-0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 513 | B | D-05 | A | strip anchor, keep the WHAT |
-| 516 | A | [D-0 | A | strip anchor, keep the WHAT |
+| 516 | A | [D-0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 516 | B | D-06 | A | strip anchor, keep the WHAT |
-| 525 | A | [D-0 | A | strip anchor, keep the WHAT |
+| 525 | A | [D-0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 525 | B | T3 | A | strip anchor, keep the WHAT |
-| 536 | A | [D-0 | A | strip anchor, keep the WHAT |
+| 536 | A | [D-0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 536 | B | T4 | A | strip anchor, keep the WHAT |
 | 546 | B | D-88 | A | strip anchor, keep the WHAT |
-| 554 | A | [D-3 | A | strip anchor, keep the WHAT |
+| 554 | A | [D-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 554 | B | D-33 | A | strip anchor, keep the WHAT |
 | 555 | A | §2 | A | strip anchor, keep the WHAT |
-| 556 | A | [R1 | A | strip anchor, keep the WHAT |
+| 556 | A | [R1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 556 | B | B-3 | A | strip anchor, keep the WHAT |
-| 566 | A | [R2 | A | strip anchor, keep the WHAT |
-| 567 | A | [R3 | A | strip anchor, keep the WHAT |
-| 568 | A | [R3 | A | strip anchor, keep the WHAT |
-| 569 | A | [R3 | A | strip anchor, keep the WHAT |
-| 570 | A | [R3 | A | strip anchor, keep the WHAT |
-| 571 | A | [R3 | A | strip anchor, keep the WHAT |
-| 572 | A | [F1 | A | strip anchor, keep the WHAT |
-| 573 | A | [D-3 | A | strip anchor, keep the WHAT |
+| 566 | A | [R2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 567 | A | [R3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 568 | A | [R3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 569 | A | [R3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 570 | A | [R3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 571 | A | [R3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 572 | A | [F1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 573 | A | [D-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 573 | B | D-38 | A | strip anchor, keep the WHAT |
-| 596 | A | [R3 | A | strip anchor, keep the WHAT |
+| 596 | A | [R3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 624 | A | [U2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 629 | A | R1-F5 | A | strip anchor, keep the WHAT |
 | 629 | B | T4 | A | strip anchor, keep the WHAT |
 | 647 | A | [y/ | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 665 | B | T4 | A | strip anchor, keep the WHAT |
 | 675 | A | [REVIEW P2 | A | strip anchor, keep the WHAT |
-| 677 | A | [a-z0 | A | strip anchor, keep the WHAT |
+| 677 | A | [a-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 713 | B | D-12 | A | strip anchor, keep the WHAT |
-| 752 | A | [R-2 | A | strip anchor, keep the WHAT |
+| 752 | A | [R-2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 752 | B | D-04 | A | strip anchor, keep the WHAT |
 | 781 | B | D-04 | A | strip anchor, keep the WHAT |
 | 842 | B | D-01 | A | strip anchor, keep the WHAT |
 | 860 | B | R-01 | A | strip anchor, keep the WHAT |
 | 887 | B | D-64 | A | strip anchor, keep the WHAT |
-| 1234 | A | [P4 | A | strip anchor, keep the WHAT |
+| 1234 | A | [P4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 1234 | B | D-15 | A | strip anchor, keep the WHAT |
 
 ### bin/lib/knowledge/concerns.cjs (13 hit(s))
 
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
-| 31 | A | [T6 | A | strip anchor, keep the WHAT |
+| 31 | A | [T6 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 31 | B | T6 | A | strip anchor, keep the WHAT |
-| 37 | A | [T6 | A | strip anchor, keep the WHAT |
+| 37 | A | [T6 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 37 | B | T6 | A | strip anchor, keep the WHAT |
-| 58 | A | [T6 | A | strip anchor, keep the WHAT |
+| 58 | A | [T6 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 58 | B | T6 | A | strip anchor, keep the WHAT |
-| 94 | A | [T5 | A | strip anchor, keep the WHAT |
+| 94 | A | [T5 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 94 | B | T5 | A | strip anchor, keep the WHAT |
 | 95 | B | T1 | A | strip anchor, keep the WHAT |
-| 118 | A | [T6 | A | strip anchor, keep the WHAT |
+| 118 | A | [T6 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 118 | B | T6 | A | strip anchor, keep the WHAT |
 | 122 | B | D-16 | A | strip anchor, keep the WHAT |
 | 230 | B | B-9 | A | strip anchor, keep the WHAT |
@@ -350,7 +350,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 12 | A | §8 | A | strip anchor, keep the WHAT |
 | 35 | A | §8 | A | strip anchor, keep the WHAT |
 | 74 | A | §8 | A | strip anchor, keep the WHAT |
-| 77 | A | [T5 | A | strip anchor, keep the WHAT |
+| 77 | A | [T5 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 77 | B | T5 | A | strip anchor, keep the WHAT |
 | 173 | B | B-8 | A | strip anchor, keep the WHAT |
 | 214 | B | B-14 | A | strip anchor, keep the WHAT |
@@ -367,10 +367,10 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 |:--|:--|:--|:--|:--|
 | 99 | A | [R1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 102 | A | [R1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
-| 137 | A | [R1 | A | strip anchor, keep the WHAT |
+| 137 | A | [R1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 255 | A | §3 | A | strip anchor, keep the WHAT |
-| 276 | A | [R1 | A | strip anchor, keep the WHAT |
-| 321 | A | [R1 | A | strip anchor, keep the WHAT |
+| 276 | A | [R1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 321 | A | [R1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 
 ### bin/lib/knowledge/phase.cjs (4 hit(s))
 
@@ -378,7 +378,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 |:--|:--|:--|:--|:--|
 | 18 | B | D-06 | A | strip anchor, keep the WHAT |
 | 31 | B | D-06 | A | strip anchor, keep the WHAT |
-| 209 | A | [T4 | A | strip anchor, keep the WHAT |
+| 209 | A | [T4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 209 | B | D-12 | A | strip anchor, keep the WHAT |
 
 ### bin/lib/knowledge/requirements.cjs (2 hit(s))
@@ -394,16 +394,16 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 |:--|:--|:--|:--|:--|
 | 27 | B | B-18 | A | strip anchor, keep the WHAT |
 | 35 | B | D-02 | A | strip anchor, keep the WHAT |
-| 78 | A | [R-2 | A | strip anchor, keep the WHAT |
+| 78 | A | [R-2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 78 | B | D-05 | A | strip anchor, keep the WHAT |
-| 98 | A | [B-1 | A | strip anchor, keep the WHAT |
-| 103 | A | [R2 | A | strip anchor, keep the WHAT |
+| 98 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 103 | A | [R2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 103 | B | D-04 | A | strip anchor, keep the WHAT |
 | 112 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 115 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
-| 119 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 119 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 121 | B | D-04 | A | strip anchor, keep the WHAT |
-| 125 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 125 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 135 | B | R-35 | A | strip anchor, keep the WHAT |
 
 ### bin/lib/map/allowlist.cjs (1 hit(s))
@@ -416,13 +416,13 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
-| 29 | A | [T4 | A | strip anchor, keep the WHAT |
+| 29 | A | [T4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 29 | B | D-12 | A | strip anchor, keep the WHAT |
 | 30 | B | D-18 | A | strip anchor, keep the WHAT |
-| 43 | A | [R2 | A | strip anchor, keep the WHAT |
+| 43 | A | [R2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 81 | A | §4 | A | strip anchor, keep the WHAT |
-| 94 | A | R2-F9 | A | strip anchor, keep the WHAT |
-| 99 | A | [P1 | A | strip anchor, keep the WHAT |
+| 94 | A | R2-F9 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 99 | A | [P1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 131 | B | D-23 | A | strip anchor, keep the WHAT |
 
 ### bin/lib/map/contract.cjs (2 hit(s))
@@ -436,17 +436,17 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
-| 56 | A | [R1 | A | strip anchor, keep the WHAT |
-| 61 | A | §4 | A | strip anchor, keep the WHAT |
-| 91 | A | [P1 | A | strip anchor, keep the WHAT |
+| 56 | A | [R1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 61 | A | §4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 91 | A | [P1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 
 ### bin/lib/map/engine.cjs (27 hit(s))
 
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
-| 70 | A | [R2 | B | delete lineage-only line, ids ride the ledger |
-| 96 | A | [R1 | A | strip anchor, keep the WHAT |
-| 116 | A | [R2 | A | strip anchor, keep the WHAT |
+| 70 | A | [R2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 96 | A | [R1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 116 | A | [R2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 240 | A | [a-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 256 | A | [a-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 281 | A | [Phase S/ | A | strip anchor, keep the WHAT |
@@ -466,9 +466,9 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 504 | A | [Phase P T2 | A | strip anchor, keep the WHAT |
 | 532 | A | [Phase P T2 | A | strip anchor, keep the WHAT |
 | 532 | B | T2 | A | strip anchor, keep the WHAT |
-| 585 | A | [m2 | A | strip anchor, keep the WHAT |
-| 650 | A | [m8 | A | strip anchor, keep the WHAT |
-| 703 | A | [P1 | A | strip anchor, keep the WHAT |
+| 585 | A | [m2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 650 | A | [m8 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 703 | A | [P1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 715 | A | [Phase P T7 | A | strip anchor, keep the WHAT |
 | 753 | B | R-06 | A | strip anchor, keep the WHAT |
 
@@ -478,31 +478,31 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 |:--|:--|:--|:--|:--|
 | 24 | A | [Phase P T7 | A | strip anchor, keep the WHAT |
 | 24 | B | T7 | A | strip anchor, keep the WHAT |
-| 93 | A | §4 | A | strip anchor, keep the WHAT |
-| 95 | A | [R2 | A | strip anchor, keep the WHAT |
-| 101 | A | §4 | A | strip anchor, keep the WHAT |
-| 110 | A | R2-F2 | A | strip anchor, keep the WHAT |
+| 93 | A | §4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 95 | A | [R2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 101 | A | §4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 110 | A | R2-F2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 160 | B | T5 | A | strip anchor, keep the WHAT |
 | 161 | A | R2-F3 | A | strip anchor, keep the WHAT |
-| 205 | A | [P1 | A | strip anchor, keep the WHAT |
+| 205 | A | [P1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 255 | B | D-65 | A | strip anchor, keep the WHAT |
 | 285 | A | [Phase D T7 | A | strip anchor, keep the WHAT |
 | 286 | A | [Phase D T8 | A | strip anchor, keep the WHAT |
 | 289 | A | [Phase D T4 | A | strip anchor, keep the WHAT |
 | 289 | B | T4 | A | strip anchor, keep the WHAT |
-| 297 | A | [R3 | A | strip anchor, keep the WHAT |
-| 300 | A | R3-F12 | A | strip anchor, keep the WHAT |
-| 302 | A | [D-3 | A | strip anchor, keep the WHAT |
+| 297 | A | [R3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 300 | A | R3-F12 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 302 | A | [D-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 308 | A | [Phase P T5 | A | strip anchor, keep the WHAT |
 | 308 | B | T5 | A | strip anchor, keep the WHAT |
-| 326 | A | [R-0 | A | strip anchor, keep the WHAT |
-| 335 | A | [R-0 | A | strip anchor, keep the WHAT |
+| 326 | A | [R-0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 335 | A | [R-0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 360 | A | [REVIEW m5 | A | strip anchor, keep the WHAT |
-| 363 | A | [T7 | A | strip anchor, keep the WHAT |
-| 367 | A | [P1 | A | strip anchor, keep the WHAT |
-| 377 | A | [T8 | A | strip anchor, keep the WHAT |
-| 394 | A | [R2 | A | strip anchor, keep the WHAT |
-| 397 | A | [R3 | A | strip anchor, keep the WHAT |
+| 363 | A | [T7 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 367 | A | [P1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 377 | A | [T8 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 394 | A | [R2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 397 | A | [R3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 412 | B | T4 | A | strip anchor, keep the WHAT |
 | 437 | A | [Phase P T7 | A | strip anchor, keep the WHAT |
 | 437 | B | T7 | A | strip anchor, keep the WHAT |
@@ -512,16 +512,16 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
-| 20 | A | R2-F10 | A | strip anchor, keep the WHAT |
+| 20 | A | R2-F10 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 24 | B | D-24 | A | strip anchor, keep the WHAT |
-| 68 | A | [P1 | A | strip anchor, keep the WHAT |
+| 68 | A | [P1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 203 | A | [Phase P T7 | A | strip anchor, keep the WHAT |
 | 203 | B | T7 | A | strip anchor, keep the WHAT |
 | 227 | A | [Phase P T7 | A | strip anchor, keep the WHAT |
 | 227 | B | T7 | A | strip anchor, keep the WHAT |
 | 238 | A | [REVIEW m6 | A | strip anchor, keep the WHAT |
-| 270 | A | R2-F8 | A | strip anchor, keep the WHAT |
-| 282 | A | [R2 | A | strip anchor, keep the WHAT |
+| 270 | A | R2-F8 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 282 | A | [R2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 
 ### bin/lib/nav/cmds.cjs (7 hit(s))
 
@@ -530,9 +530,9 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 12 | B | D-67 | A | strip anchor, keep the WHAT |
 | 62 | B | D-02 | A | strip anchor, keep the WHAT |
 | 68 | B | D-12 | A | strip anchor, keep the WHAT |
-| 169 | A | [T6 | A | strip anchor, keep the WHAT |
+| 169 | A | [T6 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 169 | B | T6 | A | strip anchor, keep the WHAT |
-| 228 | A | [T5 | A | strip anchor, keep the WHAT |
+| 228 | A | [T5 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 228 | B | T5 | A | strip anchor, keep the WHAT |
 
 ### bin/lib/nav/help.cjs (4 hit(s))
@@ -561,19 +561,19 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
-| 66 | A | [D-0 | A | strip anchor, keep the WHAT |
+| 66 | A | [D-0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 66 | B | D-06 | A | strip anchor, keep the WHAT |
 | 83 | A | [phase-ux L3 | A | strip anchor, keep the WHAT |
 | 87 | A | [phase-ux L3 | A | strip anchor, keep the WHAT |
 | 89 | B | T5 | A | strip anchor, keep the WHAT |
-| 124 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 124 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 256 | B | D-23 | A | strip anchor, keep the WHAT |
-| 258 | A | [MIN-3 | A | strip anchor, keep the WHAT |
-| 262 | A | [D-0 | A | strip anchor, keep the WHAT |
+| 258 | A | [MIN-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 262 | A | [D-0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 262 | B | D-06 | A | strip anchor, keep the WHAT |
 | 266 | B | T4 | A | strip anchor, keep the WHAT |
 | 274 | B | D-67 | A | strip anchor, keep the WHAT |
-| 297 | A | R4-F9 | A | strip anchor, keep the WHAT |
+| 297 | A | R4-F9 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 
 ### bin/lib/ops/brownfield-probe.cjs (5 hit(s))
 
@@ -631,7 +631,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 20 | B | R-08 | A | strip anchor, keep the WHAT |
 | 40 | B | R-06 | A | strip anchor, keep the WHAT |
 | 55 | B | R-05 | A | strip anchor, keep the WHAT |
-| 64 | A | [a-z0 | A | strip anchor, keep the WHAT |
+| 64 | A | [a-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 76 | B | R-01 | A | strip anchor, keep the WHAT |
 | 106 | B | R-08 | A | strip anchor, keep the WHAT |
 | 112 | B | R-01 | A | strip anchor, keep the WHAT |
@@ -650,24 +650,24 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
-| 22 | A | [a-zA-Z0 | A | strip anchor, keep the WHAT |
+| 22 | A | [a-zA-Z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 26 | B | D-09 | A | strip anchor, keep the WHAT |
 | 72 | B | D-09 | A | strip anchor, keep the WHAT |
 | 75 | A | R3-F10 | A | strip anchor, keep the WHAT |
-| 131 | A | [R1 | A | strip anchor, keep the WHAT |
+| 131 | A | [R1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 139 | B | T2 | A | strip anchor, keep the WHAT |
-| 140 | A | [B-2 | A | strip anchor, keep the WHAT |
+| 140 | A | [B-2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 140 | B | B-2 | A | strip anchor, keep the WHAT |
 | 142 | B | B-2 | A | strip anchor, keep the WHAT |
 | 204 | B | D-07 | A | strip anchor, keep the WHAT |
-| 290 | A | [a-zA-Z0 | A | strip anchor, keep the WHAT |
+| 290 | A | [a-zA-Z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 
 ### bin/lib/ops/doctor.cjs (10 hit(s))
 
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
 | 87 | B | D-63 | A | strip anchor, keep the WHAT |
-| 94 | A | [C-1 | A | strip anchor, keep the WHAT |
+| 94 | A | [C-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 94 | B | T4 | A | strip anchor, keep the WHAT |
 | 107 | B | F-6 | A | strip anchor, keep the WHAT |
 | 111 | A | RT3-F11 | A | strip anchor, keep the WHAT |
@@ -692,34 +692,34 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 19 | B | T7 | A | strip anchor, keep the WHAT |
 | 22 | B | T6 | A | strip anchor, keep the WHAT |
 | 24 | B | T7 | A | strip anchor, keep the WHAT |
-| 74 | A | [D-0 | A | strip anchor, keep the WHAT |
+| 74 | A | [D-0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 74 | B | D-07 | A | strip anchor, keep the WHAT |
-| 170 | A | [B-4 | A | strip anchor, keep the WHAT |
+| 170 | A | [B-4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 184 | A | [Phase D T7 | A | strip anchor, keep the WHAT |
 | 184 | B | T7 | A | strip anchor, keep the WHAT |
 | 185 | A | R2-F5 | A | strip anchor, keep the WHAT |
-| 190 | A | [R1 | A | strip anchor, keep the WHAT |
-| 197 | A | [D-3 | A | strip anchor, keep the WHAT |
+| 190 | A | [R1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 197 | A | [D-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 197 | B | T3 | A | strip anchor, keep the WHAT |
 | 201 | A | [Phase D T7 | A | strip anchor, keep the WHAT |
 | 201 | B | T7 | A | strip anchor, keep the WHAT |
 | 205 | A | [Phase D T1 | A | strip anchor, keep the WHAT |
 | 205 | B | T10 | A | strip anchor, keep the WHAT |
 | 215 | B | R-35 | A | strip anchor, keep the WHAT |
-| 226 | A | R2-F11 | A | strip anchor, keep the WHAT |
-| 234 | A | [D-0 | A | strip anchor, keep the WHAT |
+| 226 | A | R2-F11 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 234 | A | [D-0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 234 | B | D-02 | A | strip anchor, keep the WHAT |
 | 235 | B | D-01 | A | strip anchor, keep the WHAT |
-| 324 | A | [m7 | A | strip anchor, keep the WHAT |
-| 344 | A | [U2 | A | strip anchor, keep the WHAT |
+| 324 | A | [m7 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 344 | A | [U2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 344 | B | D-04 | A | strip anchor, keep the WHAT |
-| 354 | A | [U2 | A | strip anchor, keep the WHAT |
+| 354 | A | [U2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 354 | B | D-01 | A | strip anchor, keep the WHAT |
 | 357 | B | T33 | A | strip anchor, keep the WHAT |
 | 430 | B | D-62 | A | strip anchor, keep the WHAT |
-| 540 | A | [B-4 | A | strip anchor, keep the WHAT |
+| 540 | A | [B-4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 549 | B | T2 | A | strip anchor, keep the WHAT |
-| 565 | A | [Phase-1 | A | strip anchor, keep the WHAT |
+| 565 | A | [Phase-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 565 | B | B-22 | A | strip anchor, keep the WHAT |
 | 581 | B | D-62 | A | strip anchor, keep the WHAT |
 | 651 | A | [Phase D T1 | A | strip anchor, keep the WHAT |
@@ -727,14 +727,14 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 664 | A | [R-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 668 | B | B-18 | A | strip anchor, keep the WHAT |
 | 690 | B | T8 | A | strip anchor, keep the WHAT |
-| 700 | A | [R3 | A | strip anchor, keep the WHAT |
+| 700 | A | [R3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 700 | B | B-19 | A | strip anchor, keep the WHAT |
-| 705 | A | [R1 | A | strip anchor, keep the WHAT |
+| 705 | A | [R1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 705 | B | B-3 | A | strip anchor, keep the WHAT |
 | 737 | B | D-30 | A | strip anchor, keep the WHAT |
-| 748 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 748 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 748 | B | T4 | A | strip anchor, keep the WHAT |
-| 753 | A | [D-3 | A | strip anchor, keep the WHAT |
+| 753 | A | [D-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 753 | B | T5 | A | strip anchor, keep the WHAT |
 | 775 | B | B-11 | A | strip anchor, keep the WHAT |
 | 776 | B | B-19 | A | strip anchor, keep the WHAT |
@@ -746,15 +746,15 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 872 | B | D-01 | A | strip anchor, keep the WHAT |
 | 873 | B | D-20 | A | strip anchor, keep the WHAT |
 | 883 | B | D-20 | A | strip anchor, keep the WHAT |
-| 930 | A | [P4 | A | strip anchor, keep the WHAT |
+| 930 | A | [P4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 930 | B | T8 | A | strip anchor, keep the WHAT |
-| 940 | A | [R3 | A | strip anchor, keep the WHAT |
+| 940 | A | [R3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 940 | B | B-19 | A | strip anchor, keep the WHAT |
 | 1049 | B | T6 | A | strip anchor, keep the WHAT |
 | 1065 | B | R-03 | A | strip anchor, keep the WHAT |
-| 1222 | A | [R1 | A | strip anchor, keep the WHAT |
+| 1222 | A | [R1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 1222 | B | B-3 | A | strip anchor, keep the WHAT |
-| 1238 | A | [P4 | A | strip anchor, keep the WHAT |
+| 1238 | A | [P4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 1238 | B | T8 | A | strip anchor, keep the WHAT |
 | 1239 | A | RT2-F4 | A | strip anchor, keep the WHAT |
 | 1249 | A | §3 | A | strip anchor, keep the WHAT |
@@ -766,16 +766,16 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
-| 37 | A | [A-Za-z0 | B | delete lineage-only line, ids ride the ledger |
-| 41 | A | [A-Z0 | B | delete lineage-only line, ids ride the ledger |
-| 106 | A | [A-Za-z0 | B | delete lineage-only line, ids ride the ledger |
+| 37 | A | [A-Za-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 41 | A | [A-Z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 106 | A | [A-Za-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 188 | A | [y/ | D | string-context audit: rewrite anchor-free or pin frozen-string |
 
 ### bin/lib/ops/push.cjs (2 hit(s))
 
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
-| 78 | A | [a-z0 | A | strip anchor, keep the WHAT |
+| 78 | A | [a-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 145 | B | R-01 | A | strip anchor, keep the WHAT |
 
 ### bin/lib/ops/setup.cjs (8 hit(s))
@@ -788,7 +788,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 133 | B | D-94 | A | strip anchor, keep the WHAT |
 | 230 | B | R-05 | A | strip anchor, keep the WHAT |
 | 274 | B | D-63 | B | delete lineage-only line, ids ride the ledger |
-| 302 | A | [ans1 | A | strip anchor, keep the WHAT |
+| 302 | A | [ans1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 350 | A | [y/ | D | string-context audit: rewrite anchor-free or pin frozen-string |
 
 ### bin/lib/ops/track.cjs (23 hit(s))
@@ -826,11 +826,11 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 11 | B | D-05 | A | strip anchor, keep the WHAT |
 | 14 | B | D-08 | A | strip anchor, keep the WHAT |
 | 17 | B | D-05 | A | strip anchor, keep the WHAT |
-| 29 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 29 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 29 | B | T2 | A | strip anchor, keep the WHAT |
 | 31 | A | R4-F6 | A | strip anchor, keep the WHAT |
 | 34 | B | B-15 | A | strip anchor, keep the WHAT |
-| 37 | A | [R2 | A | strip anchor, keep the WHAT |
+| 37 | A | [R2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 37 | B | B-15 | A | strip anchor, keep the WHAT |
 | 42 | B | T7 | A | strip anchor, keep the WHAT |
 | 48 | A | R4-F1 | A | strip anchor, keep the WHAT |
@@ -839,14 +839,14 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 54 | B | D-41 | A | strip anchor, keep the WHAT |
 | 58 | B | T36 | A | strip anchor, keep the WHAT |
 | 60 | B | D-02 | B | delete lineage-only line, ids ride the ledger |
-| 62 | A | [D-3 | A | strip anchor, keep the WHAT |
+| 62 | A | [D-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 62 | B | T7 | A | strip anchor, keep the WHAT |
 | 66 | B | B-10 | A | strip anchor, keep the WHAT |
 | 69 | B | T8 | A | strip anchor, keep the WHAT |
 | 71 | B | T4 | A | strip anchor, keep the WHAT |
 | 72 | B | T29 | A | strip anchor, keep the WHAT |
 | 77 | B | T29 | A | strip anchor, keep the WHAT |
-| 78 | A | [a-z0 | B | delete lineage-only line, ids ride the ledger |
+| 78 | A | [a-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 82 | B | T4 | A | strip anchor, keep the WHAT |
 | 84 | B | T8 | A | strip anchor, keep the WHAT |
 | 88 | B | T3 | A | strip anchor, keep the WHAT |
@@ -871,7 +871,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 389 | B | D-08 | A | strip anchor, keep the WHAT |
 | 393 | A | R3-F1 | A | strip anchor, keep the WHAT |
 | 393 | B | D-03 | A | strip anchor, keep the WHAT |
-| 401 | A | [R1 | A | strip anchor, keep the WHAT |
+| 401 | A | [R1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 402 | B | D-08 | A | strip anchor, keep the WHAT |
 | 417 | A | R1-F4 | A | strip anchor, keep the WHAT |
 | 417 | B | D-03 | A | strip anchor, keep the WHAT |
@@ -879,7 +879,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 425 | B | D-03 | A | strip anchor, keep the WHAT |
 | 446 | A | R3-F1 | A | strip anchor, keep the WHAT |
 | 446 | B | D-03 | A | strip anchor, keep the WHAT |
-| 476 | A | R3-F1 | A | strip anchor, keep the WHAT |
+| 476 | A | R3-F1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 
 ### bin/lib/task/archive.cjs (28 hit(s))
 
@@ -892,7 +892,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 167 | B | D-07 | A | strip anchor, keep the WHAT |
 | 200 | B | D-64 | A | strip anchor, keep the WHAT |
 | 206 | B | D-34 | A | strip anchor, keep the WHAT |
-| 230 | A | [R4 | A | strip anchor, keep the WHAT |
+| 230 | A | [R4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 230 | B | B-21 | A | strip anchor, keep the WHAT |
 | 255 | A | [REVIEW P2 | A | strip anchor, keep the WHAT |
 | 258 | B | T8 | A | strip anchor, keep the WHAT |
@@ -903,14 +903,14 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 413 | B | T5 | A | strip anchor, keep the WHAT |
 | 418 | B | T18 | A | strip anchor, keep the WHAT |
 | 432 | A | [REVIEW P2 | A | strip anchor, keep the WHAT |
-| 438 | A | [a-z0 | A | strip anchor, keep the WHAT |
+| 438 | A | [a-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 442 | A | [REVIEW P2 | A | strip anchor, keep the WHAT |
 | 476 | A | [REVIEW P2 | A | strip anchor, keep the WHAT |
 | 485 | A | [REVIEW P1 | A | strip anchor, keep the WHAT |
 | 485 | B | R-03 | A | strip anchor, keep the WHAT |
 | 505 | B | T8 | A | strip anchor, keep the WHAT |
 | 510 | B | F-3 | A | strip anchor, keep the WHAT |
-| 547 | A | [D-0 | A | strip anchor, keep the WHAT |
+| 547 | A | [D-0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 547 | B | T3 | A | strip anchor, keep the WHAT |
 | 571 | B | F-5 | A | strip anchor, keep the WHAT |
 
@@ -919,7 +919,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
 | 20 | B | D-07 | A | strip anchor, keep the WHAT |
-| 89 | A | [a-z0 | A | strip anchor, keep the WHAT |
+| 89 | A | [a-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 
 ### bin/lib/task/checkpoint.cjs (1 hit(s))
 
@@ -932,42 +932,42 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
 | 1 | B | T2 | B | delete lineage-only line, ids ride the ledger |
-| 27 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 27 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 27 | B | B-10 | A | strip anchor, keep the WHAT |
 | 29 | B | B-22 | A | strip anchor, keep the WHAT |
-| 40 | A | [R4 | A | strip anchor, keep the WHAT |
+| 40 | A | [R4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 43 | B | B-4 | A | strip anchor, keep the WHAT |
 | 54 | B | T9 | A | strip anchor, keep the WHAT |
 | 76 | B | B-22 | A | strip anchor, keep the WHAT |
-| 88 | A | [R1 | A | strip anchor, keep the WHAT |
+| 88 | A | [R1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 88 | B | B-8 | A | strip anchor, keep the WHAT |
 | 104 | B | D-33 | A | strip anchor, keep the WHAT |
 | 134 | B | T2 | A | strip anchor, keep the WHAT |
 | 192 | B | D-03 | A | strip anchor, keep the WHAT |
 | 195 | A | [REVIEW P1 | A | strip anchor, keep the WHAT |
 | 195 | B | R-07 | A | strip anchor, keep the WHAT |
-| 225 | A | [R4 | A | strip anchor, keep the WHAT |
+| 225 | A | [R4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 225 | B | T2 | A | strip anchor, keep the WHAT |
 | 226 | B | D-30 | A | strip anchor, keep the WHAT |
-| 241 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 241 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 241 | B | T2 | A | strip anchor, keep the WHAT |
 | 243 | A | [REVIEW P1 | A | strip anchor, keep the WHAT |
 | 243 | B | R-07 | A | strip anchor, keep the WHAT |
 | 253 | B | D-62 | A | strip anchor, keep the WHAT |
-| 291 | A | [D-3 | A | strip anchor, keep the WHAT |
+| 291 | A | [D-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 291 | B | T7 | A | strip anchor, keep the WHAT |
 | 300 | B | R-01 | A | strip anchor, keep the WHAT |
 | 310 | A | [Phase D T7 | A | strip anchor, keep the WHAT |
 | 310 | B | T7 | A | strip anchor, keep the WHAT |
 | 315 | A | [Phase W T1 | A | strip anchor, keep the WHAT |
 | 315 | B | T16 | A | strip anchor, keep the WHAT |
-| 317 | A | [R2 | A | strip anchor, keep the WHAT |
+| 317 | A | [R2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 319 | A | [Phase D T1 | A | strip anchor, keep the WHAT |
 | 319 | B | T10 | A | strip anchor, keep the WHAT |
-| 320 | A | [R2 | A | strip anchor, keep the WHAT |
+| 320 | A | [R2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 321 | A | [Phase D T5 | A | strip anchor, keep the WHAT |
 | 321 | B | T5 | A | strip anchor, keep the WHAT |
-| 322 | A | [R2 | A | strip anchor, keep the WHAT |
+| 322 | A | [R2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 344 | B | F-5 | A | strip anchor, keep the WHAT |
 
 ### bin/lib/task/context.cjs (11 hit(s))
@@ -976,7 +976,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 |:--|:--|:--|:--|:--|
 | 34 | B | T4 | A | strip anchor, keep the WHAT |
 | 59 | B | D-06 | A | strip anchor, keep the WHAT |
-| 71 | A | [R1 | A | strip anchor, keep the WHAT |
+| 71 | A | [R1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 71 | B | B-11 | A | strip anchor, keep the WHAT |
 | 78 | B | D-67 | A | strip anchor, keep the WHAT |
 | 97 | B | D-19 | A | strip anchor, keep the WHAT |
@@ -1002,11 +1002,11 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 83 | B | T10 | A | strip anchor, keep the WHAT |
 | 88 | B | T5 | A | strip anchor, keep the WHAT |
 | 94 | A | [REVIEW P2 | A | strip anchor, keep the WHAT |
-| 112 | A | [T5 | A | strip anchor, keep the WHAT |
+| 112 | A | [T5 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 123 | A | R4-F2 | A | strip anchor, keep the WHAT |
 | 123 | B | D-34 | A | strip anchor, keep the WHAT |
 | 134 | B | D-29 | A | strip anchor, keep the WHAT |
-| 142 | A | [D-3 | A | strip anchor, keep the WHAT |
+| 142 | A | [D-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 142 | B | T2 | A | strip anchor, keep the WHAT |
 | 146 | B | D-12 | A | strip anchor, keep the WHAT |
 | 150 | B | T5 | A | strip anchor, keep the WHAT |
@@ -1018,7 +1018,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 168 | B | D-06 | A | strip anchor, keep the WHAT |
 | 192 | B | D-01 | A | strip anchor, keep the WHAT |
 | 195 | B | D-22 | A | strip anchor, keep the WHAT |
-| 205 | A | [D-3 | A | strip anchor, keep the WHAT |
+| 205 | A | [D-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 205 | B | T2 | A | strip anchor, keep the WHAT |
 | 265 | B | R-03 | A | strip anchor, keep the WHAT |
 
@@ -1027,7 +1027,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
 | 1 | B | T2 | B | delete lineage-only line, ids ride the ledger |
-| 20 | A | [R2 | A | strip anchor, keep the WHAT |
+| 20 | A | [R2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 20 | B | B-21 | A | strip anchor, keep the WHAT |
 | 27 | B | B-21 | A | strip anchor, keep the WHAT |
 
@@ -1038,7 +1038,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 1 | B | T2 | B | delete lineage-only line, ids ride the ledger |
 | 22 | A | R2-F8 | A | strip anchor, keep the WHAT |
 | 22 | B | D-41 | A | strip anchor, keep the WHAT |
-| 27 | A | [T6 | A | strip anchor, keep the WHAT |
+| 27 | A | [T6 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 27 | B | T6 | A | strip anchor, keep the WHAT |
 
 ### hooks/commit-msg.sh (1 hit(s))
@@ -1175,7 +1175,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 33 | B | R-01 | A | strip anchor, keep the WHAT |
 | 61 | A | Lv0-Lv4 | A | strip anchor, keep the WHAT |
 | 64 | B | D-62 | A | strip anchor, keep the WHAT |
-| 95 | A | [Lv3 | A | strip anchor, keep the WHAT |
+| 95 | A | [Lv3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 
 ### skills/gos-router/reference/gap-closure.md (1 hit(s))
 
@@ -1288,8 +1288,8 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
 | 2 | B | R-01 | A | strip anchor, keep the WHAT |
-| 76 | A | [A-Za-z0 | B | delete lineage-only line, ids ride the ledger |
-| 77 | A | [A-Za-z0 | B | delete lineage-only line, ids ride the ledger |
+| 76 | A | [A-Za-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 77 | A | [A-Za-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 
 ### test/fixtures/gh-stub/gh (1 hit(s))
 
@@ -1301,7 +1301,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
-| 142 | A | [U2 | A | strip anchor, keep the WHAT |
+| 142 | A | [U2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 
 ### test/gos-cli-tests.sh (9 hit(s))
 
@@ -1328,7 +1328,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
 | 45 | B | T36 | A | strip anchor, keep the WHAT |
-| 64 | A | [R3 | A | strip anchor, keep the WHAT |
+| 64 | A | [R3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 64 | B | T9 | A | strip anchor, keep the WHAT |
 | 71 | A | R4-F3 | A | strip anchor, keep the WHAT |
 | 71 | B | T7 | A | strip anchor, keep the WHAT |
@@ -1371,7 +1371,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 80 | B | D-12 | A | strip anchor, keep the WHAT |
 | 124 | B | D-01 | A | strip anchor, keep the WHAT |
 | 130 | B | T1 | A | strip anchor, keep the WHAT |
-| 140 | A | [D-3 | A | strip anchor, keep the WHAT |
+| 140 | A | [D-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 140 | B | T2 | A | strip anchor, keep the WHAT |
 | 149 | B | D-02 | A | strip anchor, keep the WHAT |
 | 155 | B | D-03 | A | strip anchor, keep the WHAT |
@@ -1379,7 +1379,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 236 | A | [REVIEW P2 | A | strip anchor, keep the WHAT |
 | 240 | A | [Phase W T5 | A | strip anchor, keep the WHAT |
 | 240 | B | T5 | A | strip anchor, keep the WHAT |
-| 277 | A | [T4 | A | strip anchor, keep the WHAT |
+| 277 | A | [T4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 
 ### test/sections/T100-navigator.test.sh (3 hit(s))
 
@@ -1420,7 +1420,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 90 | B | T12 | A | strip anchor, keep the WHAT |
 | 100 | B | T12 | A | strip anchor, keep the WHAT |
 | 110 | B | T12 | A | strip anchor, keep the WHAT |
-| 119 | A | [R4 | A | strip anchor, keep the WHAT |
+| 119 | A | [R4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 119 | B | T12 | A | strip anchor, keep the WHAT |
 
 ### test/sections/T13-semantic-contracts.test.sh (23 hit(s))
@@ -1428,7 +1428,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
 | 4 | B | T13 | A | strip anchor, keep the WHAT |
-| 20 | A | [F1 | A | strip anchor, keep the WHAT |
+| 20 | A | [F1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 20 | B | T13 | A | strip anchor, keep the WHAT |
 | 28 | A | §2 | A | strip anchor, keep the WHAT |
 | 28 | B | T13 | A | strip anchor, keep the WHAT |
@@ -1440,14 +1440,14 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 55 | B | T13 | A | strip anchor, keep the WHAT |
 | 56 | B | T46 | A | strip anchor, keep the WHAT |
 | 60 | B | T13 | A | strip anchor, keep the WHAT |
-| 61 | A | [D-3 | A | strip anchor, keep the WHAT |
+| 61 | A | [D-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 61 | B | T2 | A | strip anchor, keep the WHAT |
 | 70 | B | D-64 | A | strip anchor, keep the WHAT |
 | 74 | B | T13 | A | strip anchor, keep the WHAT |
 | 75 | B | T5 | A | strip anchor, keep the WHAT |
 | 88 | B | T13 | A | strip anchor, keep the WHAT |
 | 89 | B | D-09 | A | strip anchor, keep the WHAT |
-| 99 | A | [R1 | A | strip anchor, keep the WHAT |
+| 99 | A | [R1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 99 | B | T13 | A | strip anchor, keep the WHAT |
 | 122 | B | T13 | A | strip anchor, keep the WHAT |
 
@@ -1486,17 +1486,17 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 |:--|:--|:--|:--|:--|
 | 3 | B | T15 | A | strip anchor, keep the WHAT |
 | 4 | B | D-64 | A | strip anchor, keep the WHAT |
-| 7 | A | [R3 | A | strip anchor, keep the WHAT |
+| 7 | A | [R3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 33 | B | T15 | B | delete lineage-only line, ids ride the ledger |
 | 40 | B | T15 | A | strip anchor, keep the WHAT |
 | 62 | B | T15 | A | strip anchor, keep the WHAT |
 | 80 | B | T15 | A | strip anchor, keep the WHAT |
 | 90 | B | T15 | A | strip anchor, keep the WHAT |
-| 101 | A | [B-1 | B | delete lineage-only line, ids ride the ledger |
+| 101 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 101 | B | T15 | B | delete lineage-only line, ids ride the ledger |
 | 110 | B | T15 | B | delete lineage-only line, ids ride the ledger |
 | 120 | B | T15 | A | strip anchor, keep the WHAT |
-| 137 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 137 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 137 | B | T15 | A | strip anchor, keep the WHAT |
 | 152 | B | T15 | A | strip anchor, keep the WHAT |
 | 165 | B | T15 | A | strip anchor, keep the WHAT |
@@ -1509,7 +1509,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 342 | B | T15 | A | strip anchor, keep the WHAT |
 | 353 | B | T15 | A | strip anchor, keep the WHAT |
 | 358 | B | T15 | A | strip anchor, keep the WHAT |
-| 366 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 366 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 366 | B | T15 | A | strip anchor, keep the WHAT |
 | 375 | B | T15 | A | strip anchor, keep the WHAT |
 | 395 | B | T15 | A | strip anchor, keep the WHAT |
@@ -1520,23 +1520,23 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 |:--|:--|:--|:--|:--|
 | 3 | B | T16 | A | strip anchor, keep the WHAT |
 | 27 | B | T16 | A | strip anchor, keep the WHAT |
-| 44 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 44 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 44 | B | T16 | A | strip anchor, keep the WHAT |
 | 56 | B | T16 | A | strip anchor, keep the WHAT |
-| 71 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 71 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 71 | B | T16 | A | strip anchor, keep the WHAT |
-| 75 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 75 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 75 | B | T16 | A | strip anchor, keep the WHAT |
-| 79 | A | [R2 | A | strip anchor, keep the WHAT |
+| 79 | A | [R2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 79 | B | T16 | A | strip anchor, keep the WHAT |
-| 91 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 91 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 91 | B | T16 | A | strip anchor, keep the WHAT |
-| 118 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 118 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 118 | B | T16 | A | strip anchor, keep the WHAT |
 | 123 | B | T3 | A | strip anchor, keep the WHAT |
-| 129 | A | [R4 | A | strip anchor, keep the WHAT |
+| 129 | A | [R4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 129 | B | T16 | A | strip anchor, keep the WHAT |
-| 137 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 137 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 137 | B | T16 | A | strip anchor, keep the WHAT |
 
 ### test/sections/T17-semantic-engine.test.sh (23 hit(s))
@@ -1574,20 +1574,20 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 3 | B | T18 | A | strip anchor, keep the WHAT |
 | 4 | A | R4-F7 | B | delete lineage-only line, ids ride the ledger |
 | 4 | B | D-34 | B | delete lineage-only line, ids ride the ledger |
-| 5 | A | [R3 | A | strip anchor, keep the WHAT |
+| 5 | A | [R3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 42 | B | T18 | A | strip anchor, keep the WHAT |
-| 48 | A | [D-3 | A | strip anchor, keep the WHAT |
+| 48 | A | [D-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 48 | B | T18 | A | strip anchor, keep the WHAT |
-| 62 | A | [D-3 | A | strip anchor, keep the WHAT |
+| 62 | A | [D-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 62 | B | T18 | A | strip anchor, keep the WHAT |
 | 90 | B | T18 | A | strip anchor, keep the WHAT |
-| 103 | A | [B-8 | A | strip anchor, keep the WHAT |
+| 103 | A | [B-8 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 103 | B | T18 | A | strip anchor, keep the WHAT |
-| 122 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 122 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 122 | B | T18 | A | strip anchor, keep the WHAT |
-| 146 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 146 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 146 | B | T18 | A | strip anchor, keep the WHAT |
-| 156 | A | [R4 | A | strip anchor, keep the WHAT |
+| 156 | A | [R4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 156 | B | T18 | A | strip anchor, keep the WHAT |
 | 163 | B | Wave 1 | B | delete lineage-only line, ids ride the ledger |
 | 164 | B | T1 | B | delete lineage-only line, ids ride the ledger |
@@ -1603,29 +1603,29 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 8 | B | T5 | A | strip anchor, keep the WHAT |
 | 33 | B | B-9 | A | strip anchor, keep the WHAT |
 | 35 | B | B-9 | A | strip anchor, keep the WHAT |
-| 57 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 57 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 57 | B | T19 | A | strip anchor, keep the WHAT |
-| 71 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 71 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 71 | B | T19 | A | strip anchor, keep the WHAT |
-| 77 | A | [B-1 | A | strip anchor, keep the WHAT |
+| 77 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 77 | B | T19 | A | strip anchor, keep the WHAT |
-| 87 | A | [R4 | A | strip anchor, keep the WHAT |
+| 87 | A | [R4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 87 | B | T19 | A | strip anchor, keep the WHAT |
 | 91 | B | T19 | A | strip anchor, keep the WHAT |
 | 110 | B | T19 | A | strip anchor, keep the WHAT |
 | 121 | B | T19 | A | strip anchor, keep the WHAT |
-| 132 | A | [D-3 | A | strip anchor, keep the WHAT |
+| 132 | A | [D-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 132 | B | T19 | A | strip anchor, keep the WHAT |
 | 134 | A | §3 | A | strip anchor, keep the WHAT |
 | 146 | A | [Phase W T6 | A | strip anchor, keep the WHAT |
 | 146 | B | T6 | A | strip anchor, keep the WHAT |
-| 153 | A | [B-3 | A | strip anchor, keep the WHAT |
+| 153 | A | [B-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 153 | B | T19 | A | strip anchor, keep the WHAT |
-| 159 | A | [B-2 | A | strip anchor, keep the WHAT |
+| 159 | A | [B-2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 159 | B | T19 | A | strip anchor, keep the WHAT |
-| 166 | A | [F1 | A | strip anchor, keep the WHAT |
+| 166 | A | [F1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 166 | B | T19 | A | strip anchor, keep the WHAT |
-| 173 | A | [B-4 | A | strip anchor, keep the WHAT |
+| 173 | A | [B-4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 173 | B | T19 | A | strip anchor, keep the WHAT |
 
 ### test/sections/T2-project.test.sh (8 hit(s))
@@ -1709,7 +1709,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 38 | B | T23 | A | strip anchor, keep the WHAT |
 | 46 | B | T23 | A | strip anchor, keep the WHAT |
 | 55 | B | T23 | A | strip anchor, keep the WHAT |
-| 66 | A | [T6 | A | strip anchor, keep the WHAT |
+| 66 | A | [T6 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 66 | B | T23 | A | strip anchor, keep the WHAT |
 | 92 | B | T23 | A | strip anchor, keep the WHAT |
 | 106 | B | T23 | A | strip anchor, keep the WHAT |
@@ -1792,7 +1792,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 162 | B | T29 | A | strip anchor, keep the WHAT |
 | 180 | B | T29 | A | strip anchor, keep the WHAT |
 | 234 | B | T29 | A | strip anchor, keep the WHAT |
-| 248 | A | [a-z0 | B | delete lineage-only line, ids ride the ledger |
+| 248 | A | [a-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 265 | B | T29 | A | strip anchor, keep the WHAT |
 
 ### test/sections/T3-decision.test.sh (20 hit(s))
@@ -1883,7 +1883,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
-| 3 | A | [R-0 | A | strip anchor, keep the WHAT |
+| 3 | A | [R-0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 3 | B | T33 | A | strip anchor, keep the WHAT |
 | 6 | A | [Phase W T5 | A | strip anchor, keep the WHAT |
 | 6 | B | T5 | A | strip anchor, keep the WHAT |
@@ -1981,7 +1981,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
 | 3 | B | T37 | A | strip anchor, keep the WHAT |
-| 56 | A | [L3 | A | strip anchor, keep the WHAT |
+| 56 | A | [L3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 
 ### test/sections/T38-annotation-extensions.test.sh (10 hit(s))
 
@@ -2105,7 +2105,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 |:--|:--|:--|:--|:--|
 | 4 | B | T45 | A | strip anchor, keep the WHAT |
 | 34 | B | T45 | A | strip anchor, keep the WHAT |
-| 43 | A | [T4 | A | strip anchor, keep the WHAT |
+| 43 | A | [T4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 43 | B | T45 | A | strip anchor, keep the WHAT |
 | 57 | B | T45 | A | strip anchor, keep the WHAT |
 | 70 | B | T45 | A | strip anchor, keep the WHAT |
@@ -2166,7 +2166,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 41 | B | T5 | A | strip anchor, keep the WHAT |
 | 48 | B | T5 | A | strip anchor, keep the WHAT |
 | 53 | B | D-12 | A | strip anchor, keep the WHAT |
-| 65 | A | [T4 | A | strip anchor, keep the WHAT |
+| 65 | A | [T4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 65 | B | T5 | A | strip anchor, keep the WHAT |
 | 67 | B | T95 | A | strip anchor, keep the WHAT |
 | 76 | B | T5 | A | strip anchor, keep the WHAT |
@@ -2402,8 +2402,8 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 |:--|:--|:--|:--|:--|
 | 3 | B | T74 | A | strip anchor, keep the WHAT |
 | 28 | B | T74 | A | strip anchor, keep the WHAT |
-| 36 | A | [a-z0 | B | delete lineage-only line, ids ride the ledger |
-| 39 | A | [a-z0 | A | strip anchor, keep the WHAT |
+| 36 | A | [a-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 39 | A | [a-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 50 | B | T74 | B | delete lineage-only line, ids ride the ledger |
 | 64 | B | T74 | A | strip anchor, keep the WHAT |
 | 70 | B | T74 | A | strip anchor, keep the WHAT |
@@ -2427,7 +2427,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 83 | B | T75 | A | strip anchor, keep the WHAT |
 | 91 | B | T75 | B | delete lineage-only line, ids ride the ledger |
 | 106 | B | T75 | A | strip anchor, keep the WHAT |
-| 107 | A | t75-p0 | A | strip anchor, keep the WHAT |
+| 107 | A | t75-p0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 110 | A | t75-p0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 120 | B | T75 | A | strip anchor, keep the WHAT |
 | 125 | B | Wave 1 | B | delete lineage-only line, ids ride the ledger |
@@ -2547,7 +2547,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
 | 4 | B | T82 | A | strip anchor, keep the WHAT |
-| 106 | A | [T4 | A | strip anchor, keep the WHAT |
+| 106 | A | [T4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 106 | B | T94 | A | strip anchor, keep the WHAT |
 | 121 | A | R2-F13 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 
@@ -2589,7 +2589,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
 | 4 | B | T87 | A | strip anchor, keep the WHAT |
-| 12 | A | [R3 | A | strip anchor, keep the WHAT |
+| 12 | A | [R3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 41 | B | T87 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 82 | B | T87 | B | delete lineage-only line, ids ride the ledger |
 | 89 | B | T87 | A | strip anchor, keep the WHAT |
@@ -2753,8 +2753,8 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | line | tier | matched | letter | action |
 |:--|:--|:--|:--|:--|
 | 2 | A | R4-F8 | A | strip anchor, keep the WHAT |
-| 25 | A | [A-Za-z0 | B | delete lineage-only line, ids ride the ledger |
-| 37 | A | [A-Za-z0 | B | delete lineage-only line, ids ride the ledger |
-| 52 | A | [A-Za-z0 | B | delete lineage-only line, ids ride the ledger |
-| 117 | A | [A-Za-z0 | B | delete lineage-only line, ids ride the ledger |
+| 25 | A | [A-Za-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 37 | A | [A-Za-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 52 | A | [A-Za-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
+| 117 | A | [A-Za-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 

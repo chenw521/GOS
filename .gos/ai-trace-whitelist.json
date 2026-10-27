@@ -82,6 +82,29 @@
   },
   {
     "path": "bin/lib/core/fsio.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 60,
+        "sha256": "0573dba3bd383e0a24cc5a12e741c7095a410676fa06a426f198521b97ca0e1f"
+      },
+      {
+        "line": 170,
+        "sha256": "b33262f223f3d6663a997ab673b6f81db8f89259d2b2dec47d064e0ebcbb524e"
+      },
+      {
+        "line": 215,
+        "sha256": "30806c4832294a4f3c5bb73dc7f732390a016e33a02f0bcc1e5c6d66041ffaa1"
+      },
+      {
+        "line": 278,
+        "sha256": "6a5b37d241eef87a36f8333e5055be6560e1aa265415f6cc86c832a47ae69ff6"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/core/fsio.cjs",
     "category": "in-flight-sweep",
     "maxHits": 12,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -91,6 +114,17 @@
     "category": "in-flight-sweep",
     "maxHits": 4,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/core/i18n.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 63,
+        "sha256": "b8d57cca5c353c8284b87dcc3c6f0759162d725085a8490ec0ec24913fd09f83"
+      }
+    ]
   },
   {
     "path": "bin/lib/core/i18n.cjs",
@@ -125,8 +159,16 @@
     "reason": "Contract strings in prompts, level labels and error text quote finding ids by design; pinned as frozen product surface.",
     "lines": [
       {
+        "line": 69,
+        "sha256": "2d8302905090989b148140d4754cb05c7bdac2ccd826856d2ca88404cbc1173f"
+      },
+      {
         "line": 70,
         "sha256": "085bca11a0ebc8b937fb750a2786b876dd85a7040824244907fcd383dc73819e"
+      },
+      {
+        "line": 154,
+        "sha256": "c622c4c447046aba57ced45acbef918bd94b9e490aafa58f450b053068e9b52c"
       },
       {
         "line": 161,
@@ -142,6 +184,37 @@
   },
   {
     "path": "bin/lib/core/lock.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 48,
+        "sha256": "fe7abfc2b2a903501d5eba25253ba35b65b3754f81eab29ec8d3973f62a0bcb7"
+      },
+      {
+        "line": 78,
+        "sha256": "ccf22489afefb7d670dc867998d3e2fb4fed87cf76f38457bfb8597c4456202a"
+      },
+      {
+        "line": 115,
+        "sha256": "ea2ad7db4b016100102a660c16c96d3497a27750e628e09b7860d8991b40f2ac"
+      },
+      {
+        "line": 151,
+        "sha256": "8babfe0d1ec5f029c13db236a208ec128b99f5c917cf1bb0eea43ab27603994b"
+      },
+      {
+        "line": 187,
+        "sha256": "e24c0860b95cc633fe482fc18f674587553b9a350ecdd030357ce7b0ada6d0dc"
+      },
+      {
+        "line": 228,
+        "sha256": "dd2f1c2a6b864313fc5e5b3e887b9f1f21ed7dad532b89d8dd9b77b19b6f5c39"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/core/lock.cjs",
     "category": "in-flight-sweep",
     "maxHits": 10,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -152,16 +225,128 @@
     "reason": "Contract sidecar-hash table: the lessonsAnchor verdict string is a frozen product contract line asserted by suite sections.",
     "lines": [
       {
+        "line": 83,
+        "sha256": "20d067efbf754de09b017018edbe514de815453b2177766f9922875420d96652"
+      },
+      {
+        "line": 97,
+        "sha256": "28b61207c1b32a4de3d3bc5238feb070220bf6a4537a0e29b269dbb4674cde65"
+      },
+      {
+        "line": 141,
+        "sha256": "2d2dc804a52f9bd0f1f76cc83821714e6a0d47817463e8898bcd2455a968ac60"
+      },
+      {
+        "line": 230,
+        "sha256": "a2fb225c53471894577b9d0a057b9f7ffc24a017a937e7c77b57e014554c332a"
+      },
+      {
+        "line": 264,
+        "sha256": "dc2ce2b65f74cc6e78b3ba48befd84f8ec6cdae5175c0085214a7eb879dbbc79"
+      },
+      {
+        "line": 324,
+        "sha256": "6ca9501762993358c8e17e5ab61ad9042c1f9af942a5aa20848b3304ffb71d94"
+      },
+      {
+        "line": 354,
+        "sha256": "f723db315b7141b0357bd5561d0119be3a2f496c85a525c6cac71df06e21e31d"
+      },
+      {
+        "line": 478,
+        "sha256": "93b440665f771baf724e60de3b8936c5ce5f2792604b5beb62cae13e3a36b92c"
+      },
+      {
+        "line": 512,
+        "sha256": "15f455b3fddd67d2918917bf292e9d1099953f1830e8240367ac231054343dad"
+      },
+      {
+        "line": 515,
+        "sha256": "a5c88576155b222c784bcb44d393b927646204402537fe833c7b595ed3d33837"
+      },
+      {
+        "line": 524,
+        "sha256": "e954c22361d5f1ca9559c85e4b306ad7530f055d80961381ff1c088929fe1eb9"
+      },
+      {
+        "line": 535,
+        "sha256": "028d4fedf4ca878ee6e429044f6d33a56655a6dae0a2c1ef2e88450aac43370b"
+      },
+      {
+        "line": 553,
+        "sha256": "09e0a31484878828ac752039e7892e788b5ab304861a78edf4133ff9e47f8bcb"
+      },
+      {
+        "line": 555,
+        "sha256": "23838e953fff9008092984c53069b18e7c301a3cdf78cb4893492eccead63000"
+      },
+      {
         "line": 564,
         "sha256": "7fcd673dc9ddc9c9c56e250d68b08d2f407dff8f70f2e274d72d520296a99c4e"
+      },
+      {
+        "line": 565,
+        "sha256": "56eeef7fe46d604e2123d79d74b1ea6a3757d20f5463291a6144fc51153539b2"
+      },
+      {
+        "line": 566,
+        "sha256": "0907727304fb24284e10f7143433c1b61a7402a4d7bd9b8b83be59a01f9f488f"
+      },
+      {
+        "line": 567,
+        "sha256": "54bd657d19b9c1ffbb77daef7b7d337e2a450a9ca74d76bf0d7cf32ee26a6dd0"
+      },
+      {
+        "line": 568,
+        "sha256": "77a356385c92d8bb4b20d06daa63e330124291d24c02c8f2e5e2cab9f8cbff27"
+      },
+      {
+        "line": 569,
+        "sha256": "47886b3085bfb9139153a3637c0a4d26ee2a72b07b6aca75f56a9d517e791fb6"
+      },
+      {
+        "line": 570,
+        "sha256": "6da500ccb5ca91af60583218fca55a48547cb70244ffb90ac7ecc958e2af128f"
+      },
+      {
+        "line": 571,
+        "sha256": "fd471eb358fe6f87c9ce0ab4b7642f30177458e0f2a45d04e86972de0aea61fb"
+      },
+      {
+        "line": 572,
+        "sha256": "890473ae82a17ca574b665a6c76238b39535d50b6733dc82196f8065ef3625e2"
+      },
+      {
+        "line": 595,
+        "sha256": "240c812812f58b4809f741c136fa52d8c41c968e82c34a399faf7d361ac12b18"
+      },
+      {
+        "line": 623,
+        "sha256": "0951eb661c86165b2571cc369d10a7ff60c9caf9e59d76a3f6bc08cefba6724e"
       },
       {
         "line": 624,
         "sha256": "7534bfb1adb03e24ac3349f274b3c9e4d78cca372208083c10d10d2e50b9e1a3"
       },
       {
+        "line": 646,
+        "sha256": "fe5c20c078e2b37840e05e8d799175e0a77a46e1629b05ee03b0e335f33d1acf"
+      },
+      {
         "line": 647,
         "sha256": "297a8678f34ca3d871efbb7374e5c459608519a709f012e2a17797987175075b"
+      },
+      {
+        "line": 676,
+        "sha256": "a0ff656a387c7c04e75a71d5532b53b2357212b5445457b4ecda155f3cf8ac9e"
+      },
+      {
+        "line": 751,
+        "sha256": "f844494e3ebcc483d9e03525c5fa7e75397862b27fbed6f89e9a0c93541333ce"
+      },
+      {
+        "line": 1233,
+        "sha256": "bdc502fca27a64bba42503b69d9518aa43d98cb47c79a1e9d71c515488c395f5"
       }
     ]
   },
@@ -170,6 +355,33 @@
     "category": "in-flight-sweep",
     "maxHits": 69,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/knowledge/concerns.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 31,
+        "sha256": "180353a8b50924f37647b288d7bcb3d8cfd5b16cd86f6c817c031ef7fa9f2366"
+      },
+      {
+        "line": 37,
+        "sha256": "e8e58dcd06ea30b4b0118e3f898fec600b1ca746f63b6ef055e1878214d82a28"
+      },
+      {
+        "line": 58,
+        "sha256": "c4a3c31ded1f1d44f9e474eb86977404899202fef0d87d215222e59ce26dc652"
+      },
+      {
+        "line": 94,
+        "sha256": "b18c21f9033d3f99362eb2d4e62f7d9de49fa4a4a90348c19a636280ffe89a67"
+      },
+      {
+        "line": 118,
+        "sha256": "f08b205d377aa6d1a36ecc4fa03fe5c9ab19b05a1d1b3c96585999f732a61f1c"
+      }
+    ]
   },
   {
     "path": "bin/lib/knowledge/concerns.cjs",
@@ -182,6 +394,17 @@
     "category": "in-flight-sweep",
     "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/knowledge/lessons-json.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 77,
+        "sha256": "67750376a4a7aaab8e9319a6355ff79bde57bb360098d91f0816ec1bde7abfdb"
+      }
+    ]
   },
   {
     "path": "bin/lib/knowledge/lessons-json.cjs",
@@ -201,6 +424,14 @@
       {
         "line": 102,
         "sha256": "09ace9da9add63f35757ef737d67b327ded4a1c33ca02a6f7c659ed2c58033ff"
+      },
+      {
+        "line": 137,
+        "sha256": "5bf251f676aa7c5cba75af7040e4e875b5b64714169a64be8c1cecf4df3cc6ef"
+      },
+      {
+        "line": 321,
+        "sha256": "35f2171509778f91f6315449a42d256fa0d943738cdb7a8f31a9c916cf378e2d"
       }
     ]
   },
@@ -209,6 +440,17 @@
     "category": "in-flight-sweep",
     "maxHits": 6,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/knowledge/phase.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 209,
+        "sha256": "ecb6baa6f011bd679616ca0bf5a11c0b62ac00020fe38d1f3dbcada9cf81c480"
+      }
+    ]
   },
   {
     "path": "bin/lib/knowledge/phase.cjs",
@@ -228,12 +470,32 @@
     "reason": "Contract strings in prompts, level labels and error text quote finding ids by design; pinned as frozen product surface.",
     "lines": [
       {
+        "line": 78,
+        "sha256": "3557c0dc2961fd2807a72c6ae7650f213c968d0281ed7b607b1d30f03d3c9975"
+      },
+      {
+        "line": 98,
+        "sha256": "e71ff27d8e918bd4da2a94c6a3541fb6ce096318c8cedcb7a9ffa8c6edfc1679"
+      },
+      {
+        "line": 103,
+        "sha256": "ad8077dd5d13511c62cd13d6879046b16ab247165665d39284fc79f3a5426596"
+      },
+      {
         "line": 112,
         "sha256": "24d64081cfd6973d2f70f1eeea16cee66cf0b3638020eff58a782f316cc44f8e"
       },
       {
         "line": 115,
         "sha256": "711ebc2e880f7e4d08b87ac28ceee74f55a4d3d6777bbadda58bcd8453768658"
+      },
+      {
+        "line": 119,
+        "sha256": "55945c4d5323ac57895accd173fec4dd2873c6d8df0e3c4a6a6ebbb832a8ace1"
+      },
+      {
+        "line": 125,
+        "sha256": "a0734266bbadebd690b1d7067aad2a94cc81f9aadf640b4ccac21ffc9494fb61"
       }
     ]
   },
@@ -389,9 +651,39 @@
   },
   {
     "path": "bin/lib/task/archive.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 229,
+        "sha256": "ba595698c5feccc15e9b3b8fc0a1cff6f2665d21d92f24060ef13949f9e536ad"
+      },
+      {
+        "line": 437,
+        "sha256": "8638628646a84624acfd64faf64766d6f92c2a8ccb2423e483657dbc3afed673"
+      },
+      {
+        "line": 546,
+        "sha256": "829ec48da19a6121f8d61b41da0dae442d73885705855f41cc81f083b6b69ae5"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/task/archive.cjs",
     "category": "in-flight-sweep",
     "maxHits": 28,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/task/changelog.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 89,
+        "sha256": "c48475dd626dd15e3b041b50d13844f649e7f926c7a2fee4cf81a054fa0617a4"
+      }
+    ]
   },
   {
     "path": "bin/lib/task/changelog.cjs",
@@ -407,9 +699,63 @@
   },
   {
     "path": "bin/lib/task/commit.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 26,
+        "sha256": "5d491c14ca7747f5773b35ff1c4bfee13f9d3dc25c3b01e22d45fc3102bd535f"
+      },
+      {
+        "line": 39,
+        "sha256": "c89ead33587de59b009e41bcfe91968b695ba56f791271c08592a75afb24d4b6"
+      },
+      {
+        "line": 87,
+        "sha256": "a064e8412ae3d281e5c96fe898775d078c92db514fc636ddcf350f155ba24c66"
+      },
+      {
+        "line": 224,
+        "sha256": "aa8fe970ed66b9709c6d5d86d529747fc96b06d4e6b4592fe42d0b8bcddc9cc6"
+      },
+      {
+        "line": 240,
+        "sha256": "a4f6de1c08fe635a6d35acbfffbda8d2cf7f66d25d9d6248d5e5649b0c697f4b"
+      },
+      {
+        "line": 290,
+        "sha256": "4db0d21811326a7b3d419cd2248bd3285ce39ba2ad16cec26fec864218a6ca86"
+      },
+      {
+        "line": 316,
+        "sha256": "2cb3e3cdb36470b0e240873a3a0d4e7cbd6f5cf983787c13db2a3ed932220b94"
+      },
+      {
+        "line": 319,
+        "sha256": "a6069318b2995096085266d5104175719d458edc088e727dd37307ec98c61f1b"
+      },
+      {
+        "line": 321,
+        "sha256": "de87e2674cddab5f2dd808fed2d807f9284d03fe53a0cdb8673986b190bf0397"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/task/commit.cjs",
     "category": "in-flight-sweep",
     "maxHits": 38,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/task/context.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 71,
+        "sha256": "76c80b1496534dac1007fa92e21c2cf96e52cbc1287f1dff7d05a3e764fa8609"
+      }
+    ]
   },
   {
     "path": "bin/lib/task/context.cjs",
@@ -425,15 +771,56 @@
   },
   {
     "path": "bin/lib/task/init.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 111,
+        "sha256": "367f6ec57c2fb11fa27df4078857209522133f3feed278d86b28ab246337d429"
+      },
+      {
+        "line": 141,
+        "sha256": "4542fe52aeb41510a0d6f5bf99cad0fdd8ecc10e7c7f1ac3a00469c0378c47b1"
+      },
+      {
+        "line": 204,
+        "sha256": "e3ab1267f11cdf86dd0e194d4a44a052dde959fc7bc504e7c80eb5da385e7817"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/task/init.cjs",
     "category": "in-flight-sweep",
     "maxHits": 25,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/task/plansnap.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 19,
+        "sha256": "8815a4d2e597b3020e9137c05efd61d1c0209ca65df0d2a956f177795e83a0c0"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/task/plansnap.cjs",
     "category": "in-flight-sweep",
     "maxHits": 4,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/task/stage.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 26,
+        "sha256": "2779b7e742532f5c08386a4732902c01f491d8f2920b4825d9f2eb15fd6e9a0f"
+      }
+    ]
   },
   {
     "path": "bin/lib/task/stage.cjs",

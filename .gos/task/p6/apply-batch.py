@@ -63,6 +63,14 @@ def tidy(text):
     return t.rstrip()
 
 
+def tidy_comment(text):
+    t = tidy(text)
+    # comment lines only: drop wrapper parens left holding a lone connector
+    t = re.sub(r'\(\s*(join|see|refs?|and|or|cf|via|per)\s*\)', ' ', t)
+    t = re.sub(r'\(\s+([a-z]{1,10})\s+\)', r'(\1)', t)
+    return tidy(t)
+
+
 def main():
     batch_file = sys.argv[1]
     batch = [p.strip() for p in open(batch_file) if p.strip() and not p.startswith('#')]
@@ -91,7 +99,8 @@ def main():
                 spans.append((i, e))
             for i, e in sorted(spans, reverse=True):
                 text = text[:i] + ' ' + text[e:]
-            text2 = tidy(text)
+            is_comment = bool(re.match(r'^\s*(#|//|/\*|\*|<!--)', text))
+            text2 = tidy_comment(text) if is_comment else tidy(text)
             if MARKERS.match(text2):
                 del lines[ln - 1]
                 stats['B'] += 1
