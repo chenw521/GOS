@@ -88,7 +88,7 @@ def load_rows():
         if m:
             cur = m.group(1)
             continue
-        m = re.match(r'^\| (\d+) \| ([AB]) \| (\S+) \| ([ABD]) \|', line)
+        m = re.match(r'^\| (\d+) \| ([AB]) \| ([^|]+?) \| ([ABD]) \|', line)
         if m and cur:
             rows[cur][int(m.group(1))].append((m.group(2), m.group(3), m.group(4)))
     return rows
