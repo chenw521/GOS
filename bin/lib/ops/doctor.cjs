@@ -84,7 +84,7 @@ function cmdDoctor() {
 
   console.log('GOS doctor — installation diagnostics (read-only)\n');
 
-  // D-63/F8: effective locale + source — visible in diagnostics so a wrong
+ // /F8: effective locale + source — visible in diagnostics so a wrong
   // language is explainable without guessing which config won.
   {
     const eff = core.effectiveLocale();
@@ -104,11 +104,11 @@ function cmdDoctor() {
     else warn('help --json envelope malformed (schema_version/gos_version/commands mismatch)');
   } catch (e) { warn(`help --json envelope construction failed: ${e.message}`); }
 
-  // [0] Repo hygiene (REVIEW F-6): .gos/.lock must be gitignored (machine-local pid file)
+ // [0] Repo hygiene (REVIEW ): .gos/.lock must be gitignored (machine-local pid file)
   // only checked when a lock file actually exists in this repo (avoids noise in fresh clones)
   const repoRoot = (() => { try { return execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8', stdio: ['ignore','pipe','ignore'] }).trim(); } catch { return null; } })();
   if (repoRoot && fs.existsSync(path.join(repoRoot, '.gos', '.lock'))) {
-    // D-14/D-15 (§3.7, RT3-F11): the ignore verdict goes through gitprobe's
+ // ( , ): the ignore verdict goes through gitprobe's
     // ignoredSet() (its truth source collapses covered directories to a
     // single trailing-slash entry, so a wholesale `.gos/` rule counts too —
     // the same recursive verdict the retired one-shot probe gave). Any git
@@ -121,9 +121,9 @@ function cmdDoctor() {
     if (!ignored) { warn('MISSING: .gos/.lock not gitignored — add ".gos/.lock" to .gitignore (concurrency lock is machine-local)'); fix('lock_gitignore'); }
     else console.log('  ✓ OK: .gos/.lock gitignored');
   }
-  // [0b] R3-F1: lessons sidecar must be in git index once it exists (tracked → deletable/recoverable)
+ // [0b] : lessons sidecar must be in git index once it exists (tracked → deletable/recoverable)
   if (repoRoot && fs.existsSync(path.join(repoRoot, '.gos', core.GOS_PATHS.lessons_anchors.rel))) {
-    // D-14/D-15 (§3.7, RT3-F11): trackedness goes through gitprobe's isTracked
+ // ( , ): trackedness goes through gitprobe's isTracked
     // (index UNION HEAD blob). Fail-closed: any git failure reports tracked —
     // strictly more conservative than the old one-shot probe's catch → false.
     const inIndex = core.isTracked('.gos/cache/.lessons-anchors.json');
@@ -219,7 +219,7 @@ function cmdDoctor() {
     console.log('   built-in cleanup/security still run at ship stage)');
   }
 
-  // Summary (D-02: explicit machine-readable verdict)
+ // Summary ( : explicit machine-readable verdict)
   console.log('');
   if (guardFailed) {
     console.error('✗ internal error: a fix directive failed the safety whitelist and was suppressed.');

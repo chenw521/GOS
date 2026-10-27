@@ -112,7 +112,7 @@
   {
     "path": "bin/gos.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 59,
+    "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -534,12 +534,6 @@
     ]
   },
   {
-    "path": "bin/lib/map/allowlist.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "bin/lib/map/anchor.cjs",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -565,13 +559,7 @@
   {
     "path": "bin/lib/map/anchor.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 8,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "bin/lib/map/contract.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
+    "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -592,12 +580,6 @@
         "sha256": "9e83f4ffb5ddb750e29dd8088c566e19b71ff202ab69b16938bb8906807390f9"
       }
     ]
-  },
-  {
-    "path": "bin/lib/map/edges.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 3,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/map/engine.cjs",
@@ -641,7 +623,7 @@
   {
     "path": "bin/lib/map/engine.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 27,
+    "maxHits": 11,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -714,7 +696,7 @@
   {
     "path": "bin/lib/map/index.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 31,
+    "maxHits": 4,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -743,7 +725,7 @@
   {
     "path": "bin/lib/map/views.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 10,
+    "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -760,30 +742,6 @@
         "sha256": "a081128060491ebeb32b696fa4092969fae66f14bb0018a067f463eb724932b7"
       }
     ]
-  },
-  {
-    "path": "bin/lib/nav/cmds.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 7,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "bin/lib/nav/help.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "bin/lib/nav/registry-consts.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "bin/lib/nav/registry.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/nav/status.cjs",
@@ -815,19 +773,13 @@
   {
     "path": "bin/lib/nav/status.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 13,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "bin/lib/ops/brownfield-probe.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 5,
+    "maxHits": 2,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/ops/brownfield.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 29,
+    "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -840,12 +792,6 @@
         "sha256": "3397302cb4cb8aa305b40ab00acb03c5a64cd090f9f2c65d42a2b4cb02448894"
       }
     ]
-  },
-  {
-    "path": "bin/lib/ops/changelog-core.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 22,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/ops/config.cjs",
@@ -871,12 +817,6 @@
     ]
   },
   {
-    "path": "bin/lib/ops/config.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 11,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "bin/lib/ops/doctor.cjs",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -888,12 +828,6 @@
     ]
   },
   {
-    "path": "bin/lib/ops/doctor.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 10,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "bin/lib/ops/feedback.cjs",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -903,12 +837,6 @@
         "sha256": "afed28f0218254742154ece5ce7283bf5fb618c239c5d9ba133f79de3a54d6f7"
       }
     ]
-  },
-  {
-    "path": "bin/lib/ops/feedback.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/ops/gate.cjs",
@@ -998,12 +926,6 @@
     ]
   },
   {
-    "path": "bin/lib/ops/gate.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 73,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "bin/lib/ops/gitseed.cjs",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -1027,12 +949,6 @@
     ]
   },
   {
-    "path": "bin/lib/ops/gitseed.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "bin/lib/ops/push.cjs",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -1042,12 +958,6 @@
         "sha256": "2b0a2dcaf8fb2986725ec7fd5b1805c192029a895e083f107726973987de93d4"
       }
     ]
-  },
-  {
-    "path": "bin/lib/ops/push.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/ops/setup.cjs",
@@ -1063,18 +973,6 @@
         "sha256": "df5013ea42c0a0ca7f9deae4c24486d11dd06c8c8c6575d2fc3fd1f2fdb86d53"
       }
     ]
-  },
-  {
-    "path": "bin/lib/ops/setup.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 8,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "bin/lib/ops/track.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 23,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/render/views.cjs",
@@ -1106,12 +1004,6 @@
         "sha256": "ad84bcab2c535c40e8e5cafe299dd27f65cbed1df157f9a3fc2b9ea279d6cdcb"
       }
     ]
-  },
-  {
-    "path": "bin/lib/render/views.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 57,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/task/archive.cjs",

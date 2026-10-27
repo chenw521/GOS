@@ -8,13 +8,13 @@ const path = require('path');
 
 const RENDERED_HEADER = core.CONTRACTS.command_contracts.generatedHeader;
 
-// D-05 scope: active phase + 2 phases before it (by project.phases order).
+// scope: active phase + 2 phases before it (by project.phases order).
 // No active phase → last 3 phases. Unknown birth_phase (not in phases[]) → always included.
 
-// D-08 backup: only meaningful when the full rendered set exists; history is
+// backup: only meaningful when the full rendered set exists; history is
 // kept in full — expiry (14d rolling sweep) runs on the render entry.
 
-// D-05 atomic protocol: write ALL temps first, then rename ALL; any rename failure →
+// atomic protocol: write ALL temps first, then rename ALL; any rename failure →
 // restore already-renamed files from the pre-render content and die (never a torn set).
 
 // gap-C handoff block: paste-able fresh-session continuation (commit tails + `gos next`
@@ -28,10 +28,10 @@ const RENDERED_HEADER = core.CONTRACTS.command_contracts.generatedHeader;
 
 // ---------- Phase B (T2): plan_snapshot freeze [B-15] + freeze-field helpers ----------
 
-// R4-F6 pinned schema: plan_snapshot.tasks = [{id, covers: [D-NN…], files: [path…]}].
+// pinned schema: plan_snapshot.tasks = [{id, covers: [D-NN…], files: [path…]}].
 // Files comma-split + trim; a single entry containing whitespace is illegal (exit 1).
 
-// B-15 monotonicity: ∪Files and per-task Covers may only GROW vs the existing snapshot.
+// monotonicity: ∪Files and per-task Covers may only GROW vs the existing snapshot.
 // Returns the list of shrinkage descriptions (empty = legal refresh).
 
 // B-15 [R2-3] refresh double constraint: ① only current_stage==='PLAN' may refresh an
@@ -39,79 +39,78 @@ const RENDERED_HEADER = core.CONTRACTS.command_contracts.generatedHeader;
 // needs --force and writes an audit row what:'snapshot-force'.
 
 // F1 lazy-freeze ledger: uniform home for both lazy-freeze events (plan + spec),
-// queryable by later mounts (T7 status/consistency checks).
+// queryable by later mounts ( status/consistency checks).
 
 // ---------- structured next-actions (OpenSpec navigator pattern) ----------
 
 // ---------- commands ----------
 
-// D-30 two-stage level parse (R4-F1): wide lv-like match first, strict inner parse,
+// two-stage level parse : wide lv-like match first, strict inner parse,
 // fail-closed die for lv-like-but-invalid; non-lv-like → null (falls to intent text).
 // `v1` (no leading l) is NOT lv-like → intent text (spec grammar `[Ll][Vv]?<digits>`).
 
-// ---------- D-01: gos context <stage> (pre-computed context JSON) ----------
+// ---------- : gos context <stage> (pre-computed context JSON)
 
-// ---------- Phase U follow-up: curated concerns join THINK/PLAN context (D-41 symmetry) ----------
+// ---------- Phase U follow-up: curated concerns join THINK/PLAN context ( symmetry)
 // BUILD/REVIEW already consume .gos/concerns.md (five-piece wiring #5); THINK/PLAN were
 // the gap — phase P-type tasks design decisions in THINK, exactly when curated worries
 // (e.g. map blast-linked items) must be visible. Non-empty file only; empty = no noise entry.
-// Top-level fn declaration REQUIRED: phase-P T36.3d pins acorn(top-level)==regex(line-start).
+// Top-level fn declaration REQUIRED: phase-P .3d pins acorn(top-level)==regex(line-start).
 
-// ---------- D-02: gos checkpoint save ----------
 
 // ---------- Phase B (T7): commit-embedded semantic checks [D-33/B-10/B-22, F1/R4-F1/F7] ----------
 // Layer 3 of the three-layer mount: gate semantic standalone + gate all chained + THIS —
 // BUILD/VERIFY commit embeds the SAME ops.semanticChecks() (non-copy) so the model cannot bypass.
 
-// B-10 escape hatch: only GOS_TEST_SANDBOX=<abs path> whose realpath strictly equals the
+// escape hatch: only GOS_TEST_SANDBOX=<abs path> whose realpath strictly equals the
 // project root activates GOS_SKIP_SEMANTIC=1. Bare skip in production → hard refusal.
 
-// T8: does an archive dir exist for today's base slug (exact, or -2/-3 collision suffix)?
+// : does an archive dir exist for today's base slug (exact, or -2/-3 collision suffix)?
 
-// Phase C (T4, D-15): help — three modes, ALL rendered from COMMANDS registry
-// (hand-written lists forbidden; T29-4/5 assert derivation).
+// Phase C ( , ): help — three modes, ALL rendered from COMMANDS registry
+// (hand-written lists forbidden; -4/5 assert derivation).
 //   gos help            human-readable, grouped by class (row grammar below)
 //   gos help <cmd>      per-command detail page (alias resolution → host entry)
 //   gos help --json     machine envelope (sole legal machine mode — see
 //                       semantic_checks.jsonMachineMode; strict JSON from byte 0)
-// Row grammar (canonical, T29-4 anchors here): command rows match
+// Row grammar (canonical, -4 anchors here): command rows match
 //   ^  (\(no command\)|[a-z_][a-z0-9_-]*)\s{2,}\S
 // (two-space indent, ≥2 spaces separator; sentinel captured as one token;
 //  char class includes underscore — real command name '_contract' — spec refrozen).
 
-// ---------- requirement command family (T4): add | list | drop | claim ----------
+// ---------- requirement command family : add | list | drop | claim
 
-// ---------- T8: phase command family — add | list | claim | unclaim ----------
+// ---------- : phase command family — add | list | claim | unclaim
 // Lv4 lifecycle: add (pending) → claim (fresh Lv3 state per phase, gated on DONE + prev archived)
 // → archive (merges back into project.json, marks done) → repeat → milestone reset.
 
-// ---------- Phase B (T3): lessons command family — dual-file + sidecar anchors + audit chain ----------
-// D-29/D-32/D-34 + B-7/9/13/14/18/19. [model]→~/.config/gos/lessons.md (os.homedir() joined,
+// ---------- Phase B : lessons command family — dual-file + sidecar anchors + audit chain
+// + . [model]→~/.config/gos/lessons.md (os.homedir() joined,
 // never literal ~), [project]→.gos/lessons.md. Anchors: per-file sidecar json
-// {hashes[16hex], chain_head, audit[]} — NOT in state.json (D-32 symmetric, cross-repo global).
+// {hashes[16hex], chain_head, audit[]} — NOT in state.json ( symmetric, cross-repo global).
 
 // ---------- truth command family — auto-numbered add (ids continue from existing) + manual/replay verify + receipts ----------
-// B-1/B-19/B-20. `truth add` auto-numbers T1/T2… (max existing numeric id + 1, both
-// T1 and legacy T-01 forms scanned). `truth verify` manual mode = T2 three-element
-// validator (validateEvidenceObject, R4-F14 single consumption point) + manual:true;
+// . `truth add` auto-numbers / … (max existing numeric id + 1, both
+// and legacy T-01 forms scanned). `truth verify` manual mode = three-element
+// validator (validateEvidenceObject, single consumption point) + manual:true;
 
 const MANUAL_MARKER = core.CONTRACTS.command_contracts.manualMarker;
-// D-08 (R-29): backups are machine-local cache under .gos/cache/render-backup —
+// : backups are machine-local cache under .gos/cache/render-backup
 // full history (no rotation), 14d rolling expiry swept on render entry.
 const RENDER_BACKUP_DIR = core.resolvePath('render_backup');
 const LEGACY_RENDER_BACKUP_DIR = path.join(core.ARCHIVE_DIR, 'render-backup');
 const RENDER_BACKUP_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
-// Strict timestamp-dir gate (D-08/R2-5): prefix filter is the classification
+// Strict timestamp-dir gate ( /R2-5): prefix filter is the classification
 // contract; junk NEVER gets recursed into or removed.
 const TS_DIR_PREFIX_RE = /^\d{4}-\d{2}-\d{2}T/;
 // Full shape: 2026-10-15T12-34-56-789Z (fs-safe ISO, fixed-width → sortable).
 const TS_DIR_FULL_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/;
-// T8 hook: entries silently skipped by name at the backup root — the last-render
+// hook: entries silently skipped by name at the backup root — the last-render
 // manifest rides the backup root (it is the manifest, not junk); warn+skip stays
 // the default for everything else.
 const RENDER_BACKUP_SILENT_SKIP = new Set(['manifest.json']);
 const VIEW_NAMES = ['DECISIONS.md', 'ROADMAP.md', 'REQUIREMENTS.md'];
-// D-03/R3-F1 last-render manifest: content hashes of the three view bodies
+// / last-render manifest: content hashes of the three view bodies
 // (footer + MANUAL region stripped), written in the same rename batch as the views.
 const MANIFEST_PATH = path.join(RENDER_BACKUP_DIR, 'manifest.json');
 
@@ -125,7 +124,7 @@ function backupStampMs(name) {
   return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6], +m[7]);
 }
 
-// D-08 one-shot migration: timestamp dirs move from the legacy archive path to
+// one-shot migration: timestamp dirs move from the legacy archive path to
 // the cache dir; junk (non-timestamp names, symlinks, non-dirs) STAYS BEHIND
 // with a warning — never recursed into, never deleted. Same strict filter as
 // the sweep (R2-5).
@@ -157,7 +156,7 @@ function migrateLegacyRenderBackup() {
   } catch { /* junk remains behind — warnings above already name it */ }
 }
 
-// D-08 expiry sweep (rides the render entry, not a separate command): entries
+// expiry sweep (rides the render entry, not a separate command): entries
 // older than 14 days are removed, EXCEPT the newest backup — hard floor, never
 // deleted even when judged expired (clock rolled back). Every entry is lstat'd:
 // symlinks and non-directories warn+skip and are never traversed (cache/ is an
@@ -202,7 +201,7 @@ function sweepRenderBackups() {
   }
 }
 
-// D-03/R3-F1 diff basis: view content minus the generated-at footer and the
+// / diff basis: view content minus the generated-at footer and the
 // MANUAL region — the stable identity of a rendered body (the footer timestamp
 // and preserved manual content must never influence the change decision).
 function stripViewBody(content) {
@@ -215,7 +214,7 @@ function stripViewBody(content) {
   return { body, manual };
 }
 
-// D-03/R3-F1 last-render manifest gate: the renderer refuses to clobber view
+// / last-render manifest gate: the renderer refuses to clobber view
 // content it cannot vouch for. Provenance = the GENERATED header (line 1) —
 // init skeletons and handwritten brownfield views are NOT gated (the import
 // flow stays untouched); rendered views without a matching manifest (fresh
@@ -265,7 +264,7 @@ function syncManifestManualFlags(prevStripped) {
   if (drifted) core.writeAtomicJson(MANIFEST_PATH, mf);
 }
 
-// R2-F10: a killed render leaves .tmp<pid> temps behind; dead-pid ones are
+// : a killed render leaves .tmp<pid> temps behind; dead-pid ones are
 // swept at the render entry, live-pid ones are somebody's in-flight write and stay.
 function sweepOrphanTemps() {
   const zones = [
@@ -377,7 +376,7 @@ function backupRenderedViews(names) {
   const dest = path.join(RENDER_BACKUP_DIR, ts);
   fs.mkdirSync(dest, { recursive: true });
   for (const n of names) fs.copyFileSync(path.join(core.PROJECT_DIR, n), path.join(dest, n));
-  // D-08: full history — no rotation here; the 14d sweep rides the render entry.
+ // : full history — no rotation here; the 14d sweep rides the render entry.
 }
 
 function renderProjectViews(project, opts = {}) {
@@ -386,11 +385,11 @@ function renderProjectViews(project, opts = {}) {
   const force = !!opts.force;
   const auto = !!opts.auto; // mutation-driven: diff-skip + refusal carries the auto prefix
   fs.mkdirSync(core.PROJECT_DIR, { recursive: true });
-  // D-08: migration + expiry sweep ride the render entry (not a separate command).
+ // : migration + expiry sweep ride the render entry (not a separate command).
   migrateLegacyRenderBackup();
   sweepRenderBackups();
   sweepOrphanTemps();
-  // D-03/R3-F1: manifest gate — rendered bodies are renderer-owned; hand-edited
+ // / : manifest gate — rendered bodies are renderer-owned; hand-edited
   // or unvouched content refuses instead of being silently destroyed. --force
   // is the explicit reconcile exit.
   if (!force) {
@@ -399,7 +398,7 @@ function renderProjectViews(project, opts = {}) {
   }
   const names = VIEW_NAMES;
   // Phase V [R1-F8]: self-describing footer — generated views carry write-time snapshot
-  // semantics (residual rows keep their last-written status forever, D-08); point readers
+ // semantics (residual rows keep their last-written status forever, ); point readers
   // at the live merged views so a frozen 'active' row never misleads again.
   const snapshotFooter = `\n<!-- generated at ${new Date().toISOString()} after phase ${p.last_archived_phase || '(milestone reset)'} — row status is a write-time snapshot, not a live lifecycle; live merged view: gos decision list --all / gos requirement list --all -->`;
   const bodies = {
@@ -414,7 +413,7 @@ function renderProjectViews(project, opts = {}) {
     prev[n] = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : null;
     prevStripped[n] = prev[n] === null ? null : stripViewBody(prev[n]);
   }
-  // D-03 R1-F4: diff on footer-free stripped bodies — a no-change mutation
+ // : diff on footer-free stripped bodies — a no-change mutation
   // writes nothing at all (footer timestamp only advances when body content
   // changed; no backup churn). Explicit `gos render` (and archive renders)
   // stay write-through renders.
@@ -422,7 +421,7 @@ function renderProjectViews(project, opts = {}) {
     syncManifestManualFlags(prevStripped);
     return { rendered: [], skipped: true };
   }
-  // D-03 R1-F4: backup AFTER the diff decision — a no-change render never
+ // : backup AFTER the diff decision — a no-change render never
   // churns the backup history. Partial view sets back up what EXISTS: an
   // all-or-nothing gate would leave a handwritten sibling view unbacked and
   // silently destroyed by the first render (review #5).
@@ -443,7 +442,7 @@ function renderProjectViews(project, opts = {}) {
       temps[n] = { tmp: path.join(core.PROJECT_DIR, `.${n}.tmp${process.pid}`), final: path.join(core.PROJECT_DIR, n) };
       fs.writeFileSync(temps[n].tmp, content);
     }
-    // D-03/R3-F1: the manifest joins the SAME rename batch — views and manifest
+ // / : the manifest joins the SAME rename batch — views and manifest
     // land together or not at all.
     temps.__manifest__ = { tmp: path.join(RENDER_BACKUP_DIR, `.manifest.json.tmp${process.pid}-${Date.now()}`), final: MANIFEST_PATH };
     fs.writeFileSync(temps.__manifest__.tmp, JSON.stringify(manifest, null, 2) + '\n');

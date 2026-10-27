@@ -281,7 +281,7 @@ const EXTRACTORS = [
         const ann = lines.find((l) => /^#\s*gos-map:(cmd|both)\s/.test(l));   // [Phase S/D-02] both lines also carry cmd edges
         const none = lines.some((l) => /^#\s*gos-map:none/.test(l));
         // fn/file-only sections are annotated too (testof_fn / file-anchor
-        // linkage) — they must not count against R-10
+ // linkage) — they must not count against
         const fnOrFile = lines.some((l) => /^#\s*gos-map:(fn|file)\s/.test(l));
         if (ann) {
           // COMMANDS-whitelist filter: trailing prose in the annotation line can never
@@ -398,7 +398,7 @@ const EXTRACTORS = [
         let lines = [];
         try { lines = fs.readFileSync(path.join(secDir, f), 'utf8').split('\n').slice(0, 5); } catch { lines = []; }
         const anns = lines.filter((l) => /^#\s*gos-map:fn\s/.test(l));   // multiple annotation lines allowed
-        // [Phase S/D-02] explicit fn names win over `gos-map:both` derivation — collect
+ // explicit fn names win over `gos-map:both` derivation — collect
         // this section's explicit set first so both-derived fns skip them (no duplicates).
         const explicitFns = new Set();
         for (const ann of anns)
@@ -499,7 +499,7 @@ function runExtractors(root, files, readFile, ctx) {
 
 function writeDeps(root, scan) {
   const info = mapGitInfo(root);
-  // [Phase D T3] semantic families run on the SAME file set the import scanner saw
+ // semantic families run on the SAME file set the import scanner saw
   const semantic = runExtractors(root, (scan && scan.files) || [], (f) => fs.readFileSync(path.join(root, f), 'utf8'));
   const obj = Object.assign({ schema_version: 3, note: MAP_NOTE, generated: new Date().toISOString() }, info, scan, { semantic });   // [Phase P T2 / D-40] v3 = +callgraph/testof_fn/parse_failures
   obj.self_sha256 = depsSelfHash(obj);   // set LAST: body order frozen for verifier parity
@@ -529,7 +529,7 @@ function loadDeps(root) {
   let d;
   try { d = JSON.parse(raw); } catch { core.die(`✗ ${core.CONTRACTS.semantic_checks.depsParseFail}`); }
   if (!d || typeof d.schema_version !== 'number') core.die(`✗ ${core.CONTRACTS.semantic_checks.depsSchemaFuture}`);
-  // [Phase P T2 / D-40] direction-aware: newer cache → CLI is behind (upgrade);
+ // direction-aware: newer cache → CLI is behind (upgrade);
   // older cache → fn-level data missing (rescan). Never hint a rescan that cannot fix it.
   if (d.schema_version > 3) core.die(`✗ ${core.CONTRACTS.semantic_checks.depsSchemaFuture.replace('not supported by this CLI', `v${d.schema_version} newer than CLI v3 supports`) + ' — upgrade gos: npm i -g @chenw521/gos'}`);
   if (d.schema_version < 3) core.die(`✗ ${core.CONTRACTS.semantic_checks.depsSchemaStale}`);   // v2 = pre-callgraph; v3 = +callgraph/testof_fn/parse_failures
@@ -750,7 +750,7 @@ function printSemanticClosure(root, changedFiles) {   // human block (closure --
     }
   }
   if (r.unannotated > 0) console.log(`⚠ ${SC.semClosureUnannotated.replace('<N>', String(r.unannotated))}`);
-  // R-06 (D-35): one-line human summary — machine lists above stay layered (D-33);
+ // : one-line human summary — machine lists above stay layered
   // empty edge-net says so explicitly (E8: silence was misread as "checked, all fine").
   if (any) console.log(`📎 ${core.t('map.closure.summaryHit', { files: r.mustCheck.size, sections: r.mustRun.size })}`);
   else console.log(`📎 ${core.t('map.closure.summaryNone')}`);

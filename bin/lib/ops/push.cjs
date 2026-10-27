@@ -142,7 +142,7 @@ function buildAggregateMessage(subject, rest, ahead, baseSha, headSha) {
   }
   lines.push('');
   lines.push(`Aggregated ${ahead} commit(s) ${baseSha.slice(0, 8)}..${headSha.slice(0, 8)} into one semantic commit.`);
-  // R-01 choke point: the whole aggregate (subject + body bullets) passes
+ // choke point: the whole aggregate (subject + body bullets) passes
   // through the shared neutralizer — derived changelog bullets and explicit
   // --message subjects alike must never carry a close/fix keyword + #N.
   return clcore.neutralizeIssueTriggers(lines.join('\n'));

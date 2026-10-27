@@ -23,7 +23,7 @@ function detectPlatforms(home) {
   });
 }
 
-// D-63: locale persistence — project config when a .gos/ exists here, else the
+// : locale persistence — project config when a .gos/ exists here, else the
 // global config (nearest-wins resolution reads the same two).
 function persistLocale(locale) {
   const projCfg = path.join(core.GOS_DIR, 'config.json');
@@ -36,7 +36,7 @@ function persistLocale(locale) {
   return { file, scope: useProject ? 'project config' : 'global config' };
 }
 
-// D-63 non-interactive language auto-detect: normalize $LANG, persist silently.
+// non-interactive language auto-detect: normalize $LANG, persist silently.
 // Never dies (an exotic locale just means "keep default").
 function autoPersistDetectedLocale() {
   const n = core.normalizeLocale(process.env.LANG || process.env.LC_ALL);
@@ -47,7 +47,7 @@ function autoPersistDetectedLocale() {
 
 function cmdSetup(args) {
   if (args.includes('--commitlint')) { cmdSetupCommitlint(args); return; }
-  // D-63 language step: --lang validates normalized values (en | zh-CN) and
+ // language step: --lang validates normalized values (en | zh-CN) and
   // persists (project config when inside a repo, else global); invalid → die
   // listing valid values. Non-interactive without --lang = detect LANG env,
   // normalize, persist silently (never die, N8).
@@ -130,7 +130,7 @@ const COMMITLINT_HOOK_REL = path.join('hooks', 'commit-msg');
 const PRE_PUSH_HOOK_REL = path.join('hooks', 'pre-push');
 const COMMITLINT_STATE_REL = path.join('.gos', 'cache', 'commitlint-hook.json');
 const COMMITLINT_HOOKS_PATH_VALUE = 'hooks';
-// commitlint's real config resolution set (D-94, consumed by
+// commitlint's real config resolution set ( , consumed by
 // ops/brownfield-probe.cjs): the rc family and the commitlint.config family
 // are stat candidates; package.json counts only through its 'commitlint' key
 // (checked by the probe, not by stat). Exported so the candidate strings
@@ -227,7 +227,7 @@ function teardownCommitlint(top, statePath) {
 // Seed the teaching-grade gate examples into the CURRENT project (.gos/):
 // gates.json (declarative rules) + gates/check.sh (scripted check), then
 // register the script's hash in the machine-local trust store — seeded means
-// reviewed-by-setup, hence trusted (spec R-05). Idempotent: never overwrites.
+// reviewed-by-setup, hence trusted (spec ). Idempotent: never overwrites.
 // Trust registration goes through the CLI as a subprocess (same-source rule —
 // setup must not require gate.cjs, that would close a require cycle via
 // doctor.cjs).
@@ -271,7 +271,6 @@ async function onboarding() {
   W(core.t('setup.onboard.subtitle'));
   W('╰──────────────────────────────────────────────────────────────╯');
 
-  // ---- Step 0: language (D-63) ----
   W('');
   W(core.t('setup.onboard.step1Title'));
   W(core.t('setup.onboard.step1Desc'));

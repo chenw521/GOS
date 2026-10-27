@@ -86,7 +86,7 @@ function doneHint(state) {
     else lines.push('⏸ archive awaiting YOUR approval (user gate) — `gos approve archive`, then `gos archive`');
     // [phase-ux L3] unmerged-branch visibility: global sync (npm i -g) consumes the default
     // branch — shipping commits on a feature branch silently misses every other repo.
-    // T5-guard compliance: execFileSync argv form only, NO shell-assembled git calls.
+ // -guard compliance: execFileSync argv form only, NO shell-assembled git calls.
     try {
       const br = execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
       if (br && br !== 'main' && br !== 'master') {
@@ -253,7 +253,7 @@ function printStatus(state) {
     console.log(`📋 Requirements: ${claimed}/${state.requirements.length} claimed`);
   }
   if (state.gaps.filter(g => g.status !== 'fixed').length) console.log(`⚠ Open gaps: ${state.gaps.filter(g => g.status !== 'fixed').length}`);
-  // DECISIONS index governance (D-23 migration): count the truth source (project.json),
+ // DECISIONS index governance ( migration): count the truth source (project.json),
   // not file lines — GENERATED views are already scope-limited by the renderer (active + last 2 phases).
   // Phase V [MIN-3]: single core.loadProject — the parked line below shares this load.
   const proj = core.loadProject();
@@ -263,7 +263,7 @@ function printStatus(state) {
   // (doneHint covers the archived case; this line covers mid-flight status checks).
   const projParked = (proj && Array.isArray(proj.phases)) ? proj.phases.filter(x => x && x.status === 'parked').length : 0;
   if (projParked > 0) console.log(`🅿️ Parked phases: ${projParked} — close out via \`gos phase park <n> --undo\` / \`gos phase mark-done <n>\` (blocks milestone)`);
-  // D-33 (E6): in-flow self-discovery pointer — frozen core.CONTRACTS string (T4 exact-match)
+ // (E6): in-flow self-discovery pointer — frozen core.CONTRACTS string ( exact-match)
   console.log(core.CONTRACTS.decorative.fullCapabilityPointer);
 }
 
@@ -271,7 +271,7 @@ function cmdStatus() {
   const state = core.readState();
   const eff = core.effectiveLocale();
   console.log(core.t('status.localeLine', { locale: eff.locale, source: eff.source }));
-  // D-67/F16: lessons attribution on the human terminal surface — the FB-3
+ // /F16: lessons attribution on the human terminal surface — the FB-3
   // complainant is the human, not just the model (display-load: never bricks)
   {
     const attr = knowledge.lessonsAttribution();

@@ -233,7 +233,7 @@ async function cmdFeedbackPush(rest) {
   const toFlag = takeFlagValue(rest.slice(1), '--to');
   if (toFlag.rest.length) core.die(`feedback push: unknown argument '${toFlag.rest[0]}' (flags: --to)`);
   // Release the CLI lock before any network/interactive work: push may spend
-  // minutes in gh calls and prompts (gate B-19 precedent — locks never span
+ // minutes in gh calls and prompts (gate precedent — locks never span
   // user scripts/network). Entry mutations stay atomic via writeAtomicText.
   try { core.releaseLock(); } catch { /* not held — fine */ }
   const entry = loadEntryOrDie(n);

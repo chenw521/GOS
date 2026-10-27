@@ -1,27 +1,27 @@
 // ops/brownfield — `gos brownfield`: adopt GOS into an existing repo.
-// Lock-free global class (registry-consts GLOBAL_CMDS, R4-F1): mutates repo
+// Lock-free global class (registry-consts GLOBAL_CMDS, ): mutates repo
 // files like `setup --commitlint`, never takes the .gos/.lock; concurrency
 // safety = every write goes through the gitseed engine's temp+fsync+rename.
-// Wave 3 (T5): entry guards (exit 4/4/5/1, D-97), preflight (R2-F7), the
-// D-94 three-way hooksPath rule with DORMANT seeding, commitlint detection
-// (R2-F3), the empty gates skeleton (R2-F6) landed UNTRUSTED (R1-F7), the
-// .gos/.gitignore semantic lock check (R2-F12), the D-89 binary skip
-// taxonomy with the remediation/override partition, and the D-99 --json
+// : entry guards (exit 4/4/5/1, ), preflight , the
+// three-way hooksPath rule with DORMANT seeding, commitlint detection
+// , the empty gates skeleton landed UNTRUSTED , the
+// .gos/.gitignore semantic lock check , the binary skip
+// taxonomy with the remediation/override partition, and the --json
 // single-object envelope (fatal envelope on stdout, stack on stderr).
 // Prompt-free by construction: no interactive primitive is imported or
 // reached; the engine always runs nonInteractive. Status/state-flag/exit
 // tokens are imported from command_contracts (single frozen source, loud on
 // drift — same pattern as brownfield-probe.cjs). Wave 4 (T6) landed the
-// handoff block (D-90 map preview, D-98 platform probe), the D-92
+// handoff block ( map preview, platform probe), the
 // --print-agents-skeleton (stdout only) and the core.t() locale migration:
 // EVERY human-readable string flows through brownfield.* locale keys (en
-// canonical + zh same batch, D-100) via the single H render block — JSON
+// canonical + zh same batch, ) via the single H render block — JSON
 // field names and status/flag/exit tokens stay locale-invariant.
 // Review-fix wave (brownfield review): M1 symlink-escape preflight token
 // (probe-side guard), M3 drifted GOS-lineage hooks are conflict-kept and
 // overridable (never-overwrite list = user-owned hooks only), M4 blocked /
 // engine-skip / write-failed rows are report_only so kept_conflict ⟺
-// override entry (D-89 both ways), M5 dynamic paths render shell-quoted,
+// override entry ( both ways), M5 dynamic paths render shell-quoted,
 // m7 duplicate named --overwrite dies, m8 gates skeleton derived once,
 // m9 shared contract-token derivation (probe.contractTokens), m11 self-root
 // guard realpaths both sides.
@@ -48,7 +48,7 @@ function bfToken(contractKey, wanted, desc) {
 
 // Slice pin (review m9): every brownfieldExitCodes segment leads with its
 // single exit digit ('0 success; 1 generic fatal; …5 self-repo' — digits
-// 0-5 frozen in state.cjs + T78), so the leading char IS the code; the
+// 0-5 frozen in state.cjs + ), so the leading char IS the code; the
 // /^\d/ guard above rejects a segment that stops leading with a digit. If a
 // future exit code ever grows past one digit this one-char slice truncates
 // — extend it together with the contract, not silently here.
@@ -139,7 +139,7 @@ function bfParseFlags(args) {
     bfFatal(jsonMode, BF_EXIT.fatal, H.errUnexpectedArg(a));
   }
   if (overwriteAsset !== null && overwriteAll) bfFatal(jsonMode, BF_EXIT.fatal, H.errDoubleOverwrite());
-  // D-92: the skeleton print is a standalone stdout offer — mixing it with
+ // : the skeleton print is a standalone stdout offer — mixing it with
   // repo-mutating flags would blur the never-writes guarantee.
   if (printSkeleton && (overwriteAll || overwriteAsset !== null)) bfFatal(jsonMode, BF_EXIT.fatal, H.errSkeletonCombo());
   return { json: jsonMode, overwriteAll, overwriteAsset, printSkeleton };
@@ -157,10 +157,10 @@ function bfFatal(jsonMode, code, message, err) {
   process.exit(code);
 }
 
-// Guard order is frozen (D-97/exit table): non-git -> 4; cwd != toplevel ->
+// Guard order is frozen ( /exit table): non-git -> 4; cwd != toplevel ->
 // 4; self-repo -> 5; hooks state file exists-but-corrupt -> 1 with path.
 // A missing state file is NOT created here — activation (`setup
-// --commitlint`) owns its creation (R4-F7).
+// --commitlint`) owns its creation .
 function bfGuardEntry(opts) {
   let top = null;
   try {
@@ -203,7 +203,7 @@ function bfReadMasters() {
 
 // Empty gates skeleton, derived at runtime from the setup-path template:
 // protect/forbid emptied, lint nulled, _comment retained. The template's
-// ACTIVE example rules never land verbatim (R2-F6/F3-1).
+// ACTIVE example rules never land verbatim ( /F3-1).
 function bfGatesSkeletonText() {
   const tpl = JSON.parse(fs.readFileSync(path.join(core.GOS_SELF_ROOT, 'templates', 'gates', 'gates.json'), 'utf8'));
   const out = {};
@@ -214,7 +214,7 @@ function bfGatesSkeletonText() {
   return JSON.stringify(out, null, 2) + '\n';
 }
 
-// Semantic .lock check (R2-F12): an effective ignore line for the machine
+// Semantic .lock check : an effective ignore line for the machine
 // lock inside .gos/.gitignore — literal '.lock', anchored '/.lock', or the
 // '*.lock' glob all ignore .gos/.lock; comments/other lines do not.
 function bfGitignoreHasLock(text) {
@@ -326,7 +326,7 @@ function bfProbeAll(top) {
   return { masters, hooksClass, rawHooksPath, detected, assets };
 }
 
-// ---- tiered overwrite validation (D-89: exit 2 refused / exit 3 unknown) ----
+// ---- tiered overwrite validation ( : exit 2 refused / exit 3 unknown)
 
 function bfValidateOverwrite(plan, opts) {
   if (!opts.overwriteAsset) return;
@@ -396,11 +396,11 @@ async function bfAdopt(top, plan, forced) {
     try { fs.chmodSync(path.join(top, rel), 0o755); } catch { /* best-effort */ }
   };
 
-  // ---- hooks: D-94 three-way rule ----
+ // ---- hooks: three-way rule
   // Review M4: preflight-blocked, write-failed and engine-structural-skip
   // rows are report_only (manual remediation) — kept_conflict is reserved
   // for genuine content conflicts and always carries an override entry
-  // (D-89: kept_conflict ⟺ overridable, both directions).
+ // ( : kept_conflict ⟺ overridable, both directions).
   for (const rel of BF_HOOK_RELS) {
     const a = plan.assets[rel];
     if (a.disp === 'live_dir') { row(rel, BF_STATUS.reportOnly, { reason: H.whyLiveDirRow(), remediation: [...BF_RM_ACTIVATE] }); continue; }
@@ -515,7 +515,7 @@ async function bfAdopt(top, plan, forced) {
     }
   }
 
-  // ---- AGENTS family: report rows only — never a write (D-92) ----
+ // ---- AGENTS family: report rows only — never a write
   for (const arel of BF_AGENTS_RELS) {
     const a = plan.assets[arel];
     if (a.state === 'absent') row(arel, BF_STATUS.reportOnly, { reason: H.whyAgentAbsent(), remediation: [...BF_RM_SKELETON] });
@@ -532,7 +532,7 @@ async function bfAdopt(top, plan, forced) {
 // ---- pipeline + rendering ----
 
 async function bfRun(opts) {
-  // D-92 skeleton offer: standalone stdout print, exit 0, zero writes — it
+ // skeleton offer: standalone stdout print, exit 0, zero writes — it
   // runs before any entry guard so it works from any directory (the file is
   // the user's to create, never GOS's to write).
   if (opts.printSkeleton) {
@@ -549,10 +549,10 @@ async function bfRun(opts) {
   bfValidateOverwrite(plan, opts);
   const forced = bfForceSet(plan, opts);
   const { assets, overrides } = await bfAdopt(top, plan, forced);
-  // D-98 closing platform probe: pure reads via the setup-module detector
+ // closing platform probe: pure reads via the setup-module detector
   // (the linking command itself is never executed); shape 'parent' links one
   // dir, shape 'individual' links per-skill entries — ok requires every one.
-  // Kept inline (no new top-level fn: T46 fnDist freeze).
+ // Kept inline (no new top-level fn: fnDist freeze).
   const platforms = sibSetup.detectPlatforms(os.homedir()).map((p) => {
     const linked = p.shape === 'parent'
       ? fs.existsSync(p.link)
@@ -576,7 +576,7 @@ async function bfRun(opts) {
 
 // Human report: numbered remediation steps (prose, never pipeable shell
 // lines), override commands in their own section with consequence notes,
-// every rendered path shell-quoted (R1-F6), closing handoff block (D-90/D-98)
+// every rendered path shell-quoted , closing handoff block ( )
 // at the very end.
 function bfRenderHuman(report) {
   console.log(H.title(report.root));
@@ -616,7 +616,7 @@ function bfRenderHuman(report) {
 }
 
 // ---- H: render layer — every human-readable string flows through core.t()
-// (brownfield.* locale keys, en canonical + zh same batch, D-100); layout
+// (brownfield.* locale keys, en canonical + zh same batch, ); layout
 // indentation stays in code; status/flag/exit tokens and JSON field names
 // are locale-invariant by contract ----
 
@@ -655,7 +655,7 @@ const H = {
   whyUserHookRow: () => core.t('brownfield.why.userHookRow', {}),
   whyDriftedHookRow: () => core.t('brownfield.why.driftedHookRow', {}),
   // review M5: the raw hooksPath is git-config controlled — render it
-  // shell-quoted exactly like every other dynamic path (R1-F6)
+ // shell-quoted exactly like every other dynamic path
   whyForeignRow: (raw) => core.t('brownfield.why.foreignRow', { raw: core.shellQ(raw || 'set') }),
   whyLiveDirRow: () => core.t('brownfield.why.liveDirRow', {}),
   whyHooksPathRow: (cls) => core.t(cls === 'unset'

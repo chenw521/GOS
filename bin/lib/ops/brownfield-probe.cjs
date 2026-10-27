@@ -1,7 +1,7 @@
 // ops/brownfield-probe — pure classification probes for `gos brownfield`
-// (T4, D-94/D-96/R-01). Read-only by contract: every function classifies and
+// ( , ). Read-only by contract: every function classifies and
 // returns; none writes, prompts, stages, or repairs. Consumed by
-// ops/brownfield.cjs (T5) to build the adopt report; side-effect freedom is
+// ops/brownfield.cjs to build the adopt report; side-effect freedom is
 // what lets --json run against a dirty tree without touching it.
 // Ownership vocabulary note: a missing hook file classifies as 'missing' —
 // the adopt pipeline (caller) maps that to a fresh install, never to 'user'.
@@ -28,7 +28,7 @@ function contractTokens(contractKey) {
   return raw.split(' | ');
 }
 
-// Frozen preflight reason tokens (D-99) — derived from the single frozen
+// Frozen preflight reason tokens — derived from the single frozen
 // source (CONTRACTS.command_contracts.brownfieldPreflightReasons) by content
 // match, never duplicated as literals. A renamed or reordered contract token
 // fails this module loudly at require time instead of misreporting silently.
@@ -44,7 +44,7 @@ if (!REASON_OCCUPIED || !REASON_DANGLING || !REASON_UNWRITABLE || !REASON_ESCAPE
   throw new Error('brownfield-probe: command_contracts.brownfieldPreflightReasons drifted — expected tokens matching non-directory/dangling/unwritable/symlink escape');
 }
 
-// Hook-master ownership markers. Current masters (wave 1 T2) carry the
+// Hook-master ownership markers. Current masters (wave 1 ) carry the
 // '# gos-managed' line (masters ship it below the 3-line header, so the
 // marker scan is whole-file); historical masters carried only the
 // provenance line as line 2 ('# GOS commit-msg hook:' / '# GOS pre-push
@@ -114,7 +114,7 @@ function hookOwnership(file, masterPath) {
 }
 
 // Detect commitlint config at <top> over commitlint's REAL resolution set
-// (D-94): the rc family and the commitlint.config family, each stat'ed
+// : the rc family and the commitlint.config family, each stat'ed
 // following filesystem case behavior (candidates come from the setup.cjs
 // COMMITLINT_* consts so the strings live in one place), plus package.json
 // through its 'commitlint' key (parsed presence; a corrupt or absent

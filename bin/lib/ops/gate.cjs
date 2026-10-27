@@ -15,13 +15,13 @@ const { execFileSync } = require('child_process');
 
 const EXEMPT_LOG_REL = core.GOS_PATHS.exemptions.rel; // T16: logs/ via registry (relative read/write path join)
 
-// T5 semanticChecks: orchestrates ①bidirectional ②diff-hit ③artifact existence.
-// Prints ✓/⚠ lines inline; returns {failures, passes} — caller (cmdGate / T7 commit
+// semanticChecks: orchestrates ①bidirectional ②diff-hit ③artifact existence.
+// Prints ✓/⚠ lines inline; returns {failures, passes} — caller (cmdGate / commit
 // embed) maps failures → exit 1 and passes → semantic_checks.banner downgrade.
 
-// ---------- setup/teardown (T6): skills management ----------
+// ---------- setup/teardown : skills management
 
-// ---------- doctor (T7): installation diagnostics — read-only ----------
+// ---------- doctor : installation diagnostics — read-only
 
 // DOCTOR_FIXES single source lives in ops/doctor.cjs; gate consumes it via sibDoctor.
 
@@ -181,8 +181,8 @@ function semanticDiffPhase(state, tasks) {
   }
   const others = core.gitArgvBytes(['-c', 'core.quotepath=off', 'ls-files', '--others', '--exclude-standard', '-z']);
   for (const f of core.nulNames(others)) diff.add(f);
-  // [Phase D T7] integrity FIRST: a corrupted/tampered/deleted edges anchor dies before
-  // any other gate can green-light on silently-shrunk closure data (R2-F5 pass-on-unknown).
+ // integrity FIRST: a corrupted/tampered/deleted edges anchor dies before
+ // any other gate can green-light on silently-shrunk closure data ( pass-on-unknown).
   {
     const iv = map.checkEdgesIntegrity(core.mapRootDir());
     if (iv.status === 'die') return { failures: [core.gateFail('edges-integrity-die', { verdict: String(iv.msg).replace(/^✗ /, ''), evidence: [], fix: core.gateCmd('node bin/gos.cjs map scan') + ' — regenerate the edges anchor; if hand-edited, restore from git' })] };
@@ -198,11 +198,11 @@ function semanticDiffPhase(state, tasks) {
   // recompute — NEVER reads/writes deps.json (cache-independent by construction);
   // exit-code neutral (prints only); runs only after diff-hit passed.
   impactClosurePhase(diff, tasks, state);
-  // [Phase D T7] semantic closure tail (D-26): three-source merge, advisory, qualified
+ // semantic closure tail : three-source merge, advisory, qualified
   // wording first line; runs after diff-hit passed so undeclared-change noise never
   // masks the closure report.
   const closure = map.printSemanticClosure(core.mapRootDir(), [...diff]);
-  // [Phase D T10] run-manifest freshness: must-run sections exercised against THIS
+ // run-manifest freshness: must-run sections exercised against THIS
   // content tree? (no manifest = advisory BUILD mode; stale/missing = FAIL — this is
   // the "declared-must-run actually ran" fact check, NOT closure exhaustiveness)
   const mf = checkManifest(core.mapRootDir(), [...closure.mustRun.keys()], loadSemanticAllowlist(state));
@@ -212,7 +212,7 @@ function semanticDiffPhase(state, tasks) {
 }
 
 function readExemptions(root) {
-  // R-35/D-02 line grammar: `<iso8601> <section> :: <reason>` — FIELD 2 is the
+ // line grammar: `<iso8601> <section> :: <reason>` — FIELD 2 is the
   // section (the reason rides along for the `gos logs` view). #-prefixed lines
   // are comments (filtered); a bare single-token legacy line has no field 2 and
   // yields nothing.
@@ -232,7 +232,7 @@ function consumeExemptions(root) {   // called from cmdCommit — auto-expiry (R
 }
 
 // ---------- [D-02/R-35] gos logs: runtime ledger view (READ-class, no lock) ----------
-// Renders the machine-local logs trio (D-01) as formatted tables. The ledgers
+// Renders the machine-local logs trio as formatted tables. The ledgers
 // are enriched at write time (receipts carry the truth text, exemptions carry
 // the reason) so the view never needs to join task state — historical lines
 // survive post-archive.
@@ -354,7 +354,7 @@ function checkManifest(root, mustRunSecs, allowlist) {   // → {advisories, fai
     // [U2/D-01~D-04] doc-only downgrade: dirty diff fully semantic-allowlisted AND the
     // tested tree is a HEAD ancestor → doc edits cannot invalidate code-face test
     // evidence; downgrade to a VISIBLE advisory (never silent). Any non-allowlisted
-    // file keeps the fail-closed stale (R-02/T33.7); ancestor break also keeps FAIL.
+ // file keeps the fail-closed stale ( / .7); ancestor break also keeps FAIL.
     let docOnly = false;
     if (ancestorOk && allowlist) {
       try {
@@ -427,7 +427,7 @@ function checkDeferredFindings(state) {
 }
 
 // ---------------------------------------------------------------------------
-// D-62 thin spec gate (structural card floor) — pure, fixture-testable (F2:
+// thin spec gate (structural card floor) — pure, fixture-testable (F2:
 // NEVER validates the live pre-P15 spec; the grandfather stamp below is the
 // only activation switch, set by new-CLI THINK commits).
 // ---------------------------------------------------------------------------
@@ -546,7 +546,7 @@ function semanticChecks(opts = {}) {
   }
 
   // ③ artifact existence (semantic view): verified truths' evidence.artifact_path
-  // must exist on disk at gate time — gate truths keeps its own branch (T2/T4).
+ // must exist on disk at gate time — gate truths keeps its own branch ( / ).
   const missing = [];
   let artCount = 0;
   for (const t of (state.observable_truths || [])) {
@@ -578,7 +578,7 @@ function semanticChecks(opts = {}) {
     }
   }
 
-  // D-62 thin spec gate: structural card floor. Grandfathered unless the THINK
+ // thin spec gate: structural card floor. Grandfathered unless the THINK
   // commit ran under a post-P15 CLI (spec_gate_version stamp) — the live p15
   // spec predates the switch and is validated by fixtures only (F2).
   if (state.spec_gate_version === 2) {
@@ -648,7 +648,7 @@ function cmdGate(args) {
   // gos gate trust <name>: hash registration must work on unmanaged trees too
   // (setup seeding runs before any `gos init`).
   if (args[0] === 'trust') { cmdGateTrust(args); return; }
-  // [Phase D T10 → D-01, R-35] gate --exempt <section> --reason "<why>": explicit,
+ // gate --exempt <section> --reason "<why>": explicit,
   // machine-local, auto-expiring exemption. --reason is MANDATORY, >=10 codepoints
   // after sanitization (truth-waive precedent — an exemption must be auditable).
   // Line grammar pinned `<iso8601> <section> :: <reason>` (single line, no # — a
@@ -665,7 +665,7 @@ function cmdGate(args) {
     }
     const root = core.mapRootDir();
     core.acquireEdgeLock();
-    // B-18-class hardening (mirrors appendTruthReceipt): a planted symlink at
+ // -class hardening (mirrors appendTruthReceipt): a planted symlink at
     // the ledger path must not redirect exemption content in cloned repos.
     const exemptPath = path.join(root, '.gos', EXEMPT_LOG_REL);
     if (fs.existsSync(exemptPath) && !fs.lstatSync(exemptPath).isFile()) {
@@ -687,7 +687,7 @@ function cmdGate(args) {
   // --audit changes nothing — identical to a plain gate all.
   // Structural subcommand: gate codemap inspects map data only and never
   // consumes task state — it must run on stateless trees (CI checkouts),
-  // same philosophy as `gate all --audit`. gate flip (T8) is the same shape:
+ // same philosophy as `gate all --audit`. gate flip is the same shape:
   // the flip-reconcile leg reads census/git/manifest, never task state.
   const structuralOnly = which === 'codemap' || which === 'flip';
   if (!state && !(auditMode && which === 'all') && !structuralOnly) {
@@ -734,7 +734,7 @@ function cmdGate(args) {
     const unverified = state.observable_truths.filter(t => !t.verified && !t.waived);
     const waived = state.observable_truths.filter(t => t.waived);
     if (waived.length) console.log(`⚠ truths: ${waived.length} waived (external/blocked) — ${waived.map(t => `${t.id}: ${(t.waive_reason || '').slice(0, 50)}`).join('; ')}`);
-    // REVIEW #7: legacy `evidence.length < 5` string check was dead code under the D-30
+ // REVIEW #7: legacy `evidence.length < 5` string check was dead code under the
     // object schema (.length on an object = undefined) — object-form validation only.
     const noEvidence = state.observable_truths.filter(t => t.verified && (!t.evidence || typeof t.evidence !== 'object'));
     if (unverified.length) {
@@ -772,8 +772,8 @@ function cmdGate(args) {
     }
   }
 
-  // ---- lessons: json-truth integrity (five invariants) + dual-side expiry (B-11) ----
-  // REVIEW #8 lineage: runs INSIDE the locked builtin section (B-19). The gate
+ // ---- lessons: json-truth integrity (five invariants) + dual-side expiry
+ // REVIEW #8 lineage: runs INSIDE the locked builtin section . The gate
   // process holds .gos/.lock, so md render-hash regeneration degrades to an
   // advisory here (C8/N9 — regen joins the next mutation).
   if (!auditNoState && (which === 'all' || which === 'lessons')) {
@@ -822,9 +822,9 @@ function cmdGate(args) {
     }
   }
 
-  // ---- [Phase P T6 / D-38] gate codemap: map data health + fn-level closure advisory ----
+ // ---- gate codemap: map data health + fn-level closure advisory
   // FAIL items are "data deterministically broken" (fail-closed, dead-edge precedent) —
-  // the D-26 advisory red line (closure quality) is NOT turned into a hard gate here.
+ // the advisory red line (closure quality) is NOT turned into a hard gate here.
   if (which === 'all' || which === 'codemap') {
     checked++;
     const cmRoot = core.mapRootDir();
@@ -850,7 +850,7 @@ function cmdGate(args) {
       if (dupNames.length) for (const n of dupNames.slice(0, 5)) failures.push(core.gateFail('codemap-dup-fn-name', { verdict: `duplicate fn name across files: ${n} — global uniqueness required`, evidence: [n], fix: 'rename the fn or qualify the annotation; bare annotations are rejected at parse time' }));
       else console.log('✓ codemap: repo-wide unique-name assertion green (dup_names = ∅)');
       // ③ self-consistency: acorn top-level count (deps.fn_count) vs cheap regex recount.
-      // Missing fn_count family (schema-window between P-T2 and P-T3 commits) → advisory, not FAIL (F-M8).
+ // Missing fn_count family (schema-window between P- and P- commits) → advisory, not FAIL (F-M8).
       if (typeof sem.fn_count !== 'number') {
         console.log('⚠ codemap: no fn_count in cache (schema window) — self-consistency skipped (advisory)');
       } else {
@@ -869,8 +869,8 @@ function cmdGate(args) {
       const untestedCmdFns = [...new Set((sem.callgraph || []).map((e) => `${e.file}#fn:${e.from}`).concat(...(sem.callgraph || []).map((e) => `${e.file}#fn:${e.to}`)))].filter((k) => cmdFns.has(k.split('#fn:')[1])).filter((k) => !testedFns.has(k)).sort();
       if (untestedCmdFns.length) console.log(`⚠ codemap: ${untestedCmdFns.length} cmd-entry fn(s) without any gos-map:fn annotation — cmd-level drill-down relies on annotations: [${untestedCmdFns.slice(0, 8).join(', ')}${untestedCmdFns.length > 8 ? ', …' : ''}]`);
       else console.log('✓ codemap: all cmd-entry fns annotated');
-      // ---- [Phase R/D-01] DI-5: fn test-coverage report (advisory; full list on disk) ----
-      // D-20: byproduct renamed unmapped-fns.txt — the list is "callgraph fns the
+ // ---- DI-5: fn test-coverage report (advisory; full list on disk)
+ // : byproduct renamed unmapped-fns.txt — the list is "callgraph fns the
       // test-annotation map does not cover", i.e. unmapped, not "untested".
       const cgFns = new Set();
       for (const e of (sem.callgraph || [])) { cgFns.add(`${e.file}#fn:${e.from}`); cgFns.add(`${e.file}#fn:${e.to}`); }
@@ -880,7 +880,7 @@ function cmdGate(args) {
       else if (!unmappedFns.length) { console.log('✓ codemap: all fns test-covered'); semanticPass++; }
       else {
         const covPct = Math.round(((cgFns.size - unmappedFns.length) * 100) / cgFns.size);
-        // D-20 provenance header: first line = generated-at + HEAD[0:8] anchor; unborn
+ // provenance header: first line = generated-at + HEAD[0:8] anchor; unborn
         // repo degrades to the literal 'unborn' marker (mapGitInfo precedent).
         const headSha = core.gitHeadSha();
         const provHeader = `generated-at: ${new Date().toISOString().replace(/\.\d+Z$/, 'Z')} @ ${headSha ? headSha.slice(0, 8) : 'unborn'}`;
@@ -1046,7 +1046,7 @@ function cmdGate(args) {
     }
   }
 
-  // ---- Phase W (T6, D-12/R-06): orphan detection + README regen guard ----
+ // ---- Phase W ( , ): orphan detection + README regen guard
   // advisory by default (BUILD-in-progress transient files never fail the gate);
   // --strict escalates orphans to FAIL (CI / one-shot audit semantics).
   const strictMode = args.includes('--strict');
@@ -1062,7 +1062,7 @@ function cmdGate(args) {
         console.log(`⚠ orphan files: ${orphans.slice(0, 10).join(', ')}${orphans.length > 10 ? `, …(+${orphans.length - 10})` : ''}`);
       }
     }
-    // README regen guard (R-03): hand edits to the generated README = drift → FAIL always.
+ // README regen guard : hand edits to the generated README = drift → FAIL always.
     // gate all ONLY (sub-commands like `gate codemap` may run in clones without a README).
     if (which === 'all') {
       checked++;
@@ -1236,7 +1236,7 @@ function cmdGate(args) {
 
 // ---------------------------------------------------------------------------
 // [P4 T8 / D-15 / D-14] flip-reconcile leg — census/git/manifest agreement
-// on every tracked .gos file at gate time. File-granular (RT2-F4): the
+// on every tracked .gos file at gate time. File-granular : the
 // tracked set is enumerated under .gos via the gitprobe cache (trackedUnder
 // — the same set a plain tracked listing of .gos returns); per file the
 // expected value comes from the most-specific census key (census-if-present:
@@ -1246,7 +1246,7 @@ function cmdGate(args) {
 // (census git:true + nothing tracked; census git:false + tracked); every
 // tracked non-zone .gos file carries either census git:true sanction or a
 // flip-manifest record — manifest-less FAIL in census-less repos too (the
-// manifest is product-shipped). Fail-closed on gitprobe failure (§3.0).
+// manifest is product-shipped). Fail-closed on gitprobe failure .
 // ---------------------------------------------------------------------------
 
 // Flip-transaction artifacts exempt from the manifest-record requirement on
@@ -1349,10 +1349,10 @@ function flipReconcileLeg() {
   return { failures };
 }
 
-// D-66/N6 switch renderer: 3-part block, fail-closed on non-object failures —
+// /N6 switch renderer: 3-part block, fail-closed on non-object failures
 // a half-migrated site must crash loudly, never silently degrade (unit-tested
-// by section T73: injecting a string failure throws).
-// D-63↔D-66 join (C4): verdict may localize via catalog key gate.<code>
+// by section : injecting a string failure throws).
+// ↔ join (C4): verdict may localize via catalog key gate.<code>
 // ({what,why}); evidence and fix NEVER pass through t() (locale-invariant).
 function renderGateFailures(failures, opts = {}) {
   const out = [];

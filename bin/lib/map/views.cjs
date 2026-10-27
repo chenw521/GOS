@@ -21,7 +21,7 @@ function renderMermaid(pairs) {   // pairs: [{from, to, label, note?, external?}
   const idOf = new Map(ids.map((p, i) => [p, `n${i + 1}`]));
   const lines = ['graph TD'];
   for (const p of ids) lines.push(`  ${idOf.get(p)}["${mermaidEscapeLabel(p)}"]`);
-  // aggregate parallel edges: same (from,to) → one line with n×type label (D-24)
+ // aggregate parallel edges: same (from,to) → one line with n×type label
   const agg = new Map();
   for (const e of pairs) {
     const k = `${e.from}\u0000${e.to}\u0000${e.external ? 'ext' : 'std'}`;
@@ -200,7 +200,7 @@ function renderNetworkMd(root, sem, hand) {
     [core.t('map.family.testof'), (sem.testof || []).length],
     [core.t('map.family.hand'), hand ? hand.edges.length : 0],
   ];
-  // [Phase P T7 / R-08; REVIEW #1 fixed] single loop over the FULL family registry —
+ // single loop over the FULL family registry
   // future families only need a row here (or ride semantic.* automatically below)
   for (const [n, c] of fams) lines.push(`| ${n} | ${c} |`);
   const fnFams = [
@@ -224,7 +224,7 @@ function renderNetworkMd(root, sem, hand) {
     byCmd.get(t.cmd).add(t.sec);
   }
   for (const [cmd, secs] of [...byCmd.entries()].sort()) lines.push(`| ${core.escCellMd(cmd)} | ${core.escCellMd([...secs].sort().join(', '))} |`);
-  // [Phase P T7 / R-08] fn-level quick reference: fn → testing sections (from testof_fn)
+ // fn-level quick reference: fn → testing sections (from testof_fn)
   const byFn = new Map();
   for (const t of sem.testof_fn || []) {
     const k = `${t.file}#fn:${t.fn}`;
