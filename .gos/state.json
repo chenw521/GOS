@@ -1,73 +1,35 @@
 {
   "schema_version": 4,
   "repo_id": "85af56a090a78924",
-  "level": 2,
-  "current_stage": "VERIFY",
-  "completed_stages": [
-    "THINK",
-    "BUILD"
-  ],
+  "level": 3,
+  "current_stage": "INTENT",
+  "completed_stages": [],
   "intent": {
-    "summary": "Fix two live product defects diagnosed during the P6 closeout: (1) archive orphan-adoption swallows census-tracked live files (.gos/ai-trace-whitelist.json + sweep ledger) — add GOS_PATHS registry entries and exempt census-tracked files from adoption; (2) concerns add corrupts the anchor chain when the sidecar is absent — untracked-store bootstrap returns an empty hash set without writing, add pushes a single hash, every later add dies anchor-mismatch (drove the P6 BUILD-era hand-edit cycle).",
-    "confirmed": true,
-    "confirmation": {
-      "mode": "headless-auto",
-      "ts": "2026-10-27T08:31:33.178Z"
-    }
+    "summary": "Mandatory deep-dig rounds before decision cards, standing deepen option in every card, value-essence column, table rendering contract (message body vs tool picks), thin-gate extension. Re-homes concern cab1a0f8 from P2",
+    "confirmed": true
   },
-  "approvals": {
-    "THINK": "2026-10-27T09:08:27.314Z"
-  },
-  "spec_path": ".gos/task/2bb68c8a/spec.md",
-  "plan_path": ".gos/task/2bb68c8a/plan.md",
-  "project": false,
+  "approvals": {},
+  "spec_path": null,
+  "plan_path": null,
+  "project": true,
   "requirements": [
     {
       "id": "R-01",
-      "text": "Fix two live product defects diagnosed during the P6 closeout: (1) archive orphan-adoption swallows census-tracked li...",
+      "text": "Mandatory deep-dig rounds before decision cards, standing deepen option in every card, value-essence column, table re...",
       "phase": null,
-      "level": 2
+      "level": 3
     }
   ],
   "decisions": [],
-  "observable_truths": [
-    {
-      "id": "T1",
-      "description": "detectOrphans excludes git-tracked files from the orphan set, reporting them separately as unregisteredTracked",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\"test/run-sections.sh\",\"T43\"]",
-        "output_excerpt": "✓ T43.2 probe file → frozen advisory text, exit stays 0",
-        "artifact_path": "test/sections/T43-orphan-gate.test.sh",
-        "replay": true
-      }
-    },
-    {
-      "id": "T2",
-      "description": "gos archive leaves every git-tracked file in place even when its GOS_PATHS entry is missing",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\"test/run-sections.sh\",\"T45\"]",
-        "output_excerpt": "--- T45 summary: 8 passed, 0 failed ---",
-        "artifact_path": "test/sections/T45-ship-transaction.test.sh",
-        "replay": true
-      }
-    },
-    {
-      "id": "T3",
-      "description": "after deleting .gos/cache/.concerns-anchors.json, two consecutive concerns add calls both succeed with no anchor-mismatch",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\"test/run-sections.sh\",\"T23\"]",
-        "output_excerpt": "✓ first add exits 0 (exit 0)",
-        "artifact_path": "test/sections/T23-concerns.test.sh",
-        "replay": true
-      }
-    }
-  ],
+  "observable_truths": [],
   "gaps": [],
-  "activation_source": "headless",
-  "task_head": "2bb68c8a3009eeb5e405c2949410e8a9470553d3",
-  "spec_sha256": "7bfd9f9e9fc0a0d9439377b89d3497f62d57a3c01a442a80c5b2dcb41d29cabd",
-  "spec_gate_version": 2
+  "phase_name": "P5: dialogue governance",
+  "task_head": "8e367dbd2e514974ae402be332f3becfe29b586a",
+  "task_head_history": [
+    {
+      "sha": "8e367dbd2e514974ae402be332f3becfe29b586a",
+      "at": "2026-10-27T10:37:54.359Z",
+      "what": "claim"
+    }
+  ]
 }
