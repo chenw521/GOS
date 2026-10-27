@@ -70,7 +70,7 @@
     ".gos": {
       "git": true,
       "npm": false,
-      "note": "product mechanism files only: gates, config, map-ignore, README, cjk-whitelist"
+      "note": "product mechanism files only: gates, config, map-ignore, README, cjk-whitelist, ai-trace whitelist + sweep ledger"
     },
     ".gos/task": {
       "git": true,

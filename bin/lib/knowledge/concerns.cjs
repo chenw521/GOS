@@ -72,7 +72,12 @@ function loadConcernsAnchor(P, opts = {}) {
       return { anchor, bootstrapped: true };   // silent rebuild — no banner
     }
     if (!quiet) console.log(`⚠ ${SC.concernsBootstrap}`);
-    return { anchor: { hashes: [] }, bootstrapped: true };
+    // untracked store (or an empty one): rebuild the anchor set FROM the file —
+    // an empty set here would let the next add persist a single-hash sidecar
+    // and every later add would die anchor-mismatch (the corrosion chain).
+    // Persistence stays with the write paths; this read stays side-effect free
+    // (a crash before the write re-derives the same set on the next load).
+    return { anchor: { hashes: entryLines.map(concernsLineHash) }, bootstrapped: true };
   }
   let anchor;
   try { anchor = JSON.parse(fs.readFileSync(P.anchor, 'utf8')); }

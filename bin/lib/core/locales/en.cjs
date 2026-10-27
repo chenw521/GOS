@@ -49,6 +49,7 @@ module.exports = {
     what: 'a configured lint rule failed',
     why: 'repo-level lint rules are hard gates, not suggestions',
   },
+  'gate.registry-gap-advisory': '[registry-gap] {n} tracked file(s) under .gos/ lack GOS_PATHS registry entries — tracked files are never adopted; register them to silence this. Advisory only (never fails, also under --strict).',
 
   // ---- status / guidance surfaces (first-user high-frequency, FB-1) ----
   'status.localeLine': 'locale: {locale} (source: {source}) — change via GOS_LANG or `gos setup --lang <en|zh-CN>`',

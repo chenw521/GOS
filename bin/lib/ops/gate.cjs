@@ -1046,12 +1046,15 @@ function cmdGate(args) {
     }
   }
 
- // ---- Phase W: orphan detection + README regen guard
+  // ---- Phase W: orphan detection + registry-gap advisory + README regen guard
   // advisory by default (BUILD-in-progress transient files never fail the gate);
-  // --strict escalates orphans to FAIL (CI / one-shot audit semantics).
+  // --strict escalates orphans to FAIL (CI / one-shot audit semantics). The
+  // registry-gap tier (tracked but unregistered files) stays advisory under
+  // every mode — registration gaps prompt, they never block.
   const strictMode = args.includes('--strict');
   {
-    const orphans = auditNoState ? [] : sibDoctor.detectOrphans(state);
+    const tier = auditNoState ? { orphans: [], unregisteredTracked: [], probeFailure: null } : sibDoctor.detectOrphans(state);
+    const orphans = tier.orphans;
     if (orphans.length) {
       checked++;
       const line = sibDoctor.orphanAdvisoryLine(orphans.length);
@@ -1061,6 +1064,16 @@ function cmdGate(args) {
         console.log(`⚠ ${line}`);
         console.log(`⚠ orphan files: ${orphans.slice(0, 10).join(', ')}${orphans.length > 10 ? `, …(+${orphans.length - 10})` : ''}`);
       }
+    }
+    if (tier.unregisteredTracked.length) {
+      checked++;
+      const gapN = tier.unregisteredTracked.length;
+      console.log(`⚠ ${sibDoctor.registryGapAdvisoryLine(gapN)}`);
+      console.log(`⚠ tracked files: ${tier.unregisteredTracked.slice(0, 10).join(', ')}${gapN > 10 ? `, …(+${gapN - 10})` : ''}`);
+    }
+    if (tier.probeFailure && tier.probeFailure !== 'no-git') {
+      checked++;
+      console.log(`⚠ orphan tier skipped — git probe unavailable: ${tier.probeFailure}`);
     }
  // README regen guard : hand edits to the generated README = drift → FAIL always.
     // gate all ONLY (sub-commands like `gate codemap` may run in clones without a README).

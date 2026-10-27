@@ -63,6 +63,18 @@ set +e; OUT=$(node "$GOS" concerns add "post-delete" 2>&1); RC=$?; set -e
 assert_exit "tracked+nonempty+missing-sidecar → exit 1 (no bootstrap whitelist)" 1 "$RC"
 if echo "$OUT" | grep -q "bootstrapped"; then echo "  ✗ tamper laundered via bootstrap"; FAIL=$((FAIL+1)); else echo "  ✓ no bootstrap on tracked-missing"; PASS=$((PASS+1)); fi
 
+# --- .7 untracked store + sidecar loss: bootstrap must return the full derived
+#      set — the next add persists a consistent chain, a second add survives
+t23_teardown; t23_setup
+node "$GOS" concerns add "chain one" >/dev/null 2>&1
+node "$GOS" concerns add "chain two" >/dev/null 2>&1
+rm .gos/cache/.concerns-anchors.json
+set +e; OUT=$(node "$GOS" concerns add "chain three" 2>&1); RC=$?; set -e
+assert_exit "add right after sidecar loss exits 0" 0 "$RC"
+set +e; OUT=$(node "$GOS" concerns add "chain four" 2>&1); RC=$?; set -e
+assert_exit "second add after loss exits 0 (chain intact)" 0 "$RC"
+grep -q "chain three" .gos/concerns.md && grep -q "chain four" .gos/concerns.md && echo "  ✓ chain survived the loss (all four lines present)" && PASS=$((PASS+1)) || { echo "  ✗ chain lines lost after sidecar loss"; FAIL=$((FAIL+1)); }
+
 # --- T23.6 [T6/D-16 inverted]: stage back records the gap in state.gaps ONLY —
 #      concerns.md is never mirrored; injected reason still exits 1 ---
 t23_teardown; t23_setup

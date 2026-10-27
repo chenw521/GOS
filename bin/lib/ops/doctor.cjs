@@ -28,12 +28,32 @@ const DOCTOR_FIXES = Object.freeze({
 
 const DOCTOR_FIX_RE = /^(gos setup|echo "\.gos\/\.lock" >> \.gitignore|gos teardown && gos setup( --local <repo-path>)?|reinstall GOS \(npm i -g\) or git pull, then gos setup|report issue at \S+ with doctor output \(your \.gos\/ task state is never affected by reinstall\))$/;
 
+// fs-level .git presence marker (no git spawn): distinguishes a non-git tree
+// (the tracked tier does not exist there — registry-only orphan semantics)
+// from a git tree whose probe failed (fail-closed: nothing is adoptable).
+// A `.git` file (worktree link) counts the same as a directory.
+function hasGitAncestor(startDir) {
+  let cur = startDir;
+  for (;;) {
+    if (fs.existsSync(path.join(cur, '.git'))) return true;
+    const parent = path.dirname(cur);
+    if (parent === cur) return false;
+    cur = parent;
+  }
+}
+
+// Two-tier scan: registry-external files split by git truth. `orphans` are
+// untracked strays (adoptable by the ship ritual); `unregisteredTracked` are
+// git-tracked files the GOS_PATHS registry does not cover — never adoptable,
+// surfaced as a registry-gap advisory instead. `probeFailure` is null on a
+// healthy git tree, 'no-git' outside any git tree, or the cached fail-closed
+// marker when git truth was unavailable (adoption must refuse, never guess).
 function detectOrphans(state) {
   const wl = sibPaths.registeredPaths();
   const wlFiles = new Set(wl.files.map((p) => path.relative(core.GOS_DIR, p)));
   const wlDirs = wl.dirs.map((p) => path.relative(core.GOS_DIR, p));
   const tid = core.currentTaskId(state);
-  const out = [];
+  const candidates = [];
   const walk = (dir) => {
     let entries;
     try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
@@ -48,17 +68,40 @@ function detectOrphans(state) {
         if (ORPHAN_TRANSIENT_RE.test(rel)) continue;
         if (wlFiles.has(rel)) continue;
         if (wlDirs.some((d) => (rel + path.sep).startsWith(d + path.sep))) continue;
-        out.push(rel);
+        candidates.push(rel);
       }
     }
   };
   walk(core.GOS_DIR);
-  return out.sort();
+  const sorted = candidates.sort();
+  if (!hasGitAncestor(core.GOS_DIR)) {
+    return { orphans: sorted, unregisteredTracked: [], probeFailure: 'no-git' };
+  }
+  const tracked = core.trackedUnder('.gos/');
+  if (tracked == null) {
+    return { orphans: [], unregisteredTracked: sorted, probeFailure: core.lastFailure() || 'git probe failed' };
+  }
+  const tset = new Set(tracked);
+  const orphans = [];
+  const unregisteredTracked = [];
+  for (const rel of sorted) {
+    // GOS_DIR is the literal '.gos' at the repo root — the repo-relative
+    // spelling is the fixed prefix plus the walk-relative path
+    (tset.has(`.gos/${rel}`) ? unregisteredTracked : orphans).push(rel);
+  }
+  return { orphans, unregisteredTracked, probeFailure: null };
 }
 
 function orphanAdvisoryLine(n) {
   const t = core.CONTRACTS.gate_verdicts.orphanAdvisory;
   return n === 1 ? core.CONTRACTS.gate_verdicts.orphanAdvisoryOne : t.split('<N>').join(String(n));
+}
+
+// Registry-gap advisory (tracked-but-unregistered tier): advisory-only under
+// every mode, so the copy lives in the locale catalog, not the frozen
+// gate_verdicts contract table.
+function registryGapAdvisoryLine(n) {
+  return core.t('gate.registry-gap-advisory', { n: String(n) });
 }
 
 function repoIssuesUrl() {
@@ -235,4 +278,4 @@ function cmdDoctor() {
   }
 }
 
-module.exports = { DOCTOR_FIXES, DOCTOR_FIX_RE, ORPHAN_EXEMPT_TOP, ORPHAN_TRANSIENT_RE, detectOrphans, orphanAdvisoryLine, repoIssuesUrl, cmdDoctor };
+module.exports = { DOCTOR_FIXES, DOCTOR_FIX_RE, ORPHAN_EXEMPT_TOP, ORPHAN_TRANSIENT_RE, detectOrphans, orphanAdvisoryLine, registryGapAdvisoryLine, hasGitAncestor, repoIssuesUrl, cmdDoctor };

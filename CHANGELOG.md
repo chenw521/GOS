@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Fix archive orphan adoption to never touch git-tracked files via a two-tier orphan scan with registry-gap advisory, and cure the concerns sidecar corrosion chain after sidecar loss (R-01) [2026-10-27]
 - Fix the sweep ledger extractor prefix-capture defect and rebuild its deleted-id records from repository history, clear anchor-strip punctuation shells across the product tree, close a whitelist ASCII fail-open gap and re-anchor the curated concern ledger after an unanchored write (D-24/D-28/R-43) [2026-10-27]
 - Remove anchor fragments left behind by the early sweep batches with deleted ids reconciled into the tracked sweep ledger (D-24/R-43) [2026-10-27]
 - Remove legacy anchor comments across the product docs, hooks, scripts and skills with example ids converted to placeholder spellings and deleted ids reconciled into the tracked sweep ledger (D-24/R-43) [2026-10-27]

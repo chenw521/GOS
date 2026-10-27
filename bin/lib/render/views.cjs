@@ -325,7 +325,7 @@ function renderPathsMarkdown() {
   lines.push('## Layout rules');
   lines.push('');
   lines.push('- Agent artifacts never appear at .gos/ root — they live under `task/<id>/` (supplied via `gos context <stage>` artifact_paths).');
-  lines.push('- Anything not listed above is an orphan: `gos gate` reports it (advisory), `gos commit ship` adopts it into `archive/<date>-orphans/`.');
+  lines.push('- Anything not listed above is an orphan: `gos gate` reports it (advisory), `gos commit ship` adopts it into `archive/<date>-orphans/`. Git-tracked files without a registry entry are never adopted — `gos gate` reports them as a registry-gap advisory instead.');
   lines.push('- `archive/` is the history zone — safe to batch-prune after a milestone (git history is the net).');
   lines.push('- This README is generated — never hand-edit (gate verifies regen diff is empty).');
   return lines.join('\n') + '\n';

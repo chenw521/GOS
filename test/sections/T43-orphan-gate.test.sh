@@ -77,6 +77,30 @@ else
 fi
 rm -f .gos/tmpfile.tmp .gos/foo.lock
 
+# .10 function-level two-tier split: a fresh sandbox repo with one tracked
+#     unregistered file and one untracked stray — detectOrphans must return
+#     them in separate tiers with a healthy probe verdict
+T43_SUB="$T43_DIR/fn-probe"
+mkdir -p "$T43_SUB"
+( cd "$T43_SUB" && git init -q . && git commit -q --allow-empty -m root \
+  && mkdir -p .gos \
+  && echo live > .gos/unreg-tracked.md && git add -f .gos/unreg-tracked.md \
+  && echo stray > .gos/plain-stray.txt \
+  && node -e '
+    const d = require(process.argv[1] + "/bin/lib/ops/doctor.cjs");
+    const r = d.detectOrphans(null);
+    const ok = JSON.stringify(r.orphans) === JSON.stringify(["plain-stray.txt"])
+      && JSON.stringify(r.unregisteredTracked) === JSON.stringify(["unreg-tracked.md"])
+      && r.probeFailure === null;
+    console.log(ok ? "T43.10-OK" : "T43.10-FAIL " + JSON.stringify(r));
+  ' "$GOS_ROOT" ) > "$T43_DIR/fn.out" 2>&1
+if grep -q "T43.10-OK" "$T43_DIR/fn.out"; then
+  echo "  ✓ T43.10 two-tier split verified at function level"; PASS=$((PASS+1))
+else
+  echo "  ✗ T43.10 function-level verdict: $(cat "$T43_DIR/fn.out" | tail -1)"; FAIL=$((FAIL+1))
+fi
+rm -rf "$T43_SUB"
+
 # .6 README hand-edited -> regen diff check fails (anti-drift hard gate)
 printf 'hand-edited\n' >> .gos/README.md
 set +e
@@ -98,6 +122,30 @@ if [ "$RC7" -eq 0 ]; then
 else
   echo "  ✗ T43.7 still red after regen (rc=$RC7)"; FAIL=$((FAIL+1))
 fi
+
+# .9 tracked-but-unregistered (via a real gos track flip) → registry-gap advisory
+#    (not orphan), never fails even under --strict
+echo live > .gos/legacy-tracked.md
+echo ".gos/legacy-tracked.md" >> .gitignore && git add .gitignore && git commit -q -m gi
+node "$GOS" track .gos/legacy-tracked.md >/dev/null 2>&1
+set +e
+OUT9="$(node "$GOS" gate all 2>&1)"; RC9=$?
+set -e
+if [ "$RC9" -eq 0 ] && ! printf '%s' "$OUT9" | grep -q "orphan-advisory" && printf '%s' "$OUT9" | grep -q "registry-gap"; then
+  echo "  ✓ T43.9 tracked registry-gap → advisory tier, not orphan"; PASS=$((PASS+1))
+else
+  echo "  ✗ T43.9 rc=$RC9 orphan_line=$(printf '%s' "$OUT9" | grep -o 'orphan-advisory[^,]*' | head -1) gap=$(printf '%s' "$OUT9" | grep -c registry-gap)"; FAIL=$((FAIL+1))
+fi
+set +e
+node "$GOS" gate all --strict >/dev/null 2>&1; RC9B=$?
+set -e
+if [ "$RC9B" -eq 0 ]; then
+  echo "  ✓ T43.9b registry-gap stays advisory under --strict"; PASS=$((PASS+1))
+else
+  echo "  ✗ T43.9b --strict escalated the registry-gap tier (rc=$RC9B)"; FAIL=$((FAIL+1))
+fi
+rm -f .gos/legacy-tracked.md
+git rm -q --cached .gos/legacy-tracked.md 2>/dev/null
 
 # .8 freeze non-regression: existing verdicts keys untouched
 for key in allPass gateFailedPrefix passPrefix failPrefix; do

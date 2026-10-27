@@ -1,9 +1,9 @@
 {
   "current": {
-    "total": 938,
-    "callgraph": 469,
+    "total": 939,
+    "callgraph": 470,
     "testof_fn": 107,
-    "fn_count": 498,
+    "fn_count": 500,
     "fns": [
       "absTaskPath",
       "acornCtx",
@@ -236,6 +236,7 @@
       "guardCwd",
       "handoffBlock",
       "hasCJK",
+      "hasGitAncestor",
       "hasMultiSentence",
       "helpEnvelope",
       "helpLookup",
@@ -358,6 +359,7 @@
       "readUniverseLines",
       "refreshNetworkMd",
       "registeredPaths",
+      "registryGapAdvisoryLine",
       "releaseChangelogLock",
       "releaseLock",
       "remoteRepoIds",
@@ -841,8 +843,10 @@
       "cmdResolveModel": "bin/lib/ops/config.cjs",
       "cmdConfigChangelogPath": "bin/lib/ops/config.cjs",
       "cmdConfig": "bin/lib/ops/config.cjs",
+      "hasGitAncestor": "bin/lib/ops/doctor.cjs",
       "detectOrphans": "bin/lib/ops/doctor.cjs",
       "orphanAdvisoryLine": "bin/lib/ops/doctor.cjs",
+      "registryGapAdvisoryLine": "bin/lib/ops/doctor.cjs",
       "repoIssuesUrl": "bin/lib/ops/doctor.cjs",
       "cmdDoctor": "bin/lib/ops/doctor.cjs",
       "feedbackDir": "bin/lib/ops/feedback.cjs",
@@ -1004,14 +1008,14 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "3e60a6005797343f",
-    "at": "2026-10-27T07:03:22.192Z"
+    "fp": "05586b7a826a5906",
+    "at": "2026-10-27T09:49:34.376Z"
   },
   "peak": {
-    "total": 938,
-    "callgraph": 469,
+    "total": 939,
+    "callgraph": 470,
     "testof_fn": 107,
-    "fn_count": 498,
+    "fn_count": 500,
     "fns": [
       "absTaskPath",
       "acornCtx",
@@ -1244,6 +1248,7 @@
       "guardCwd",
       "handoffBlock",
       "hasCJK",
+      "hasGitAncestor",
       "hasMultiSentence",
       "helpEnvelope",
       "helpLookup",
@@ -1366,6 +1371,7 @@
       "readUniverseLines",
       "refreshNetworkMd",
       "registeredPaths",
+      "registryGapAdvisoryLine",
       "releaseChangelogLock",
       "releaseLock",
       "remoteRepoIds",
@@ -1849,8 +1855,10 @@
       "cmdResolveModel": "bin/lib/ops/config.cjs",
       "cmdConfigChangelogPath": "bin/lib/ops/config.cjs",
       "cmdConfig": "bin/lib/ops/config.cjs",
+      "hasGitAncestor": "bin/lib/ops/doctor.cjs",
       "detectOrphans": "bin/lib/ops/doctor.cjs",
       "orphanAdvisoryLine": "bin/lib/ops/doctor.cjs",
+      "registryGapAdvisoryLine": "bin/lib/ops/doctor.cjs",
       "repoIssuesUrl": "bin/lib/ops/doctor.cjs",
       "cmdDoctor": "bin/lib/ops/doctor.cjs",
       "feedbackDir": "bin/lib/ops/feedback.cjs",
@@ -2012,8 +2020,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "3e60a6005797343f",
-    "at": "2026-10-26T10:25:59.854Z"
+    "fp": "05586b7a826a5906",
+    "at": "2026-10-27T09:23:15.766Z"
   },
   "note": "peak rotates ONLY via gos map baseline reset --reason (approve-gated); scan is peak-monotonic (D-30/R-34)"
 }

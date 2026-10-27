@@ -54,6 +54,8 @@ const GOS_PATHS = {
   gates_json:       { rel: 'gates.json', producer: 'cli', readers: 'gate', purge: 'never', tracked: true, granularity: 'file' },
   concerns:         { rel: 'concerns.md', producer: 'cli', readers: 'concerns/status/red-team', purge: 'never', tracked: true, granularity: 'file' },
   cjk_whitelist:    { rel: 'cjk-whitelist.json', producer: 'cli (promoted from task dir 2026-09-30)', readers: 'gate cjk-lint', purge: 'never', tracked: true, granularity: 'file' },
+  ai_trace_whitelist: { rel: 'ai-trace-whitelist.json', producer: 'cli (ai-trace lint baseline)', readers: 'gate ai-trace lint', purge: 'never', tracked: true, granularity: 'file' },
+  ai_trace_sweep_ledger: { rel: 'ai-trace-sweep-ledger.ndjson', producer: 'cli (ai-trace sweep reconciliation)', readers: 'changelog validator / audit', purge: 'never (deleted-anchor reconciliation lives here)', tracked: true, granularity: 'file' },
   lessons:          { rel: 'lessons.md', producer: 'cli (regenerated view of lessons.json)', readers: 'lessons/status/red-team', purge: 'regen any time (json is truth)', tracked: true, granularity: 'file' },
   lessons_json:     { rel: 'lessons.json', producer: 'cli (lessons family)', readers: 'lessons/gate/commit/archive', purge: 'never (audit chain lives here)', tracked: true, granularity: 'file' },
   lessons_backup:   { rel: 'lessons-migration-backup-<ymd>.md', producer: 'cli (lessons migrate)', readers: 'migration rollback runbook', purge: 'latest generation only', tracked: true, granularity: 'file' },
