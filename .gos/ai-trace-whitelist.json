@@ -1373,6 +1373,21 @@
   },
   {
     "path": "test/sections/T10-security-e2e.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 140,
+        "sha256": "a2def5f8faf996d600ac5435caccd5fbd8d7ac9b8a4898c329608fa7fdbf7e9a"
+      },
+      {
+        "line": 276,
+        "sha256": "70d8651708941ddfd40596ba17331471e55eabb227571a98607473cc2e4a04f3"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T10-security-e2e.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 16,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -1397,9 +1412,51 @@
   },
   {
     "path": "test/sections/T12-wiring.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 119,
+        "sha256": "ac5b54754427d965a1cd77f8eaed6261271ced29a77a637ec9b72ba593ec7246"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T12-wiring.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 16,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T13-semantic-contracts.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 20,
+        "sha256": "294cda802cad8dda26c507cb77f0d854b02f49cd5409290ba055e6a0f550211e"
+      },
+      {
+        "line": 43,
+        "sha256": "f73ec6102be439f5077328243d3992b4c280bb3be27211c34d5331e205227539"
+      },
+      {
+        "line": 50,
+        "sha256": "b011f82f8b3785fa0bdfceda9f3d6d2781a50e6d71069433a1f2f0d223c9e873"
+      },
+      {
+        "line": 52,
+        "sha256": "c192c187cdf333a5a91ed235c65644868a153c6bcfc7a1dccb02dd6d472e6276"
+      },
+      {
+        "line": 61,
+        "sha256": "a2def5f8faf996d600ac5435caccd5fbd8d7ac9b8a4898c329608fa7fdbf7e9a"
+      },
+      {
+        "line": 99,
+        "sha256": "131f320587720a074132bb67eb67cd46bff09fd2c05b8433a615231b8c1f3f70"
+      }
+    ]
   },
   {
     "path": "test/sections/T13-semantic-contracts.test.sh",
@@ -1409,9 +1466,71 @@
   },
   {
     "path": "test/sections/T14-state-b.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 22,
+        "sha256": "955fec64f68b228a52a2a61fdc0ae21fbcc4aa57c06555ed0ecf164fc112cceb"
+      },
+      {
+        "line": 90,
+        "sha256": "dcf880d7b162d432730ed51376f5474216c43cd017cfccecf1d637daf4984c5d"
+      },
+      {
+        "line": 100,
+        "sha256": "3958a51c8be79c315875db26867accfa8afa4a63e775fe29ff287cdacb937b5e"
+      },
+      {
+        "line": 133,
+        "sha256": "93fc81e9f10c55748c94d9dbab13da58a6b5393c7061a2eca09b637e44705f5a"
+      },
+      {
+        "line": 179,
+        "sha256": "87c9e469bcc566c5374296bb4ab6ca6cca220187f95e07f1b021fee93ec5ce6b"
+      },
+      {
+        "line": 235,
+        "sha256": "9210bf2e54b81d68141d403315e877e6a615e1d441dad852861f6183cab50623"
+      },
+      {
+        "line": 280,
+        "sha256": "4a24d7d9f6a2c857b4a1153847f05cff5dc7fac98dca274fe43f33c9f64f8a40"
+      },
+      {
+        "line": 332,
+        "sha256": "c3279c86a04c48b98deef6ab60f51abc6706263f71ea3c828f9c574d837f160c"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T14-state-b.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 24,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T15-lessons.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 7,
+        "sha256": "cb9fdbdb00578ed2527ce254eae55a65b5eb8c82df18669553643b078fe5cc82"
+      },
+      {
+        "line": 100,
+        "sha256": "2da2c3276d516702c9737472f55509a6078fafa3c119580773b4a30ffde0d875"
+      },
+      {
+        "line": 135,
+        "sha256": "a2496fc0082e0146eb69e29cf09192ff121779bda983d7781ac80a360df22788"
+      },
+      {
+        "line": 364,
+        "sha256": "6ec931d7a70b916d6b2a9c57bd37f3694b80bfb0ab9bdb53c50680f5bb2d7f2b"
+      }
+    ]
   },
   {
     "path": "test/sections/T15-lessons.test.sh",
@@ -1421,9 +1540,75 @@
   },
   {
     "path": "test/sections/T16-truth.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 44,
+        "sha256": "59b0cb28eef6338fc03bd03cfec92857daa3e182c13fde64959379fa37d4be68"
+      },
+      {
+        "line": 71,
+        "sha256": "7543fae477f48ce617565a2fc7083f4d5bc633cfb6b75b887f2fe95b3eb84861"
+      },
+      {
+        "line": 75,
+        "sha256": "ed147cc4874ae015e3f234aee4e52a4fd42a225e0e50516ea681c8f28af21a04"
+      },
+      {
+        "line": 79,
+        "sha256": "cfcb8ec0f6a8d821c39370815aa4af1c1a6a8619ddc6d123fe9c372e42f0fb73"
+      },
+      {
+        "line": 91,
+        "sha256": "9dd983aace01edc2cc7db2a08a98e1f3a5a3261f11bd5029abf193a77a4e3c96"
+      },
+      {
+        "line": 118,
+        "sha256": "8f2df1bc70f48821ec0b91ed94bd061b6dec061b259b8cef6f23018edeea7774"
+      },
+      {
+        "line": 129,
+        "sha256": "6bf071e034b5d391684cdb9cc65af7513961a7b02fd092dd33ebcc23afbef13f"
+      },
+      {
+        "line": 137,
+        "sha256": "655c9f0893dd00016139f03c2fa4f4c6faa97ae1db3985fbac5d0822d70178f0"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T16-truth.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 20,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T17-semantic-engine.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 53,
+        "sha256": "1ff9a18610a4701e813ee2068d5b82a6b00e5ca05d4785788e364e7037764ff8"
+      },
+      {
+        "line": 110,
+        "sha256": "d61bb81cdf0d4b5198987fd719e58ec3c419fbe4be1ca61a678bed85673edf82"
+      },
+      {
+        "line": 185,
+        "sha256": "fd1afa9b4d5881726aaacac914c83aa001d62fbd7b03d01eb2bcea12ae8df503"
+      },
+      {
+        "line": 229,
+        "sha256": "4031955c8d283e0ff3f2551e360ab8a87b3199fb787c0fe4cbf123d00bc0f910"
+      },
+      {
+        "line": 247,
+        "sha256": "d2638c91e6862c54b75745b678fc46a034fa20f2d3ce42a557a810881d402cb7"
+      }
+    ]
   },
   {
     "path": "test/sections/T17-semantic-engine.test.sh",
@@ -1433,9 +1618,87 @@
   },
   {
     "path": "test/sections/T18-f1-gate-lessons.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 4,
+        "sha256": "46f76d1230a859fdc3f57161e8535e28a60f738cd7009fc3394cc09c0d5d3ea9"
+      },
+      {
+        "line": 47,
+        "sha256": "e2eec2eb1e196b569a603a0df4e7d5de983adba3128dc7262600493968c03b16"
+      },
+      {
+        "line": 61,
+        "sha256": "7a31c3252a3d73a5e05eddda81018ba3243ef3971a376134f82d6e96d901be98"
+      },
+      {
+        "line": 102,
+        "sha256": "9ceee45a1c8bb9346b35b44b194f69a496bb75a99e1027df6703a62b3ea0659c"
+      },
+      {
+        "line": 121,
+        "sha256": "a468e5227486354546ac0055d69754bcfbb14299161b27027ceffa9886877ca8"
+      },
+      {
+        "line": 145,
+        "sha256": "1758df2b1f41228aea80f4d68a4209e557bcaf8d929e0d0c1a806f2511d4f114"
+      },
+      {
+        "line": 155,
+        "sha256": "d3ab741c37c3a966457a206cf8b60fd4de4a5b54f52c11d1f881a204de399b3c"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T18-f1-gate-lessons.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 20,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T19-mounting.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 56,
+        "sha256": "69f8e31f0d2bcdf9148f0fd7500d696df62fc6d4d723f6714ae2b41e8dfa4443"
+      },
+      {
+        "line": 70,
+        "sha256": "17fd6ae3ebcfba7797f45a8688dce5a7184cf5aaa9af7b416ef20981ba57db10"
+      },
+      {
+        "line": 76,
+        "sha256": "c183cda02b7337f7f2a146b3cb79362c9f1c5a730c3f61e520ffb063d5cfe449"
+      },
+      {
+        "line": 86,
+        "sha256": "1ff896c9d57450e66d0d296f78e15e6c2e90fd9d4aae3a8367b9b8577becce2d"
+      },
+      {
+        "line": 131,
+        "sha256": "3e506ded0b314db560e55e3ca9cfa6a008263a08b45b77ecbf9d0cd64f2939ab"
+      },
+      {
+        "line": 152,
+        "sha256": "f1fe7416604e4b23733bcb4f9dce65b57332ebd3f7faa7ac562550fe27097724"
+      },
+      {
+        "line": 158,
+        "sha256": "15e76702926d350e2d646632cbb3e155cf87e0145ef919908962f584b9b8b2b8"
+      },
+      {
+        "line": 165,
+        "sha256": "7599ef99f3561aa20ad5b8dcfb27a1e447d73fafd56a3e408ad3ea63eae6e8ce"
+      },
+      {
+        "line": 172,
+        "sha256": "92fc0797a4451df3cb46d55db9103103ffd198815af6aade32d8a7d5ced91a52"
+      }
+    ]
   },
   {
     "path": "test/sections/T19-mounting.test.sh",
@@ -1457,6 +1720,17 @@
   },
   {
     "path": "test/sections/T21-map-closure.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 106,
+        "sha256": "f57302f36727583d849b90e779a5374e087960a43da0e3b135903e2f5c4de55f"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T21-map-closure.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 16,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -1466,6 +1740,17 @@
     "category": "in-flight-sweep",
     "maxHits": 14,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T23-concerns.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 66,
+        "sha256": "1ca0951d30f9bab01775642d65c75247453584dad155d8d0736d1fb11ef61d6c"
+      }
+    ]
   },
   {
     "path": "test/sections/T23-concerns.test.sh",
@@ -1505,6 +1790,33 @@
   },
   {
     "path": "test/sections/T29-command-registry.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 105,
+        "sha256": "edbc8de6bbfe3856f3fb8e33b093be91bcd3926c446d103cbf3c392d5a04f294"
+      },
+      {
+        "line": 115,
+        "sha256": "1c30c0b08e8802f1a50aa8d117e6600e4e0cd24907ba1b4a3f0b005e288a6fe6"
+      },
+      {
+        "line": 116,
+        "sha256": "32cc95fe561a55dbeeb3cdc1698a9d2ba7ac3a2e65977414e51ac936a2ca9aca"
+      },
+      {
+        "line": 155,
+        "sha256": "d1894cbcea7cb803588092873082558e3cc5e79427a9d1976eca63f08e69f533"
+      },
+      {
+        "line": 247,
+        "sha256": "bf1f4d62becefb709185cf4298f73aedcef6ef6cac49eba1b05192b15d4c9967"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T29-command-registry.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 22,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -1532,6 +1844,17 @@
     "category": "in-flight-sweep",
     "maxHits": 11,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T33-map-manifest.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 3,
+        "sha256": "a73c24297f24fe762b56e3dbbf4c4aec2262e55bd49088cafa1705f919eec112"
+      }
+    ]
   },
   {
     "path": "test/sections/T33-map-manifest.test.sh",
@@ -1583,6 +1906,17 @@
   },
   {
     "path": "test/sections/T37-phase-ux.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 56,
+        "sha256": "e7cd3bdab3813362e649e736e8f2c3d54ceb3f5fd3471b75d8f0db50d9427fca"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T37-phase-ux.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 2,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -1631,9 +1965,31 @@
   },
   {
     "path": "test/sections/T44-static-splice.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 32,
+        "sha256": "ff3715925e77af8c5cb8bf94d33b58706c2033da6d01e0211b11c3f3c4b0b1d5"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T44-static-splice.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 5,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T45-ship-transaction.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 43,
+        "sha256": "fb68bf58b1bec7884fa631737c345e3df2a2b7960d436ca6d9b21ca321269b82"
+      }
+    ]
   },
   {
     "path": "test/sections/T45-ship-transaction.test.sh",
@@ -1675,6 +2031,17 @@
   },
   {
     "path": "test/sections/T5-guard.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 64,
+        "sha256": "28b6c1f6d96ac92d9b780401239cb0b867a86a1be4a7744a22d431eb84b1c045"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T5-guard.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 17,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -1693,9 +2060,39 @@
   },
   {
     "path": "test/sections/T52-gitseed-render.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 58,
+        "sha256": "eeb5a41e7a35c4cb9f137f6e3fcd60e95d573fd772696d86a4212c14de21dfa8"
+      },
+      {
+        "line": 65,
+        "sha256": "04effd1c1966aff26ae2f3afae0a758113f6e0a23daada77f17388bb13a1952f"
+      },
+      {
+        "line": 98,
+        "sha256": "ac69256d7ad7603183f973fd093c42d936f51c04d99f23763ed6e1abf2807881"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T52-gitseed-render.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 6,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T53-changelog-core.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 220,
+        "sha256": "933a27fd36bd0cb7b717347d7cd2835cd1770d017dd0822ab1cd3015586145f3"
+      }
+    ]
   },
   {
     "path": "test/sections/T53-changelog-core.test.sh",
@@ -1777,6 +2174,21 @@
   },
   {
     "path": "test/sections/T68-section-run.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 102,
+        "sha256": "8d4a7c10e0a3733993feab2e45049305706294d8eeb5ba0e07ed9856082861f7"
+      },
+      {
+        "line": 103,
+        "sha256": "d105a5cc7d57d78c4152e7510352581e3b217a02c173c426a796ff13297e0eca"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T68-section-run.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 4,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -1801,9 +2213,31 @@
   },
   {
     "path": "test/sections/T71-phase-amend-reposlug.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 84,
+        "sha256": "37b66347f4db4cee6f957d0212485ee61b976b20cb92805170b512d0b3d78c90"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T71-phase-amend-reposlug.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 2,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T72-lessons-json.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 156,
+        "sha256": "ea8ee61be92ab575da8ae9e4ea1991d1589d6e99312a0e3988a76b3e8be8d0aa"
+      }
+    ]
   },
   {
     "path": "test/sections/T72-lessons-json.test.sh",
@@ -1819,9 +2253,39 @@
   },
   {
     "path": "test/sections/T74-i18n.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 36,
+        "sha256": "af48c591e654a78239e9539a4266c15c1bb74aa0d79903d6252cd42efbc401f4"
+      },
+      {
+        "line": 39,
+        "sha256": "e52b141f7bd250cb772772b148802f3182fc54d075db66432b462e36f4277b19"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T74-i18n.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 13,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T75-blast.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 106,
+        "sha256": "01ab4a878bed6e71fe21366dd408b71079db5e939d3eb977fb258234fec0324f"
+      },
+      {
+        "line": 109,
+        "sha256": "b536eac12f0a9e5b5a1064dffe4ca73479ef982a48da5f1de4c995604377fdf5"
+      }
+    ]
   },
   {
     "path": "test/sections/T75-blast.test.sh",
@@ -1843,6 +2307,17 @@
   },
   {
     "path": "test/sections/T78-registry-brownfield.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 42,
+        "sha256": "38cce0e6f0d3aec2a170c78f83b1fd3f3e75309230b8b5b4da4ac48358143e95"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T78-registry-brownfield.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 9,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -1861,6 +2336,21 @@
   },
   {
     "path": "test/sections/T80-brownfield-adopt.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 217,
+        "sha256": "dbd630ed9bf5c62648c5383bc82a182212a5d4aa72972d43b168ae1c7fc4e3af"
+      },
+      {
+        "line": 361,
+        "sha256": "de07deb14969e0c40d47ed8203a70d57a93492514aa4306197012d977c9f04aa"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T80-brownfield-adopt.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 5,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -1870,6 +2360,21 @@
     "category": "in-flight-sweep",
     "maxHits": 13,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T82-brownfield-edges.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 106,
+        "sha256": "556a81259760a4dc036c1baae7c701eabd7741998fda1517d71daa1d467f388b"
+      },
+      {
+        "line": 121,
+        "sha256": "863e4663df7a20c7ec730b722bed2cb3add5e3e675128f14dee39ae83ecdd610"
+      }
+    ]
   },
   {
     "path": "test/sections/T82-brownfield-edges.test.sh",
@@ -1885,6 +2390,17 @@
   },
   {
     "path": "test/sections/T85-security-depth.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 9,
+        "sha256": "968200d11d3ba4d4e1f9559e5df1d8e3098ce4fe6897566942cb523d2ebc1379"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T85-security-depth.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 7,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -1897,6 +2413,21 @@
   },
   {
     "path": "test/sections/T87-config-twolayer.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 12,
+        "sha256": "6ca8ff81457a2de1c8c5e02fc666b80d2d1c66ae7b72958a26e127f8cb8241a0"
+      },
+      {
+        "line": 41,
+        "sha256": "7d1fd66953764127ba40852acc7c104f367f5b3da442c994664a0aca7153084b"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T87-config-twolayer.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 14,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -1906,6 +2437,17 @@
     "category": "in-flight-sweep",
     "maxHits": 15,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T89-changelog-path.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 30,
+        "sha256": "4bcc95d368ef63114ce31ac8a833d28c84f56fcf8c6d440c86704696ebe57faa"
+      }
+    ]
   },
   {
     "path": "test/sections/T89-changelog-path.test.sh",
@@ -1960,6 +2502,21 @@
     "category": "in-flight-sweep",
     "maxHits": 2,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T97-gap-migrate.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 57,
+        "sha256": "ec85f35393d0031b23761caf9b5e2cd85b2b331b82f1be925fd79f5173b793b3"
+      },
+      {
+        "line": 205,
+        "sha256": "b48c456784e029f450667af4f06b7dbdcc8b3570545834aa6e4bbf5b870bdbe8"
+      }
+    ]
   },
   {
     "path": "test/sections/T97-gap-migrate.test.sh",
