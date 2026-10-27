@@ -2,8 +2,10 @@
   "schema_version": 4,
   "repo_id": "85af56a090a78924",
   "level": 2,
-  "current_stage": "INTENT",
-  "completed_stages": [],
+  "current_stage": "THINK",
+  "completed_stages": [
+    "THINK"
+  ],
   "intent": {
     "summary": "Fix two live product defects diagnosed during the P6 closeout: (1) archive orphan-adoption swallows census-tracked live files (.gos/ai-trace-whitelist.json + sweep ledger) — add GOS_PATHS registry entries and exempt census-tracked files from adoption; (2) concerns add corrupts the anchor chain when the sidecar is absent — untracked-store bootstrap returns an empty hash set without writing, add pushes a single hash, every later add dies anchor-mismatch (drove the P6 BUILD-era hand-edit cycle).",
     "confirmed": true,
@@ -49,5 +51,7 @@
   ],
   "gaps": [],
   "activation_source": "headless",
-  "task_head": "2bb68c8a3009eeb5e405c2949410e8a9470553d3"
+  "task_head": "2bb68c8a3009eeb5e405c2949410e8a9470553d3",
+  "spec_sha256": "7bfd9f9e9fc0a0d9439377b89d3497f62d57a3c01a442a80c5b2dcb41d29cabd",
+  "spec_gate_version": 2
 }
