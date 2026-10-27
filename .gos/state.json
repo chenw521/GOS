@@ -2,7 +2,7 @@
   "schema_version": 4,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "BUILD",
+  "current_stage": "PLAN",
   "completed_stages": [
     "THINK",
     "PLAN"
@@ -217,6 +217,12 @@
       "id": "G-1793018890724",
       "type": "major",
       "description": "Fluid back to BUILD: spec sha refreeze after removing two stray CJK strings from the frozen spec",
+      "status": "open"
+    },
+    {
+      "id": "G-1793075275950",
+      "type": "major",
+      "description": "Fluid back to PLAN: declare the census-wide sweep scope the plan Files globs missed",
       "status": "open"
     }
   ],

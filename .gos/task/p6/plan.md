@@ -265,7 +265,7 @@
 
 #### T11: sweep batch 2 — bin/lib ops + bin root
 - **Covers**: D-24, D-23, D-29, R-43
-- **Files**: bin/lib/ops/*.cjs, bin/*.cjs, CHANGELOG.md, .gos/ai-trace-whitelist.json, .gos/ai-trace-sweep-ledger.ndjson
+- **Files**: bin/lib/ops/*.cjs, bin/lib/map/*.cjs, bin/lib/nav/*.cjs, bin/lib/render/*.cjs, bin/*.cjs, CHANGELOG.md, .gos/ai-trace-whitelist.json, .gos/ai-trace-sweep-ledger.ndjson
 - **Read first**: disposition.md batch 2
 - **Approach**: batch membership = disposition.md batch 2. Same harness discipline as T10 on batch 2 (serial after T10; lockfile enforces).
 - **Done when**: harness exit 0 AND lint exit 0 AND in-flight-sweep entries for batch-2 paths == 0 (harness log reconciles pre/post counts) AND --affected green AND changelog lint clean
@@ -273,7 +273,7 @@
 
 #### T12: sweep batch 3 + 4 — test/ tree (+ .gitattributes disposition closure)
 - **Covers**: D-24 (incl. string-context audit closure), D-23, D-29, R-43
-- **Files**: test/checks/, test/fixtures/, test/golden/, test/sections/*.test.sh, .gitattributes, CHANGELOG.md, .gos/ai-trace-whitelist.json, .gos/ai-trace-sweep-ledger.ndjson
+- **Files**: test/checks/, test/fixtures/, test/golden/, test/sections/*.test.sh, test/*.sh, .gitattributes, CHANGELOG.md, .gos/ai-trace-whitelist.json, .gos/ai-trace-sweep-ledger.ndjson
 - **Read first**: disposition.md batches 3-4, T8's lint-fixture registrations
 - **Approach**: batches 3 then 4, serially, in the order frozen at T9 (batch 4 splits 4a/4b the same way if so frozen; test/fixtures/ scope excludes the permanent ai-trace fixtures; .gitattributes only if its disposition row says strip). Plan-format
   heredoc fixtures inside sections are functional parse data — never edited (structural
@@ -291,7 +291,7 @@
 
 #### T13: endgame — final state, concerns close-out, ledger audit
 - **Covers**: D-23 (end state), D-24, D-29 (ledger reconciliation audit), D-31 (DI-1/DI-2 parking), R-01, R-43
-- **Files**: .gos/concerns.md, .gos/ai-trace-whitelist.json, .gos/ai-trace-sweep-ledger.ndjson, CHANGELOG.md, .gos/task/p6/
+- **Files**: .gos/concerns.md, .gos/ai-trace-whitelist.json, .gos/ai-trace-sweep-ledger.ndjson, CHANGELOG.md, .gos/task/p6/, README.md, README.zh-CN.md, .github/**, .opencode/commands/**, hooks/*.sh, scripts/*.sh, skills/**, .gos/codebase/, .gos/track-manifest.json
 - **Read first**: .gos/concerns.md FB-4 entry + parking-anchor format, .gos/task/p6/spec.md Deferred Ideas
 - **Approach**: task dir receives the ship-stage delta inputs. Verify terminal whitelist = permanent categories only (in-flight-sweep
   zero, shrink check green vs main); mark FB-4 cured in concerns.md with date +
