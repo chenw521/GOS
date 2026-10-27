@@ -421,7 +421,14 @@ function cmdArchive(opts = {}) {
     const now = Date.now();
     const anchorLock = path.join(core.GOS_DIR, '.anchors.lock');
     const anchorLockHeld = fs.existsSync(anchorLock) && (Date.now() - fs.statSync(anchorLock).mtimeMs < 120000);
-    const orphans = ops.detectOrphans(state);
+    const orphanTier = ops.detectOrphans(state);
+    if (orphanTier.probeFailure && orphanTier.probeFailure !== 'no-git') {
+      // fail-closed: adoption is destructive relocation — without git truth
+      // nothing moves (the tier reports every candidate as tracked-side, so
+      // the rescan below stays consistent with what was refused)
+      console.log(`⚠ orphan adoption refused — git probe unavailable: ${orphanTier.probeFailure}`);
+    }
+    const orphans = orphanTier.orphans;
     const adopted = [], skipped = [];
     for (const rel of orphans) {
       const src = path.join(core.GOS_DIR, rel);
@@ -449,6 +456,10 @@ function cmdArchive(opts = {}) {
       gitMvOrRename(src, dstAbs);
       adopted.push(rel);
     }
+    if (orphanTier.unregisteredTracked.length) {
+      console.log(`⚠ ${orphanTier.unregisteredTracked.length} tracked file(s) lack GOS_PATHS registry entries — left in place (registry-gap):`);
+      console.log('  ' + orphanTier.unregisteredTracked.join('\n  '));
+    }
     if (process.env.GOS_TEST_BREAK_SHIP === 'staging') throw new Error('GOS_TEST_BREAK_SHIP: injected staging failure');
     // ④ Phase B: rename staging into the archive destination; reroute/<dir>/ lands in core.ARCHIVE_DIR/<dir>/
     if (process.env.GOS_TEST_BREAK_SHIP === 'phase-b') throw new Error('GOS_TEST_BREAK_SHIP: injected phase-b failure');
@@ -470,7 +481,7 @@ function cmdArchive(opts = {}) {
     try { fs.rmdirSync(staging); } catch { /* keep */ }
     if (process.env.GOS_TEST_BREAK_SHIP === 'after-dest') throw new Error('GOS_TEST_BREAK_SHIP: injected after-dest failure (crash window: dest materialized, state not yet written)');
     // ⑤ rescan zero-assertion: non-transient orphans must be zero (manual adjudication on failure)
-    const rest = ops.detectOrphans(state).filter((r) => !skipped.includes(r));
+    const rest = ops.detectOrphans(state).orphans.filter((r) => !skipped.includes(r));
     if (rest.length) {
  // dest is born in THIS transaction — removing it avoids a half-archived
       // stray that rescan can never reach again (archive/ is the exempt zone)

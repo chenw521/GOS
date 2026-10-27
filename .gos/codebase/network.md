@@ -9,12 +9,12 @@ Nodes = path anchors (human and machine share the same key); edges = semantic de
 
 | family | count |
 |:--|:--|
-| calls (② call sites → cmd anchors) | 687 |
+| calls (② call sites → cmd anchors) | 688 |
 | contracts (③ contract-string consumers) | 82 |
 | switch (④case↔cmdXxx) | 37 |
 | testof (⑤ section annotations → cmd) | 147 |
 | hand (hand edges from edges.json) | 1 |
-| callgraph (⑥fn↔fn, acorn) | 469 |
+| callgraph (⑥fn↔fn, acorn) | 470 |
 | testof_fn (⑦ section annotations → fn) | 107 |
 
 ### Hand-edge detail (edges.json)
@@ -1326,6 +1326,7 @@ graph TD
   n352 -->|"calls"| n74
   n352 -->|"calls"| n76
   n352 -->|"calls"| n82
+  n352 -->|"calls"| n95
   n353 -->|"calls"| n60
   n353 -->|"calls"| n61
   n353 -->|"calls"| n66

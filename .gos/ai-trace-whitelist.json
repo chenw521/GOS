@@ -73,19 +73,19 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 60,
+        "line": 62,
         "sha256": "0573dba3bd383e0a24cc5a12e741c7095a410676fa06a426f198521b97ca0e1f"
       },
       {
-        "line": 170,
+        "line": 172,
         "sha256": "b33262f223f3d6663a997ab673b6f81db8f89259d2b2dec47d064e0ebcbb524e"
       },
       {
-        "line": 215,
+        "line": 217,
         "sha256": "30806c4832294a4f3c5bb73dc7f732390a016e33a02f0bcc1e5c6d66041ffaa1"
       },
       {
-        "line": 278,
+        "line": 280,
         "sha256": "6a5b37d241eef87a36f8333e5055be6560e1aa265415f6cc86c832a47ae69ff6"
       }
     ]
@@ -107,11 +107,11 @@
     "reason": "Contract strings in prompts, level labels and error text quote finding ids by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 60,
+        "line": 61,
         "sha256": "eaab1cd5c1dc4a8379d3564ad0e02e38cc23ef821047e93e2e528de1b4f7338b"
       },
       {
-        "line": 160,
+        "line": 161,
         "sha256": "fa281827af2a018981bf990b310d983e8858b7031e9ef93a031f7de68461541f"
       }
     ]
@@ -122,19 +122,19 @@
     "reason": "Contract strings in prompts, level labels and error text quote finding ids by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 69,
+        "line": 70,
         "sha256": "2d8302905090989b148140d4754cb05c7bdac2ccd826856d2ca88404cbc1173f"
       },
       {
-        "line": 70,
+        "line": 71,
         "sha256": "085bca11a0ebc8b937fb750a2786b876dd85a7040824244907fcd383dc73819e"
       },
       {
-        "line": 154,
+        "line": 155,
         "sha256": "c622c4c447046aba57ced45acbef918bd94b9e490aafa58f450b053068e9b52c"
       },
       {
-        "line": 161,
+        "line": 162,
         "sha256": "494559409849c5c2685fa26f213780054ae24ac85ebb9f42f5bc41c4dbb65726"
       }
     ]
@@ -319,11 +319,11 @@
         "sha256": "c4a3c31ded1f1d44f9e474eb86977404899202fef0d87d215222e59ce26dc652"
       },
       {
-        "line": 94,
+        "line": 99,
         "sha256": "b18c21f9033d3f99362eb2d4e62f7d9de49fa4a4a90348c19a636280ffe89a67"
       },
       {
-        "line": 118,
+        "line": 123,
         "sha256": "f08b205d377aa6d1a36ecc4fa03fe5c9ab19b05a1d1b3c96585999f732a61f1c"
       }
     ]
@@ -672,7 +672,7 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 94,
+        "line": 137,
         "sha256": "8fd9b8bfbd2f0524e1b0e5de0fbd20572b19b14ff47b8ca71787826765fefcef"
       }
     ]
@@ -766,11 +766,11 @@
         "sha256": "6d3196b5e6a8ffbffa3a81b00146cbe43f0993099f3a37f75cfcd87e2910a6dc"
       },
       {
-        "line": 1222,
+        "line": 1235,
         "sha256": "3471b41ccdef2d24fb7a74200e8483f22be994e0e242eed44e74ee4f33f2a2a5"
       },
       {
-        "line": 1238,
+        "line": 1251,
         "sha256": "76b61f6ea9edff48418c510972f1a37168708b30c4ec1969ae883ca70632f7db"
       }
     ]
@@ -865,11 +865,11 @@
         "sha256": "ba595698c5feccc15e9b3b8fc0a1cff6f2665d21d92f24060ef13949f9e536ad"
       },
       {
-        "line": 437,
+        "line": 444,
         "sha256": "8638628646a84624acfd64faf64766d6f92c2a8ccb2423e483657dbc3afed673"
       },
       {
-        "line": 546,
+        "line": 557,
         "sha256": "829ec48da19a6121f8d61b41da0dae442d73885705855f41cc81f083b6b69ae5"
       }
     ]
@@ -1474,7 +1474,7 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 66,
+        "line": 78,
         "sha256": "1ca0951d30f9bab01775642d65c75247453584dad155d8d0736d1fb11ef61d6c"
       }
     ]

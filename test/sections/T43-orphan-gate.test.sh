@@ -99,6 +99,30 @@ else
   echo "  ✗ T43.7 still red after regen (rc=$RC7)"; FAIL=$((FAIL+1))
 fi
 
+# .9 tracked-but-unregistered (via a real gos track flip) → registry-gap advisory
+#    (not orphan), never fails even under --strict
+echo live > .gos/legacy-tracked.md
+echo ".gos/legacy-tracked.md" >> .gitignore && git add .gitignore && git commit -q -m gi
+node "$GOS" track .gos/legacy-tracked.md >/dev/null 2>&1
+set +e
+OUT9="$(node "$GOS" gate all 2>&1)"; RC9=$?
+set -e
+if [ "$RC9" -eq 0 ] && ! printf '%s' "$OUT9" | grep -q "orphan-advisory" && printf '%s' "$OUT9" | grep -q "registry-gap"; then
+  echo "  ✓ T43.9 tracked registry-gap → advisory tier, not orphan"; PASS=$((PASS+1))
+else
+  echo "  ✗ T43.9 rc=$RC9 orphan_line=$(printf '%s' "$OUT9" | grep -o 'orphan-advisory[^,]*' | head -1) gap=$(printf '%s' "$OUT9" | grep -c registry-gap)"; FAIL=$((FAIL+1))
+fi
+set +e
+node "$GOS" gate all --strict >/dev/null 2>&1; RC9B=$?
+set -e
+if [ "$RC9B" -eq 0 ]; then
+  echo "  ✓ T43.9b registry-gap stays advisory under --strict"; PASS=$((PASS+1))
+else
+  echo "  ✗ T43.9b --strict escalated the registry-gap tier (rc=$RC9B)"; FAIL=$((FAIL+1))
+fi
+rm -f .gos/legacy-tracked.md
+git rm -q --cached .gos/legacy-tracked.md 2>/dev/null
+
 # .8 freeze non-regression: existing verdicts keys untouched
 for key in allPass gateFailedPrefix passPrefix failPrefix; do
   if node "$GOS" _contract 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); assert '$key' in d['gate_verdicts']" 2>/dev/null; then

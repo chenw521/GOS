@@ -122,5 +122,21 @@ else
   echo "  ✗ T45.5 rc=$RC5 hit=$HIT out=$(printf '%s' "$OUT5" | tail -2)"; FAIL=$((FAIL+1))
 fi
 
+# --- .6 tracked-but-unregistered file is never adopted; untracked strays still are
+seed_ship_ready f
+echo live > .gos/legacy-tracked.md
+git add -f .gos/legacy-tracked.md && git commit -q -m legacy   # tracked, no GOS_PATHS entry
+echo stray > .gos/old-stray2.txt
+touch -d "10 minutes ago" .gos/legacy-tracked.md .gos/old-stray2.txt   # both past the quiet window
+set +e
+OUT6="$(GOS_SKIP_SHIP_CHECK=1 node "$GOS" archive 2>&1)"; RC6=$?
+set -e
+AD6=$(ls -d .gos/archive/*/ 2>/dev/null | head -1)
+if [ "$RC6" -eq 0 ] && [ -f .gos/legacy-tracked.md ] && [ ! -f "$AD6/orphans/legacy-tracked.md" ] && [ -f "$AD6/orphans/old-stray2.txt" ]; then
+  echo "  ✓ T45.6 tracked registry-gap file left in place, untracked stray adopted"; PASS=$((PASS+1))
+else
+  echo "  ✗ T45.6 rc=$RC6 tracked_at_origin=$([ -f .gos/legacy-tracked.md ] && echo yes || echo no) adopted=$([ -f "$AD6/orphans/legacy-tracked.md" ] && echo yes || echo no) stray=$([ -f "$AD6/orphans/old-stray2.txt" ] && echo yes || echo no) out=$(printf '%s' "$OUT6" | tail -3)"; FAIL=$((FAIL+1))
+fi
+
 echo "--- T45 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]

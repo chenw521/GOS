@@ -53,6 +53,7 @@ module.exports = {
     what: '配置的 lint 规则未通过',
     why: '仓库级 lint 规则是硬门禁，不是建议',
   },
+  'gate.registry-gap-advisory': '[registry-gap] .gos/ 下有 {n} 个已 tracked 的文件缺少 GOS_PATHS 注册表条目——tracked 文件永不被收养；补注册条目即可消除此提示。仅提示（永不失败，--strict 下同样）。',
 
   // ---- status / guidance surfaces (first-user high-frequency, FB-1) ----
   'status.localeLine': '语言: {locale}（来源: {source}）— 可用 GOS_LANG 或 {cmd:setup} --lang <en|zh-CN> 切换',

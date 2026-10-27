@@ -12,6 +12,8 @@ Every artifact under .gos/: who writes it, who reads it, when it can be deleted.
 | `gates.json` | cli | gate | never | yes |
 | `concerns.md` | cli | concerns/status/red-team | never | yes |
 | `cjk-whitelist.json` | cli (promoted from task dir 2026-09-30) | gate cjk-lint | never | yes |
+| `ai-trace-whitelist.json` | cli (ai-trace lint baseline) | gate ai-trace lint | never | yes |
+| `ai-trace-sweep-ledger.ndjson` | cli (ai-trace sweep reconciliation) | changelog validator / audit | never (deleted-anchor reconciliation lives here) | yes |
 | `lessons.md` | cli (regenerated view of lessons.json) | lessons/status/red-team | regen any time (json is truth) | yes |
 | `lessons.json` | cli (lessons family) | lessons/gate/commit/archive | never (audit chain lives here) | yes |
 | `lessons-migration-backup-<ymd>.md` | cli (lessons migrate) | migration rollback runbook | latest generation only | yes |
@@ -73,6 +75,6 @@ Every artifact under .gos/: who writes it, who reads it, when it can be deleted.
 ## Layout rules
 
 - Agent artifacts never appear at .gos/ root — they live under `task/<id>/` (supplied via `gos context <stage>` artifact_paths).
-- Anything not listed above is an orphan: `gos gate` reports it (advisory), `gos commit ship` adopts it into `archive/<date>-orphans/`.
+- Anything not listed above is an orphan: `gos gate` reports it (advisory), `gos commit ship` adopts it into `archive/<date>-orphans/`. Git-tracked files without a registry entry are never adopted — `gos gate` reports them as a registry-gap advisory instead.
 - `archive/` is the history zone — safe to batch-prune after a milestone (git history is the net).
 - This README is generated — never hand-edit (gate verifies regen diff is empty).

@@ -2,7 +2,7 @@
   "schema_version": 4,
   "repo_id": "85af56a090a78924",
   "level": 2,
-  "current_stage": "THINK",
+  "current_stage": "BUILD",
   "completed_stages": [
     "THINK"
   ],
