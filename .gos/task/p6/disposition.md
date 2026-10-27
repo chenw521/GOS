@@ -2758,3 +2758,290 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 52 | A | [A-Za-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 117 | A | [A-Za-z0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 
+
+## Remedial batch (fragment wreckage from the early batches)
+
+### bin/gos.cjs (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 129 | A | [Phase D T2 | A | strip fragment, keep the WHAT |
+
+### bin/lib/core/fsio.cjs (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 112 | A | [REVIEW P2 | A | strip fragment, keep the WHAT |
+
+### bin/lib/core/gitprobe.cjs (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 1 | B | D-15 | A | strip fragment, keep the WHAT |
+
+### bin/lib/core/i18n.cjs (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 111 | B | D-66 | A | strip fragment, keep the WHAT |
+
+### bin/lib/core/locales/en.cjs (5 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 71 | B | R-35 | A | strip fragment, keep the WHAT |
+| 87 | B | D-17 | A | strip fragment, keep the WHAT |
+| 90 | B | D-16 | A | strip fragment, keep the WHAT |
+| 127 | B | D-15 | A | strip fragment, keep the WHAT |
+| 215 | B | D-90 | A | strip fragment, keep the WHAT |
+
+### bin/lib/core/locales/zh.cjs (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 122 | B | D-15 | A | strip fragment, keep the WHAT |
+
+### bin/lib/core/state.cjs (10 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 225 | B | D-14 | A | strip fragment, keep the WHAT |
+| 431 | B | D-01 | A | strip fragment, keep the WHAT |
+| 449 | B | R-06 | A | strip fragment, keep the WHAT |
+| 486 | B | D-17 | A | strip fragment, keep the WHAT |
+| 501 | B | D-10 | A | strip fragment, keep the WHAT |
+| 545 | B | D-99 | A | strip fragment, keep the WHAT |
+| 628 | A | R3-F4 | A | strip fragment, keep the WHAT |
+| 628 | B | D-15 | A | strip fragment, keep the WHAT |
+| 664 | B | T35 | A | strip fragment, keep the WHAT |
+| 674 | A | [REVIEW P2 | A | strip fragment, keep the WHAT |
+| 841 | B | D-08 | A | strip fragment, keep the WHAT |
+
+### bin/lib/knowledge/decisions.cjs (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 10 | B | R-28 | A | strip fragment, keep the WHAT |
+
+### bin/lib/knowledge/lessons.cjs (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 276 | A | [R1 | A | strip fragment, keep the WHAT |
+
+### bin/lib/knowledge/phase.cjs (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 31 | B | R-33 | A | strip fragment, keep the WHAT |
+
+### bin/lib/knowledge/requirements.cjs (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 59 | B | R-01 | A | strip fragment, keep the WHAT |
+
+### bin/lib/knowledge/truth.cjs (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 35 | B | R-35 | A | strip fragment, keep the WHAT |
+
+### bin/lib/map/anchor.cjs (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 131 | B | D-23 | A | strip fragment, keep the WHAT |
+
+### bin/lib/map/engine.cjs (11 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 281 | A | [Phase S/ | A | strip fragment, keep the WHAT |
+| 340 | A | [REVIEW M1 | A | strip fragment, keep the WHAT |
+| 350 | A | [REVIEW m8 | A | strip fragment, keep the WHAT |
+| 359 | A | [REVIEW m4 | A | strip fragment, keep the WHAT |
+| 374 | A | [Phase P T6 | A | strip fragment, keep the WHAT |
+| 409 | A | [Phase S/ | A | strip fragment, keep the WHAT |
+| 417 | A | [REVIEW M2 | A | strip fragment, keep the WHAT |
+| 440 | A | [REVIEW M1 | A | strip fragment, keep the WHAT |
+| 450 | A | [Phase S/ | A | strip fragment, keep the WHAT |
+| 504 | A | [Phase P T2 | A | strip fragment, keep the WHAT |
+| 715 | A | [Phase P T7 | A | strip fragment, keep the WHAT |
+
+### bin/lib/map/index.cjs (4 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 285 | A | [Phase D T7 | A | strip fragment, keep the WHAT |
+| 286 | A | [Phase D T8 | A | strip fragment, keep the WHAT |
+| 360 | A | [REVIEW m5 | A | strip fragment, keep the WHAT |
+| 467 | A | [Phase P T7 | A | strip fragment, keep the WHAT |
+
+### bin/lib/map/views.cjs (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 238 | A | [REVIEW m6 | A | strip fragment, keep the WHAT |
+
+### bin/lib/nav/status.cjs (2 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 83 | A | [phase-ux L3 | A | strip fragment, keep the WHAT |
+| 87 | A | [phase-ux L3 | A | strip fragment, keep the WHAT |
+
+### bin/lib/ops/brownfield.cjs (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 14 | B | Wave 4 | A | strip fragment, keep the WHAT |
+
+### bin/lib/task/archive.cjs (9 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 51 | A | [REVIEW P1 | A | strip fragment, keep the WHAT |
+| 143 | B | R-33 | A | strip fragment, keep the WHAT |
+| 254 | A | [REVIEW P2 | A | strip fragment, keep the WHAT |
+| 332 | B | T18 | A | strip fragment, keep the WHAT |
+| 339 | A | §3 | A | strip fragment, keep the WHAT |
+| 339 | B | D-15 | A | strip fragment, keep the WHAT |
+| 431 | A | [REVIEW P2 | A | strip fragment, keep the WHAT |
+| 441 | A | [REVIEW P2 | A | strip fragment, keep the WHAT |
+| 475 | A | [REVIEW P2 | A | strip fragment, keep the WHAT |
+| 484 | A | [REVIEW P1 | A | strip fragment, keep the WHAT |
+
+### bin/lib/task/commit.cjs (6 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 28 | B | B-8 | A | strip fragment, keep the WHAT |
+| 53 | B | T2 | A | strip fragment, keep the WHAT |
+| 133 | B | B-15 | A | strip fragment, keep the WHAT |
+| 194 | A | [REVIEW P1 | A | strip fragment, keep the WHAT |
+| 242 | A | [REVIEW P1 | A | strip fragment, keep the WHAT |
+| 318 | A | R2-F11 | A | strip fragment, keep the WHAT |
+
+### bin/lib/task/context.cjs (3 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 34 | B | R-04 | A | strip fragment, keep the WHAT |
+| 59 | B | R-33 | A | strip fragment, keep the WHAT |
+| 97 | B | D-20 | A | strip fragment, keep the WHAT |
+
+### bin/lib/task/init.cjs (4 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 93 | A | [REVIEW P2 | A | strip fragment, keep the WHAT |
+| 149 | B | D-11 | A | strip fragment, keep the WHAT |
+| 155 | A | §1 | A | strip fragment, keep the WHAT |
+| 167 | B | R-33 | A | strip fragment, keep the WHAT |
+
+### skills/gos-plan/reference/revision-loop.md (3 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 21 | B | D-05 | A | strip fragment, keep the WHAT |
+| 22 | B | D-05 | A | strip fragment, keep the WHAT |
+| 61 | B | D-02 | A | strip fragment, keep the WHAT |
+
+### skills/gos-plan/reference/task-decomposition.md (3 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 40 | B | D-02 | A | strip fragment, keep the WHAT |
+| 46 | B | D-01 | A | strip fragment, keep the WHAT |
+| 72 | B | T1 | A | strip fragment, keep the WHAT |
+
+### skills/gos-plan/reference/thinking-models.md (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 47 | B | Wave 1 | A | strip fragment, keep the WHAT |
+
+### skills/gos-think/prompts/red-team-attacker.md (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 32 | A | [Phase 6 | A | strip fragment, keep the WHAT |
+
+### skills/gos-think/reference/dialogue-protocol.md (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 113 | B | D-02 | A | strip fragment, keep the WHAT |
+
+### skills/gos-verify/SKILL.md (2 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 40 | B | T1 | A | strip fragment, keep the WHAT |
+| 41 | B | T2 | A | strip fragment, keep the WHAT |
+
+### test/sections/T10-security-e2e.test.sh (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 235 | A | [REVIEW P2 | A | strip fragment, keep the WHAT |
+
+### test/sections/T100-navigator.test.sh (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 4 | B | Wave 4 | A | strip fragment, keep the WHAT |
+
+### test/sections/T14-state-b.test.sh (7 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 105 | B | Wave 1 | A | strip fragment, keep the WHAT |
+| 107 | B | T1 | A | strip fragment, keep the WHAT |
+| 143 | B | Wave 1 | A | strip fragment, keep the WHAT |
+| 145 | B | T1 | A | strip fragment, keep the WHAT |
+| 158 | B | Wave 1 | A | strip fragment, keep the WHAT |
+| 188 | B | Wave 1 | A | strip fragment, keep the WHAT |
+| 222 | B | Wave 1 | A | strip fragment, keep the WHAT |
+
+### test/sections/T17-semantic-engine.test.sh (4 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 42 | B | Wave 1 | A | strip fragment, keep the WHAT |
+| 44 | B | T1 | A | strip fragment, keep the WHAT |
+| 149 | B | Wave 1 | A | strip fragment, keep the WHAT |
+| 151 | B | T1 | A | strip fragment, keep the WHAT |
+
+### test/sections/T20-map-scan.test.sh (2 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 98 | A | [Phase P T2 | A | strip fragment, keep the WHAT |
+| 156 | A | [Phase P T2 | A | strip fragment, keep the WHAT |
+
+### test/sections/T26-nav-hints.test.sh (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 71 | A | [phase-ux L3 | A | strip fragment, keep the WHAT |
+
+### test/sections/T30-map-edges.test.sh (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 144 | A | [Phase P T2 | A | strip fragment, keep the WHAT |
+
+### test/sections/T36-callgraph.test.sh (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 41 | A | [REVIEW M3 | A | strip fragment, keep the WHAT |
+
+### test/sections/T4-requirement.test.sh (1 hit(s))
+
+| line | tier | matched | letter | action |
+|:--|:--|:--|:--|:--|
+| 4 | B | Wave 2 | A | strip fragment, keep the WHAT |
+

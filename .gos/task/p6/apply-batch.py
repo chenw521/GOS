@@ -74,7 +74,16 @@ def strip_all_anchors(text):
 def load_rows():
     rows = collections.defaultdict(lambda: collections.defaultdict(list))
     cur = None
+    import os
+    remedial_only = os.environ.get('SWEEP_REMEDIAL') == '1'
+    seen_remedial = False
     for line in open(DISPOSITION, encoding='utf8'):
+        if remedial_only:
+            if line.startswith('## Remedial batch'):
+                seen_remedial = True
+                continue
+            if not seen_remedial:
+                continue
         m = re.match(r'^### (\S+) \((\d+) hit', line)
         if m:
             cur = m.group(1)
@@ -152,6 +161,11 @@ def main():
             is_comment = bool(re.match(r'^\s*(#|//|/\*|\*|<!--)', text))
             if is_comment:
                 text = strip_all_anchors(text)
+            elif ' // ' in text:
+                # trailing comment on a code line: strip the tail segment only
+                cut = text.rindex(' // ')
+                head, tail = text[:cut + 1], text[cut + 1:]
+                text = head + strip_all_anchors(tail)
             else:
                 spans = []
                 for tier, tok, letter in rs:
