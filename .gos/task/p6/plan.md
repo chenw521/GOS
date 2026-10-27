@@ -210,7 +210,7 @@
 
 #### T8: test section T102 — lint/whitelist/gate/fixtures/templates/hint evidence
 - **Covers**: D-26 (templates-clean test), D-28 (equality both directions), D-23, R-40, R-41, R-42, R-44
-- **Files**: test/sections/T102-ai-trace.test.sh, test/fixtures/ai-trace/, .gos/ai-trace-whitelist.json
+- **Files**: test/sections/T102-ai-trace.test.sh, test/fixtures/ai-trace/anchors.json, test/fixtures/ai-trace/anchors.md, test/fixtures/ai-trace/anchors.sh, templates/coding-standards/00-general.md, templates/coding-standards/node.md, templates/coding-standards/python.md, templates/coding-standards/shell.md, templates/plan-template.md, templates/spec-template.md, templates/trace-template.md, templates/review-checklist.md, .gos/ai-trace-whitelist.json
 - **Read first**: test/sections/T101-*.test.sh (section conventions), T4 machine-view contracts, T6 gate line
 - **Approach**: both section and fixture files are new; whitelist gains lint-fixture entries with in-task regen. FIRST plant the permanent fixture files under test/fixtures/ai-trace/
   (digit-bearing anchors by design), register them as `lint-fixture` entries, and
@@ -273,7 +273,7 @@
 
 #### T12: sweep batch 3 + 4 — test/ tree (+ .gitattributes disposition closure)
 - **Covers**: D-24 (incl. string-context audit closure), D-23, D-29, R-43
-- **Files**: test/checks/, test/fixtures/, test/golden/, test/sections/*.test.sh, test/*.sh, .gitattributes, CHANGELOG.md, .gos/ai-trace-whitelist.json, .gos/ai-trace-sweep-ledger.ndjson
+- **Files**: test/checks/gitprobe-monopoly.sh, test/checks/stale-verbs.sh, test/fixtures/gh-stub/gh, test/golden/, test/sections/*.test.sh, test/*.sh, .gitattributes, CHANGELOG.md, .gos/ai-trace-whitelist.json, .gos/ai-trace-sweep-ledger.ndjson
 - **Read first**: disposition.md batches 3-4, T8's lint-fixture registrations
 - **Approach**: batches 3 then 4, serially, in the order frozen at T9 (batch 4 splits 4a/4b the same way if so frozen; test/fixtures/ scope excludes the permanent ai-trace fixtures; .gitattributes only if its disposition row says strip). Plan-format
   heredoc fixtures inside sections are functional parse data — never edited (structural

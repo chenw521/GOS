@@ -224,6 +224,12 @@
       "type": "major",
       "description": "Fluid back to PLAN: declare the census-wide sweep scope the plan Files globs missed",
       "status": "open"
+    },
+    {
+      "id": "G-1793075320218",
+      "type": "major",
+      "description": "Fluid back to PLAN: declare the remaining sweep-touched paths",
+      "status": "open"
     }
   ],
   "phase_name": "P6: comment hygiene and coding standards",
@@ -384,6 +390,9 @@
         ],
         "files": [
           "bin/lib/ops/*.cjs",
+          "bin/lib/map/*.cjs",
+          "bin/lib/nav/*.cjs",
+          "bin/lib/render/*.cjs",
           "bin/*.cjs",
           "CHANGELOG.md",
           ".gos/ai-trace-whitelist.json",
@@ -403,6 +412,7 @@
           "test/fixtures/",
           "test/golden/",
           "test/sections/*.test.sh",
+          "test/*.sh",
           ".gitattributes",
           "CHANGELOG.md",
           ".gos/ai-trace-whitelist.json",
@@ -424,7 +434,16 @@
           ".gos/ai-trace-whitelist.json",
           ".gos/ai-trace-sweep-ledger.ndjson",
           "CHANGELOG.md",
-          ".gos/task/p6/"
+          ".gos/task/p6/",
+          "README.md",
+          "README.zh-CN.md",
+          ".github/**",
+          ".opencode/commands/**",
+          "hooks/*.sh",
+          "scripts/*.sh",
+          "skills/**",
+          ".gos/codebase/",
+          ".gos/track-manifest.json"
         ]
       }
     ],
