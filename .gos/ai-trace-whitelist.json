@@ -1318,6 +1318,21 @@
   },
   {
     "path": "test/checks/stale-verbs.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 76,
+        "sha256": "ffb16930e35a04596e21c011dc230e98457169cefbd3e922ee7235a5dabbb264"
+      },
+      {
+        "line": 77,
+        "sha256": "e2042baa34d2f9cc8071676837d38962bbcd5c9bb8e0af9040b4af0279f0be2d"
+      }
+    ]
+  },
+  {
+    "path": "test/checks/stale-verbs.sh",
     "category": "in-flight-sweep",
     "maxHits": 3,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -1348,6 +1363,17 @@
   },
   {
     "path": "test/golden/pre-split/contract.txt",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 142,
+        "sha256": "f1e66f95d015b3bb61dbe603451383f3d7934a8f27bd4d960d031cb8245fa042"
+      }
+    ]
+  },
+  {
+    "path": "test/golden/pre-split/contract.txt",
     "category": "in-flight-sweep",
     "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -1363,6 +1389,17 @@
     "category": "in-flight-sweep",
     "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/run-sections.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 64,
+        "sha256": "ce56c664db6abf69430a9850e8078d1151ed3a2e885a99846882000f2a9a2b07"
+      }
+    ]
   },
   {
     "path": "test/run-sections.sh",
@@ -1989,6 +2026,29 @@
     "category": "in-flight-sweep",
     "maxHits": 4,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/workflow-lint.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 25,
+        "sha256": "9cb03a03af5e54c96429cebaf7b949e147eb42d9d39b4c73059486add284fe19"
+      },
+      {
+        "line": 37,
+        "sha256": "9cb03a03af5e54c96429cebaf7b949e147eb42d9d39b4c73059486add284fe19"
+      },
+      {
+        "line": 52,
+        "sha256": "ed12ed6c13dd03d0f7252c8f5009e105015fa16609b0f8f6c17413e71fe72700"
+      },
+      {
+        "line": 117,
+        "sha256": "b1301662f66d319b88f8b6aaca585b358d78a20da682d5a7d6993579f70e8a26"
+      }
+    ]
   },
   {
     "path": "test/workflow-lint.sh",
