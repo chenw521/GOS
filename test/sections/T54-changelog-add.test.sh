@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # gos-map:cmd changelog
-# T54: gos changelog add — single-track CHANGELOG.md entry generator.
+# gos changelog add — single-track CHANGELOG.md entry generator.
 # Covers: fail-closed gates (no-state / no-summary / validator), user_summary
 # sources (--summary arg > state cache > TTY ask), template bootstrap,
 # UTC-stamped bullet format (same-source with changelog-core), concurrent-safe
 # write (dedicated O_EXCL lock, wait-not-die), .changes.md sealed (mtime frozen).
 # NOTE: interactive-path cases use `env -u GOS_HEADLESS script -qec` to fabricate
-#       a pty and feed a line through it (T35-u-init pattern); the rest of the
+# a pty and feed a line through it ( -u-init pattern); the rest of the
 #       section runs headless (GOS_HEADLESS=1 pinned by the runner).
 T54_DIR=""
 

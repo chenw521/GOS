@@ -1,4 +1,4 @@
-// core/gitprobe.cjs — fail-closed git probing primitives (§3.0; D-14/D-15/D-17):
+// core/gitprobe.cjs — fail-closed git probing primitives ( ; / ):
 // clone-resume's tracked-flip gate refuses whenever git truth cannot be
 // established. isTracked answers `true` (assume tracked) on ANY git failure
 // (rc!=0, stderr chatter on rc=0, spawn exception, poisoned GIT_INDEX_FILE /
@@ -137,7 +137,7 @@ function isTracked(file) {
   const set = indexSet();
   if (_failure || !set) return true;
   if (set.exact.has(rel)) return true;
-  // Case-collision doubt (fail-closed bias, mirrors fsio R2-F9 honesty): a
+ // Case-collision doubt (fail-closed bias, mirrors fsio honesty): a
   // differently-cased index twin that exists on disk counts as tracked.
   if (set.lower.has(rel.toLowerCase())) {
     const top = toplevelReal();
@@ -167,7 +167,7 @@ function ignoredSet() {
   return out;
 }
 
-// Tracked-under-prefix enumeration (T8 gate flip-reconcile leg): the sorted
+// Tracked-under-prefix enumeration ( gate flip-reconcile leg): the sorted
 // tracked path set under a repo-relative prefix ('.gos/' — the same set
 // `git ls-files -z -- .gos` returns, quotepath off), served from the cached
 // index universe with no second spawn. null when git truth is unavailable

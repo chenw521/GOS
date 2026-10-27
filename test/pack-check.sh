@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# npm pack manifest integrity check (R-09): the published tarball must carry
+# npm pack manifest integrity check : the published tarball must carry
 # the plugin's runtime directories and must NOT carry repo-internal files.
 # Asserts from the actual `npm pack --dry-run` manifest (never assumptions):
 #   - entries under bin/, skills/, templates/, .opencode/, hooks/ exist

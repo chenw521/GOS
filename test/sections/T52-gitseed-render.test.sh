@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/gitseed.cjs#fn:render bin/lib/ops/gitseed.cjs#fn:renderLayer bin/lib/ops/gitseed.cjs#fn:validateCodeowner
 # gos-map:cmd init
-# T52: templates/git layered masters + render functions (D-44/D-48, R-01/R-02/R-04)
+# templates/git layered masters + render functions
 # Cases: A=master inventory + zero-CJK  B=render byte-exact + variable budget
 #        C=renderLayer split + fail-closed  D=validateCodeowner (4 rejections + @org/team)
 #        E=destination path map + GOS_SELF_ROOT anchoring  F=master content spot checks
@@ -82,7 +82,6 @@ assert_contains "C3 unknown layer name throws" "THREW" "$CB"
 set +e; CV=$(GSEED="$GSEED" node -e "const g=require(process.env.GSEED);try{g.renderLayer('universal',{codeowner:'@octo cat'});console.log('BAD:no-throw')}catch(e){console.log('THREW:'+e.message.slice(0,17))}" 2>&1); set -e
 assert_contains "C4 renderLayer validates codeowner (fail-closed)" "THREW:invalid codeowner" "$CV"
 
-# --- D: validateCodeowner fail-closed (R-04) ---
 set +e; D1=$(GSEED="$GSEED" node -e "const g=require(process.env.GSEED);try{g.validateCodeowner('');console.log('BAD:no-throw')}catch(e){console.log('THREW:'+e.message.slice(0,17))}" 2>&1); set -e
 assert_contains "D1 empty codeowner rejected" "THREW:invalid codeowner" "$D1"
 
@@ -104,7 +103,7 @@ assert_contains "D6 bare user and org/team forms accepted" "OK-bare-forms" "$D6"
 set +e; D7=$(GSEED="$GSEED" node -e "const g=require(process.env.GSEED);try{g.render({codeowner:'@octo cat'});console.log('BAD:no-throw')}catch(e){console.log('THREW')}" 2>&1); set -e
 assert_contains "D7 render() refuses to run with illegal codeowner" "THREW" "$D7"
 
-# --- E: destination path map + GOS_SELF_ROOT anchoring (R-03 flavor) ---
+# --- E: destination path map + GOS_SELF_ROOT anchoring ( flavor)
 set +e; EK=$(GSEED="$GSEED" node -e "
 const g=require(process.env.GSEED);
 const want=['.github/ISSUE_TEMPLATE/bug_report.yml','.github/ISSUE_TEMPLATE/feature_request.yml','.github/ISSUE_TEMPLATE/config.yml','.github/PULL_REQUEST_TEMPLATE.md','.github/CODEOWNERS','commitlint.config.yaml','CHANGELOG.md','.github/workflows/ci.yml','.github/workflows/release.yml'];

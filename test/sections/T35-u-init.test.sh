@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # gos-map:cmd init
-# T35: Phase U init state machine — dual mode / confirm-only / alias blocking / audit / level normalization / activation_source / echo sanitization
-# Covers: D-29, D-30, D-31, D-34 (plan r2 T1-T4)
+# Phase U init state machine — dual mode / confirm-only / alias blocking / audit / level normalization / activation_source / echo sanitization
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 # NOTE: interactive-path cases use `env -u GOS_HEADLESS script -qec` to fabricate a pty
-#       (T7 pins GOS_HEADLESS=1 as runner anchor — `env -u` neutralizes it inside cases)
+# ( pins GOS_HEADLESS=1 as runner anchor — `env -u` neutralizes it inside cases)
 
 T35_DIR=""
 
@@ -25,7 +24,6 @@ hl_summary() { python3 -c "import json;print(json.load(open('.gos/state.json'))[
 t35_setup
 echo "--- T35: init state machine (dual-mode / confirm-only / alias / audit / level / source / echo) ---"
 
-# ===== T1: dual-mode + audit =====
 
 # U1 headless: one-shot init sets confirmed + audit
 out=$(GOS_HEADLESS=1 node "$GOS" init 1 "u1 headless oneshot" 2>&1); rc=$?
@@ -58,7 +56,7 @@ t35_setup
 env -u GOS_HEADLESS script -qec "node '$GOS' init 1 'u6 mixed' < /dev/null" /dev/null >/dev/null 2>&1
 assert_eq "U6 mixed confirmed=false" "False" "$(hl_confirmed)"
 
-# ===== T1: confirm-only state machine =====
+# ===== : confirm-only state machine =====
 
 # U7 bare --confirm with NO active task → die "nothing to confirm"
 t35_setup
@@ -100,7 +98,6 @@ GOS_HEADLESS=1 node "$GOS" init 1 "u12 guard" >/dev/null 2>&1
 out=$(GOS_HEADLESS=1 node "$GOS" init 2 "u12 second" 2>&1); rc=$?
 assert_exit "U12 in-flight guard still bites" 1 "$rc"
 
-# ===== T2: level normalization =====
 
 # U13 lowercase lv1 → Lv1
 t35_setup
@@ -139,7 +136,6 @@ t35_setup
 node "$GOS" init 0 "u19 zero" >/dev/null 2>&1
 assert_eq "U19 digit 0 → level 0" "0" "$(hl_level)"
 
-# ===== T3: activation_source =====
 
 # U20 headless → activation_source=headless
 t35_setup
@@ -167,8 +163,7 @@ json.dump(s,open('.gos/state.json','w'))"
 out=$(node "$GOS" status 2>&1); rc=$?
 assert_exit "U23 legacy state tolerant" 0 "$rc"
 
-# ===== T4: echo sanitization =====
-# R2-M1 rewrite: inject payload DIRECTLY into state.json intent.summary (no badText
+# rewrite: inject payload DIRECTLY into state.json intent.summary (no badText
 # guard on that field — exactly why sanitizeEcho exists at display sinks). CLI-level
 # control-char intent dies earlier at validateRequirement (schema guard, separate layer).
 

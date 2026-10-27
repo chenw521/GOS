@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 # gos-map:cmd decision
-# T3: decision command family (add/amend/cover/list/import)
-# Covers: D-02, D-03, D-09, D-11, D-19, D-20, D-22 (plan W2-T3)
+# decision command family (add/amend/cover/list/import)
 # Env: GOS (CLI path), TESTBASE (repo root for sandbox), + assert helpers sourced by runner
 T3_DIR=""
 
-# [Phase W T5] fixture paths follow the CLI supply (task/<id>/) — never hardcode .gos/ root
+# fixture paths follow the CLI supply (task/<id>/) — never hardcode .gos/ root
 gos_spec() { node "$GOS" context think 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["spec"])' 2>/dev/null; }
 gos_plan() { node "$GOS" context plan 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["plan"])' 2>/dev/null; }
 
@@ -21,7 +20,7 @@ t3_teardown() { cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$T3_DIR"; }
 t3_setup
 echo "--- T3: decision family (add/amend/cover/list/import) ---"
 
-# --- T3.1: add explicit id → state entry + frozen output + gate coverage blocks ---
+# --- .1: add explicit id → state entry + frozen output + gate coverage blocks
 node "$GOS" init 3 "decisions" >/dev/null 2>&1
 OUT=$(node "$GOS" decision add D-01 "Use JSON truth store" --rationale "single source" 2>&1)
 assert_contains "add D-01 output contract" "✓ Decision D-01 added: Use JSON truth store" "$OUT"
@@ -32,35 +31,32 @@ set +e; OUT=$(node "$GOS" gate coverage 2>&1); RC=$?; set -e
 assert_exit "gate coverage exits 1 on uncovered D-01" 1 "$RC"
 assert_contains "gate output names D-01" "D-01" "$OUT"
 
-# --- T3.2: duplicate id ---
 set +e; OUT=$(node "$GOS" decision add D-01 "another" --rationale x 2>&1); RC=$?; set -e
 assert_exit "duplicate add exits 1" 1 "$RC"
 assert_contains "duplicate message + amend hint" "already exists, use: gos decision amend D-01" "$OUT"
 
-# --- T3.3: hostile title rejected, no side-effect file ---
+# --- .3: hostile title rejected, no side-effect file
 set +e; OUT=$(node "$GOS" decision add 'bad $(touch pwned-t3) x' --rationale x 2>&1); RC=$?; set -e
 assert_exit "hostile title exits 1" 1 "$RC"
 if [ -e pwned-t3 ]; then echo "  ✗ hostile title executed payload"; FAIL=$((FAIL+1)); else echo "  ✓ no payload side effect (pwned-t3 absent)"; PASS=$((PASS+1)); fi
 
-# --- T3.4: 121-codepoint title ---
 LONG=$(python3 -c "print('字'*121)")
 set +e; OUT=$(node "$GOS" decision add "$LONG" --rationale x 2>&1); RC=$?; set -e
 assert_exit "121-codepoint title exits 1" 1 "$RC"
 
-# --- T3.5: bad anchor (.. segment) ---
 set +e; OUT=$(node "$GOS" decision add "anchor test" --anchor 'spec.md/../etc' 2>&1); RC=$?; set -e
 assert_exit "bad anchor exits 1" 1 "$RC"
 
-# --- T3.5b: bad explicit id format (R- prefix) ---
+# --- .5b: bad explicit id format (R- prefix)
 set +e; OUT=$(node "$GOS" decision add R-01 "wrong prefix" --rationale x 2>&1); RC=$?; set -e
 assert_exit "R- prefix id rejected" 1 "$RC"
 
-# --- T3.6: auto id = max(state ∪ project)+1 ---
+# --- .6: auto id = max(state ∪ project)+1
 node "$GOS" decision add "second decision" --rationale r2 >/dev/null 2>&1
 AUTO=$(python3 -c "import json; s=json.load(open('.gos/state.json')); print(s['decisions'][-1]['id'])")
 assert_eq "auto id continues at D-02" "D-02" "$AUTO"
 
-# --- T3.7: supersedes marks target + records chain ---
+# --- .7: supersedes marks target + records chain
 node "$GOS" decision add "third decision" --supersedes D-01 --rationale r3 >/dev/null 2>&1
 SUP=$(python3 -c "
 import json; s=json.load(open('.gos/state.json'))
@@ -73,7 +69,7 @@ assert_contains "D-01 superseded + D-03.supersedes=D-01" "superseded D-01" "$SUP
 set +e; OUT=$(node "$GOS" decision add D-04 "self" --supersedes D-04 2>&1); RC=$?; set -e
 assert_exit "self-supersede exits 1" 1 "$RC"
 
-# real cycle: pre-seed D-99 (supersedes D-98); adding D-98 --supersedes D-99 closes the loop
+# real cycle: pre-seed (supersedes ); adding --supersedes closes the loop
 python3 -c "
 import json; s=json.load(open('.gos/state.json'))
 s['decisions'].append({'id':'D-99','title':'chain holder','rationale':'','birth_phase':'P0','status':'open','anchor':None,'covered':False,'covered_by':None,'supersedes':'D-98'})
@@ -82,11 +78,10 @@ set +e; OUT=$(node "$GOS" decision add D-98 "cycle closer" --supersedes D-99 2>&
 assert_exit "supersedes cycle exits 1" 1 "$RC"
 assert_contains "cycle message" "cycle" "$OUT"
 
-# re-adding an id that sits in the chain (D-01) still exits 1
+# re-adding an id that sits in the chain still exits 1
 set +e; OUT=$(node "$GOS" decision add D-01 "again" --supersedes D-03 2>&1); RC=$?; set -e
 assert_exit "D-01 re-add blocked (dup/cycle)" 1 "$RC"
 
-# --- T3.8: cover ---
 # no plan.md yet → exit 1 "task not found in current plan"
 set +e; OUT=$(node "$GOS" decision cover D-02 --task T1 2>&1); RC=$?; set -e
 assert_exit "cover without plan exits 1" 1 "$RC"
@@ -111,7 +106,6 @@ set +e; OUT=$(node "$GOS" decision cover D-02 --task T99 2>&1); RC=$?; set -e
 assert_exit "phantom task exits 1" 1 "$RC"
 assert_contains "phantom message" "task not found in current plan" "$OUT"
 
-# --- T3.9: amend ---
 node "$GOS" decision amend D-02 --title "renamed second" >/dev/null 2>&1
 T=$(python3 -c "import json; s=json.load(open('.gos/state.json')); print([d for d in s['decisions'] if d['id']=='D-02'][0]['title'])")
 assert_eq "amend changes title" "renamed second" "$T"
@@ -119,7 +113,7 @@ set +e; OUT=$(node "$GOS" decision amend D-01 --title "nope" 2>&1); RC=$?; set -
 assert_exit "amend superseded blocked" 1 "$RC"
 assert_contains "amend superseded message" "cannot amend superseded" "$OUT"
 
-# --- T3.10: list hides superseded by default, --all shows ---
+# --- .10: list hides superseded by default, --all shows
 OUT=$(node "$GOS" decision list 2>&1)
 if echo "$OUT" | grep -q "D-01"; then echo "  ✗ list hides superseded by default"; FAIL=$((FAIL+1)); else echo "  ✓ list hides superseded by default"; PASS=$((PASS+1)); fi
 assert_contains "list shows renamed D-02" "renamed second" "$OUT"
@@ -127,7 +121,6 @@ assert_contains "list header contract" "| ID | Title | Status | Phase |" "$OUT"
 OUT=$(node "$GOS" decision list --all 2>&1)
 assert_contains "list --all shows D-01" "D-01" "$OUT"
 
-# --- T3.11: import (D-22) ---
 t3_teardown; t3_setup
 node "$GOS" init 3 "import test" >/dev/null 2>&1
 mkdir -p .gos/project
@@ -147,7 +140,6 @@ assert_contains "import --all adds both entries" "2 True True" "$IMP"
 OUT=$(node "$GOS" decision import --all 2>&1)
 assert_contains "re-import skips duplicates with notice" "skipped" "$OUT"
 
-# --- T3.12: dual-store write (D-20) ---
 t3_teardown; t3_setup
 node "$GOS" init 4 "platform" --project >/dev/null 2>&1
 node "$GOS" decision add "dual store decision" --rationale "both stores" >/dev/null 2>&1

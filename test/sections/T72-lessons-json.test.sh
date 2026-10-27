@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd lessons
-# T72: lessons-json formal suite
+# lessons-json formal suite
 # Cases: five invariants / preserved-id mutation / shape injection / promotion
 # lineage / salt collision / prefix ambiguity / concurrent mutation lock / regen
 # survival / display-load degrade / fresh-clone anchor-rebuild / downgrade
@@ -44,7 +44,7 @@ store.entries.forEach((e) => j.appendAuditRow(store, "add", "fixture add", { new
 j.saveStore({ truth: ".gos/lessons.json", truthBak: null, anchor: ".gos/cache/.lessons-anchors.json", file: ".gos/lessons.md", global: false }, store);
 '
 
-# --- T72.1: regen survival — md regen cycles never move lessons.json bytes (C8) ---
+# --- .1: regen survival — md regen cycles never move lessons.json bytes (C8)
 J1=$(sha256sum .gos/lessons.json | cut -d' ' -f1)
 t72_node '
 const j = require(process.env.GOS_ROOT + "/bin/lib/knowledge/lessons-json.cjs");
@@ -64,7 +64,7 @@ assert_exit "md regen deterministic + header present" "0" "$RC"
 J2=$(sha256sum .gos/lessons.json | cut -d' ' -f1)
 assert_eq "lessons.json bytes unchanged across md regen cycles" "$J1" "$J2"
 
-# --- T72.2: preserved-id mutation → fail-closed (F2) ---
+# --- .2: preserved-id mutation → fail-closed (F2)
 cp .gos/lessons.json /tmp-store.json 2>/dev/null || cp .gos/lessons.json t72-store.bak
 python3 - <<'PYEOF'
 import json
@@ -80,7 +80,7 @@ assert_exit "legacy content mutation with kept id → fail-closed" "1" "$RC"
 assert_contains "mutation names the content-id bind" "content-id bind" "$OUT"
 cp t72-store.bak .gos/lessons.json
 
-# --- T72.3: shape injection — v2 fields onto raw legacy (fifth invariant) ---
+# --- .3: shape injection — v2 fields onto raw legacy (fifth invariant)
 python3 - <<'PYEOF'
 import json
 p = '.gos/lessons.json'
@@ -95,7 +95,7 @@ assert_exit "injected permanent on raw legacy → fail-closed" "1" "$RC"
 assert_contains "shape whitelist named" "non-legacy field" "$OUT"
 cp t72-store.bak .gos/lessons.json
 
-# --- T72.4: downgrade attack — v2 origin rewritten into legacy shape ---
+# --- .4: downgrade attack — v2 origin rewritten into legacy shape
 t72_node '
 const j = require(process.env.GOS_ROOT + "/bin/lib/knowledge/lessons-json.cjs");
 const core = require(process.env.GOS_ROOT + "/bin/lib/core/index.cjs");
@@ -124,7 +124,7 @@ s.entries.push({ id, ...base });
 j.saveStore({ truth: ".gos/lessons.json", anchor: ".gos/cache/.lessons-anchors.json", file: ".gos/lessons.md", global: false }, s);
 '
 
-# --- T72.5: promotion amend lineage — legacy → structured, origin preserved ---
+# --- .5: promotion amend lineage — legacy → structured, origin preserved
 LEGPREFIX=$(python3 -c "import json; s=json.load(open('.gos/lessons.json')); print([e['id'] for e in s['entries'] if e.get('origin')=='legacy'][0][:8])")
 OUT=$(t72_g lessons amend "$LEGPREFIX" --scene "deploy" --lesson "promoted structured lesson" --tags ops 2>&1); RC=$?
 assert_exit "amend promotes legacy entry" "0" "$RC"
@@ -143,7 +143,7 @@ fi
 OUT=$(t72_g gate lessons 2>&1); RC=$?
 assert_exit "gate green after promotion (store verifies)" "0" "$RC"
 
-# --- T72.6: id salt collision — same content twice mints two ids ---
+# --- .6: id salt collision — same content twice mints two ids
 t72_g lessons add --type project --scene "dup" --lesson "identical twin entry" >/dev/null 2>&1
 t72_g lessons add --type project --scene "dup" --lesson "identical twin entry" >/dev/null 2>&1
 if python3 -c "
@@ -158,7 +158,7 @@ else
   echo "  ✗ salt collision handling wrong"; FAIL=$((FAIL+1))
 fi
 
-# --- T72.7: prefix ambiguity → reject + list (brute-forced shared 4-prefix pair) ---
+# --- .7: prefix ambiguity → reject + list (brute-forced shared 4-prefix pair)
 AMBP=$(t72_node '
 const j = require(process.env.GOS_ROOT + "/bin/lib/knowledge/lessons-json.cjs");
 const core = require(process.env.GOS_ROOT + "/bin/lib/core/index.cjs");
@@ -192,7 +192,7 @@ else
   echo "  ✗ ambiguity pair not fabricated"; FAIL=$((FAIL+1))
 fi
 
-# --- T72.8: concurrent mutation — a live lock holder blocks a second mutation ---
+# --- .8: concurrent mutation — a live lock holder blocks a second mutation
 python3 - <<'PYEOF' &
 import json, os, time
 lock = '.gos/.lock'
@@ -212,7 +212,7 @@ else
   echo "  ✗ post-lock mutation failed"; FAIL=$((FAIL+1))
 fi
 
-# --- T72.9: display-load degrade — corrupt json must not brick status (N9) ---
+# --- .9: display-load degrade — corrupt json must not brick status (N9)
 cp .gos/lessons.json t72-good.json
 echo '{corrupt' > .gos/lessons.json
 OUT=$(t72_g status 2>&1); RC=$?
@@ -221,7 +221,7 @@ OUT=$(t72_g context build 2>&1); RC=$?
 assert_exit "corrupt lessons json does NOT brick context" "0" "$RC"
 cp t72-good.json .gos/lessons.json
 
-# --- T72.10: fresh-clone semantics — committed json, no sidecar, no md ---
+# --- .10: fresh-clone semantics — committed json, no sidecar, no md
 rm -f .gos/cache/.lessons-anchors.json .gos/lessons.md
 OUT=$(t72_g lessons list 2>&1); RC=$?
 assert_exit "missing sidecar+md do not brick adjudicating read" "0" "$RC"
@@ -230,7 +230,7 @@ assert_exit "anchor-rebuild legal on fresh clone" "0" "$RC"
 assert_file "sidecar re-derived" .gos/cache/.lessons-anchors.json
 assert_file "md regenerated" .gos/lessons.md
 
-# --- T72.11: global recovery rehearsal — corrupt global json → die
+# --- .11: global recovery rehearsal — corrupt global json → die
 # points at .bak + backup; restore via runbook passes ---
 mkdir -p "$T72_HOME/.config/gos"
 t72_g lessons add --type model --scene "g" --lesson "global recovery seed" >/dev/null 2>&1
@@ -248,12 +248,12 @@ else
   echo "  ✗ global entry lost after restore"; FAIL=$((FAIL+1))
 fi
 
-# --- T72.12: gate lessons green end-to-end on the fixture store ---
+# --- .12: gate lessons green end-to-end on the fixture store
 OUT=$(t72_g gate lessons 2>&1); RC=$?
 assert_exit "gate lessons green" "0" "$RC"
 assert_contains "integrity ✓ line" "json truth intact" "$OUT"
 
-# --- T72.13: batch disposal (prune old_ids) recognized by BOTH B-8 channels ---
+# --- .13: batch disposal (prune old_ids) recognized by BOTH channels
 # fixture gap this closes: lessons.json is now tracked at git HEAD, so the
 # out-of-band git channel (not just the sidecar channel) adjudicates the load
 t72_node '
@@ -282,7 +282,7 @@ OUT=$(t72_g gate lessons 2>&1); RC=$?
 assert_exit "gate lessons still green after prune" "0" "$RC"
 git rm -q --cached .gos/lessons.json >/dev/null 2>&1
 
-# --- T72.14: v2 pipe reserved characters — input reject + load-side shape check ---
+# --- .14: v2 pipe reserved characters — input reject + load-side shape check
 OUT=$(t72_g lessons add --type project --scene 'a|b' --lesson x 2>&1); RC=$?
 assert_exit "pipe in --scene rejected at input" "1" "$RC"
 assert_contains "reserved-character wording" "reserved character" "$OUT"
@@ -302,7 +302,7 @@ console.log("pipe-shift-blocked");
 assert_exit "pipe-shift forge fails v2 shape check" "0" "$RC"
 assert_contains "pipe-shift blocked marker" "pipe-shift-blocked" "$OUT"
 
-# --- T72.15: migration preserves non-matching md (backup on ANY content) ---
+# --- .15: migration preserves non-matching md (backup on ANY content)
 T72B="$TESTBASE/test-$(date +%s)-$RANDOM-t72b"
 mkdir -p "$T72B/.gos"
 (cd "$T72B" && git init -q . && git commit -q --allow-empty -m root)

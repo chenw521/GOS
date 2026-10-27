@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/map/contract.cjs#fn:cmdContract
 # gos-map:cmd _contract
-# T40: GOS_PATHS registry integrity — _contract additionally emits paths_registry
+# GOS_PATHS registry integrity — _contract additionally emits paths_registry
 T40_DIR=""
 
 t40_setup() {
@@ -20,14 +20,14 @@ echo "--- T40: GOS_PATHS registry via _contract ---"
 
 OUT="$(node "$GOS" _contract 2>&1)"
 
-# T40.1 output is still valid JSON (the added key does not break the existing contract)
+# .1 output is still valid JSON (the added key does not break the existing contract)
 if printf '%s' "$OUT" | python3 -m json.tool >/dev/null 2>&1; then
   echo "  ✓ T40.1 _contract output is valid JSON"; PASS=$((PASS+1))
 else
   echo "  ✗ T40.1 _contract output is NOT valid JSON"; FAIL=$((FAIL+1))
 fi
 
-# T40.2 paths_registry integrity: key entries + metadata quadruple + dynamic placeholders + scale
+# .2 paths_registry integrity: key entries + metadata quadruple + dynamic placeholders + scale
 printf '%s' "$OUT" > "$T40_DIR/contract.json"
 set +e
 VERIFY="$(python3 - "$T40_DIR/contract.json" <<'PYEOF'
@@ -73,7 +73,7 @@ else
   echo "  ✗ T40.2 $VERIFY"; FAIL=$((FAIL+1))
 fi
 
-# T40.3 freeze non-regression: existing contract keys still present (additive only)
+# .3 freeze non-regression: existing contract keys still present (additive only)
 for key in allPass noActiveTask decisionAdded; do
   if printf '%s' "$OUT" | grep -q "\"$key\""; then
     echo "  ✓ T40.3 existing contract key present: $key"; PASS=$((PASS+1))

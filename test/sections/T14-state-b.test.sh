@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # gos-map:cmd commit,status
-# T14: state schema evolution — evidence three-element object + task_head/_history/_pending
+# state schema evolution — evidence three-element object + task_head/_history/_pending
 #     + plan_snapshot freeze/monotonic/lazy-freeze + spec_sha256 freeze + parsePlanMd hardening
 # Env: GOS (CLI path), TESTBASE (isolated base), assert helpers sourced by runner
 T14_DIR=""
 
-# [Phase W T5] fixture paths follow the CLI supply (task/<id>/) — never hardcode .gos/ root
+# fixture paths follow the CLI supply (task/<id>/) — never hardcode .gos/ root
 gos_spec() { node "$GOS" context think 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["spec"])' 2>/dev/null; }
 gos_plan() { node "$GOS" context plan 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["plan"])' 2>/dev/null; }
 
@@ -62,7 +62,7 @@ assert_exit "A4 artifact missing on disk → exit 1" 1 "$RC"
 assert_contains "A4 names disk existence" "not found on disk" "$OUT"
 
 # --- A4b: machine-local zones (.gos/archive/ .gos/logs/ .gos/cache/) are
-# clone-absent by design (D-01/D-08 + census audit) — the on-disk leg is an
+# clone-absent by design ( + census audit) — the on-disk leg is an
 # authoring-machine guarantee; clones must not fail schema validation ---
 python3 -c "
 import json; s=json.load(open('.gos/state.json'))

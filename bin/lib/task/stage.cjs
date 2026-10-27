@@ -1,4 +1,3 @@
-// task/stage — Split-③ ②-4 (T2)
 'use strict';
 
 const core = require('../core/index.cjs');
@@ -19,7 +18,7 @@ function cmdStage(args) {
     state.current_stage = target;
     // Record gap that triggered the back
     const reason = args.slice(2).join(' ') || 'discovered during ' + state.current_stage;
-    // D-41 + R2-F8: the gap reason is sanitized (injection '\n- [' / isolated CR /
+ // + the gap reason is sanitized (injection '\n- [' / isolated CR /
     // '(auto)' forgery → exit 1 BEFORE the gap is recorded).
     const rc_ = core.checkInputConstraint({ value: reason, maxCp: 400, label: 'stage back reason', noNewlineListPrefix: true });
     if (!rc_.ok) core.die(`✗ ${rc_.reason}`);

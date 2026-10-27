@@ -139,7 +139,7 @@ Wasting context window and user patience on the wrong layer.
 <Good>
 ```
 Agent 1 instructions (fresh context, no assumptions):
-  Task: T1 - Create User model with bcrypt
+ Task: - Create User model with bcrypt
   Files to create: src/models/User.ts, src/models/User.test.ts
   Read first: src/models/Base.ts (for class structure)
   Implement: User class extends BaseModel, passwordHash field,

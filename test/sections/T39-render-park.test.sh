@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:none   # sandbox builds its own project container; no live-repo truth source
-# T39: render views single source of truth (state-only default + --all audit) + claim gate prev-done/parked
+# render views single source of truth (state-only default + --all audit) + claim gate prev-done/parked
 #      + park lifecycle + milestone debt visibility + ghost teaching line + residual byte-stability
-# Covers truths T1-T12 (spec.md)
 PASS=0; FAIL=0
 command -v assert_exit >/dev/null || assert_exit() {
   local label="$1" expected="$2" actual="$3"
@@ -46,7 +45,7 @@ t39_setup() {
   mkdir -p "$T39_DIR" && cd "$T39_DIR" || exit 1
   git init -q . && git -c user.email=t@t -c user.name=t commit -q --allow-empty -m root
   node "$GOS" init --project 1 "t39 container" >/dev/null 2>&1
-  # T90 PROJECT.md gate: fill the seeded skeleton (TODO-only would block archive preflight)
+ # PROJECT.md gate: fill the seeded skeleton (TODO-only would block archive preflight)
   cat > .gos/project/PROJECT.md << 'EOF'
 ## What This Is
 t39 fixture container for render-truth, park lifecycle, and ghost-plan coverage.
@@ -81,7 +80,7 @@ echo "--- T39: render truth-source + park lifecycle + ghost teaching ---"
 
 H0=$(t39_residual_hash)
 
-# ===== T1: requirement list state-only default / --all merge =====
+# ===== : requirement list state-only default / --all merge =====
 OUT=$(node "$GOS" requirement list 2>&1)
 assert_contains "T1.a default shows wrapper R-01 only" "t39 container" "$OUT"
 assert_not_contains "T1.b default hides legacy R-02" "legacy done-phase requirement" "$OUT"
@@ -89,7 +88,7 @@ OUT=$(node "$GOS" requirement list --all 2>&1)
 assert_contains "T1.c --all shows legacy R-02" "legacy done-phase requirement" "$OUT"
 assert_contains "T1.d --all keeps write-time snapshot status (dropped)" "dropped" "$OUT"
 
-# ===== T2 (pre-claim): decision list empty by default / --all carries residuals and superseded =====
+# ===== (pre-claim): decision list empty by default / --all carries residuals and superseded =====
 OUT=$(node "$GOS" decision list 2>&1)
 assert_contains "T2.a default empty state says no decisions" "(no decisions)" "$OUT"
 assert_not_contains "T2.b default hides legacy D-01" "legacy decision" "$OUT"
@@ -97,7 +96,7 @@ OUT=$(node "$GOS" decision list --all 2>&1)
 assert_contains "T2.c --all shows legacy D-01" "legacy decision" "$OUT"
 assert_contains "T2.d --all shows superseded D-02" "superseded" "$OUT"
 
-# ===== T5: park lifecycle (B not yet claimed) + milestone blocking hint =====
+# ===== : park lifecycle (B not yet claimed) + milestone blocking hint =====
 OUT=$(node "$GOS" phase park B --reason "waiting on deps" 2>&1)
 assert_contains "T5.a park success names phase" "Phase parked: B-beta: second" "$OUT"
 assert_contains "T5.b park warns milestone blocking" "parked blocks milestone completion" "$OUT"
@@ -117,29 +116,28 @@ assert_contains "T5.h park range error maps queue" "valid range: 0-2" "$OUT"
 OUT=$(node "$GOS" phase claim A 2>&1)
 assert_contains "T4.a claim first phase ok" "Phase claimed: A-alpha: first" "$OUT"
 
-# ===== T2 (post-claim): state-only shows this phase's decisions =====
+# ===== (post-claim): state-only shows this phase's decisions =====
 node "$GOS" decision add "current phase decision" --rationale "t39" >/dev/null 2>&1
 OUT=$(node "$GOS" decision list 2>&1)
 assert_contains "T2.e default shows current decision" "current phase decision" "$OUT"
 assert_not_contains "T2.f default still hides legacy D-01" "legacy decision" "$OUT"
 
-# ===== T3: status/resume summary lines carry zero residuals =====
+# ===== : status/resume summary lines carry zero residuals =====
 OUT=$(node "$GOS" status 2>&1)
 assert_not_contains "T3.a status has no legacy requirement text" "legacy done-phase requirement" "$OUT"
 assert_not_contains "T3.b status has no legacy decision title" "legacy decision" "$OUT"
 OUT=$(node "$GOS" resume 2>&1)
 assert_not_contains "T3.c resume has no legacy decision title" "legacy decision" "$OUT"
 
-# ===== T11 (part 1): residuals byte-identical after read-only ops =====
+# ===== (part 1): residuals byte-identical after read-only ops =====
 H1=$(t39_residual_hash)
 [ "$H0" = "$H1" ] && { echo "  ✓ T11.a residuals byte-identical after read ops"; PASS=$((PASS+1)); } || { echo "  ✗ T11.a residuals mutated by read ops"; FAIL=$((FAIL+1)); }
 
-# ===== T8.a: park on active refused =====
 OUT=$(node "$GOS" phase park A 2>&1); RC=$?
 assert_exit "T8.a park on active refused" 1 "$RC"
 assert_contains "T8.b refusal explains active" "refused — phase is active" "$OUT"
 
-# ===== T6.a: orphan warning (park this phase while state is mid-flight) =====
+# ===== .a: orphan warning (park this phase while state is mid-flight) =====
 node "$GOS" phase unclaim >/dev/null 2>&1
 node -e "
 const fs=require('fs');
@@ -150,7 +148,7 @@ fs.writeFileSync('.gos/state.json', JSON.stringify(d,null,2));
 OUT=$(node "$GOS" phase park A 2>&1)
 assert_contains "T6.a park emits orphan warning for mid-flight state" "state.json still points at this phase" "$OUT"
 
-# ===== T4: pending predecessor -> claim teaching error (DONE prerequisite) =====
+# ===== : pending predecessor -> claim teaching error (DONE prerequisite) =====
 t39_done_state
 OUT=$(node "$GOS" phase claim C 2>&1); RC=$?
 assert_exit "T4.b skipping pending predecessor exits 1" 1 "$RC"
@@ -158,14 +156,14 @@ assert_contains "T4.c teaching: gated on predecessor" "close it first (claim gat
 assert_contains "T4.d teaching: park guidance" "gos phase park 1" "$OUT"
 assert_contains "T4.e teaching: cross-phase pointer" "gos requirement list --all" "$OUT"
 
-# ===== T6.b: parked predecessor lets claim pass =====
+# ===== .b: parked predecessor lets claim pass =====
 node "$GOS" init --force 1 "t39 reset" >/dev/null 2>&1
 OUT=$(node "$GOS" phase claim B 2>&1)
 assert_contains "T6.b parked predecessor lets claim pass" "Phase claimed: B-beta: second" "$OUT"
 assert_contains "T6.b2 claim output recommends a fresh session" "fresh session" "$OUT"
 assert_contains "T6.b3 claim output carries the resume handoff" "gos resume" "$OUT"
 
-# ===== T7: parked/done target allowlist =====
+# ===== : parked/done target allowlist =====
 OUT=$(node "$GOS" phase park C 2>&1)
 assert_contains "T7.a park pending C ok" "Phase parked: C-gamma: third" "$OUT"
 OUT=$(node "$GOS" phase claim C 2>&1); RC=$?
@@ -179,7 +177,7 @@ assert_exit "T7.e claiming done target exits 1" 1 "$RC"
 assert_contains "T7.f done target redirects to next pending" "already done — next pending phase is index" "$OUT"
 node "$GOS" phase park A --reason "defer" >/dev/null 2>&1
 
-# ===== T10: ghost Fix teaching line (B's Lv3 state in hand) =====
+# ===== : ghost Fix teaching line (B's Lv3 state in hand) =====
 cat > "$(gos_plan)" << 'EOF'
 # Plan: t39 ghost fixture
 
@@ -198,12 +196,12 @@ assert_exit "T10.a ghost covers fail the gate" 1 "$RC"
 assert_contains "T10.b ghost error carries Fix teaching" "Fix: align plan Covers with the state ID set" "$OUT"
 assert_contains "T10.c teaching points to cross-phase audit" "cross-phase needs:" "$OUT"
 
-# ===== T7.g: all-closed variant (A parked / B active / C done -> no pending) =====
+# ===== .g: all-closed variant (A parked / B active / C done -> no pending) =====
 t39_done_state
 OUT=$(node "$GOS" phase claim C 2>&1)
 assert_contains "T7.g all-closed variant mentions parked debt" "parked item(s) pending close-out" "$OUT"
 
-# ===== T9: milestone debt visibility (archive BLOCKED block + doneHint parked line) =====
+# ===== : milestone debt visibility (archive BLOCKED block + doneHint parked line) =====
 printf '# Changelog\n\n## [Unreleased]\n\n- Test t39 fixture ship gate (R-01) [%s]\n' "$(date -u +%F)" > CHANGELOG.md
 node -e "
 const fs=require('fs');
@@ -220,11 +218,11 @@ node "$GOS" phase mark-done 0 >/dev/null 2>&1
 OUT=$(node "$GOS" status 2>&1)
 assert_contains "T9.d All-done truth after close-out" "All roadmap phases done." "$OUT"
 
-# ===== T11 (part 2): residuals still byte-identical after full lifecycle =====
+# ===== (part 2): residuals still byte-identical after full lifecycle =====
 H2=$(t39_residual_hash)
 [ "$H0" = "$H2" ] && { echo "  ✓ T11.e residuals byte-identical after full lifecycle"; PASS=$((PASS+1)); } || { echo "  ✗ T11.e residuals mutated by lifecycle ops"; FAIL=$((FAIL+1)); }
 
-# ===== T12 recheck: CONTRACTS nail strings exist (guards against bare-printf drift) =====
+# ===== recheck: CONTRACTS nail strings exist (guards against bare-printf drift) =====
 cat "$GOS" "$GOS_ROOT/bin/lib/core/state.cjs" | grep -q "parked blocks milestone completion" && { echo "  ✓ T12.a park-blocks nail in CONTRACTS"; PASS=$((PASS+1)); } || { echo "  ✗ T12.a nail missing"; FAIL=$((FAIL+1)); }
 cat "$GOS" "$GOS_ROOT/bin/lib/core/state.cjs" | grep -q "MILESTONE BLOCKED — parked item(s) prevent milestone completion:" && { echo "  ✓ T12.b milestone-blocked nail"; PASS=$((PASS+1)); } || { echo "  ✗ T12.b nail missing"; FAIL=$((FAIL+1)); }
 cat "$GOS" "$GOS_ROOT/bin/lib/core/state.cjs" | grep -q "parked → done (close-out)" && { echo "  ✓ T12.c close-out nail"; PASS=$((PASS+1)); } || { echo "  ✗ T12.c nail missing"; FAIL=$((FAIL+1)); }

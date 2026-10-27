@@ -8,13 +8,13 @@
 
 | D-NN | Decision | Implemented? | Evidence |
 |:---|:---|:---|:---|
-| D-01 | [decision] | ✅/❌ | [file:line] |
+| D-nn | [decision] | ✅/❌ | [file:line] |
 
 ### Requirement Coverage Audit
 
 | R-NN | Requirement | Shipped? | Evidence |
 |:---|:---|:---|:---|
-| R-01 | [requirement] | ✅/❌ | [truth or test] |
+| R-nn | [requirement] | ✅/❌ | [truth or test] |
 
 ### Scope Boundary Check
 

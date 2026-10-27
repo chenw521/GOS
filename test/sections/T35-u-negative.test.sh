@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
 # T35d: negative assertions (zero cooldown mechanism) + runner anchor self-check
-# Covers: D-32 (plan T7)
 # Env: GOS (CLI path), GOS_ROOT
 
 echo "--- T35d: D-32 negative assertion (no cooldown machinery) + runner anchor ---"

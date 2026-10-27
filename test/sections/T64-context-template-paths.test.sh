@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/task/context.cjs#fn:cmdContext
 # gos-map:cmd context
-# T64: context template fields must carry GOS_SELF_ROOT-joined absolute paths
+# context template fields must carry GOS_SELF_ROOT-joined absolute paths
 # (real files on disk) + a readonly hint — cwd-relative "templates/..." strings
 # are dead links in product installs where GOS lives in node_modules/gos.
 T64_DIR=""
@@ -52,7 +52,7 @@ echo "--- T64: context template paths (self-root + readonly hint) ---"
 
 GOS_REAL="$(cd "$GOS_ROOT" && pwd -P)"
 
-# --- T64.1 dev-repo mode: every stage's template paths resolve to real files ---
+# --- .1 dev-repo mode: every stage's template paths resolve to real files
 node "$GOS" init 1 "t64 template paths" >/dev/null 2>&1
 node "$GOS" context think  > ct.json 2>/dev/null
 node "$GOS" context plan   > cp.json 2>/dev/null
@@ -68,7 +68,7 @@ for pair in "ct.json:think" "cp.json:plan" "cv.json:verify"; do
   t64_hint "$F" "$S"
 done
 
-# --- T64.2 product-install mode: npm pack → unpack → CLI from the tarball copy;
+# --- .2 product-install mode: npm pack → unpack → CLI from the tarball copy;
 # cwd-relative paths die here (sandbox repo has no ./templates) ---
 t64_teardown; t64_setup
 PKG="$T64_DIR/pkg"; mkdir -p "$PKG"

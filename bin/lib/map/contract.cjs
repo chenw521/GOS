@@ -6,7 +6,7 @@
 const core = require('../core/index.cjs');
 
 function cmdContract(args) {
-  // T1 hidden sub-mode: `gos _contract --check-input "<text>" [--max-cp N]`
+ // hidden sub-mode: `gos _contract --check-input "<text>" [--max-cp N]`
   // exercises the input-constraint helper for tests; exit 0/1.
   const a = args || [];
   const ci = a.indexOf('--check-input');
@@ -17,7 +17,7 @@ function cmdContract(args) {
     if (!res.ok) { console.error(`✗ ${res.reason}`); process.exit(1); }
     return;
   }
-  // Phase W (T1): paths_registry attached as a SEPARATE top-level key (additive-only
+ // Phase W : paths_registry attached as a SEPARATE top-level key (additive-only
   // for existing contract consumers — grep-based assertions unaffected).
   console.log(JSON.stringify({ ...core.CONTRACTS, paths_registry: core.GOS_PATHS }, null, 2));
 }

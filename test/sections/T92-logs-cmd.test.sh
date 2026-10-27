@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/gate.cjs#fn:cmdLogs bin/lib/ops/gate.cjs#fn:readExemptions bin/lib/knowledge/truth.cjs#fn:appendTruthReceipt
 # gos-map:cmd help,truth,gate,_contract
-# T92: logs presentation (D-02/R-35) — write-side enrichment + `gos logs` view.
+# logs presentation — write-side enrichment + `gos logs` view.
 # Facts asserted:
 #   - receipts carry the truth text: `<iso8601> <id> replay-verified: <cmd> :: <truth text (first 80cp)>`
 #     and the verify echo names the registry rel path (.gos/logs/truth-receipts.md)
@@ -127,7 +127,7 @@ node "$GOS" logs receipts --last 1 > t92-rec-1.txt 2>&1; R1L=$?
 L4_OK=1
 [ "$RALL" -ne 0 ] && L4_OK=0
 [ "$R1L" -ne 0 ] && L4_OK=0
-# --last 1 = ONLY the newest entry (T2: long description, command echoes "total 165")
+# --last 1 = ONLY the newest entry (long description, command echoes "total 165")
 grep -qF 'total 165' t92-rec-1.txt || L4_OK=0
 grep -qE 'T2[[:space:]]' t92-rec-1.txt || L4_OK=0
 grep -qF 'long description truth' t92-rec-1.txt || L4_OK=0
@@ -192,7 +192,7 @@ else
   echo "  ✗ L6 sanitization: parse=$L6 read=$RD2"; FAIL=$((FAIL+1))
 fi
 
-# --- L7: enriched exemption round-trips through the one-shot reader (T11 compat) ---
+# --- L7: enriched exemption round-trips through the one-shot reader ( compat)
 printf '.gos/logs/exemptions.log\n' >> .gitignore
 git add -A >/dev/null 2>&1 && git commit -qm t92-ledger >/dev/null 2>&1
 T92_TREE="$(git rev-parse 'HEAD^{tree}')"

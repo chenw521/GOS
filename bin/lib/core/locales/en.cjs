@@ -1,4 +1,4 @@
-// core/locales/en.cjs — en canonical catalog (P15 D-63)
+// core/locales/en.cjs — en canonical catalog (P15 )
 // Existing frozen copy = REFERENCES into core.CONTRACTS (single source; copies
 // forbidden). New P15+ strings live here as the en canonical home. Structured
 // {what, why, fix?} entries are for actionable surfaces (3-part rendered by
@@ -8,7 +8,7 @@
 const { CONTRACTS } = require('../state.cjs');
 
 module.exports = {
-  // ---- gate-family actionable entries, keyed by failure code (D-66 join) ----
+ // ---- gate-family actionable entries, keyed by failure code
   'gate.coverage-uncovered': {
     what: 'decisions recorded in state but not covered by any plan task',
     why: 'a decision without a covering task is a decision that will never land',
@@ -68,14 +68,14 @@ module.exports = {
   'setup.lang.saved': 'language saved: {locale} ({source})',
   'help.contractKeysHeader': '  contract keys (not commands — used by test assertions):',
 
-  // ---- logs view surfaces (D-02/R-35: runtime ledger rendering; paths/counts
+ // ---- logs view surfaces ( / : runtime ledger rendering; paths/counts
   // interpolate — the ledgers themselves are locale-invariant machine files) ----
   'logs.receipts.title': 'truth receipts — {path} (showing last {n} of {total})',
   'logs.exemptions.title': 'gate exemptions — {path} (showing last {n} of {total})',
   'logs.audit.title': 'edge audit — {path} (showing last {n} of {total})',
   'logs.empty': 'no entries yet — the ledger fills as the corresponding commands run',
 
-  // ---- lessons attribution (D-67; CONSOLE-only localization — the md view
+ // ---- lessons attribution ( ; CONSOLE-only localization — the md view
   // stays locale-invariant en by design, F8) ----
   'lessons.attribution': 'lessons: {projN} project + {globN} global loaded (project: {projPath}; global: {globPath}) — expiring soon: {expiring}',
   'lessons.unavailable': 'lessons: unavailable ({reason}) — the most-run command must never be bricked; fix: `gos lessons list` shows the failure detail',
@@ -84,10 +84,10 @@ module.exports = {
   'lessons.projectLabel': 'repo knowledge · never expires',
   'lessons.modelLabel': 'cross-repo behavior · expires on date',
 
-  // ---- T5/D-17 language boundary (tracked stores are English-only) ----
+ // ---- / language boundary (tracked stores are English-only)
   'langBoundary.trackedStore': 'language boundary: {file} is git-tracked — tracked GOS stores are English-only; rewrite the content in English before saving (untracked stores accept any language)',
 
-  // ---- T6/D-16 gap migrate/history + concerns anchor bootstrap predicate ----
+ // ---- / gap migrate/history + concerns anchor bootstrap predicate
   'gap.migrate.removed': '✓ migrated {n} stage-back mirror line(s) from concerns.md to the gap-history ledger — state.gaps stays the single source',
   'gap.migrate.none': 'no (auto) mirror lines in concerns.md — nothing to migrate',
   'gap.migrate.dupes': '⚠ {n} mirror line(s) already in the ledger (deduped by text) — cured from concerns.md without re-appending',
@@ -95,7 +95,7 @@ module.exports = {
   'gap.history.skipped': '⚠ skipped {n} malformed ledger line(s) (.gos/logs/gap-history.ndjson)',
   'concerns.err.anchorMissingDirty': 'concerns.md is git-tracked but .concerns-anchors.json is missing and the file differs from the HEAD blob — hand edit suspected; restore via git checkout, or commit the change first (bootstrap forbidden, no laundering)',
 
-  // ---- T7a/D-15 gos track — validated ignored→tracked flip (validation dies,
+ // ---- T7a/ gos track — validated ignored→tracked flip (validation dies,
   // pre-scan reports, surgery verify, success lines) ----
   'track.err.notRepo': 'track: not a git repository — gos track flips files inside a git worktree only',
   'track.err.notFound': 'track: {path} cannot be resolved to a regular file inside this repository (missing, a directory, or outside the worktree)',
@@ -116,7 +116,7 @@ module.exports = {
   'track.surgery.verifyFail': 'track: gitignore surgery failed verification — the ignored-set diff was [{diff}], expected exactly the target; rolled back, nothing was changed',
   'track.done.surgery': '✓ tracked {path} — .gos/.gitignore negation {negation} verified (ignored-set diff == target), {census}, staged via git add',
   'track.done.noSurgery': '✓ tracked {path} — target not ignored (no gitignore surgery needed), {census}, staged via git add',
-  // ---- T7b/D-15 flip transaction: manifest, adopt/no-op (RT3-F7), preset ----
+ // ---- T7b/ flip transaction: manifest, adopt/no-op , preset
   'track.done.manifest': '  flip manifest: {path} recorded at HEAD {head} (staged with the flip)',
   'track.adopt.done': '✓ adopted {path} — already git-tracked without a manifest record; adopt record appended to .gos/track-manifest.json ({census}), staged via git add',
   'track.noop.done': '✓ {path} already tracked — manifest record present, {census}; verified no-op, zero mutations',
@@ -124,8 +124,8 @@ module.exports = {
   'track.preset.err.missing': 'track --knowledge: {path} is missing — the preset requires all three guide-trio files (.gos/codebase/structure.md, conventions.md, concerns.md)',
   'track.knowledge.done': '✓ knowledge preset complete: {n} file(s) stamped born-at: {head}',
 
-  // ---- T8/D-15 gate flip-reconcile leg (census/git/manifest agreement on
-  // tracked .gos files; failure codes join the D-66 locale renderer) ----
+ // ---- / gate flip-reconcile leg (census/git/manifest agreement on
+ // tracked .gos files; failure codes join the locale renderer)
   'gate.flip-git-probe-failed': {
     what: 'git truth could not be established for the flip-reconcile leg',
     why: 'fail-closed: with no probe truth the gate refuses to reconcile rather than guess',
@@ -162,6 +162,7 @@ module.exports = {
   "setup.onboard.agentsWritten": "┃ ✓ wrote {path}",
   "setup.onboard.checkerDesc": "┃  checker (reviewer, the soul of the team profile): cross-validate with a model different from your main one",
   "setup.onboard.checkerPrompt": "    checker model [Enter={suggestion}]: ",
+  "setup.onboard.codingHint": "┃ Seed the coding-standards book set into this repo: gos init coding",
   "setup.onboard.doneRestart": "│ Restart your AI assistant, then:                             │",
   "setup.onboard.doneStart": "│   Start: say \"help me with GOS ...\" or type /gos             │",
   "setup.onboard.doneTitle": "╭─ Done ───────────────────────────────────────────────────────╮",
@@ -211,7 +212,7 @@ module.exports = {
   "map.allowlist.dirViolation": "require direction violation: {from} → {to} (module direction {fr}→{tr} not in the allowlist{drift})",
   "map.allowlist.moduleDrift": "; module drift — endpoint not under any registered moduleRoot",
 
-  // ---- brownfield adoption surfaces (T6: D-90/D-92/D-98/D-100; status/
+ // ---- brownfield adoption surfaces (status/
   // state-flag/exit tokens and JSON field names stay locale-invariant) ----
   'brownfield.fatal.line': '✗ {msg}',
   'brownfield.title': 'brownfield adoption report — {root}',

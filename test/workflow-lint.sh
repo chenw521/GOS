@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Structural lint for .github/workflows/*.yml (red-team R4-F8: grep-based
+# Structural lint for .github/workflows/*.yml (red-team : grep-based
 # checks stand in for a non-existent external workflow linter — zero extra
 # dependencies, works offline). Per workflow it asserts:
 #   1. an `on:` trigger key exists;

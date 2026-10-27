@@ -1,27 +1,26 @@
 #!/usr/bin/env bash
 # gos-map:cmd brownfield
 # gos-map:fn bin/lib/ops/brownfield.cjs#fn:cmdBrownfield,bin/lib/ops/brownfield.cjs#fn:bfParseFlags,bin/lib/ops/brownfield.cjs#fn:bfRun,bin/lib/ops/brownfield.cjs#fn:bfRenderHuman
-# T81: brownfield handoff + skeleton + locales (T6, D-90/D-92/D-98/D-100).
+# brownfield handoff + skeleton + locales.
 # Seven case groups:
 # (1) handoff block at report end — map preview line points at the single
-#     trigger (`gos init <level>`, D-90), no map is ever run (.gos/codebase
+# trigger (`gos init <level>`), no map is ever run (.gos/codebase
 #     and .gos/cache/deps.json absent); per-platform link rows via
 #     detectPlatforms under fake HOMEs (linked -> ok, unlinked -> missing,
-#     nothing detected -> none-detected row, D-98) + frozen --no-onboard
+# nothing detected -> none-detected row) + frozen --no-onboard
 #     remediation argv in the --json envelope;
-# (2) --print-agents-skeleton (D-92) — exit 0, skeleton on stdout with
+# (2) --print-agents-skeleton — exit 0, skeleton on stdout with
 #     intro/build/test/conventions placeholders ONLY; no routing block, no
-#     Lv0-Lv4/level presets, no slash-command content; sandbox tree
+# /level presets, no slash-command content; sandbox tree
 #     unchanged including no .gos/ creation; --json envelope carries it;
 #     combined with --overwrite it dies;
 # (3) locale catalog discipline — `brownfield.` key-line counts en == zh and
-#     >= 15; en/zh brownfield key sets identical (D-100 same batch);
+# >= 15; en/zh brownfield key sets identical ( same batch);
 # (4) locale render — GOS_LANG=zh-CN renders handoff + skeleton in Chinese;
 #     unset / explicit en stays English (no zh leak);
 # (5) i18n inventory check green;
 # (6) prompt-free module grep — no ask( / onboarding / stdin reach in
-#     brownfield.cjs (R3-F5);
-# (7) T80 regression still green (embedded run, zero failing assertions);
+# (7) regression still green (embedded run, zero failing assertions);
 # (8) review m12/OT-5 — the printed `gos setup --no-onboard` remediation
 #     EXECUTED under a sandbox fake HOME: skills link, zero AGENTS.md writes.
 # Env: GOS (CLI path), GOS_ROOT, TESTBASE (sandbox base), assert helpers sourced by runner
@@ -61,7 +60,7 @@ HOME_NONE="$T81_DIR/home-none"      # nothing detectable
 HOME_CODEX="$T81_DIR/home-codex"    # codex platform present (.agents), link absent
 mkdir -p "$HOME_OC/.config/opencode" "$HOME_LINKED/.config/opencode/skills/gos" "$HOME_NONE" "$HOME_CODEX/.agents"
 
-# --- G1: handoff — map preview line (D-90) + platform rows (D-98) at report end ---
+# --- G1: handoff — map preview line + platform rows at report end
 t81_repo g1
 t81_run g1 "$HOME_OC"
 assert_exit "G1a handoff run exits 0" 0 "$RC"
@@ -108,7 +107,7 @@ assert any(p.get('name')=='opencode' for p in plats), plats
 assert h.get('platform_remediation')==['gos','setup','--no-onboard'], h.get('platform_remediation')
 print('ok')" ; assert_exit "G1p json handoff: map_trigger argv + platform rows + frozen remediation argv" 0 "$?"
 
-# --- G2: --print-agents-skeleton — stdout-only skeleton, zero repo mutation (D-92) ---
+# --- G2: --print-agents-skeleton — stdout-only skeleton, zero repo mutation
 t81_repo skel
 SNAP_A=$( cd "$T81_DIR/skel" && find . -name .git -prune -o -print | sort )
 t81_json skel "$HOME_NONE" --print-agents-skeleton
@@ -141,7 +140,7 @@ assert_contains "G2l combo refusal explains alone-usage" "alone" "$OUT"
 SNAP_C=$( cd "$T81_DIR/skel" && find . -name .git -prune -o -print | sort )
 assert_eq "G2m refused combo still writes nothing" "$SNAP_A" "$SNAP_C"
 
-# --- G3: locale catalog discipline (D-100 en canonical + zh same batch) ---
+# --- G3: locale catalog discipline ( en canonical + zh same batch)
 EN_LOC="$GOS_ROOT/bin/lib/core/locales/en.cjs"
 ZH_LOC="$GOS_ROOT/bin/lib/core/locales/zh.cjs"
 EN_N=$(grep -c "brownfield\." "$EN_LOC" || true)
@@ -194,7 +193,7 @@ T81_ENV=""
 OUT=$(bash "$GOS_ROOT/test/checks/i18n-inventory.sh" 2>&1); RC=$?
 assert_exit "G5 i18n inventory check green" 0 "$RC"
 
-# --- G6: prompt-free module check (R3-F5) ---
+# --- G6: prompt-free module check
 if grep -q 'ask(' "$GOS_ROOT/bin/lib/ops/brownfield.cjs"; then
   echo "  ✗ G6a brownfield.cjs reaches an interactive primitive (ask("; FAIL=$((FAIL+1))
 else echo "  ✓ G6a no interactive primitive in brownfield.cjs"; PASS=$((PASS+1)); fi
@@ -202,7 +201,7 @@ if grep -Eq 'onboarding|process\.stdin' "$GOS_ROOT/bin/lib/ops/brownfield.cjs"; 
   echo "  ✗ G6b brownfield.cjs imports onboarding or reads stdin"; FAIL=$((FAIL+1))
 else echo "  ✓ G6b no onboarding import, no stdin read"; PASS=$((PASS+1)); fi
 
-# --- G7: T80 regression still green (embedded; output captured so the
+# --- G7: regression still green (embedded; output captured so the
 # runner's ✓/✗ counting is not double-fed) ---
 T80OUT=$(bash "$GOS_ROOT/test/sections/T80-brownfield-adopt.test.sh" 2>&1); T80RC=$?
 assert_exit "G7a embedded T80 section completes" 0 "$T80RC"

@@ -1,4 +1,4 @@
-# Plan: [Task/Feature Name]
+# Plan: [Task or Feature Name]
 
 > **Date**: YYYY-MM-DD | **Based on spec**: .gos/spec.md
 
@@ -6,29 +6,29 @@
 
 <!-- Verify every D-NN from spec has a task (Decision Coverage Gate) -->
 
-- [ ] D-01: [decision] → T__
-- [ ] D-02: [decision] → T__
+- [ ] D-nn: [decision] → T__
+- [ ] D-nn: [decision] → T__
 
 ## Requirement Claims
 
 <!-- Each R-NN must be claimed by ≥1 task. gos gate requirements checks at Lv4. -->
 
-- [ ] R-01: [requirement] → T__
-- [ ] R-02: [requirement] → T__
+- [ ] R-nn: [requirement] → T__
+- [ ] R-nn: [requirement] → T__
 
 ## Execution Waves
 
 ### Wave 1 (no dependencies, parallel)
 
-#### T1: [Task name]
-- **Covers**: D-01, R-01
+#### Tn: [Task name]
+- **Covers**: D-nn, R-nn
 - **Files**: [which files]
 - **Read first**: [prerequisite files]
 - **Done when**: [grep-verifiable criteria]
 - **Depends on**: none
 
-#### T2: [Task name]
-- **Covers**: D-02
+#### Tn: [Task name]
+- **Covers**: D-nn
 - **Files**: [which files]
 - **Read first**: [prerequisite files]
 - **Done when**: [completion criteria]
@@ -36,8 +36,8 @@
 
 ### Wave 2 (depends on Wave 1)
 
-#### T3: [Task name]
-- **Covers**: D-03, R-02
+#### Tn: [Task name]
+- **Covers**: D-nn, R-nn
 - **Depends on**: T1, T2
 
 ## Observable Truths
@@ -53,4 +53,4 @@
 - **Verify**: [command or test]
 
 ## Risks
-- [Risk 1]: [Mitigation]
+- [Risk n]: [Mitigation]

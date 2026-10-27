@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/brownfield.cjs#fn:cmdBrownfield,bin/lib/ops/brownfield.cjs#fn:bfParseFlags,bin/lib/ops/brownfield.cjs#fn:bfGuardEntry,bin/lib/ops/brownfield.cjs#fn:bfProbeAll,bin/lib/ops/brownfield.cjs#fn:bfValidateOverwrite,bin/lib/ops/brownfield.cjs#fn:bfAdopt,bin/lib/ops/brownfield.cjs#fn:bfRenderHuman
 # gos-map:cmd brownfield
-# T80: brownfield adopt pipeline (T5, D-89/D-91/D-94/D-96/D-97/D-99).
 # Ten case groups driven via $GOS in sandbox repos:
 # (1) all-conflict fixture — exit 0; locked rows (user hooks) have NO
 #     override anywhere; kept_conflict rows (yaml detection, gates.json,
@@ -37,7 +36,7 @@
 #     review fixes — (11) symlink directory escape blocked + nothing written
 #     outside; (12) drifted GOS-lineage hook = kept_conflict with override,
 #     --overwrite adopts with .gos-bak; (13) blocked paths report_only
-#     (D-89: kept_conflict <=> override, both ways); (14) hooksPath with a
+# (kept_conflict <=> override, both ways); (14) hooksPath with a
 #     space renders shell-quoted; (15) duplicate named --overwrite dies.
 # Env: GOS (CLI path), GOS_ROOT, TESTBASE (sandbox base), assert helpers sourced by runner
 T80_DIR=""
@@ -155,7 +154,7 @@ assert 'hooks/commit-msg' not in ovr and 'hooks/pre-push' not in ovr, 'locked ro
 rows=[r for r in d['assets'] if r['asset'] in ('hooks/commit-msg','hooks/pre-push')]
 assert all('override' not in r for r in rows), 'no override field inside locked rows'
 print('ok')" ; assert_exit "G1u override entries: argv shape + consequence; locked rows carry none" 0 "$?"
-# review M4: D-89 invariant — kept_conflict set == override set, both ways
+# review M4: invariant — kept_conflict set == override set, both ways
 printf '%s' "$OUT" | python3 -c "
 import json,sys
 d=json.loads(sys.stdin.read())

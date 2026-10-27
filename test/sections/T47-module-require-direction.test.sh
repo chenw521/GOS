@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # gos-map:cmd gate,map
 # gos-map:fn bin/lib/ops/gate.cjs#fn:cmdGate
-# T47: require-direction assertion — allowlist CODE-ized defense line
-# Single source of truth consumed: .gos/codebase/require-allowlist.json (shared by T46/T47/gate)
-# fixture pattern follows T36: sandbox git init -> real scan -> inject edge -> self_sha256 re-sign
+# require-direction assertion — allowlist CODE-ized defense line
+# Single source of truth consumed: .gos/codebase/require-allowlist.json (shared by / /gate)
+# fixture pattern follows : sandbox git init -> real scan -> inject edge -> self_sha256 re-sign
 T47_DIR=""
 
 t47_setup() {
@@ -16,12 +16,12 @@ t47_teardown() { cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$T47_DIR"; }
 t47_setup
 echo "--- T47: require-direction assertion (R-30) ---"
 
-# --- T47.1: self-repo gate codemap stays healthy (green when the machine-local
+# --- .1: self-repo gate codemap stays healthy (green when the machine-local
 #     codebase layer exists; advisory-off but exit 0 on a fresh clone) ---
 set +e; OUT=$(cd "$GOS_ROOT" && node "$GOS" map scan >/dev/null 2>&1; node "$GOS" gate codemap 2>&1); RC=$?; set -e
 assert_exit "self-repo gate codemap exits 0" 0 "$RC"
 
-# --- T47.2: fixture repo generates a v2 baseline, then an illegal edge is injected (map→nav banned direction) -> gate red ---
+# --- .2: fixture repo generates a v2 baseline, then an illegal edge is injected (map→nav banned direction) -> gate red
 mkdir -p "$T47_DIR/violation/bin/lib/nav" "$T47_DIR/violation/bin/lib/map" "$T47_DIR/violation/bin/lib/core"
 cd "$T47_DIR/violation" || exit 1
 git init -q . && git commit -q --allow-empty -m root
@@ -36,7 +36,7 @@ printf 'module.exports = {};\n' > bin/lib/core/index.cjs
 git add -A && git commit -q -m fixture
 set +e; (cd "$T47_DIR/violation" && node "$GOS" map scan >/dev/null 2>&1 && node "$GOS" init 1 "t47-violation" >/dev/null 2>&1 && node "$GOS" map allowlist init >/dev/null 2>&1); set -e
 assert_file "v2 baseline generated in fixture" "$T47_DIR/violation/.gos/codebase/require-allowlist.json"
-# T47.1b: the fixture's legal dependency direction (nav->map) asserts green — this is
+# .1b: the fixture's legal dependency direction (nav->map) asserts green — this is
 # the sandboxed replacement for the old self-repo green-line check (fresh clones carry
 # no .gos/codebase, so the self repo can only promise exit 0 there)
 set +e; GOUT0=$(cd "$T47_DIR/violation" && node "$GOS" gate codemap 2>&1); GRC0=$?; set -e
@@ -56,13 +56,13 @@ set +e; VOUT=$(cd "$T47_DIR/violation" && node "$GOS" gate codemap 2>&1); VRC=$?
 assert_exit "violation fails gate codemap" 1 "$VRC"
 assert_contains "violation names map→nav outside whitelist" "not in the allowlist" "$VOUT"
 
-# --- T47.3: missing allowlist -> advisory downgrade (gate does not crash) ---
+# --- .3: missing allowlist -> advisory downgrade (gate does not crash)
 rm "$T47_DIR/violation/.gos/codebase/require-allowlist.json"
 set +e; MOUT=$(cd "$T47_DIR/violation" && node "$GOS" gate codemap 2>&1); MRC=$?; set -e
 assert_exit "missing allowlist keeps gate exit 0" 0 "$MRC"
 assert_contains "missing allowlist degrades to advisory" "direction assertion off" "$MOUT"
 
-# --- T47.4: direction assertion stays green on a clean fixture (scan→gate closed loop) ---
+# --- .4: direction assertion stays green on a clean fixture (scan→gate closed loop)
 mkdir -p "$T47_DIR/green/bin/lib/nav" "$T47_DIR/green/bin/lib/map" "$T47_DIR/green/bin/lib/core"
 cd "$T47_DIR/green" || exit 1
 git init -q . && git commit -q --allow-empty -m root

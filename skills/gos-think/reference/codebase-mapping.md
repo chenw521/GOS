@@ -35,7 +35,7 @@ An eighth artifact can appear after a baseline rotation:
 `edge-history.ndjson` (append-only, gitignored) — see edge-baseline.json
 below.
 
-## Travel tiers (D-20) — what a fresh clone actually has
+## Travel tiers — what a fresh clone actually has
 
 File availability is tiered; never assume a file exists because it
 existed on the machine that wrote it:

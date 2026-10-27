@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/knowledge/phase.cjs#fn:cmdPhase bin/lib/ops/gitseed.cjs#fn:validateRepoSlug bin/lib/ops/gitseed.cjs#fn:inferRepoSlug
 # gos-map:cmd phase
-# T71: phase amend — pending goal rewrite via command (edit-via-commands discipline)
+# phase amend — pending goal rewrite via command (edit-via-commands discipline)
 # Block layout: amend block first; the reposlug block goes at the marked
 # append point below (keep teardown/final-exit lines LAST).
 PASS=0; FAIL=0

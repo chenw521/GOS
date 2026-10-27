@@ -66,13 +66,29 @@ change.
 ❌ **Ticket and review anchors** — traceability IDs pointing at process tools:
 
 ```js
-// [REVIEW M1] fixed the off-by-one here
-// T-123: handle the empty-list case
-// TODO(JIRA-455): remove this after migration
+// [REVIEW Mn] fixed the off-by-one here
+// T-nnn: handle the empty-list case
+// TODO(JIRA-nnn): remove this after migration
 ```
 
 Review findings, task IDs, and sprint references rot instantly; the code stays.
 Link them from the issue tracker, the PR description, or the commit body.
+
+The full banned family, named digit-free — every digit-bearing shape of these
+is a trace artifact:
+
+- bracket decision anchors: `[D-NN]`, `[REVIEW Mn]` (slash compounds stay parenthesized, see below)
+- bare and parenthesized decision/requirement ids: `D-nn`, `R-nn`, `F-nn`,
+  `(R-nn/F-nn)`
+- wave and task ids: `Wn`, `Tn`, `Wn-Tn`
+- dash compounds: `RTn-Fn`
+- spec-section citations: `spec §n.n`, `§n.n`
+- task-narrative phrases: this <phase|wave|task> <adds|ships|introduces> … —
+  narrating the task in a comment instead of describing WHAT
+
+**The rule: lineage lives in commit bodies and the CHANGELOG; comments keep
+the WHAT.** A trace-free comment states a constraint, a contract, or a reason
+the code cannot express — never which task, wave, or review produced it.
 
 ✅ **What a surviving comment looks like** — a constraint, a contract, or a
 reason that the code cannot state:

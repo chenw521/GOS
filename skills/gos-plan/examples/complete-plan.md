@@ -7,15 +7,15 @@
 
 ## Decision Inventory
 
-- [x] D-01: JWT tokens (24h + refresh) → T1, T3
-- [x] D-02: bcrypt cost 12 → T1
-- [x] D-03: refresh token rotation → T3
-- [x] D-04: structured JSON errors → T3
+- [x] D-nn: JWT tokens (24h + refresh) → Tn, Tn
+- [x] D-nn: bcrypt cost 12 → Tn
+- [x] D-nn: refresh token rotation → Tn
+- [x] D-nn: structured JSON errors → Tn
 
 ## Requirement Claims
 
-- [x] R-01: user authentication → T1, T3, T5
-- [x] R-02: password reset → T6
+- [x] R-nn: user authentication → Tn, Tn, Tn
+- [x] R-nn: password reset → Tn
 
 ## Patterns to Follow
 
@@ -27,7 +27,7 @@
 
 ### Wave 1 (parallel, no deps)
 
-#### T1: User model with bcrypt password hashing
+#### Tn: User model with bcrypt password hashing
 - **Covers**: D-02, R-01
 - **Files**: src/models/User.ts, src/models/User.test.ts
 - **Read first**: src/models/Base.ts, src/config/index.ts
@@ -38,7 +38,7 @@
   AND `npm test -- --testPathPattern=User` passes with ≥4 tests
 - **Depends on**: none
 
-#### T2: DB migration for users table
+#### Tn: DB migration for users table
 - **Covers**: D-01 (storage prerequisite)
 - **Files**: migrations/001_users.sql
 - **Read first**: existing migrations in migrations/
@@ -49,10 +49,10 @@
 
 ### Wave 2 (depends on Wave 1)
 
-#### T3: AuthService (JWT issue/verify/refresh rotation)
+#### Tn: AuthService (JWT issue/verify/refresh rotation)
 - **Covers**: D-01, D-03, D-04, R-01
 - **Files**: src/services/AuthService.ts, src/services/AuthService.test.ts
-- **Read first**: src/models/User.ts (from T1), src/config/index.ts
+- **Read first**: src/models/User.ts (from Tn), src/config/index.ts
 - **Approach**: issueToken(user) → JWT 24h; refreshToken flow rotates
   (old refresh invalidated on use); errors as AppError('AUTH_xxx', msg).
 - **Done when**: 5 tests pass — issue/verify/expired/refresh-rotates/
@@ -61,7 +61,7 @@
 
 ### Wave 3 (depends on Wave 2)
 
-#### T4: Auth middleware (route protection)
+#### Tn: Auth middleware (route protection)
 - **Covers**: D-01
 - **Files**: src/middleware/auth.ts, src/middleware/auth.test.ts
 - **Read first**: src/services/AuthService.ts
@@ -70,7 +70,7 @@
 - **Done when**: middleware test covers valid/missing/expired (3 cases)
 - **Depends on**: T3
 
-#### T5: Auth routes (register/login/refresh)
+#### Tn: Auth routes (register/login/refresh)
 - **Covers**: R-01, D-04
 - **Files**: src/routes/v1/auth.ts, src/routes/v1/auth.test.ts
 - **Read first**: src/routes/v1/users.ts (pattern), src/services/AuthService.ts
@@ -82,7 +82,7 @@
 
 ### Wave 4 (depends on Wave 3)
 
-#### T6: Password reset flow
+#### Tn: Password reset flow
 - **Covers**: R-02
 - **Files**: src/services/ResetService.ts, src/routes/v1/reset.ts, tests
 - **Read first**: src/services/AuthService.ts

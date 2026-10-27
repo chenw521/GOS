@@ -138,7 +138,7 @@ gos map closure <file> --semantic # 这次改动牵连谁（fn 调用图）
 gos lessons add --type project "…" # 跨会话存活的仓库记忆
 gos map blast <paths>                 # 改动前影响报告：还需连带检查什么、为什么
 gos setup --lang zh-CN                # 中文界面（GOS_LANG=zh 可单次覆盖）
-gos truth verify T1 --replay      # 证据来自真实 stdout，不是口头声称
+gos truth verify --replay # 证据来自真实 stdout，不是口头声称
 gos render                        # 重新渲染 DECISIONS/ROADMAP/REQUIREMENTS 视图
 gos setup --local                 # 开发模式：从 git 检出做符号链接
 gos teardown                      # 移除 skills 链接

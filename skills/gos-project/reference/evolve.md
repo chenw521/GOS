@@ -13,10 +13,10 @@ A phase just SHIPped (`gos archive` done) and another phase remains in ROADMAP.
 2. **PROJECT.md evolution** (mandatory checklist, not optional):
    - [ ] "What This Is" still accurate? Update if the system's identity shifted.
    - [ ] "Core Value" still the priority order? Reorder if learned otherwise.
-   - [ ] "Requirements Evolution" — append one line: `P2 done: auth shipped; R-03 deferred (reason)`.
+ - [ ] "Requirements Evolution" — append one line: `P2 done: auth shipped; deferred (reason)`.
 
 3. **DECISIONS.md rolling update**:
-   - Append this phase's decisions as one-liners: `### P2: auth` + `- D-05: JWT 24h — user chose over sessions`.
+ - Append this phase's decisions as one-liners: `### P2: auth` + `- : JWT 24h — user chose over sessions`.
    - **Prune if file > 150 lines**: drop entries older than 2 completed phases (detail lives in `.gos/archive/*/delta.md`).
 
 4. **Next-phase handoff**:

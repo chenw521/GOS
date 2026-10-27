@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # gos-map:cmd gap,concerns,lessons,decision
-# T96: D-17 language boundary at all three GOS text stores + gap rewrite.
+# language boundary at all three GOS text stores + gap rewrite.
 # Facts asserted:
 #   - boundary trigger = gitprobe.isTracked(<store file>) at EACH store's write
 #     path: tracked state.json + zh decision → exit 1; tracked concerns.md +
 #     zh `gos concerns add` → exit 1; tracked lessons.json + zh lessons add →
 #     exit 1 — bilingual guidance (en + zh) pulled from the locale catalogs
 #   - fail-closed: GIT_DIR poison with ALL stores untracked still exits 1
-#     (the boundary never falls open; T1 primitive)
+# (the boundary never falls open; primitive)
 #   - all-untracked fixture: CJK accepted normally (no behavior change)
 #   - `gos gap rewrite <G-id> --text` clears a legacy zh gap description when
 #     untracked; tracked concerns.md + zh --text → exit 1 (gap text flows into

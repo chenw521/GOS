@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd truth
-# T16: truth command family — add continuous numbering + manual verify + --replay execution + receipts + manualWarning
+# truth command family — add continuous numbering + manual verify + --replay execution + receipts + manualWarning
 # Covers: input constraint table, synthetic exit-code lines not counted as hits, canary injection
 # Env: GOS (CLI path), TESTBASE (isolated base), assert helpers sourced by runner
 T16_DIR=""
@@ -24,7 +24,7 @@ echo "--- T16: truth add 续号 + manual/replay verify + receipts + manualWarnin
 t16_g init 2 "t16 truth family" >/dev/null 2>&1
 echo "evidence artifact body" > art.txt
 
-# --- T16.1: truth add continuous numbering — first→T1, second→T2 ---
+# --- .1: truth add continuous numbering — first→ , second→
 OUT=$(t16_g truth add "first truth" 2>&1); RC=$?
 assert_exit "truth add exits 0" "0" "$RC"
 assert_contains "first add → id T1" "T1" "$OUT"
@@ -53,7 +53,7 @@ else
   echo "  ✗ T1 set despite validation failure"; FAIL=$((FAIL+1))
 fi
 
-# --- T16.3: manual verify with stats excerpt + existing artifact → exit 0 + manual:true ---
+# --- .3: manual verify with stats excerpt + existing artifact → exit 0 + manual:true
 OUT=$(t16_g truth verify T1 --command "bash test/run-sections.sh" --excerpt "5 passed, 0 failed" --artifact art.txt 2>&1); RC=$?
 assert_exit "manual verify exits 0" "0" "$RC"
 if t16_st 'import json
@@ -120,7 +120,7 @@ OUT=$(t16_g gate truths 2>&1); RC=$?
 assert_exit "gate truths exits 0 (all verified)" "0" "$RC"
 assert_contains "manualWarning text present" "manual truths (evidence not replayed)" "$OUT"
 assert_contains "manualWarning N=1 (T1 manual, T2 replay)" "1 manual truths" "$OUT"
-# add + manual-verify a third truth → N=2, and add numbering continues at T3
+# add + manual-verify a third truth → N=2, and add numbering continues at
 t16_g truth add "third truth" >/dev/null 2>&1
 t16_g truth verify T3 --command "bash test/run-sections.sh" --excerpt "7 files checked" --artifact art.txt >/dev/null 2>&1
 OUT=$(t16_g gate truths 2>&1)

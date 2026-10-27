@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/brownfield-probe.cjs#fn:classifyHooksPath,bin/lib/ops/brownfield-probe.cjs#fn:hookOwnership,bin/lib/ops/brownfield-probe.cjs#fn:detectCommitlintConfigs,bin/lib/ops/brownfield-probe.cjs#fn:preflight
-# T79: brownfield probe module (T4, pure classification — D-94/D-96/R-01).
+# brownfield probe module ( , pure classification — ).
 # Four read-only classifiers driven through a node driver against sandboxes:
 # (1) classifyHooksPath — core.hooksPath unset/empty (= unset, empty is
 #     normalized BEFORE comparison), 'hooks' literal or absolute <top>/hooks
@@ -58,7 +58,6 @@ echo "--- T79: brownfield probe (pure classification) ---"
 CM_MASTER="$GOS_ROOT/hooks/commit-msg.sh"
 PP_MASTER="$GOS_ROOT/hooks/pre-push.sh"
 
-# --- T79.1: classifyHooksPath ---
 t79_repo w1
 assert_eq "1a no core.hooksPath -> unset" "unset" "$(node "$T79_DIR/probe.cjs" classify "$T79_DIR/w1")"
 git -C "$T79_DIR/w1" config core.hooksPath ""
@@ -72,7 +71,6 @@ assert_eq "1e '.husky' -> foreign" "foreign" "$(node "$T79_DIR/probe.cjs" classi
 git -C "$T79_DIR/w1" config core.hooksPath "$T79_DIR/w1/.husky"
 assert_eq "1f absolute foreign dir -> foreign" "foreign" "$(node "$T79_DIR/probe.cjs" classify "$T79_DIR/w1")"
 
-# --- T79.2: hookOwnership ---
 mkdir -p "$T79_DIR/own"
 cp "$CM_MASTER" "$T79_DIR/own/bytes.sh"
 assert_eq "2a byte-identical copy of master -> gos_bytes" "gos_bytes" "$(node "$T79_DIR/probe.cjs" own "$T79_DIR/own/bytes.sh" "$CM_MASTER")"
@@ -93,7 +91,6 @@ assert_eq "2g cross-kind provenance (commit-msg line, pre-push master) ignored -
 printf '#!/bin/sh\n# line one\n# line two\n# line three\n# GOS commit-msg hook: provenance below the header zone\necho custom\n' > "$T79_DIR/own/deep-provenance.sh"
 assert_eq "2h provenance line past the 3-line header zone -> user" "user" "$(node "$T79_DIR/probe.cjs" own "$T79_DIR/own/deep-provenance.sh" "$CM_MASTER")"
 
-# --- T79.3: detectCommitlintConfigs ---
 t79_repo d1
 printf '{}\n' > "$T79_DIR/d1/.commitlintrc.json"
 assert_eq "3a .commitlintrc.json detected" '[".commitlintrc.json"]' "$(node "$T79_DIR/probe.cjs" detect "$T79_DIR/d1")"
@@ -114,7 +111,7 @@ t79_repo d6
 printf '{}\n' > "$T79_DIR/d6/.COMMITLINTRC.YML"
 assert_eq "3f uppercase .COMMITLINTRC.YML NOT detected (case-sensitive fs)" "[]" "$(node "$T79_DIR/probe.cjs" detect "$T79_DIR/d6")"
 
-# --- T79.4: preflight (reasons byte-equal to the frozen contract tokens) ---
+# --- .4: preflight (reasons byte-equal to the frozen contract tokens)
 t79_repo p1
 assert_eq "4a clean paths -> ok:true" '{"hooks":{"ok":true},".gos":{"ok":true}}' "$(node "$T79_DIR/probe.cjs" preflight "$T79_DIR/p1" '["hooks",".gos"]')"
 t79_repo p2

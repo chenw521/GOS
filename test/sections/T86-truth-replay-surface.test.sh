@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # gos-map:cmd truth
-# T86: truth replay execution surface — widened evidence features, tiered hit
-#      selection, LHS-normalized synthetic-key veto (D-04/R-26) + --timeout flag
-#      with self-describing failures + explicit maxBuffer 64 MiB (D-05/R-27).
+# truth replay execution surface — widened evidence features, tiered hit
+# selection, LHS-normalized synthetic-key veto + --timeout flag
+# with self-describing failures + explicit maxBuffer 64 MiB.
 # Env: GOS (CLI path), TESTBASE (isolated base), assert helpers sourced by runner
 T86_DIR=""
 
@@ -119,7 +119,7 @@ OUT=$(t86_g truth verify T1 --replay --command '["bash","-c","echo boom-stderr-t
 assert_exit "I1 nonzero exit fails replay" 1 "$RC"
 assert_contains "I1 diagnostics carry the stderr tail" "boom-stderr-tail" "$OUT"
 
-# --- J: --timeout flag (D-05: digits only, 1..600000, flag only, no env var) ---
+# --- J: --timeout flag (digits only, 1..600000, flag only, no env var)
 OUT=$(t86_g truth verify T1 --replay --command '["bash","-c","echo total 165"]' --artifact art.txt --timeout 600000 2>&1); RC=$?
 assert_exit "J1 --timeout 600000 (cap, inclusive) accepted" 0 "$RC"
 for BAD in '0' '1e5' '+5' '0.5' '600001'; do
@@ -137,7 +137,7 @@ assert_contains "J3 missing operand dies with usage copy" "Usage" "$OUT"
 OUT=$(t86_g truth verify T1 --command "bash test/x.sh" --excerpt "5 passed, 0 failed" --artifact art.txt --timeout 5000 2>&1); RC=$?
 assert_exit "J4 --timeout without --replay rejected" 1 "$RC"
 
-# --- K: 30s default budget + --timeout override (spec T3 truth; slow block ~62s) ---
+# --- K: 30s default budget + --timeout override (spec truth; slow block ~62s)
 OUT=$(t86_g truth verify T1 --replay --command '["bash","-c","sleep 31; echo total 165"]' --artifact art.txt 2>&1); RC=$?
 assert_exit "K1 sleep 31 without the flag fails (default 30s budget)" 1 "$RC"
 if printf '%s\n' "$OUT" | grep -q -- "--timeout"; then
@@ -148,7 +148,7 @@ fi
 OUT=$(t86_g truth verify T1 --replay --command '["bash","-c","sleep 31; echo total 165"]' --artifact art.txt --timeout 120000 2>&1); RC=$?
 assert_exit "K2 sleep 31 with --timeout 120000 succeeds" 0 "$RC"
 
-# --- L: structure contract (same-commit sync with T14/T46) ---
+# --- L: structure contract (same-commit sync with / )
 if grep -q 'EVIDENCE_FEATURE_RES_MANUAL' "$GOS_ROOT/bin/lib/core/state.cjs"; then
   echo "  ✓ L1 state.cjs declares EVIDENCE_FEATURE_RES_MANUAL"; PASS=$((PASS+1))
 else

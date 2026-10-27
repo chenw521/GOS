@@ -9,7 +9,7 @@ permissions:
 ---
 
 <objective>
-Adopt an existing (brownfield) repository into GOS: report which GOS assets are live, missing, or inactive, and print numbered remediation steps. Read-mostly and lock-free — a brownfield repo has no `.gos` state yet. "brownfield" here means adopting an existing repo, distinct from the D-22 decision-import sense (where `gos init` detects handwritten decision files and suggests importing them).
+Adopt an existing (brownfield) repository into GOS: report which GOS assets are live, missing, or inactive, and print numbered remediation steps. Read-mostly and lock-free — a brownfield repo has no `.gos` state yet. "brownfield" here means adopting an existing repo, distinct from the decision-import sense (where `gos init` detects handwritten decision files and suggests importing them).
 </objective>
 
 <process>

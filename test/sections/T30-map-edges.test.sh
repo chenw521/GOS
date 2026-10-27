@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd map
-# T30: map 2.0 anchor layer — parseAnchor / five validator classes / universe / last-# split / bans / case normalization
-# Covers: D-21, D-22 (R4 plan r2 T1)
+# map 2.0 anchor layer — parseAnchor / five validator classes / universe / last-# split / bans / case normalization
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 T30_DIR=""
 
@@ -34,7 +33,7 @@ A() { # A <label> <spec> <wantRC> <wantGrep|- >
   if [ "$wantGrep" != "-" ]; then assert_contains "$label (text)" "$wantGrep" "$out"; fi
 }
 
-# --- T30.1 five validator classes: bare path / cmd / fn / sec / contract key / h ---
+# --- .1 five validator classes: bare path / cmd / fn / sec / contract key / h
 A "T30.1a bare path anchor ok"                     "README.md"                  0 "anchor verified"
 A "T30.1b cmd: anchor ok (COMMANDS row)"            "bin/gos.cjs#cmd:map"        0 "anchor verified"
 A "T30.1c cmd: unknown command dead"                "bin/gos.cjs#cmd:nonexistent" 1 "dead anchor"
@@ -47,30 +46,29 @@ A "T30.1i unknown bare word = dead contract key"    "src/app.js#mainApp"        
 A "T30.1j h: heading anchor ok"                     "README.md#h:Title Here"     0 "anchor verified"
 A "T30.1k h: missing heading dead"                  "README.md#h:No Such"        1 "dead anchor"
 
-# --- T30.2 split rules and bans ---
+# --- .2 split rules and bans
 A "T30.2a line-number anchor banned"                "src/app.js#L42"             1 "line-number anchors are banned"
 A "T30.2b path containing # banned (last-# split)"  "we#ird.md#cmd:map"          1 "ambiguous"
 A "T30.2c absolute path banned"                     "/etc/passwd"                1 "absolute"
 A "T30.2d home-relative path banned"                "~/secret.md"                1 "absolute"
 
-# --- T30.3 universe and normalization ---
 A "T30.3a dead path (not in universe)"              "nope.md"                    1 "dead anchor"
 A "T30.3b untracked+unscanned file outside universe" "untracked.md"              1 "dead anchor"
 A "T30.3c case-normalized tracked match ok"         "readme.md"                  0 "anchor verified"
 
-# --- T30.4 CONTRACTS frozen text present (anchorVerif key family) ---
+# --- .4 CONTRACTS frozen text present (anchorVerif key family)
 set +e; COUT=$(node "$GOS" _contract 2>&1); CRC=$?; set -e
 assert_exit "_contract callable" 0 "$CRC"
 N_ANCHOR=$(printf '%s\n' "$COUT" | grep -c "anchorVerif" || true)
 if [ "${N_ANCHOR:-0}" -ge 1 ]; then echo "  ✓ CONTRACTS has anchorVerif key family ($N_ANCHOR)"; PASS=$((PASS+1))
 else echo "  ✗ CONTRACTS anchorVerif keys missing"; FAIL=$((FAIL+1)); fi
 
-# --- T30.5 dead-edge text embeds the recovery command ---
+# --- .5 dead-edge text embeds the recovery command
 set +e; OUT=$(node "$GOS" map anchor "nope.md" 2>&1); RC=$?; set -e
 assert_exit "dead anchor exits 1" 1 "$RC"
 assert_contains "dead-anchor text embeds recovery command" "gos map edge rewrite" "$OUT"
 
-# --- T30.6 edge CLI: add/rm/rewrite/audit-log + audit receipt + git add enforcement ---
+# --- .6 edge CLI: add/rm/rewrite/audit-log + audit receipt + git add enforcement
 E() { # E <label> <wantRC> <args...>
   local label="$1" wantRC="$2"; shift 2
   local out rc
@@ -94,7 +92,7 @@ set +e; AL=$(node "$GOS" map edge audit-log 2>&1); ALRC=$?; set -e
 assert_exit "T30.6g audit-log lists history" 0 "$ALRC"
 assert_contains "audit-log shows add+rm+rewrite" "rewrite" "$AL"
 
-# --- T30.7 read-failure classes: parse fail / EACCES die (catch-null banned) ---
+# --- .7 read-failure classes: parse fail / EACCES die (catch-null banned)
 cp .gos/cache/edges.json .gos/cache/edges.json.bak
 printf '{broken' > .gos/cache/edges.json
 E "T30.7a parse-fail edges.json dies" 1 add "README.md" "bin/gos.cjs#cmd:map" --type greps
@@ -105,7 +103,7 @@ E "T30.7b unreadable edges.json dies (not silent null)" 1 add "README.md" "bin/g
 chmod 644 .gos/cache/edges.json
 rm -f .gos/cache/edges.json.bak
 
-# --- T30.8 lock discipline: live lock blocks / stale-mtime fake-live lock breakable / ROOT anchored ---
+# --- .8 lock discipline: live lock blocks / stale-mtime fake-live lock breakable / ROOT anchored
 mkdir -p .gos
 printf '{"pid":%d,"started_at":"2026-01-01T00:00:00Z"}' $$ > .gos/.lock
 E "T30.8a live-pid lock blocks add" 1 add "README.md" "bin/gos.cjs#cmd:map" --type greps
@@ -116,14 +114,14 @@ if [ ! -e .gos/.lock ]; then echo "  ✓ lock cleanly released on exit (process.
 else echo "  ✗ lock file leaked after successful exit"; FAIL=$((FAIL+1)); fi
 E "T30.8c audit-log still consistent after lock cycle" 0 audit-log
 
-# --- T30.9 seeding: adopt --bootstrap creates a valid empty edges.json ---
+# --- .9 seeding: adopt --bootstrap creates a valid empty edges.json
 rm -rf .gos/cache/edges.json .gos/logs/edge-audit.log
 E "T30.9a adopt --bootstrap seeds empty edges.json" 0 adopt --bootstrap
 python3 -c "import json;d=json.load(open('.gos/cache/edges.json'));exit(0 if d.get('schema_version')==1 and d.get('edges')==[] else 1)" && echo "  ✓ seeded schema valid (v1, empty)" && PASS=$((PASS+1)) || { echo "  ✗ seed schema wrong"; FAIL=$((FAIL+1)); }
 E "T30.9b adopt re-anchors freeze when edges.json exists" 0 adopt
 assert_file "adopt wrote edges.lock" ".gos/cache/edges.lock"
 
-# --- T30.10 COMMANDS discovery surface: edge subcommand family in help metadata ---
+# --- .10 COMMANDS discovery surface: edge subcommand family in help metadata
 set +e; HJ=$(node "$GOS" help --json 2>/dev/null); HRC=$?; set -e
 assert_exit "help --json callable" 0 "$HRC"
 python3 -c "
@@ -133,7 +131,7 @@ N_SUB=$(printf '%s\n' "$HJ" | grep -o "edge add\|edge rm\|edge adopt\|edge rewri
 if [ "${N_SUB:-0}" -ge 5 ]; then echo "  ✓ COMMANDS exposes edge subfamily ($N_SUB)"; PASS=$((PASS+1))
 else echo "  ✗ COMMANDS edge subs missing ($N_SUB)"; FAIL=$((FAIL+1)); fi
 
-# --- T30.11 extractor framework + switch extractor (deps.json semantic.* keys, schema v2) ---
+# --- .11 extractor framework + switch extractor (deps.json semantic.* keys, schema v2)
 if grep -q "const EXTRACTORS = \[" "$GOS_ROOT/bin/lib/map/engine.cjs"; then
   echo "  ✓ EXTRACTORS registry exists (extensible framework)"; PASS=$((PASS+1))
 else echo "  ✗ EXTRACTORS registry missing"; FAIL=$((FAIL+1)); fi
@@ -157,7 +155,7 @@ set +e; CL=$(cd "$GOS_ROOT" && node "$GOS" map closure bin/gos.cjs --no-refresh 
 assert_exit "T30.11c legacy consumers (closure) still work on v2 cache" 0 "$CLRC"
 rm -f "$GOS_ROOT/.gos/cache/deps.json"
 
-# --- T30.12 extractor call site + contract string + map-ignore (sandbox repo) ---
+# --- .12 extractor call site + contract string + map-ignore (sandbox repo)
 t30_setup
 git init -q . && mkdir -p .gos docs bin
 printf 'x\n' > bin/gos.cjs   # anchor host for #cmd:map neighborhood query

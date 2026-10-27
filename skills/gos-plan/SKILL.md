@@ -48,6 +48,6 @@ claims status, and the exact steps to produce the plan (path supplied by `gos co
 
 | Excuse | Reality |
 |:---|:---|
-| "D-05 is minor, skip coverage" | `gos gate coverage` will exit 1. It doesn't care about "minor". |
+| " is minor, skip coverage" | `gos gate coverage` will exit 1. It doesn't care about "minor". |
 | "I'll figure out task details in BUILD" | BUILD executes. PLAN designs. Do your job. |
 | "Truths can wait until VERIFY" | Truths defined HERE. VERIFY checks them. No truths = no verification. |

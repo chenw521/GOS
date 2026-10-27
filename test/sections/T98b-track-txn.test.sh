@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # gos-map:cmd track
-# T98b: D-15/D-14 gos track — flip transaction: manifest + rename-style backups
-# + injected-failure rollback + adopt/no-op (RT3-F7) + --knowledge preset.
+# T98b: gos track — flip transaction: manifest + rename-style backups
+# + injected-failure rollback + adopt/no-op + --knowledge preset.
 # Facts asserted:
 #   - M1 flip success appends a per-line JSON record {ts,path,head} to
 #     .gos/track-manifest.json, stages it via the SAME git add, prints it
 #   - M2 wholesale-ignored .gos/* repo: surgery negates BOTH the target and the
 #     manifest (ignored-set diff == {target, manifest}), both staged
-#   - B1-B3 GOS_TEST_BREAK_TRACK={manifest,surgery,census} injected mid-
+# - GOS_TEST_BREAK_TRACK={manifest,surgery,census} injected mid-
 #     transaction failures → exit 1 and ALL stores restored byte-identical
 #     (sha256 before/after: .gos/.gitignore, census.json, .gos/state.json,
 #     target), manifest absent afterwards, nothing staged, backup dir swept
@@ -159,7 +159,7 @@ assert_contains "M2 manifest staged" ".gos/track-manifest.json" "$STAGED"
 assert_contains "M2 .gos/.gitignore staged" ".gos/.gitignore" "$STAGED"
 t98b_teardown
 
-# --- B1-B3: injected mid-transaction failure → all stores restored ---
+# --- : injected mid-transaction failure → all stores restored
 t98b_rollback_case() {
   local STAGE="$1" LABEL="$2"
   t98b_fresh

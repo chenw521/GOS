@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/task/archive.cjs#fn:cmdArchive
 # gos-map:cmd archive
-# T57: ship/archive single-track — daily obligation reads CHANGELOG.md
+# ship/archive single-track — daily obligation reads CHANGELOG.md
 # [Unreleased] (today UTC-stamped bullet, utcToday same-source), missing file
 # blocks with the bootstrap advisory, .changes.md sealed read-only (mtime
 # frozen across archive), delta.md gains user_summary from the task-scoped

@@ -1,4 +1,4 @@
-// core/i18n.cjs — locale resolution + catalog lookup (P15 D-63)
+// core/i18n.cjs — locale resolution + catalog lookup (P15 )
 // en canonical = locales/en.cjs (existing frozen strings as CONTRACTS aliases —
 // copies forbidden); zh = translation layer, command tokens NEVER embedded
 // literally ({cmd:<name>} placeholders resolve from the CLI registry).
@@ -58,7 +58,7 @@ function effectiveLocale(refresh = false) {
 }
 
 // {cmd:<name>} placeholders resolve against the CLI registry single source —
-// zh strings stay command-token-free by construction (renames go red in T74).
+// zh strings stay command-token-free by construction (renames go red in ).
 function resolveCmdPlaceholders(s) {
   return String(s).replace(/\{cmd:([a-z0-9_-]+)\}/g, (m, name) => {
     const known = Object.prototype.hasOwnProperty.call(state.COMMANDS, name) || name === '';
@@ -108,7 +108,7 @@ function t(key, params) {
   return params || typeof v === 'object' ? interpolate(v, params) : v;
 }
 
-// D-63↔D-66 join (C4): localized what/why for a gate failure code; evidence and
+// ↔ join (C4): localized what/why for a gate failure code; evidence and
 // fix NEVER pass through here (locale-invariant by construction).
 function gateVerdictParts(code) {
   const v = t(`gate.${code}`);

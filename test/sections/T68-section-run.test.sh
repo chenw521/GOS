@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/section.cjs#fn:cmdSection bin/lib/ops/section.cjs#fn:cmdSectionRun bin/lib/ops/section.cjs#fn:cmdSectionTrust
 # gos-map:cmd section
-# T68: gos section run — section-test runner product surface (fixture-isolation
+# gos section run — section-test runner product surface (fixture-isolation
 # discipline shared with test/run-sections.sh).
-# Sandboxes live OUTSIDE any GOS-managed tree (mktemp base, T67 precedent):
+# Sandboxes live OUTSIDE any GOS-managed tree (mktemp base, precedent):
 # the nested runners would otherwise trip the cwd guard under TESTBASE.
 T68_DIR=""
 

@@ -42,7 +42,7 @@ if [ "$MODE" = "fresh" ]; then
     echo "✗ --fresh: cannot create worktree" >&2; exit 1
   fi
   # CI parity: the sections job installs dependencies before running (acorn
-  # for T36). A fresh tree has no node_modules (gitignored).
+ # for ). A fresh tree has no node_modules (gitignored).
   ( cd "$FRESH_WT" && npm install --no-audit --no-fund --loglevel=error >/dev/null 2>&1 ) || echo "⚠ fresh: npm install failed (network?)"
   # CI parity: the sections job trusts the tracked custom gate before running
   # (trust is opt-in and machine-local; a fresh tree starts untrusted).
@@ -68,13 +68,13 @@ mkdir -p "$HOME"
 # fake HOME hides the real .gitconfig — pin git identity so sandbox commits work
 export GIT_AUTHOR_NAME="gos-test" GIT_AUTHOR_EMAIL="gos-test@test.invalid"
 export GIT_COMMITTER_NAME="gos-test" GIT_COMMITTER_EMAIL="gos-test@test.invalid"
-# Phase U T7 (R4-F3, D-29): headless determinism anchor — suite stdout is never a TTY,
+# Phase U: headless determinism anchor — suite stdout is never a TTY,
 # so without this pin the init dual-mode flips with the developer's terminal state
 # (CI green / local red). Sections that need the interactive path MUST `env -u GOS_HEADLESS`
-# (see T35-u-init U3-U6: `script -qec` pty cases).
+# (see -u-init : `script -qec` pty cases).
 export GOS_HEADLESS=1
-# P15 D-63/F10: sections pin en — locale-dependent output stays deterministic
-# regardless of the developer's environment (goldens live in section T74).
+# P15 /F10: sections pin en — locale-dependent output stays deterministic
+# regardless of the developer's environment (goldens live in section ).
 export GOS_LANG=en
 
 assert_contains() {
@@ -196,7 +196,7 @@ for f in "$GOS_ROOT"/test/sections/T*.test.sh; do
   RAN_NAMES="$RAN_NAMES$name
 "
   echo "=== $name ==="
-  # guard: sections must run FROM TESTBASE (never the repo root — F-1 fixture-contamination root fix)
+ # guard: sections must run FROM TESTBASE (never the repo root — fixture-contamination root fix)
   # REVIEW #1: capture section rc — a section aborted mid-script (set -e truncation, bash
   # error) must NEVER report green; runner counts ✓/✗ lines AND treats rc≠0 as a failure row.
   SEC_OUT="$(cd "$TESTBASE" && bash "$f" 2>&1)"
@@ -204,7 +204,7 @@ for f in "$GOS_ROOT"/test/sections/T*.test.sh; do
   echo "$SEC_OUT"
   if [ "$SEC_RC" -ne 0 ]; then
     echo "  ✗ SECTION ABORTED (exit $SEC_RC) — assertions after the failure point may not have run"
-    # Phase C (T5, R4-F4): rc≠0 MUST count as a failure — the ABORTED line above is
+ # Phase C: rc≠0 MUST count as a failure — the ABORTED line above is
     # echoed to runner stdout (not into SEC_OUT), so the X-count below misses it.
     # A section that dies mid-script with zero ✗ lines must never report green.
     TOTAL_FAIL=$((TOTAL_FAIL + 1))
@@ -227,8 +227,8 @@ shopt -u nullglob
 echo ""
 echo "=== Sections total: $TOTAL_PASS passed, $TOTAL_FAIL failed ==="
 
-# [Phase D T10] run-manifest: overwrite-mode (never append — partial runs are snapshots,
-# R4 plan r2 §7). Component form {head_tree, patch_sha} — commit-advance tolerant (T12 fix).
+# run-manifest: overwrite-mode (never append — partial runs are snapshots,
+# R4 plan r2 ). Component form {head_tree, patch_sha} — commit-advance tolerant ( fix).
 RAN_SECS="$(printf '%s\n' "$RAN_NAMES" | python3 -c "import json,sys; print(json.dumps(sorted(l.strip() for l in sys.stdin if l.strip())))" 2>/dev/null || echo '[]')"
 WTH_H="$(git -C "$GOS_ROOT" rev-parse 'HEAD^{tree}' 2>/dev/null)"
 WTH_P="$(git -C "$GOS_ROOT" -c core.quotepath=off diff --no-color --no-ext-diff --no-textconv HEAD 2>/dev/null | sha256sum | cut -d' ' -f1)"

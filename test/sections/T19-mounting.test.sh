@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 # gos-map:cmd truth,gate,commit
-# T19: three-layer mounting — gate all chaining + BUILD/VERIFY commit embedding + sandbox escape hatch + spec_sha256 + status
-# Covers: D-33, B-10/B-19/B-22, F1, R4-F1/R4-F7/R4-F9
+# three-layer mounting — gate all chaining + BUILD/VERIFY commit embedding + sandbox escape hatch + spec_sha256 + status
 # Env: GOS, TESTBASE, assert helpers
 T19_DIR=""
 
-# [Phase W T5] fixture paths follow the CLI supply (task/<id>/) — never hardcode .gos/ root
+# fixture paths follow the CLI supply (task/<id>/) — never hardcode .gos/ root
 gos_spec() { node "$GOS" context think 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["spec"])' 2>/dev/null; }
 gos_plan() { node "$GOS" context plan 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["plan"])' 2>/dev/null; }
 
@@ -30,9 +29,9 @@ PYEOF
 t19_semok() { # seed a semantically-passable state: D-01 covered by T1 whose file we touch
   rm -rf .gos
   # fixture hygiene: a prior section's bootstrap may have git-added the sidecar; a
-  # tracked-but-missing sidecar is a LEGIT B-9 failure — clear it so semok starts clean
+ # tracked-but-missing sidecar is a LEGIT failure — clear it so semok starts clean
   node "$GOS" init 3 "t19 mounting" >/dev/null 2>&1
-  # fixture hygiene AFTER init: init seeds edges.json+stages it (Phase D) — clear so this fixture's diff stays clean (B-9 pattern)
+ # fixture hygiene AFTER init: init seeds edges.json+stages it (Phase D) — clear so this fixture's diff stays clean ( pattern)
   git rm -q --cached .gos/cache/edges.json 2>/dev/null || true
   git rm -q --cached .gos/cache/edges.lock 2>/dev/null || true   # [Phase D compat] one pathspec per call: multi-path rm fails WHOLE if any path unmatched
   git rm -q --cached .gos/logs/edge-audit.log 2>/dev/null || true
@@ -88,7 +87,7 @@ unset GOS_TEST_SANDBOX
 OUT=$(node "$GOS" status 2>&1)
 assert_contains "status shows semantic skip count" "semantic skips" "$OUT"
 
-# --- T19.3b (REVIEW #4): escape hatch skips ONLY the engine — B-8 deletion still blocks ---
+# --- .3b (REVIEW #4): escape hatch skips ONLY the engine — deletion still blocks
 rm -rf .gos && t19_semok
 node "$GOS" lessons add --type project --scene "hatch" --lesson "b8 under escape hatch" >/dev/null 2>&1
 python3 - <<'PYEOF'
@@ -107,7 +106,7 @@ OUT=$(GOS_SKIP_SEMANTIC=1 node "$GOS" commit build 2>&1); RC=$?
 assert_exit "after disposal, escape-hatch commit passes" "0" "$RC"
 unset GOS_TEST_SANDBOX
 
-# --- T19.3c (REVIEW #11): negative escape paths — relative/other-dir/missing sandbox → refused ---
+# --- .3c (REVIEW #11): negative escape paths — relative/other-dir/missing sandbox → refused
 rm -rf .gos && t19_semok
 OUT=$(GOS_TEST_SANDBOX="." GOS_SKIP_SEMANTIC=1 node "$GOS" commit build 2>&1); RC=$?
 assert_exit "relative sandbox path refused" "1" "$RC"
@@ -118,7 +117,7 @@ assert_contains "other-dir refusal names unset" "unset GOS_SKIP_SEMANTIC" "$OUT"
 OUT=$(GOS_TEST_SANDBOX="/nonexistent/no-such-dir" GOS_SKIP_SEMANTIC=1 node "$GOS" commit build 2>&1); RC=$?
 assert_exit "nonexistent sandbox path refused" "1" "$RC"
 
-# --- T19.3d (Phase-1 audit): gate semantic carries B-22 spec-hash check ---
+# --- .3d (Phase-1 audit): gate semantic carries spec-hash check
 rm -rf .gos && t19_semok
 t19_mkstate "s['spec_sha256']='deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef'"
 OUT=$(node "$GOS" gate semantic 2>&1); RC=$?
@@ -131,7 +130,7 @@ assert_contains "spec frozen check line present" "spec frozen" "$OUT"
 
 # --- T19.5: gate all includes semantic chain + downgrade banner last line [D-33] ---
 rm -rf .gos && t19_semok
-# flip-reconcile leg (P4 §3.4): earlier `commit build` runs git-committed .gos
+# flip-reconcile leg (P4 ): earlier `commit build` runs git-committed .gos
 # files whose task ids are one-shot — init never reseeds them, so the product
 # adopt path cannot run on a rebuilt tree. Record them as adopted flips (the
 # exact record shape `gos track` appends) so the leg sees an accounted trail.
@@ -143,7 +142,7 @@ git ls-files -- .gos | while read -r f; do
     "$(date -u +%FT%TZ)" "$f" "$(git rev-parse HEAD)" >> .gos/track-manifest.json
 done
 OUT=$(node "$GOS" gate all 2>&1); RC=$?
-# [Phase W T6 debug-keep] show failures inline when red (temporary diagnosis aid)
+# show failures inline when red (temporary diagnosis aid)
 if [ "$RC" -ne 0 ]; then printf '%s\n' "$OUT" | grep -E "✗|evidence|fix:|README drift|orphan" | head -16 >&2; git ls-files -- .gos >&2; fi
 assert_exit "gate all green on passable semantics" "0" "$RC"
 assert_contains "gate all runs bidirectional check" "bidirectional" "$OUT"

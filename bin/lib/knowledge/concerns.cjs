@@ -92,7 +92,7 @@ function appendConcernsLine(P, text, opts = {}) {
   if (!opts.auto && c.value.includes('(auto)')) core.die(`✗ concern text: '(auto)' is a reserved write-back marker — manual entries may not carry it`);
   if (opts.auto && c.value.includes('(auto)')) core.die(`✗ concern text: '(auto)' may not appear in the source text (system appends it)`);
   // [T5/D-17] language boundary at the write path: the new line is the payload;
-  // CJK + tracked concerns.md dies (fail-closed via the T1 git probe — checked
+ // CJK + tracked concerns.md dies (fail-closed via the git probe — checked
   // before the anchor load so the boundary wording wins the failure).
   core.dieTrackedStoreCJK(P.file, c.value);
   const { anchor } = loadConcernsAnchor(P);
@@ -119,7 +119,7 @@ function appendConcernsLine(P, text, opts = {}) {
 // (machine-local zone; one JSON {ts,text} per line, JSON.stringify guarantees no
 // raw newlines → line integrity by construction, the (auto) sentinel rides inside
 // text). state.gaps is the single live source; this ledger is the durable record
-// of what the stage-back write-back era mirrored into concerns.md before D-16.
+// of what the stage-back write-back era mirrored into concerns.md before .
 function gapHistoryLedgerPath(P) {
   return path.join(P.root, '.gos', 'logs', 'gap-history.ndjson');
 }
@@ -227,7 +227,7 @@ function cmdConcerns(args) {
       core.writeAtomicText(P.file, kept.join('\n') + (kept.length ? '\n' : ''));
       anchor.hashes = kept.filter((l) => l.startsWith('- [')).map(concernsLineHash);
       core.writeAtomicJson(P.anchor, anchor);
-      // .bak shadow failure is fail-closed (parity with lessons B-9) —
+ // .bak shadow failure is fail-closed (parity with lessons )
       // a silently-absent shadow breaks the documented recovery path.
       try { core.writeAtomicJson(P.bak, anchor); }
       catch (e) { core.die(`✗ .concerns-anchors.bak write failed: ${e.message} — sidecar written, shadow not; inspect before proceeding`); }

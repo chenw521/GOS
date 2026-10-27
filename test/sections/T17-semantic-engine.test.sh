@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/gate.cjs#fn:cmdGate
 # gos-map:cmd gate
-# T17: semantic engine + gate semantic minimal command
-# Covers: plan W3-T5 — bidirectional coverage / diff-hit (task_head baseline, CJK NUL)
+# semantic engine + gate semantic minimal command
+# Covers: plan — bidirectional coverage / diff-hit (task_head baseline, CJK NUL)
 #     / allowlist strength+exemptions / closureFn interface slot / degradation banners
 # Env: GOS (CLI path), TESTBASE (isolated base), assert helpers sourced by runner
 T17_DIR=""
 
-# [Phase W T5] fixture paths follow the CLI supply (task/<id>/) — never hardcode .gos/ root
+# fixture paths follow the CLI supply (task/<id>/) — never hardcode .gos/ root
 gos_spec() { node "$GOS" context think 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["spec"])' 2>/dev/null; }
 gos_plan() { node "$GOS" context plan 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["plan"])' 2>/dev/null; }
 
@@ -18,7 +18,7 @@ t17_setup() {
   printf ".gos/state.json\n.gos/cache/\n" > .gitignore && git add .gitignore && git commit -q -m gi
 }
 
-# full Lv3 fixture: init→think→plan committed (plan_snapshot frozen), D-01 added
+# full Lv3 fixture: init→think→plan committed (plan_snapshot frozen), added
 # usage: t17_plan "<covers>" "<files>"
 t17_plan() {
   node "$GOS" init 3 "semantic engine" >/dev/null 2>&1
@@ -54,14 +54,14 @@ t17_teardown() { cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$T17_DIR"; }
 t17_setup
 echo "--- T17.A: bidirectional coverage [B-2] ---"
 
-# --- A1: ghost D-99 in plan Covers (not in state.decisions) → exit 1, names D-99 ---
+# --- A1: ghost in plan Covers (not in state.decisions) → exit 1, names
 t17_plan "D-01, D-99" "src/a.js"
 mkdir -p src && echo x > src/a.js
 set +e; OUT=$(node "$GOS" gate semantic 2>&1); RC=$?; set -e
 assert_exit "A1 ghost D-99 → exit 1" 1 "$RC"
 assert_contains "A1 failure names D-99" "D-99" "$OUT"
 
-# --- A2: decision D-02 in state, covered by no task → exit 1 ---
+# --- A2: decision in state, covered by no task → exit 1
 t17_teardown; t17_setup
 t17_plan "D-01" "src/a.js"
 node "$GOS" decision add D-02 "uncovered" --rationale "r" >/dev/null 2>&1
@@ -70,7 +70,7 @@ set +e; OUT=$(node "$GOS" gate semantic 2>&1); RC=$?; set -e
 assert_exit "A2 uncovered decision → exit 1" 1 "$RC"
 assert_contains "A2 failure names D-02 not covered" "D-02" "$OUT"
 
-# --- A3: ghost R-99 in Covers (no such requirement) → exit 1, names R-99 ---
+# --- A3: ghost in Covers (no such requirement) → exit 1, names
 t17_teardown; t17_setup
 t17_plan "D-01, R-99" "src/a.js"
 mkdir -p src && echo x > src/a.js
@@ -136,7 +136,7 @@ assert_exit "B3 no-Files task → warn not fail (exit 0)" 0 "$RC"
 assert_contains "B3 warn line names no Files" "no Files" "$OUT"
 
 # --- B4: non-git sandbox → diff skip line, exit 0 ---
-# (TESTBASE lives INSIDE the GOS worktree repo — clip git's upward discovery, T2/T10 convention)
+# (TESTBASE lives INSIDE the GOS worktree repo — clip git's upward discovery, / convention)
 t17_teardown
 T17_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-t17n"
 mkdir -p "$T17_DIR" && cd "$T17_DIR" || exit 1
@@ -218,7 +218,7 @@ assert_exit "C3 artifact gone → exit 1" 1 "$RC"
 assert_contains "C3 names not found on disk" "not found on disk" "$OUT"
 
 # --- C4: state.semantic.allowlist ['**'] → exit 1 pattern too broad ---
-# (restore artifact first — T2 validateState would die on the missing path before
+# (restore artifact first — validateState would die on the missing path before
 #  the allowlist strength check ever loads)
 python3 -c "
 import json; s=json.load(open('.gos/state.json'))

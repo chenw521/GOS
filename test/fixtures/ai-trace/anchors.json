@@ -1,0 +1,7 @@
+// Permanent red fixture for the ai-trace lint: every marker below is a
+// deliberate digit-bearing lineage shape the lint must flag.
+// [REVIEW M7] bracket anchor tier A
+// dash compound RT2-F5 tier A
+// wave pointer W4 tier B
+// finding pointer D-26 tier B
+module.exports = {};

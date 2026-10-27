@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd map
-# T25: golden-set sanity (GOS self-repo) + main-suite regression + static discipline grep
+# golden-set sanity (GOS self-repo) + main-suite regression + static discipline grep
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 T25_DIR=""
 
@@ -14,8 +14,8 @@ t25_teardown() { cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$T25_DIR"; }
 t25_setup
 echo "--- T25: self-repo golden sanity + main-suite regression ---"
 
-# --- T25.1: GOS self-repo scan — frozen-set equality + expected entry projection edge set ---
-# Frozen set shares its source with T46; expected edge set = projection of deps.json edges
+# --- .1: GOS self-repo scan — frozen-set equality + expected entry projection edge set
+# Frozen set shares its source with ; expected edge set = projection of deps.json edges
 # with from==bin/gos.cjs (dual-source cross-check: independent grep of require('./lib/ in bin/gos.cjs)
 set +e; OUT=$(cd "$GOS_ROOT" && node "$GOS" map scan 2>/dev/null); RC=$?; set -e
 assert_exit "self-repo scan exits 0" 0 "$RC"
@@ -51,8 +51,8 @@ assert_exit "closure consumes self-repo deps.json (anchor verified)" 0 "$RC"
 assert_contains "self in closure result" "bin/gos.cjs" "$OUT"
 rm -f "$GOS_ROOT/.gos/cache/deps.json"   # cleanup: leave no in-repo cache
 
-# --- T25.2: static discipline — atomic deps.json write + no string-concatenated git calls (multi-file grep) ---
-# grep patterns frozen: targets = the T46-shared frozen set; patterns track the namespaced form (core.writeAtomicJson + core.GOS_PATHS)
+# --- .2: static discipline — atomic deps.json write + no string-concatenated git calls (multi-file grep)
+# grep patterns frozen: targets = the -shared frozen set; patterns track the namespaced form (core.writeAtomicJson + core.GOS_PATHS)
 GOS_SRC_FILES="$GOS_ROOT/bin/gos.cjs $GOS_ROOT/bin/lib/core/fsio.cjs $GOS_ROOT/bin/lib/core/state.cjs $GOS_ROOT/bin/lib/core/lock.cjs $GOS_ROOT/bin/lib/map/index.cjs $GOS_ROOT/bin/lib/map/engine.cjs $GOS_ROOT/bin/lib/map/edges.cjs $GOS_ROOT/bin/lib/map/views.cjs $GOS_ROOT/bin/lib/map/anchor.cjs $GOS_ROOT/bin/lib/map/contract.cjs $GOS_ROOT/bin/lib/knowledge/index.cjs $GOS_ROOT/bin/lib/knowledge/lessons-json.cjs $GOS_ROOT/bin/lib/knowledge/lessons.cjs $GOS_ROOT/bin/lib/knowledge/decisions.cjs $GOS_ROOT/bin/lib/knowledge/requirements.cjs $GOS_ROOT/bin/lib/knowledge/truth.cjs $GOS_ROOT/bin/lib/knowledge/concerns.cjs $GOS_ROOT/bin/lib/knowledge/phase.cjs $GOS_ROOT/bin/lib/task/index.cjs $GOS_ROOT/$GOS_ROOT/bin/lib/task/init.cjs $GOS_ROOT/bin/lib/task/commit.cjs $GOS_ROOT/bin/lib/task/archive.cjs $GOS_ROOT/bin/lib/task/stage.cjs $GOS_ROOT/bin/lib/task/checkpoint.cjs $GOS_ROOT/bin/lib/task/context.cjs $GOS_ROOT/bin/lib/task/plansnap.cjs $GOS_ROOT/bin/lib/task/changelog.cjs $GOS_ROOT/bin/lib/nav/index.cjs $GOS_ROOT/bin/lib/nav/registry.cjs $GOS_ROOT/bin/lib/nav/registry-consts.cjs $GOS_ROOT/bin/lib/nav/status.cjs $GOS_ROOT/bin/lib/nav/help.cjs $GOS_ROOT/bin/lib/nav/cmds.cjs $GOS_ROOT/bin/lib/render/index.cjs $GOS_ROOT/bin/lib/render/views.cjs $GOS_ROOT/bin/lib/ops/index.cjs $GOS_ROOT/bin/lib/ops/gate.cjs $GOS_ROOT/bin/lib/ops/doctor.cjs $GOS_ROOT/bin/lib/ops/setup.cjs $GOS_ROOT/bin/lib/ops/config.cjs $GOS_ROOT/bin/lib/ops/paths.cjs"
 N_ATOMIC=$(grep -c "writeAtomicJson(path.join(root, '.gos', core.GOS_PATHS.deps.rel)" $GOS_SRC_FILES 2>/dev/null | awk -F: '{s+=$NF} END {print s+0}')
 if [ "${N_ATOMIC:-0}" -ge 1 ]; then
@@ -67,7 +67,7 @@ else
   echo "  ✗ string-concat git calls found: $N_STRGIT"; FAIL=$((FAIL+1))
 fi
 
-# --- T25.3: main-suite regression RC=0 (all sections green ≠ full suite green) ---
+# --- .3: main-suite regression RC=0 (all sections green ≠ full suite green)
 set +e; (cd "$GOS_ROOT" && bash test/gos-cli-tests.sh > "$T25_DIR/main-suite.log" 2>&1); MAINRC=$?; set -e
 assert_exit "main suite gos-cli-tests.sh RC=0" 0 "$MAINRC"
 tail -2 "$T25_DIR/main-suite.log" | head -1 | grep -q "passed\|PASS\|✓" && echo "  ✓ main suite summary present" && PASS=$((PASS+1)) || { echo "  (main suite log tail:)"; tail -3 "$T25_DIR/main-suite.log"; }

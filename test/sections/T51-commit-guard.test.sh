@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/task/commit.cjs#fn:cmdCommit
 # gos-map:cmd commit
-# T51: commit generator guard bundle + ADD_PATHS expansion
+# commit generator guard bundle + ADD_PATHS expansion
 # Cases: A=empty-commit guard (duplicate run) B=CJK subject guard
 #        C=--subject english escape hatch D=git-failure state rollback
 #        E=ADD_PATHS static assertions F=no --allow-empty
@@ -48,7 +48,7 @@ assert_eq "B3 HEAD unchanged" "$HEAD_B0" "$(git rev-parse HEAD)"
 assert_eq "B4 state.stage not advanced" "$STAGE_B0" "$(t51_state_field current_stage)"
 assert_eq "B5 state file untouched" "$SHA_B0" "$(t51_state_sha)"
 
-# --- C: --subject english escape hatch succeeds (english intent: D-17 boundary
+# --- C: --subject english escape hatch succeeds (english intent: boundary
 # forbids CJK state content once the store is tracked by the commit flip) ---
 t51_teardown; t51_setup
 git init -q . && git commit -q --allow-empty -m root

@@ -3,7 +3,7 @@
 # T33: run-manifest freshness anchor + gate comparison (stale/missing/exempt) [R-08]
 T33_DIR=""
 
-# [Phase W T5] fixture paths follow the CLI supply (task/<id>/) — never hardcode .gos/ root
+# fixture paths follow the CLI supply (task/<id>/) — never hardcode .gos/ root
 gos_spec() { node "$GOS" context think 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["spec"])' 2>/dev/null; }
 gos_plan() { node "$GOS" context plan 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["plan"])' 2>/dev/null; }
 
@@ -22,7 +22,6 @@ mkdir -p bin docs
 printf "function cmdMap(){ }\nswitch (sub) { case 'map': cmdMap(); }\n" > bin/gos.cjs
 printf 'caller gos map\n' > docs/plain.md
 git add -A && git commit -q -m chain
-# Lv3 fixture (T22 pattern)
 node "$GOS" init 3 "manifest" >/dev/null 2>&1
 node "$GOS" commit intent >/dev/null 2>&1
 cat > "$(gos_spec)" <<'SPECEOF'
@@ -42,7 +41,7 @@ printf '# Plan\n\n### Wave 1\n\n#### T1: impl\n- **Covers**: D-01\n- **Files**: 
 node "$GOS" approve plan >/dev/null 2>&1
 node "$GOS" commit plan >/dev/null 2>&1
 node "$GOS" map edge adopt >/dev/null 2>&1
-# flip-reconcile leg (P4 §3.4): the commit chain above git-commits .gos files
+# flip-reconcile leg (P4 ): the commit chain above git-commits .gos files
 # (lessons, task/<id>/…) whose ids are one-shot; record them as adopted flips
 # (the exact record shape `gos track` appends) so the leg sees an accounted trail
 git ls-files -- .gos | while read -r f; do
@@ -57,14 +56,14 @@ git add -A >/dev/null 2>&1 && git commit -qm frozen >/dev/null 2>&1
 WTH_H() { git rev-parse 'HEAD^{tree}'; }
 WTH_P() { git -c core.quotepath=off diff --no-color --no-ext-diff --no-textconv HEAD | sha256sum | cut -d' ' -f1; }
 
-# --- T33.1 no manifest -> gate all advisory (does not fail; BUILD semantics) ---
+# --- .1 no manifest -> gate all advisory (does not fail; BUILD semantics)
 printf '// touch\n' >> bin/gos.cjs
 set +e; G=$(node "$GOS" gate all 2>&1); GRC=$?; set +e
 if printf '%s\n' "$G" | grep -q "run-manifest\|no manifest"; then
   echo "  ✓ T33.1 no-manifest advisory (BUILD-safe)"; PASS=$((PASS+1))
 else echo "  (T33.1: no-manifest hint not shown — acceptable if gate green: $GRC)"; PASS=$((PASS+1)); fi
 
-# --- T33.2 fresh manifest: same two-layer hash scheme as gate, all sections run -> no stale report ---
+# --- .2 fresh manifest: same two-layer hash scheme as gate, all sections run -> no stale report
 ALL_SECS=$(cd "$GOS_ROOT" && ls test/sections/*.test.sh | xargs -n1 basename | sed 's/\.test\.sh$//' | python3 -c "import json,sys; print(json.dumps(sorted(l.strip() for l in sys.stdin if l.strip())))")
 printf '{"schema_version":2,"sections_run":%s,"head_tree":"%s","patch_sha":"%s","finished_at":"2026-09-03T00:00:00Z"}\n' "$ALL_SECS" "$(WTH_H)" "$(WTH_P)" > .gos/cache/run-manifest.json
 set +e; G=$(node "$GOS" gate all 2>&1); GRC=$?; set +e
@@ -72,13 +71,13 @@ if printf '%s\n' "$G" | grep -q "manifest stale"; then
   echo "  ✗ T33.2 fresh manifest wrongly flagged stale"; FAIL=$((FAIL+1))
 else echo "  ✓ T33.2 fresh manifest (content-tree match) passes manifest check"; PASS=$((PASS+1)); fi
 
-# --- T33.3 stale: code change advances the hash -> gate all fails with 'manifest stale' ---
+# --- .3 stale: code change advances the hash -> gate all fails with 'manifest stale'
 printf '// more\n' >> bin/gos.cjs
 set +e; G=$(node "$GOS" gate all 2>&1); GRC=$?; set +e
 assert_exit "T33.3a stale manifest → gate all non-zero" 1 "$GRC"
 assert_contains "T33.3b stale text distinguishes from missing" "manifest stale" "$G"
 
-# --- T33.4 exemption: --exempt writes the tracked log -> gate passes -> commit consumes and clears it ---
+# --- .4 exemption: --exempt writes the tracked log -> gate passes -> commit consumes and clears it
 git checkout -q -- bin/gos.cjs
 printf '{"schema_version":2,"sections_run":[],"head_tree":"deadbeef","patch_sha":"deadbeef","finished_at":"z"}' > .gos/cache/run-manifest.json
 set +e; node "$GOS" gate --exempt T30-map-edges --reason "manifest fixture exemption for T33" >/dev/null 2>&1; ERC=$?; set +e
@@ -90,16 +89,16 @@ if [ ! -s .gos/logs/exemptions.log ] 2>/dev/null || [ ! -e .gos/logs/exemptions.
   echo "  ✓ T33.4c exemptions consumed+cleared at commit (auto-expiry)"; PASS=$((PASS+1))
 else echo "  (T33.4c exemptions.log retained: $(head -c 40 .gos/logs/exemptions.log 2>/dev/null))"; PASS=$((PASS+1)); fi
 
-# --- T33.5 runner writes the manifest (static assertion: a nested run would sweep the outer TESTBASE; end-to-end covered by T12) ---
+# --- .5 runner writes the manifest (static assertion: a nested run would sweep the outer TESTBASE; end-to-end covered by )
 if grep -q "run-manifest.json" "$GOS_ROOT/test/run-sections.sh" && grep -q "sha256sum" "$GOS_ROOT/test/run-sections.sh" && grep -q "sections_run" "$GOS_ROOT/test/run-sections.sh"; then
   echo "  ✓ runner writes manifest {sections_run, worktree_hash(two-layer sha), finished_at}"; PASS=$((PASS+1))
 else echo "  ✗ runner manifest wiring missing"; FAIL=$((FAIL+1)); fi
 
-# --- T33.6 doc-only downgrade: stale manifest + purely allowlisted dirty files (.changes.md) -> advisory, not FAIL ---
-# preconditions: T33.4 restored bin/gos.cjs; .changes.md seeded TRACKED (D-01/R-34: the
+# --- .6 doc-only downgrade: stale manifest + purely allowlisted dirty files (.changes.md) -> advisory, not FAIL
+# preconditions: .4 restored bin/gos.cjs; .changes.md seeded TRACKED (the
 # exemption ledger is no longer git-staged, so the scenario dirties the tree honestly);
 # head_tree taken from the current HEAD tree (legal ancestor), patch_sha forged -> hits
-# the stale branch; .changes.md is on the B-5 allowlist -> downgrade to advisory.
+# the stale branch; .changes.md is on the allowlist -> downgrade to advisory.
 printf 'base\n' > .changes.md && git add .changes.md && git commit -qm changes-md
 printf '{"schema_version":2,"sections_run":[],"head_tree":"%s","patch_sha":"deadbeef","finished_at":"z"}\n' "$(WTH_H)" > .gos/cache/run-manifest.json
 printf 'doc touch\n' >> .changes.md
@@ -108,7 +107,7 @@ if [ "$GRC" -eq 0 ] && printf '%s\n' "$G" | grep -q "doc-only"; then
   echo "  ✓ T33.6 doc-only diff downgrades stale to advisory (exit 0)"; PASS=$((PASS+1))
 else echo "  ✗ T33.6 doc-only diff not downgraded (rc=$GRC)"; printf '%s\n' "$G" | grep -i "fail\|stale\|zero-hit\|undeclared" | head -3; FAIL=$((FAIL+1)); fi
 
-# --- T33.7 fail-closed: mixed allowlisted+code dirty files -> still stale FAIL ---
+# --- .7 fail-closed: mixed allowlisted+code dirty files -> still stale FAIL
 printf '// code touch\n' >> bin/gos.cjs
 set +e; G=$(node "$GOS" gate all 2>&1); GRC=$?; set +e
 if [ "$GRC" -ne 0 ] && printf '%s\n' "$G" | grep -q "manifest stale"; then

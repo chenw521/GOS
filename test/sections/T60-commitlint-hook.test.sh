@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/setup.cjs#fn:cmdSetupCommitlint
 # gos-map:cmd setup
-# T60: gos setup --commitlint hook
+# gos setup --commitlint hook
 # Cases: A=install basics + non-git guard  B=enforcement (bad/good msg via real npx)
 #        C=npx-missing skip  D=teardown/restore/idempotency
 #        E=gos-root layout uses master config via --config
@@ -109,7 +109,7 @@ fi
 set +e; git commit -q --allow-empty -m "anything goes now" >/dev/null 2>&1; DRC5=$?; set -e
 assert_exit "D5 post-teardown commits are no longer linted" 0 "$DRC5"
 
-# --- D6-D8: prior-value restore + idempotent re-install keeps the ORIGINAL backup ---
+# --- : prior-value restore + idempotent re-install keeps the ORIGINAL backup
 t60_teardown; t60_setup
 git init -q . && git commit -q --allow-empty -m "chore: root"
 mkdir -p .githooks && printf '#!/bin/sh\nexit 0\n' > .githooks/commit-msg && chmod +x .githooks/commit-msg
@@ -146,7 +146,7 @@ assert_exit "E1 gos-root layout: master config enforced (exit 1)" 1 "$ERC"
 set +e; sh hooks/commit-msg goodmsg.txt >/dev/null 2>&1; ERC2=$?; set -e
 assert_exit "E2 gos-root layout: conventional message passes" 0 "$ERC2"
 
-# --- H: offline npx classification via PATH shim (D-94) ---
+# --- H: offline npx classification via PATH shim
 # A shim npx shadows the real one: tool-unrunnable network/registry failures
 # (npm ERR! network / ENOTFOUND / ...) fail open — output echoed, exit 0;
 # every other non-zero exit (including commitlint validation verdicts)
@@ -189,7 +189,7 @@ set +e; PACK=$(cd "$GOS_ROOT" && npm pack --dry-run 2>&1); PRC=$?; set -e
 assert_exit "F2 npm pack --dry-run exits 0" 0 "$PRC"
 assert_contains "F3 tarball listing includes hooks/commit-msg.sh" "hooks/commit-msg.sh" "$PACK"
 
-# F4/F5: both masters carry exactly one `# gos-managed` marker line (D-94).
+# F4/F5: both masters carry exactly one `# gos-managed` marker line .
 set +e; MC=$(grep -c "gos-managed" "$GOS_ROOT/hooks/commit-msg.sh"); MP=$(grep -c "gos-managed" "$GOS_ROOT/hooks/pre-push.sh"); set -e
 assert_eq "F4 commit-msg.sh master is gos-managed (exactly one marker)" "1" "$MC"
 assert_eq "F5 pre-push.sh master is gos-managed (exactly one marker)" "1" "$MP"

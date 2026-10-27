@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd phase
-# T8: phase command family (add/list/claim/unclaim) + archive integration
+# phase command family (add/list/claim/unclaim) + archive integration
 # (idempotency / dest conflict / merge / milestone / anchor rewrite)
 # Env: GOS (CLI path), TESTBASE (repo root for sandbox), + assert helpers sourced by runner
 T8_DIR=""
@@ -36,7 +36,7 @@ echo "--- T8: phase family + archive integration ---"
 
 node "$GOS" init 4 "plat" --project >/dev/null 2>&1
 
-# --- T8.1: phase add recreates missing project.json + brownfield warning (same strings as init --project) ---
+# --- .1: phase add recreates missing project.json + brownfield warning (same strings as init --project)
 rm .gos/project/project.json
 printf '| D-99 | legacy call |\n' >> .gos/project/DECISIONS.md
 set +e; OUT=$(node "$GOS" phase add "P1: core" --goal "ship g1" 2>&1); RC=$?; set -e
@@ -47,11 +47,10 @@ assert_file "project.json recreated" ".gos/project/project.json"
 P1CNT=$(python3 -c "import json; print(len(json.load(open('.gos/project/project.json'))['phases']))")
 assert_eq "recreated project.json holds the phase" "1" "$P1CNT"
 
-# --- T8.2: phase add x2 more ---
 node "$GOS" phase add "P2: extra" --goal "ship g1" >/dev/null 2>&1
 node "$GOS" phase add "P3: more" --goal "ship tail" >/dev/null 2>&1
 
-# --- T8.3: phase list shows all pending ---
+# --- .3: phase list shows all pending
 set +e; OUT=$(node "$GOS" phase list 2>&1); RC=$?; set -e
 assert_exit "list exits 0" 0 "$RC"
 assert_contains_f "list header" "| Phase | Goal | Status |" "$OUT"
@@ -59,12 +58,11 @@ assert_contains_f "P1 row pending" "| P1: core | ship g1 | pending |" "$OUT"
 assert_contains_f "P2 row pending" "| P2: extra | ship g1 | pending |" "$OUT"
 assert_contains_f "P3 row pending" "| P3: more | ship tail | pending |" "$OUT"
 
-# --- T8.4: duplicate name rejected ---
 set +e; OUT=$(node "$GOS" phase add "P1: core" --goal "dup" 2>&1); RC=$?; set -e
 assert_exit "duplicate name exits 1" 1 "$RC"
 assert_contains "duplicate message" "phase name already exists" "$OUT"
 
-# --- T8.5: claim blocked while task mid-flight (BUILD stage) ---
+# --- .5: claim blocked while task mid-flight (BUILD stage)
 python3 -c "
 import json; s=json.load(open('.gos/state.json')); s['current_stage']='BUILD'
 json.dump(s,open('.gos/state.json','w'),indent=2)"
@@ -72,7 +70,7 @@ set +e; OUT=$(node "$GOS" phase claim 0 2>&1); RC=$?; set -e
 assert_exit "claim blocked at BUILD stage" 1 "$RC"
 assert_contains "blocked message names wrapper state" "wrapper state is at BUILD" "$OUT"
 
-# --- T8.6: --force bypasses preconditions with LOUD warning ---
+# --- .6: --force bypasses preconditions with LOUD warning
 set +e; OUT=$(node "$GOS" phase claim 0 --force 2>&1); RC=$?; set -e
 assert_exit "force-claim exits 0" 0 "$RC"
 assert_contains "loud force warning" "FORCE-CLAIM bypasses DONE/archive preconditions" "$OUT"
@@ -80,14 +78,14 @@ assert_contains "force claim success" "✓ Phase claimed: P1: core" "$OUT"
 ST=$(python3 -c "import json; print(json.load(open('.gos/project/project.json'))['phases'][0]['status'])")
 assert_eq "phases[0] active after force-claim" "active" "$ST"
 
-# --- T8.7: unclaim reverts active phase to pending ---
+# --- .7: unclaim reverts active phase to pending
 set +e; OUT=$(node "$GOS" phase unclaim 2>&1); RC=$?; set -e
 assert_exit "unclaim exits 0" 0 "$RC"
 assert_contains "unclaim message" "✓ Phase P1: core unclaimed — state now orphaned; re-claim or gos init to replace" "$OUT"
 ST=$(python3 -c "import json; print(json.load(open('.gos/project/project.json'))['phases'][0]['status'])")
 assert_eq "phases[0] pending after unclaim" "pending" "$ST"
 
-# --- T8.8: claim 1 without P1 archived → archive-evidence failure ---
+# --- .8: claim 1 without P1 archived → archive-evidence failure
 # Claim gate error text is teaching-form: names the gated-predecessor rule and the park escape hatch
 python3 -c "
 import json; s=json.load(open('.gos/state.json')); s['current_stage']='DONE'
@@ -97,7 +95,7 @@ assert_exit "claim 1 blocked: P1 not archived" 1 "$RC"
 assert_contains "gated-predecessor message" "close it first (claim gated on predecessor)" "$OUT"
 assert_contains "park guidance in gate error" "gos phase park 0" "$OUT"
 
-# --- T8.9: claim 0 success — fresh state written FIRST, then phase active ---
+# --- .9: claim 0 success — fresh state written FIRST, then phase active
 set +e; OUT=$(node "$GOS" phase claim 0 2>&1); RC=$?; set -e
 assert_exit "claim 0 exits 0" 0 "$RC"
 assert_contains "claim success line" "✓ Phase claimed: P1: core" "$OUT"
@@ -109,12 +107,12 @@ print('|'.join([s['intent']['summary'], s['phase_name'], str(s['project']), s['c
 assert_eq "fresh state + active phase (goal|phase|project|stage|confirmed|level|R-01|status)" \
   "ship g1|P1: core|True|INTENT|True|3|ship g1|active" "$FRESH"
 
-# --- T8.10: re-claim active phase rejected ---
+# --- .10: re-claim active phase rejected
 set +e; OUT=$(node "$GOS" phase claim 0 2>&1); RC=$?; set -e
 assert_exit "re-claim exits 1" 1 "$RC"
 assert_contains "already-active message" "phase already active" "$OUT"
 
-# --- T8.11: full cycle → archive merges into project.json + renders views + rewrites anchor ---
+# --- .11: full cycle → archive merges into project.json + renders views + rewrites anchor
 mkdir -p test/out && echo "412 passed, 0 failed" > test/out/t8.log
 python3 -c "
 import json; s=json.load(open('.gos/state.json'))
@@ -140,12 +138,11 @@ assert_file "DECISIONS.md rendered" ".gos/project/DECISIONS.md"
 assert_eq "DECISIONS.md line 1 GENERATED header" "<!-- GENERATED by gos — edit via gos decision/requirement/phase commands, not this file -->" "$(head -n 1 .gos/project/DECISIONS.md)"
 assert_contains "D-01 row present" "| D-01 |" "$(cat .gos/project/DECISIONS.md)"
 
-# --- T8.12: idempotent re-archive ---
 set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
 assert_exit "re-archive exits 0" 0 "$RC"
 assert_contains "idempotent message" "✓ already archived — nothing to do" "$OUT"
 
-# --- T8.13: claim 1 now allowed (P1 archived) ---
+# --- .13: claim 1 now allowed (P1 archived)
 set +e; OUT=$(node "$GOS" phase claim 1 2>&1); RC=$?; set -e
 assert_exit "claim 1 exits 0" 0 "$RC"
 CL1=$(python3 -c "
@@ -154,7 +151,7 @@ s=json.load(open('.gos/state.json')); p=json.load(open('.gos/project/project.jso
 print('|'.join([s['phase_name'], s['intent']['summary'], p['phases'][1]['status']]))")
 assert_eq "P2 claimed (phase_name|intent|status)" "P2: extra|ship g1|active" "$CL1"
 
-# --- T8.14: same-day same-slug archive → dest gets -2 suffix ---
+# --- .14: same-day same-slug archive → dest gets -2 suffix
 python3 -c "
 import json; s=json.load(open('.gos/state.json'))
 s['current_stage']='DONE'
@@ -184,7 +181,7 @@ import json; p=json.load(open('.gos/project/project.json'))
 print('|'.join([p['phases'][1]['status'], str(p['last_archived_phase']), str(len(p['decisions']))]))")
 assert_eq "P2 done + last_archived + D-02 merged (no milestone: P3 pending)" "done|P2: extra|2" "$P2DONE"
 
-# --- T8.15: milestone — all phases done → final render + blank project.json + milestone-record/ ---
+# --- .15: milestone — all phases done → final render + blank project.json + milestone-record/
 python3 -c "
 import json
 s=json.load(open('.gos/state.json'))
@@ -209,7 +206,7 @@ print('|'.join([str(p['schema_version']), str(p['last_archived_phase']), str(len
 assert_eq "project.json reset to empty shape" "1|None|0|0|0" "$BLANK"
 assert_file "milestone-record snapshot" ".gos/archive/$UDATE-v$VER-phase-p3-milestone-tail-task/milestone-record/DECISIONS.md"
 
-# --- T8.16-18: non-Lv4 guards + no-project render skip ---
+# --- .16-18: non-Lv4 guards + no-project render skip
 t8_teardown; t8_setup
 node "$GOS" init 3 "plain task" >/dev/null 2>&1
 set +e; OUT=$(node "$GOS" phase add "P1: x" --goal "g" 2>&1); RC=$?; set -e
@@ -231,7 +228,7 @@ set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
 assert_exit "archive without project.json exits 0" 0 "$RC"
 assert_contains "render-skip message" "(no project.json — render skipped)" "$OUT"
 
-# --- T8.8: claim precondition semantics — wrapper vs phase-owned state (2026-08-24 fix) ---
+# --- .8: claim precondition semantics — wrapper vs phase-owned state (2026-08-24 fix)
 t8_teardown; t8_setup
 node "$GOS" init 4 "plat" --project >/dev/null 2>&1
 node "$GOS" phase add "P1: first" --goal "g1" >/dev/null 2>&1

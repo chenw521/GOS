@@ -15,7 +15,7 @@ function detectBrownfield() {
     'DECISIONS.md': (t) => /^\|\s*D-\d{2,3}\s*\|/m.test(t),
     'REQUIREMENTS.md': (t) => /^\|\s*R-\d{2,3}\s*\|/m.test(t),
     'ROADMAP.md': (t) => t.split('\n').some(l => /^\|\s*[^:|#\s]/.test(l) && !/^\|\s*Phase\s*\|/.test(l)),
-    // D-06: TODO guidance lines are seeded scaffolding, never handwritten
+ // TODO guidance lines are seeded scaffolding, never handwritten
     // content — a fresh skeleton must not read as brownfield.
     'PROJECT.md': (t) => t.split('\n').filter(l => l.trim() && !l.startsWith('#') && !l.trim().startsWith('TODO:')).length > 2,
   };
@@ -28,7 +28,7 @@ function detectBrownfield() {
   return found.length ? found : null;
 }
 
-// D-06/R-33 (F-8): PROJECT.md per-section predicate. Every `## ` section must
+// / : PROJECT.md per-section predicate. Every `## ` section must
 // carry at least one content line: non-TODO, >=20 codepoints, and not a
 // separator/dash string (three junk lines like `-`/`x`/`n/a` still fail). A
 // section-less file never passes vacuously — at least one `## ` section is

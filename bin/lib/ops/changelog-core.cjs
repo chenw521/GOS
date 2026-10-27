@@ -1,10 +1,10 @@
 // ops/changelog-core — single-source CHANGELOG.md validator primitives.
 // Shared implementation for `gos changelog add` (pre-write gate) and
-// `gos changelog lint` (post-hoc enforcement): one validator, zero drift (R-05).
+// `gos changelog lint` (post-hoc enforcement): one validator, zero drift .
 // The validator family stays pure — no filesystem access, no CLI side effects;
 // the command shells live in bin/lib/task/changelog.cjs and consume this module.
 //
-// D-07 (R-32) widens the module with the single root-anchored changelog
+// widens the module with the single root-anchored changelog
 // LOCATION resolver + the shared changelog lock: `path.resolve('CHANGELOG.md')`
 // at require time was cwd-anchored — subdir invocations bootstrapped a foreign
 // CHANGELOG and archive misreported. The resolver folds the two former
@@ -12,12 +12,12 @@
 // at the PROJECT ROOT (git toplevel → nearest .gos ancestor → cwd), reading
 // the PROJECT-layer config key `changelog_path` (global layer is never
 // consulted — a global value could not pass in-root validation for other
-// repos, D-07 R3-F8). Validation runs on BOTH the config-set write side and
-// the resolver read side (R1-F5) from one implementation below.
+// repos). Validation runs on BOTH the config-set write side and
+// the resolver read side from one implementation below.
 //
 // Entry format contract (bullet inside [Unreleased] or a version section):
 //   `- <CategoryVerb> <one-sentence summary> (<D-nn|R-nn refs>) [YYYY-MM-DD]`
-// The trailing bracket is a UTC date stamp (R-08); `promoteUnreleased` strips
+// The trailing bracket is a UTC date stamp ; `promoteUnreleased` strips
 // stamps when moving entries into a released version section. All date math
 // flows through `utcToday()` — the single time source shared by add and lint.
 //
@@ -37,7 +37,7 @@
 //   F7  multi-sentence entries — sentence-ending punctuation followed by more
 //       content; exactly one sentence per bullet
 //
-// Structural checks for validateStructure (the R-06 three checks):
+// Structural checks for validateStructure (the three checks):
 //   S1  exactly one top-level `# ` title
 //   S2  version dates newest-first (descending); each version heading carries
 //       a valid `YYYY-MM-DD` date
@@ -52,7 +52,7 @@ const core = require('../core/index.cjs');
 
 // Imperative category verbs an entry must start with (exact word, imperative
 // form). Exported so the add generator templates its output from the same
-// single source (R-05); extending the list here extends both consumers.
+// single source ; extending the list here extends both consumers.
 const CATEGORY_VERBS = [
   'Add', 'Bump', 'Change', 'Chore', 'CI', 'Deprecate', 'Docs', 'Document',
   'Drop', 'Fix', 'Init', 'Move', 'Perf', 'Promote', 'Refactor', 'Remove',
@@ -73,7 +73,7 @@ const STAMP_TAIL_RE = /\s*\[(\d{4}-\d{2}-\d{2})\]\s*$/;
 const TRACE_GROUP_RE = /\(([^()]*)\)/g;
 const TRACE_WELL_FORMED_RE = /^(?:[DR]-\d+)(?:\s*[,/]\s*(?:[DR]-\d+))*$/;
 // (#24) / (#24, #31) groups are GitHub issue references, not trace refs: the
-// R-01 relaxation makes them legal bullet content, but they never satisfy the
+// relaxation makes them legal bullet content, but they never satisfy the
 // trace-ref obligation and never enter the D-nn/R-nn well-formedness check.
 const ISSUE_REF_GROUP_RE = /^#\d+(?:\s*[,/]\s*#\d+)*$/;
 const BARE_DI_RE = /\bDI-\d+/;
@@ -103,13 +103,13 @@ function hasMultiSentence(body) {
   return /[A-Za-z]/.test(m[2]);
 }
 
-// The single time source (R-08): every "today" decision in add/lint/promote
+// The single time source : every "today" decision in add/lint/promote
 // resolves through this function so UTC semantics can never drift per caller.
 function utcToday() {
   return new Date().toISOString().slice(0, 10);
 }
 
-// Commit-time issue-close neutralization (R-01): a GitHub close/fix keyword
+// Commit-time issue-close neutralization : a GitHub close/fix keyword
 // (case-insensitive: fix/fixes/fixed, close/closes/closed,
 // resolve/resolves/resolved) directly adjacent to an issue reference `#N`
 // would let a gos-built commit message close the issue by accident. The
@@ -232,9 +232,9 @@ function validateEntry(entry) {
   return { ok: errors.length === 0, errors };
 }
 
-// The R-06 three structural checks. `todayUtc` is injectable for deterministic
+// The three structural checks. `todayUtc` is injectable for deterministic
 // tests; when absent it defaults to utcToday() — the same single time source
-// the add path uses (R-08).
+// the add path uses .
 function validateStructure(text, opts) {
   const errors = [];
   const injected = opts && typeof opts.todayUtc === 'string' ? opts.todayUtc : '';
@@ -317,11 +317,11 @@ function compareTag(a, b) {
   return 0;
 }
 
-// Fold [Unreleased] entries into a new version section (D-43: no backfill;
+// Fold [Unreleased] entries into a new version section (no backfill;
 // accumulate then promote). Boundary order: skeleton integrity first
 // ('no-header'), then tag sanity ('version-rollback'), then content presence
 // ('nothing-to-release'). Entries keep their text but lose the UTC date
-// stamps — the stamp is an [Unreleased]-period marker only (R-08).
+// stamps — the stamp is an [Unreleased]-period marker only .
 function promoteUnreleased(text, tag) {
   const src = String(text == null ? '' : text);
   const parsed = parseChangelog(src);
@@ -351,7 +351,7 @@ function promoteUnreleased(text, tag) {
   return { ok: true, text: out.join('\n') };
 }
 
-// ---- D-07 (R-32): single changelog location resolver + shared lock ----
+// ---- : single changelog location resolver + shared lock
 
 const CHANGELOG_PATH_KEY = 'changelog_path';
 const DEFAULT_CHANGELOG_REL = 'CHANGELOG.md';
@@ -364,7 +364,7 @@ const DEFAULT_CHANGELOG_REL = 'CHANGELOG.md';
 // Self-root carve-out: a resolved root equal to the CLI's OWN checkout is
 // never adopted from a nested cwd — scratch directories inside the
 // installation tree (the repo's test sandboxes) are unmanaged context, not
-// project subdirs (same interference pattern `run-sections --fresh` and T61
+// project subdirs (same interference pattern `run-sections --fresh` and
 // sidestep by placing fixtures outside the self-repo). At the self root
 // itself the root still wins: running AT the checkout is project context.
 function changelogProjectRoot() {
@@ -388,10 +388,10 @@ function changelogProjectRoot() {
 }
 
 // Path-shape validation shared by `gos config changelog-path` (write side) and
-// the resolver (read side) — R1-F5 dual validation, one implementation.
+// the resolver (read side) — dual validation, one implementation.
 // Rejects: absolute paths, '..' segments (raw input AND normalized escape),
 // realpath escapes via symlink chains, anything under .git/, node_modules/,
-// or .gos/ entirely (R3-F8: agent artifacts never live at the .gos/ root —
+// or .gos/ entirely (agent artifacts never live at the .gos/ root
 // orphan scan and ship adoption would sweep the file away), and any suffix
 // other than .md. Returns { ok, rel (posix), abs } or { ok: false, reason }.
 function validateChangelogRelPath(raw, root) {
@@ -470,7 +470,7 @@ function configuredChangelogRel(root) {
 // THE resolver (folds the former changelog.cjs:38 + archive.cjs:144
 // hardcodes): absolute path of the changelog, anchored at the project root and
 // reading the project-layer config. Hand-edited config values are re-validated
-// here (R1-F5 read-side half) — invalid stored values die with fix guidance.
+// here ( read-side half) — invalid stored values die with fix guidance.
 function resolveChangelogMd() {
   const root = changelogProjectRoot();
   const rel = configuredChangelogRel(root);
@@ -482,7 +482,7 @@ function resolveChangelogMd() {
   return v.abs;
 }
 
-// ---- shared changelog lock (moved from task/changelog.cjs — D-07) ----
+// ---- shared changelog lock (moved from task/changelog.cjs — )
 // Root-anchored (was cwd-anchored) so every consumer serializes on one lock
 // file per project. Lock ordering is pinned: .gos/.lock → changelog.lock
 // (R2-4); `gos config changelog-path` (write-class dispatch already holds

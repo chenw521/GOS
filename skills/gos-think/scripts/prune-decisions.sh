@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # GENERATED views are scoped by renderer — prune works on project.json now.
-# (D-23 migration: the old 150-line DECISIONS.md file check is retired; the truth
+# ( migration: the old 150-line DECISIONS.md file check is retired; the truth
 #  source is .gos/project/project.json. Advisory only, always exit 0.)
 set -euo pipefail
 PJ=.gos/project/project.json

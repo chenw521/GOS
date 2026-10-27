@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd map,gate
-# T36: fn-level drill-down — acorn lazy require + schema v3 + callgraph/testof_fn extractors
-# Covers: D-36~D-41, R-01~R-09 (plan Phase P)
+# fn-level drill-down — acorn lazy require + schema v3 + callgraph/testof_fn extractors
 # Env: GOS (CLI path), TESTBASE (repo root for sandbox), + assert helpers sourced by runner
 T36_DIR=""
 T36_REPO=""   # live repo root (subject of the lazy/mv experiments)
@@ -39,10 +38,10 @@ t36_teardown() {
 }
 
 t36_setup
-trap t36_teardown EXIT   # [REVIEW M3] restore live-repo acorn even on Ctrl-C / assert-exit
+trap t36_teardown EXIT # restore live-repo acorn even on Ctrl-C / assert-exit
 echo "--- T36: callgraph fn-level drilling ---"
 
-# --- T36.1 (T1): lazy require — CLI boots without acorn (help = side-effect-free boot probe) ---
+# --- .1 : lazy require — CLI boots without acorn (help = side-effect-free boot probe)
 node "$GOS" help >/dev/null 2>&1
 assert_exit "T36.1a CLI boots with acorn present" 0 "$?"
 mv "$T36_REPO/node_modules/acorn" "$T36_REPO/node_modules/acorn.bak-t36"
@@ -52,7 +51,7 @@ mv "$T36_REPO/node_modules/acorn.bak-t36" "$T36_REPO/node_modules/acorn"
 node "$GOS" help >/dev/null 2>&1
 assert_exit "T36.1c CLI boots after acorn restore" 0 "$?"
 
-# --- T36.2 (T2): schema v3 + loadDeps direction-aware die ---
+# --- .2 : schema v3 + loadDeps direction-aware die
 # re-sign helper: mirror depsSelfHash (canonical JSON + sha256, trailing \n)
 t36_resign() {   # file → rewrites self_sha256 in place
   python3 - "$1" <<'PYEOF'
@@ -79,7 +78,7 @@ assert_exit "T36.2c v4 cache dies" 1 "$RC"
 assert_contains "T36.2c' v4 die says upgrade" "upgrade gos" "$OUT"
 node "$GOS" map scan >/dev/null 2>&1   # restore healthy v3 cache
 
-# --- T36.3 (T3): callgraph extraction — real edges + self-consistency ---
+# --- .3 : callgraph extraction — real edges + self-consistency
 # fn-level assertions target the LIVE repo (gos self-hosting monolith); deps.json is gitignored
 (cd "$T36_REPO" && node "$GOS" map scan >/dev/null 2>&1)
 node -e "
@@ -96,7 +95,7 @@ console.log((okPf?'OK':'BAD') + ' parse_failures empty');
 assert_contains "T36.3a callgraph >150 edges (②-5 multi-file floor)" "OK count=" "$(cat t363.txt)"
 assert_contains "T36.3b real edge writeDeps->runExtractors (same-file)" "OK writeDeps" "$(cat t363.txt)"
 assert_contains "T36.3c parse_failures empty" "OK parse_failures" "$(cat t363.txt)"
-# self-consistency (R-03/F-H4): acorn top-level FunctionDeclaration count === ^(async )?function regex count
+# self-consistency ( /F-H4): acorn top-level FunctionDeclaration count === ^(async )?function regex count
 node -e "
 const fs = require('fs');
 const path = require('path');
@@ -115,11 +114,11 @@ console.log((fns.size > 140 ? 'OK' : 'BAD') + ' distinct-fns=' + fns.size);   //
 assert_contains "T36.3d self-consistency acorn==regex" "OK acorn=" "$(cat t363b.txt)"
 assert_contains "T36.3e distinct fn nodes >140" "OK distinct-fns=" "$(cat t363b.txt)"
 
-# --- T36.4 (T4): testof_fn annotations — clone isolation + dead-annotation soft warning ---
+# --- .4 : testof_fn annotations — clone isolation + dead-annotation soft warning
 T36_CLONE="$TESTBASE/clone-$RANDOM-t36"
 git clone -q "$T36_REPO" "$T36_CLONE" 2>/dev/null
 ln -s "$T36_REPO/node_modules" "$T36_CLONE/node_modules"
-# pre-state: clone inherits the live repo's pilot annotations (≥3 sections since T36.8)
+# pre-state: clone inherits the live repo's pilot annotations (≥3 sections since .8)
 (cd "$T36_CLONE" && node "$GOS" map scan >/dev/null 2>&1)
 TFN=$(node -e "console.log(((require(process.argv[1]+'/.gos/cache/deps.json').semantic.testof_fn)||[]).length)" "$T36_CLONE")
 [ "$TFN" -ge 3 ] && { echo "  ✓ T36.4a clone inherits live testof_fn edges ($TFN)"; PASS=$((PASS+1)); } || { echo "  ✗ T36.4a clone testof_fn=$TFN (want ≥3)"; FAIL=$((FAIL+1)); }
@@ -143,7 +142,7 @@ CLONE_T=$(node -e "const d=require(process.argv[1]+'/.gos/cache/deps.json'); con
 assert_eq "T36.4e cmd family untouched by fn annotations" "$LIVE_T" "$CLONE_T"
 rm -rf "$T36_CLONE"
 
-# --- T36.5 (T5): fn closure — transitive must-run + parse warning + json envelope ---
+# --- .5 : fn closure — transitive must-run + parse warning + json envelope
 # clone: annotate cmdMap → closure on its callee pathOf must surface that section (transitive merge)
 T36_CLONE="$TESTBASE/clone5-$RANDOM-t36"
 git clone -q "$T36_REPO" "$T36_CLONE" 2>/dev/null
@@ -178,7 +177,7 @@ OUT=$(cd "$T36_CLONE" && node "$GOS" map closure bin/gos.cjs#fn:totallyFakeFn 2>
 assert_contains "T36.5h fn not in graph advisory" "isolated or out-of-graph" "$OUT"
 rm -rf "$T36_CLONE"
 
-# --- T36.6 (T6): gate codemap — health FAILs are data-broken only; absent cache is advisory ---
+# --- .6 : gate codemap — health FAILs are data-broken only; absent cache is advisory
 (cd "$T36_REPO" && node "$GOS" gate codemap >/dev/null 2>&1)
 assert_exit "T36.6a healthy repo → gate codemap exit 0" 0 "$?"
 OUT=$(cd "$T36_REPO" && node "$GOS" gate codemap 2>&1)
@@ -188,7 +187,7 @@ T36_CLONE="$TESTBASE/clone6-$RANDOM-t36"
 git clone -q "$T36_REPO" "$T36_CLONE" 2>/dev/null
 ln -s "$T36_REPO/node_modules" "$T36_CLONE/node_modules"
 (cd "$T36_CLONE" && node "$GOS" map scan >/dev/null 2>&1 && git add -A >/dev/null 2>&1 && git -c user.email=t@t -c user.name=t commit -qm annot)
-# gate requires an active task — seed one headlessly (D-29: GOS_HEADLESS auto-confirms)
+# gate requires an active task — seed one headlessly (GOS_HEADLESS auto-confirms)
 (cd "$T36_CLONE" && node "$GOS" init 1 "codemap-gate-test" >/dev/null 2>&1)
 node -e "
 const fs=require('fs');
@@ -229,7 +228,7 @@ OUT=$(cd "$T36_REPO" && node "$GOS" map closure "bin/gos.cjs#fn:pathOf" --graph 
 assert_contains "T36.6i closure --graph renders fn nodes" "fn:pathOf" "$OUT"
 rm -rf "$T36_CLONE"
 
-# --- T36.7 (T7): render drill-down — full graph excludes fn family; --fn neighborhood; show fn view ---
+# --- .7 : render drill-down — full graph excludes fn family; --fn neighborhood; show fn view
 (cd "$T36_REPO" && node "$GOS" map scan >/dev/null 2>&1)
 N=$(cd "$T36_REPO" && node "$GOS" map graph 2>/dev/null | grep -c '#fn:')
 assert_eq "T36.7a full graph has 0 fn nodes (default off)" "0" "$N"
@@ -245,7 +244,7 @@ assert_contains "T36.7f show dedupes repeated call sites" "$(echo "$OUT" | grep 
 grep -q "callgraph (⑥" "$T36_REPO/.gos/codebase/network.md" && { echo "  ✓ T36.7g network.md has fn family stats"; PASS=$((PASS+1)); } || { echo "  ✗ T36.7g network.md fn family missing"; FAIL=$((FAIL+1)); }
 grep -q "fn quick reference" "$T36_REPO/.gos/codebase/network.md" && { echo "  ✓ T36.7h network.md has fn quick-reference"; PASS=$((PASS+1)); } || { echo "  ✗ T36.7h fn quick-reference missing"; FAIL=$((FAIL+1)); }
 
-# --- T36.8 (T8): trap fixtures — exact edge-set assertions in an isolated clone (R-03 blind spots ARE assertions) ---
+# --- .8 : trap fixtures — exact edge-set assertions in an isolated clone ( blind spots ARE assertions)
 mkdir -p "$TESTBASE/traps-src"
 cat > "$TESTBASE/traps-src/trap1-redecl.js" <<'EOF'
 function dup(){ return 1; }

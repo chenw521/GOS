@@ -187,7 +187,7 @@ Full capability: `gos help [--json]`
 gos gate semantic                 # bidirectional coverage + diff-hit + impact closure
 gos map closure <file> --semantic # what your change co-determines (fn call-graph)
 gos lessons add --type project "..." # repo memory that survives sessions
-gos truth verify T1 --replay      # evidence from real stdout, not claims
+gos truth verify --replay # evidence from real stdout, not claims
 gos track <path-under-.gos>       # atomic ignored->tracked flip (gitignore negation + census + manifest; rollback-safe)
 gos track --knowledge             # preset: flip the .gos/codebase guide trio + born-at stamps
 gos gap migrate                   # cure stage-back (auto) mirrors into the gap-history ledger

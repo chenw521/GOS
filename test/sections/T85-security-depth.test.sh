@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:file skills/gos-ship/scripts/security.sh
-# T85: security.sh depth-aware DANGER classifier (D-11 / R-25).
-# The spec T1 truth table, copied verbatim as cases — FAIL rows must trip the
+# security.sh depth-aware DANGER classifier.
+# The spec truth table, copied verbatim as cases — FAIL rows must trip the
 # gate (exit 2 + "DANGEROUS pattern" marker), PASS rows must stay clean
 # (exit 0 + "security gate: clean"). Plus regression rows pinning the three
 # untouched DANGER alternations, the secrets branch, and flag/target
@@ -58,7 +58,7 @@ t85_check() {
 
 echo "--- T85: security.sh depth-aware DANGER (D-11 truth table) ---"
 
-# --- spec T1 FAIL rows (verbatim) ---
+# --- spec FAIL rows (verbatim)
 t85_check "FAIL: rm -rf /"                       fail 'rm -rf /'
 t85_check "FAIL: rm -rf /*"                      fail 'rm -rf /*'
 t85_check "FAIL: rm -fr / (flag order swap)"     fail 'rm -fr /'
@@ -74,14 +74,14 @@ t85_check "FAIL: rm -rf /run"                    fail 'rm -rf /run'
 t85_check "FAIL: rm -rf /mnt/backup (depth-2 mount root)" fail 'rm -rf /mnt/backup'
 t85_check "FAIL: continuation-split /etc target" fail $'rm -rf \\\n  /etc'
 
-# --- spec T1 PASS rows (verbatim) ---
+# --- spec PASS rows (verbatim)
 t85_check "PASS: rm -rf /tmp/build-cache"        pass 'rm -rf /tmp/build-cache'
 t85_check "PASS: rm -rf /var/lib/apt/lists/*"    pass 'rm -rf /var/lib/apt/lists/*'
 t85_check "PASS: rm -rf /home/user/.cache"       pass 'rm -rf /home/user/.cache'
 t85_check "PASS: rm -rf /opt/layer-cache"        pass 'rm -rf /opt/layer-cache'
 t85_check "PASS: rm -rf \${HOME}/x (post-expansion depth-2 non-mount)" pass 'rm -rf ${HOME}/x'
 
-# --- D-11 card, algorithm-derivable edges ---
+# --- card, algorithm-derivable edges
 t85_check "FAIL: rm -rf ~ (bare tilde)"          fail 'rm -rf ~'
 t85_check "FAIL: rm -rf \${HOME} (brace form, whole-target var root)" fail 'rm -rf ${HOME}'
 t85_check "FAIL: rm -rf ~/* (wholesale home contents)" fail 'rm -rf ~/*'
@@ -130,7 +130,7 @@ else
   echo "  ✗ SAFE_ROOTS table missing from security.sh"; FAIL=$((FAIL+1))
 fi
 
-# --- D-11 fail-closed: classifier failure must FAIL the gate, never pass (review #6) ---
+# --- fail-closed: classifier failure must FAIL the gate, never pass (review #6)
 FC_BIN="$T85_DIR/fcbin"; mkdir -p "$FC_BIN"
 printf '#!/usr/bin/env bash\nexit 3\n' > "$FC_BIN/awk"; chmod +x "$FC_BIN/awk"
 printf 'rm -rf /tmp/x\n' > "$FIX"

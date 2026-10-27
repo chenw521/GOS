@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/knowledge/phase.cjs#fn:projectMdSectionReport bin/lib/knowledge/phase.cjs#fn:projectMdFilled bin/lib/task/archive.cjs#fn:cmdArchive bin/lib/task/context.cjs#fn:cmdContext
 # gos-map:cmd archive,context
-# T90: PROJECT.md gate (D-06/R-33) — approve-archive pre-flight refuses a TODO-only
+# PROJECT.md gate — approve-archive pre-flight refuses a TODO-only
 #      skeleton / three junk lines / a section-less file before any mutation; a filled
 #      PROJECT.md passes, joins `gos context think` read_files, and init seeds TODO
 #      guidance that brownfield detection ignores.
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by the runner;
-#      direct invocation defines its own fallbacks (T39 pattern).
+# direct invocation defines its own fallbacks ( pattern).
 PASS=0
 FAIL=0
 command -v assert_exit >/dev/null || assert_exit() {
@@ -60,7 +60,7 @@ json.dump(s,open('.gos/state.json','w'),indent=2)"
 t90_setup
 echo "--- T90: PROJECT.md gate (TODO markers + approve-archive pre-flight + THINK read_files) ---"
 
-# --- T90.0: source contract — init seeds TODO guidance lines ---
+# --- .0: source contract — init seeds TODO guidance lines
 TODON=$(grep -c 'TODO' "$GOS_ROOT/bin/lib/task/init.cjs" || true)
 if [ "${TODON:-0}" -ge 1 ]; then
   echo "  ✓ T90.0a init.cjs carries TODO guidance (count=$TODON)"; PASS=$((PASS+1))
@@ -68,7 +68,7 @@ else
   echo "  ✗ T90.0a init.cjs carries no TODO guidance"; FAIL=$((FAIL+1))
 fi
 
-# --- T90.1: seeded skeleton is TODO-marked, brownfield-ignored, NOT pushed to THINK ---
+# --- .1: seeded skeleton is TODO-marked, brownfield-ignored, NOT pushed to THINK
 OUT=$(node "$GOS" init 4 "projmd gate" --project 2>&1)
 assert_file "T90.1a PROJECT.md seeded" ".gos/project/PROJECT.md"
 if grep -qF 'TODO:' .gos/project/PROJECT.md 2>/dev/null; then
@@ -88,7 +88,7 @@ else
   echo "  ✓ T90.1d skeleton PROJECT.md withheld from THINK read_files"; PASS=$((PASS+1))
 fi
 
-# --- T90.2: TODO-only skeleton refused at approve-archive pre-flight, zero mutation ---
+# --- .2: TODO-only skeleton refused at approve-archive pre-flight, zero mutation
 t90_ship_ready
 set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
 assert_exit "T90.2a TODO-only skeleton refuses archive" 1 "$RC"
@@ -100,7 +100,7 @@ else
   echo "  ✓ T90.2d validate-then-mutate: no dest materialized"; PASS=$((PASS+1))
 fi
 
-# --- T90.3: three junk non-TODO lines (-/x/n/a) still refuse ---
+# --- .3: three junk non-TODO lines (-/x/n/a) still refuse
 cat > .gos/project/PROJECT.md <<'EOF'
 # Project
 
@@ -119,7 +119,7 @@ set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
 assert_exit "T90.3a junk lines refuse archive" 1 "$RC"
 assert_contains "T90.3b gate banner names PROJECT.md gate" "ARCHIVE BLOCKED (PROJECT.md gate)" "$OUT"
 
-# --- T90.4: section-less file refuses (no vacuous pass) ---
+# --- .4: section-less file refuses (no vacuous pass)
 cat > .gos/project/PROJECT.md <<'EOF'
 # Project
 
@@ -131,7 +131,7 @@ set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
 assert_exit "T90.4a section-less file refuses archive" 1 "$RC"
 assert_contains "T90.4b gate banner names PROJECT.md gate" "ARCHIVE BLOCKED (PROJECT.md gate)" "$OUT"
 
-# --- T90.5: filled PROJECT.md joins THINK read_files and the archive passes ---
+# --- .5: filled PROJECT.md joins THINK read_files and the archive passes
 cat > .gos/project/PROJECT.md <<'EOF'
 # Project
 

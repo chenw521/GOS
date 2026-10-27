@@ -2,7 +2,7 @@
 # templates/git/node masters — the node layer is exempt from the master-diff
 # invariant, this repo keeps its own CI file). Never uses pull_request_target.
 #
-# Core trio per R-09: gate (--audit: CI has no task state), sections
+# Core trio per : gate (--audit: CI has no task state), sections
 # regression, npm pack manifest integrity. Plus master-consistency (re-render
 # the universal layer and require a zero diff), commitlint on PRs, and the
 # aggregate-push guard on pushes to main.
@@ -28,6 +28,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
+        with:
+          # the ai-trace shrink guard diffs the whitelist against origin/main
+          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -40,6 +43,9 @@ jobs:
 
       - name: ascii filename guard (tracked names pure ASCII)
         run: bash test/checks/ascii-filenames.sh
+
+      - name: ai-trace whitelist shrink guard (tracker may only shrink)
+        run: bash test/checks/ai-trace-shrink.sh
 
   sections:
     name: Sections (Node ${{ matrix.node-version }})

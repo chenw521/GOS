@@ -167,7 +167,7 @@ function inLinkedWorktree() {
   try { return fs.realpathSync(gd).toString() !== fs.realpathSync(cdAbs).toString(); } catch { return false; }
 }
 
-// repo_id of every identifiable remote URL (D-18 canonicalization per remote).
+// repo_id of every identifiable remote URL ( canonicalization per remote).
 // Membership is a SET question — origin preference only governs STAMPING.
 function remoteRepoIds(rootDir) {
   const names = (gitFact(['remote'], rootDir) || '').split(/\s+/).filter(Boolean);
@@ -233,7 +233,7 @@ function guardCwd(cls, cmdName, breakLock) {
   const ids = remoteRepoIds(root);
   const stamped = stateL.repo_id == null ? null : String(stateL.repo_id);
   if (!ids.length) {
-    // D-18: no usable remotes → identity unverifiable → advisory pass (no die).
+ // no usable remotes → identity unverifiable → advisory pass (no die).
     // repo_id null IS the recorded advisory (stamped at init) — silent pass; a
     // STAMPED binding that cannot be verified is the case worth one warning
     // (stderr only — stdout stays machine-clean).

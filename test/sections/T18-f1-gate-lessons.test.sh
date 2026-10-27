@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd gate,lessons
-# T18: F-1 inversion exemption (json audit) + gate lessons five invariants + dual-side expiry
-# Covers: D-34, D-64, B-8/B-11/B-16/B-21, R4-F7/R4-F8
+# inversion exemption (json audit) + gate lessons five invariants + dual-side expiry
 # Env: GOS, TESTBASE, assert helpers. Global-path assertions use fake-HOME [R3-F7]
 T18_DIR=""
 T18_HOME=""
@@ -39,7 +38,7 @@ t18_g init 3 "t18 f1 gate lessons" >/dev/null 2>&1
 # incident state: gaps + redteam findings + archive approval + ship check skipped
 t18_mkstate "s['gaps']=[{'stage':'VERIFY','what':'minor gap'}]; s['redteam_rounds']=[{'round':1,'findings':2}]; s.setdefault('approvals',{})['ARCHIVE']=True"
 
-# --- T18.1: incident task, no lesson today, no skip → archive exit 1 (F-1 two-of-two missing) ---
+# --- .1: incident task, no lesson today, no skip → archive exit 1 ( two-of-two missing)
 export GOS_SKIP_SHIP_CHECK=1
 OUT=$(t18_g archive 2>&1); RC=$?
 assert_exit "incident archive without lesson/skip → exit 1" "1" "$RC"
@@ -87,7 +86,7 @@ assert_contains "still demands lesson or fresh skip" "lessons skip --reason" "$O
 cd "$T18_DIR" || exit 1
 rm -rf "$T18_STALE"
 
-# --- T18.2c: skip never touches .changes.md (sealed archive), symlink moot ---
+# --- .2c: skip never touches .changes.md (sealed archive), symlink moot
 t18_g init 3 "t18 symlink changes" >/dev/null 2>&1
 rm -f real-changes.md && echo "victim" > real-changes.md
 rm -f .changes.md; ln -s real-changes.md .changes.md

@@ -52,7 +52,6 @@ function verifyCommandRegistry() {
     if (!e) fail(`sibc.SUBCLASS_OVERRIDES '${key}' unknown command`);
     else if (!(e.subs || []).some(s => s.split(' ')[0] === sub)) fail(`sibc.SUBCLASS_OVERRIDES '${key}' sub not listed in ${cmd}.subs`);
   }
-  // #6 core set ≤ 10 (D-20)
   const coreN = Object.values(core.COMMANDS).filter(e => e.core).length;
   if (coreN > 10) fail(`core set has ${coreN} entries (>10, D-20)`);
 }

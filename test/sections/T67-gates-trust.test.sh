@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/gate.cjs#fn:cmdGate bin/lib/ops/gate.cjs#fn:cmdGateTrust bin/lib/ops/setup.cjs#fn:seedGatesExamples
 # gos-map:cmd gate,setup
-# T67: custom-gate hash-trust layer + teaching templates + setup seeding
-# Sandboxes live OUTSIDE any GOS-managed tree (mktemp base, T61 precedent):
+# custom-gate hash-trust layer + teaching templates + setup seeding
+# Sandboxes live OUTSIDE any GOS-managed tree (mktemp base, precedent):
 # stateless scenarios (pre-init trust seeding, stateless --audit) are correctly
 # refused by the cwd guard when nested under a managed ancestor like TESTBASE.
 T67_DIR=""

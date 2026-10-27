@@ -1,18 +1,18 @@
-// core/locales/zh.cjs — zh-CN catalog (P15 D-63 translation layer)
+// core/locales/zh.cjs — zh-CN catalog (P15 translation layer)
 // Rules: command tokens NEVER embedded literally — use {cmd:<name>} placeholders
-// resolved from the CLI registry (section T74 lint enforces); locale-invariant
+// resolved from the CLI registry (section lint enforces); locale-invariant
 // fields (codes/paths/commands/✓✗) never appear here; missing keys fall back
 // to en with an advisory (never crash, never empty). Frozen carve-out keys are
 // deliberately NOT translated (byte-stability; they fall back to en).
 'use strict';
 
-// contract.* frozen strings are English by design (D-68: frozen surface, one
+// contract.* frozen strings are English by design (frozen surface, one
 // final migration then byte-stable) — zh entries REFERENCE the CONTRACTS
 // source (copies forbidden), so zh render equals en for these keys.
 const { CONTRACTS } = require('../state.cjs');
 
 module.exports = {
-  // ---- gate-family actionable entries, keyed by failure code (D-66 join) ----
+ // ---- gate-family actionable entries, keyed by failure code
   'gate.coverage-uncovered': {
     what: '已记录的决策没有任何任务覆盖',
     why: '没有任务落地的决策只是一句空话',
@@ -58,7 +58,6 @@ module.exports = {
   'status.localeLine': '语言: {locale}（来源: {source}）— 可用 GOS_LANG 或 {cmd:setup} --lang <en|zh-CN> 切换',
   'status.noActiveTask.next': '下一步: 运行 `gos init <level> "<意图>"` 开始一个任务',
 
-  // ---- logs 视图（D-02/R-35：运行时账本渲染；路径与计数为插值——账本文件本身与语言无关）----
   'logs.receipts.title': '真相回执 — {path}（显示最近 {n} 条，共 {total} 条）',
   'logs.exemptions.title': '门禁豁免 — {path}（显示最近 {n} 条，共 {total} 条）',
   'logs.audit.title': '边审计 — {path}（显示最近 {n} 条，共 {total} 条）',
@@ -78,7 +77,6 @@ module.exports = {
   'setup.lang.saved': '语言已保存: {locale}（来源: {source}）',
   'help.contractKeysHeader': '  契约键（非命令，测试断言用）:',
 
-  // ---- lessons 归因 (D-67; 仅控制台本地化——md 视图恒 en, F8) ----
   'lessons.attribution': 'lessons: 已加载 {projN} 条项目 + {globN} 条全局（项目: {projPath}; 全局: {globPath}）— 即将过期: {expiring}',
   'lessons.unavailable': 'lessons: 不可用（{reason}）——最常用的命令绝不能被坏文件卡死；修复: `gos lessons list` 查看详情',
   'lessons.stageSubsetHeader': '本阶段相关教训（标记 #{stage}）:',
@@ -86,10 +84,8 @@ module.exports = {
   'lessons.projectLabel': '仓库知识 · 永不过期',
   'lessons.modelLabel': '跨仓库行为 · 到期自动过期',
 
-  // ---- T5/D-17 语言边界（受跟踪存储仅限英文）----
   'langBoundary.trackedStore': '语言边界：{file} 受 git 跟踪——跟踪态的 GOS 知识文件仅允许英文，保存前请将内容改写为英文（未跟踪的存储不受语言限制）',
 
-  // ---- T6/D-16 缺口迁移/历史 + concerns 锚点自助重建谓词 ----
   'gap.migrate.removed': '✓ 已将 {n} 条 stage-back 镜像行从 concerns.md 迁入缺口历史台账——state.gaps 仍是唯一事实源',
   'gap.migrate.none': 'concerns.md 中没有 (auto) 镜像行——无需迁移',
   'gap.migrate.dupes': '⚠ {n} 条镜像行已在台账中（按文本去重）——从 concerns.md 清除但不再重复追加',
@@ -97,7 +93,6 @@ module.exports = {
   'gap.history.skipped': '⚠ 已跳过 {n} 行格式错误的台账行（.gos/logs/gap-history.ndjson）',
   'concerns.err.anchorMissingDirty': 'concerns.md 受 git 跟踪但 .concerns-anchors.json 缺失，且文件与 HEAD blob 不一致——疑似手改；请用 git checkout 恢复，或先提交该改动（禁止借此重建，防止洗白）',
 
-  // ---- T7a/D-15 gos track——校验过的 忽略→跟踪 翻转（校验失败、预扫描报告、手术验证、成功行）----
   'track.err.notRepo': 'track: 不是 git 仓库——gos track 只在 git 工作树内翻转文件',
   'track.err.notFound': 'track: {path} 无法解析为本仓库内的常规文件（不存在、是目录、或在工作树之外）',
   'track.err.scope': 'track: {path} 在 .gos/ 范围之外——gos track 只翻转 .gos/ 下的文件',
@@ -117,7 +112,6 @@ module.exports = {
   'track.surgery.verifyFail': 'track: gitignore 手术验证失败——忽略集差异为 [{diff}]，应恰好等于目标；已回滚，未做任何更改',
   'track.done.surgery': '✓ 已跟踪 {path}——.gos/.gitignore 否定规则 {negation} 验证通过（忽略集差异 == 目标），{census}，已通过 git add 暂存',
   'track.done.noSurgery': '✓ 已跟踪 {path}——目标未被忽略（无需 gitignore 手术），{census}，已通过 git add 暂存',
-  // ---- T7b/D-15 翻转事务：清单、adopt/无操作（RT3-F7）、预设 ----
   'track.done.manifest': '  翻转清单：{path} 已记录于 HEAD {head}（随翻转一并暂存）',
   'track.adopt.done': '✓ 已收编 {path}——已被 git 跟踪但缺清单记录；adopt 记录已追加至 .gos/track-manifest.json（{census}），已通过 git add 暂存',
   'track.noop.done': '✓ {path} 已被跟踪——清单记录存在，{census}；经验证的无操作，零改动',
@@ -125,8 +119,7 @@ module.exports = {
   'track.preset.err.missing': 'track --knowledge: {path} 缺失——预设要求三份导览文件齐备（.gos/codebase/structure.md、conventions.md、concerns.md）',
   'track.knowledge.done': '✓ knowledge 预设完成：{n} 个文件已加 born-at: {head} 戳',
 
-  // ---- T8/D-15 gate 翻转对账腿（tracked .gos 文件的 census/git/清单三方
-  // 一致；失败码接入 D-66 本地化渲染器）----
+ // ---- / gate 翻转对账腿（tracked .gos 文件的 census/git/清单三方
   'gate.flip-git-probe-failed': {
     what: '翻转对账腿无法确立 git 事实',
     why: '故障关闭：没有探测事实时 gate 拒绝对账，绝不猜测',
@@ -163,6 +156,7 @@ module.exports = {
   "setup.onboard.agentsWritten": "┃ ✓ 已写入 {path}",
   "setup.onboard.checkerDesc": "┃  checker（审查员，team 编制的灵魂）：用与主力不同的模型交叉验证",
   "setup.onboard.checkerPrompt": "    checker 模型 [回车={suggestion}]: ",
+  "setup.onboard.codingHint": "┃ 把 coding-standards 书集种入本仓库：gos init coding（命令原样，各语言一致）",
   "setup.onboard.doneRestart": "│ 重启你的 AI 助手，然后：                                        │",
   "setup.onboard.doneStart": "│   开始：对它说 \"用 GOS 帮我 ...\"  或输入 /gos                  │",
   "setup.onboard.doneTitle": "╭─ 完成 ────────────────────────────────────────────────────────╮",
@@ -212,8 +206,7 @@ module.exports = {
   "map.allowlist.dirViolation": "require 方向违规：{from} → {to}（模块向 {fr}→{tr} 不在白名单{drift}）",
   "map.allowlist.moduleDrift": "；模块漂移——端点不在任何已登记 moduleRoot 下",
 
-  // ---- brownfield 接管报告（T6：D-90/D-92/D-98/D-100；状态/标志/退出码
-  // 令牌与 JSON 字段名保持原样不翻译；命令一律用 {cmd:…} 占位符） ----
+  // 令牌与 JSON 字段名保持原样不翻译；命令一律用 {cmd:…} 占位符
   'brownfield.fatal.line': '✗ {msg}',
   'brownfield.title': 'brownfield 接管报告 — {root}',
   'brownfield.hooksClass.unset': 'core.hooksPath：未设置——种下的钩子处于休眠（git 读 .git/hooks/；GOS 绝不写 .git/hooks/ 或 git config）',

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:cmd map,gate
 # gos-map:fn bin/lib/map/engine.cjs#fn:writeDeps bin/lib/ops/gate.cjs#fn:cmdGate
-# T49: C4 baseline alarm + admission protocol
+# C4 baseline alarm + admission protocol
 # A: fn removal -> full list + fingerprint; B: scan writes no history; C: reset without approve refused; D: approve -> single-consume reset + peak archived; E: large-repo dir aggregation
 T49_DIR=""
 
@@ -19,7 +19,7 @@ gen_fns() { # $1=file $2=prefix $3=count
 t49_setup
 echo "--- T49: C4 baseline alarm (D-30) ---"
 
-# --- T49.A: small repo (5 fn), remove 1 fn -> full list + fingerprint change ---
+# --- .A: small repo (5 fn), remove 1 fn -> full list + fingerprint change
 mkdir -p small/lib && cd "$T49_DIR/small" || exit 1
 git init -q . && git commit -q --allow-empty -m root
 node "$GOS" init 1 "t49 small" >/dev/null 2>&1
@@ -32,19 +32,19 @@ assert_contains "A1 fn missing vs peak full list (small repo)" "fn missing vs pe
 assert_contains "A2 fingerprint-changed row" "fingerprint changed" "$GOUT"
 assert_contains "A3 list includes the deleted fn" "fn1" "$GOUT"
 
-# --- T49.B: scan adds no history entries (scan has no write access to history) ---
+# --- .B: scan adds no history entries (scan has no write access to history)
 HIST=".gos/codebase/edge-history.ndjson"
 if [ -f "$HIST" ]; then N1=$(wc -l < "$HIST"); else N1=0; fi
 set +e; node "$GOS" map scan >/dev/null 2>&1; set -e
 if [ -f "$HIST" ]; then N2=$(wc -l < "$HIST"); else N2=0; fi
 assert_eq "B1 scan adds no history entry" "$N1" "$N2"
 
-# --- T49.C: reset without approve -> refused ---
+# --- .C: reset without approve -> refused
 set +e; ROUT=$(node "$GOS" map baseline reset --reason "no approve" 2>&1); RRC=$?; set -e
 assert_exit "C1 reset without approve is refused (exit 1)" 1 "$RRC"
 assert_contains "C2 refusal message carries the approve pointer" "approve baseline-reset" "$ROUT"
 
-# --- T49.D: approve -> reset single consumption + peak archived + re-anchor ---
+# --- .D: approve -> reset single consumption + peak archived + re-anchor
 set +e; AOUT=$(node "$GOS" approve baseline-reset --reason "legit re-anchor" 2>&1); ARC=$?; set -e
 assert_exit "D1 approve baseline-reset succeeds" 0 "$ARC"
 set +e; ROUT2=$(node "$GOS" map baseline reset --reason "legit re-anchor" 2>&1); RRC2=$?; set -e
@@ -58,7 +58,7 @@ assert_contains "D4 peak re-anchored to current" "OK peak==current" "$(cat t49d.
 set +e; ROUT3=$(node "$GOS" map baseline reset --reason "legit re-anchor" 2>&1); RRC3=$?; set -e
 assert_exit "D5 single-consume: second reset is refused" 1 "$RRC3"
 
-# --- T49.E: large repo (>50 fn) per-directory aggregation ---
+# --- .E: large repo (>50 fn) per-directory aggregation
 cd "$T49_DIR" || exit 1
 mkdir -p big/lib/dirA big/lib/dirB && cd "$T49_DIR/big" || exit 1
 git init -q . && git commit -q --allow-empty -m root

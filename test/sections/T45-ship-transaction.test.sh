@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/task/archive.cjs#fn:cmdArchive bin/lib/ops/doctor.cjs#fn:detectOrphans
 # gos-map:cmd archive
-# T45: ship two-phase transaction — normal archive / rollback / idempotent re-entry / mtime exemption / owned-orphan re-homing
+# ship two-phase transaction — normal archive / rollback / idempotent re-entry / mtime exemption / owned-orphan re-homing
 T45_DIR=""
 
 t45_setup() {
@@ -31,7 +31,7 @@ seed_ship_ready() {
   node "$GOS" approve archive >/dev/null 2>&1
 }
 
-# --- T45.1 normal archive: task/<id>/ dir moves into archive + strays adopted into orphans/ + rescan clean ---
+# --- .1 normal archive: task/<id>/ dir moves into archive + strays adopted into orphans/ + rescan clean
 seed_ship_ready a
 echo junk > .gos/old-stray.txt
 sleep 1
@@ -54,7 +54,7 @@ else
   echo "  ✗ T45.1b archived=$([ -f "$AD/task/$TID_REL/spec.md" ] 2>/dev/null && echo yes || echo no) tid=$TID_REL"; FAIL=$((FAIL+1))
 fi
 
-# --- T45.2 rollback: injected staging write failure -> original paths kept + die ---
+# --- .2 rollback: injected staging write failure -> original paths kept + die
 seed_ship_ready b
 echo stray > .gos/old2.txt; touch -d "10 minutes ago" .gos/old2.txt
 set +e
@@ -67,7 +67,7 @@ else
   echo "  ✗ T45.2 spec lost after failed ship (SPEC2=$SPEC2)"; FAIL=$((FAIL+1))
 fi
 
-# --- T45.3 idempotent re-entry: manual staging leftover -> next archive restores first, then finishes ---
+# --- .3 idempotent re-entry: manual staging leftover -> next archive restores first, then finishes
 seed_ship_ready c
 mkdir -p .gos/.ship-staging/task
 SPEC3="$(node "$GOS" context think 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["spec"])')"
@@ -81,7 +81,7 @@ else
   echo "  ✗ T45.3 rc=$RC3 recovered=$(printf '%s' "$OUT3" | grep -c idempotent) staging_left=$([ -d .gos/.ship-staging ] && echo yes || echo no)"; FAIL=$((FAIL+1))
 fi
 
-# --- T45.4 mtime exemption: orphans younger than 5min are skipped, rescan assertion skipped too ---
+# --- .4 mtime exemption: orphans younger than 5min are skipped, rescan assertion skipped too
 seed_ship_ready d
 echo fresh > .gos/fresh-orphan.txt   # mtime=now -> must be exempt
 set +e
@@ -94,7 +94,7 @@ else
   echo "  ✗ T45.4 rc=$RC4 fresh_at_origin=$([ -f .gos/fresh-orphan.txt ] && echo yes || echo no)"; FAIL=$((FAIL+1))
 fi
 
-# --- T45.4b phase-b injected failure: rename dies midway -> rollback keeps the task in place (full staging transaction path) ---
+# --- .4b phase-b injected failure: rename dies midway -> rollback keeps the task in place (full staging transaction path)
 seed_ship_ready d2
 set +e
 OUT4B="$(GOS_SKIP_SHIP_CHECK=1 GOS_TEST_BREAK_SHIP=phase-b node "$GOS" archive 2>&1)"; RC4B=$?
@@ -106,7 +106,7 @@ else
   echo "  ✗ T45.4b rc=$RC4B spec=$SPEC4B"; FAIL=$((FAIL+1))
 fi
 
-# --- T45.5 owned-orphan re-homing: task/<code>/ leftover -> pre-seeded legacy phase-w archive directory ---
+# --- .5 owned-orphan re-homing: task/<code>/ leftover -> pre-seeded legacy phase-w archive directory
 seed_ship_ready e
 mkdir -p .gos/archive/2026-01-01-v0.0.0-phase-w-legacy/gone
 mkdir -p .gos/task/w

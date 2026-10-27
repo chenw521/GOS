@@ -1,9 +1,9 @@
 // ops/track — `gos track`: validated atomic ignored→tracked flip. T7a core
-// steps 1-5 of spec §3.4 (D-15/D-14) + T7b transaction layer: flip manifest
-// (.gos/track-manifest.json, per-line {ts,path,head} records, RT2-F5),
+// steps 1-5 of spec + T7b transaction layer: flip manifest
+// (.gos/track-manifest.json, per-line {ts,path,head} records),
 // rename-style backups under .gos/cache/track-backup/ with rollback on ANY
-// mid-transaction failure (ENOSPC-safe: rollback = rename back, RT2-F10),
-// adopt/no-op bookkeeping for already-tracked targets (RT3-F7) and the
+// mid-transaction failure (ENOSPC-safe: rollback = rename back),
+// adopt/no-op bookkeeping for already-tracked targets and the
 // --knowledge preset (guide trio flip + idempotent born-at stamp).
 // Transaction shape: die-before-touch validation (canonical path, no-symlink
 // components, never-track zones, .env secrets, unborn HEAD, case guards) →
@@ -25,20 +25,20 @@ const { execFileSync } = require('node:child_process');
 
 const core = require('../core/index.cjs');
 
-// Never-track zones (spec §3.4 step 1): machine-local by design — flipping a
+// Never-track zones (spec step 1): machine-local by design — flipping a
 // file here would leak caches/audit ledgers or fight the runtime (lock,
-// staging). Shared with the T7b transaction and the T8 gate reconcile leg.
+// staging). Shared with the T7b transaction and the gate reconcile leg.
 const TRACK_NEVER_ZONES = ['.gos/archive/', '.gos/logs/', '.gos/cache/', '.gos/.ship-staging/'];
 
 // Never-track files: .gos/.lock fights the runtime; .gos/track-manifest.json
 // is machine-managed by the flip transaction itself (a user flip on it would
-// race the ledger) — the T8 gate leg exempts never-files from the
+// race the ledger) — the gate leg exempts never-files from the
 // manifest-record requirement, which is how the ledger tracks itself.
 const TRACK_NEVER_FILES = ['.gos/.lock', '.gos/track-manifest.json'];
 
-// Flip manifest (spec §3.4 step 6, RT2-F5) — tracked NDJSON ledger, one
+// Flip manifest (spec step 6) — tracked NDJSON ledger, one
 // {ts, path, head} record per line (adopt records add "adopted": true).
-// Consumed by the T8 gate flip-reconcile leg and the adopt/no-op resolver.
+// Consumed by the gate flip-reconcile leg and the adopt/no-op resolver.
 const TRACK_MANIFEST_REL = '.gos/track-manifest.json';
 
 // Rename-style backup zone (GOS_PATHS key track_backup): machine-local,
@@ -46,12 +46,12 @@ const TRACK_MANIFEST_REL = '.gos/track-manifest.json';
 // on failure) — never a durable artifact.
 const TRACK_BACKUP_REL = '.gos/cache/track-backup';
 
-// Language-boundary trigger stores (spec §3.2): tracked members are
+// Language-boundary trigger stores: tracked members are
 // English-only; the flip pre-scan reports every one of them before any
 // mutation so a repo carrying zh content can never grow its tracked set.
 const TRACK_STORES = ['.gos/state.json', '.gos/concerns.md', '.gos/lessons.json'];
 
-// --knowledge preset trio (spec §3.4): guide files that travel with clones.
+// --knowledge preset trio: guide files that travel with clones.
 const KNOWLEDGE_TRIO = ['.gos/codebase/structure.md', '.gos/codebase/conventions.md', '.gos/codebase/concerns.md'];
 
 // TEST-ONLY fault injection (mirrors GOS_TEST_BREAK_SHIP in task/archive.cjs):
@@ -85,7 +85,7 @@ function gitRun(args, opts) {
 // Steps 1-5, die-before-touch. Returns ctx { top, rel, abs, argRel,
 // alreadyTracked }. opts.allowTracked diverts the step-4 NOT-tracked die into
 // ctx.alreadyTracked=true (cmdTrack then runs adopt/no-op bookkeeping,
-// spec §3.4 step 1 / RT3-F7); the default keeps the strict die for future
+// spec step 1 / ); the default keeps the strict die for future
 // non-CLI callers.
 function validateTrackTarget(raw, opts) {
   const arg = String(raw == null ? '' : raw).trim();
@@ -99,7 +99,7 @@ function validateTrackTarget(raw, opts) {
   let st = null;
   try { st = fs.lstatSync(abs); } catch { /* realpath resolved it moments ago */ }
   if (!st || !st.isFile()) core.die(core.t('track.err.notFound', { path: real }));
-  // argv spelling honesty (RT3-F12): a case-only mismatch gets the canonical
+ // argv spelling honesty : a case-only mismatch gets the canonical
   // correction; any other argv≠canonical gap means a symlinked or traversed
   // argv — realpath followed it to a different file, refuse both.
   const argRel = path.relative(top, path.resolve(arg)).split(path.sep).join('/');
@@ -118,7 +118,7 @@ function validateTrackTarget(raw, opts) {
   // NOT-tracked precondition (index ∪ HEAD, fail-closed via gitprobe): T7b
   // diverts tracked targets to adopt/no-op bookkeeping — a manifest record
   // present ∧ census consistent → verified no-op; legacy-tracked without a
-  // record → adopt; census contradiction → die (spec §3.4 step 1, RT3-F7).
+ // record → adopt; census contradiction → die (spec step 1).
   const alreadyTracked = core.isTracked(abs);
   if (alreadyTracked && !(opts && opts.allowTracked)) core.die(core.t('track.err.tracked', { path: real }));
   // case-insensitive collision guard: a differently-cased twin on disk would
@@ -143,7 +143,7 @@ function firstCjkLine(text) {
   return null;
 }
 
-// Sanitize table (spec §3.4 step 3): runtime paths ∪ fixed leak families ∪
+// Sanitize table (spec step 3): runtime paths ∪ fixed leak families ∪
 // hostname exact. Ordered — the first matching pattern is the reported one.
 function sanitizeTable() {
   const t = [];
@@ -201,7 +201,7 @@ function mostSpecificCensusKey(entries, rel) {
 }
 
 // Manifest reader (per-line try→skip+count, never crash): returns the parsed
-// records plus malformed-line count. The T8 gate reconcile leg consumes the
+// records plus malformed-line count. The gate reconcile leg consumes the
 // same shape.
 function manifestRead(top) {
   const out = { records: [], bad: 0 };
@@ -232,7 +232,7 @@ function manifestAppend(top, record) {
   return line;
 }
 
-// Hard-link staging + rename-back rollback (RT2-F10 ENOSPC-safety): every
+// Hard-link staging + rename-back rollback ( ENOSPC-safety): every
 // touched store gets a hard-link twin in .gos/cache/track-backup/ BEFORE any
 // mutation. A link costs one inode and zero data blocks (no copy — ENOSPC
 // cannot strand a half-written backup), and because every product write goes
@@ -292,7 +292,7 @@ function stageTransaction(top, rels) {
     let stagingLeft = false;
     try { fs.rmdirSync(dir); } catch { stagingLeft = true; /* non-empty/raced — cache zone sweeps */ }
     if (stagingLeft) incomplete.push('staging dir');
-    // Rollback gaps are never silent (spec §3.4: failure at ANY step restores
+ // Rollback gaps are never silent (spec : failure at ANY step restores
     // ALL stores): surface what survived and where the backup bytes live.
     if (incomplete.length) {
       process.stderr.write(core.t('track.err.rollbackIncomplete', {
@@ -314,7 +314,7 @@ function stageTransaction(top, rels) {
   return { restore, commit };
 }
 
-// Census consistency for an ALREADY git-tracked target (spec §3.4 step 1):
+// Census consistency for an ALREADY git-tracked target (spec step 1):
 // absent census = consistent (census-if-present philosophy); a covering entry
 // saying git:false while git says tracked = contradiction (needs human eyes).
 function censusConsistency(top, rel) {
@@ -334,7 +334,7 @@ function censusConsistency(top, rel) {
   return { present: true, consistent: true, key };
 }
 
-// Adopt / no-op bookkeeping for an already-tracked target (RT3-F7):
+// Adopt / no-op bookkeeping for an already-tracked target
 //   census contradiction → die (human eyes first)
 //   manifest record for the path → {noop:true}, exit 0, zero mutations
 //   legacy-tracked (no record) → append {adopted:true} record, exit 0
@@ -370,7 +370,7 @@ function runAdoptOrNoop(ctx) {
   }
 }
 
-// Born-at stamp (spec §3.4 --knowledge, §3.5): first line `born-at: <HEAD8>`,
+// Born-at stamp (spec --knowledge): first line `born-at: <HEAD8>`,
 // idempotent replace — an identical existing line writes nothing (no-op
 // purity), a differing born-at line is replaced, anything else is prepended.
 // Returns true when bytes changed.
@@ -507,7 +507,7 @@ function performFlip(ctx, opts) {
   return result;
 }
 
-// --knowledge preset (spec §3.4): flip the guide trio under .gos/codebase/ +
+// --knowledge preset: flip the guide trio under .gos/codebase/ +
 // stamp `born-at: <HEAD[0:8]>` first-line (idempotent replace). Requires all
 // three files (die-before-touch); tracked members run adopt/no-op bookkeeping
 // with an idempotent re-stamp.

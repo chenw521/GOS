@@ -81,7 +81,7 @@ origins untraceable.
 
 ```python
 def parse_task_id(raw: str) -> tuple[str, int] | None:
-    """Parse a task ID string ("p12-t03") into (phase, number).
+    """Parse a task ID string ("pnn-tnn") into (phase, number).
 
     Returns None when raw is not a task ID; never raises on bad input —
     callers branch on the None return.
@@ -134,7 +134,7 @@ return result
 ```python
 # v2 switched to a LRU cache (v1 recomputed every call)
 # per option B we retry twice
-# T-123: added the None guard
+# T-nnn: added the None guard
 ```
 
 ✅ — constraint the code cannot express:
@@ -176,5 +176,17 @@ git keep history. Every `TODO` names an owner and an actionable next step
 
 Docstrings and comments are read by humans first. Assistant-style phrasing
 ("It is worth noting", "As per the requirement", "Let's"), decision-narration
-("per option B"), and ticket anchors (`[REVIEW M1]`, `T-123`) are all banned —
+("per option B"), and ticket anchors (`[REVIEW Mn]`, `T-nnn`) are all banned —
 full list and rationale in `00-general.md`.
+
+❌ — process narrative:
+
+```python
+# this <wave> introduces batching for the export query
+```
+
+✅ — the WHAT-only rewrite:
+
+```python
+# Rows are exported in bounded batches: the endpoint rejects oversized bodies.
+```

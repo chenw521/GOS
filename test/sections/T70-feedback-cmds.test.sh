@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/feedback.cjs#fn:cmdFeedback
 # gos-map:cmd feedback
-# T70: gos feedback command family — drafts untracked (zero README footprint),
+# gos feedback command family — drafts untracked (zero README footprint),
 # push argv-array strict via gh stub, owner-mismatch guard, idempotent marker,
 # sending-intent crash window, published ledger render + readmeDrift green.
 # Spec T-08a (all local via test/fixtures/gh-stub/gh) + T-08b network-truth
 # gating (real push only under GOS_E2E_NETWORK=1, never attempted here).
-# Sandboxes live OUTSIDE any GOS-managed tree (mktemp base, T67/T68 precedent).
+# Sandboxes live OUTSIDE any GOS-managed tree (mktemp base, / precedent).
 T70_DIR=""
 
 t70_setup() {

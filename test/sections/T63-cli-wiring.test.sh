@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd help,changelog
-# T63: CLI wiring for changelog + init git — registry/help/status surfaces wired
+# CLI wiring for changelog + init git — registry/help/status surfaces wired
 # WITHOUT entering the core set (the core set stays ≤ 10).
 # Facts asserted:
 #   - registry sets: changelog = read-class whole-command; init = write-class
@@ -11,7 +11,7 @@
 #     `git` sub-mode
 #   - CLI: bare `gos changelog` fails closed with a usage hint
 #   - status: BUILD + SHIP instructions carry the changelog obligation hint
-#   - core set unchanged: changelog stays non-core (T29 owns the five-doc layer)
+# - core set unchanged: changelog stays non-core ( owns the five-doc layer)
 T63_DIR=""
 
 t63_setup() {
@@ -78,7 +78,7 @@ OUT=$(node "$GOS" instructions ship 2>&1)
 assert_contains "S2 SHIP hint carries changelog obligation" "gos changelog add" "$OUT"
 t63_teardown
 
-# ===== F: frozen core-set contract (cheap mirror; T29 owns the doc layer) =====
+# ===== F: frozen core-set contract (cheap mirror; owns the doc layer) =====
 python3 - <<'PYEOF' && echo "  ✓ F1 core set unchanged (≤10; changelog outside, init inside)" || echo "  ✗ F1 core set drifted"
 import json
 env = json.load(open('env.json'))

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd gate
-# T5: cwd guard + concurrent lock + git argv-ization + dispatch table
-# Covers: D-06, D-10, D-11, D-17 (plan W3-T5)
+# cwd guard + concurrent lock + git argv-ization + dispatch table
 T5_DIR=""
 
 t5_setup() {
@@ -18,14 +17,14 @@ echo "--- T5: cwd guard + lock + argv git + dispatch ---"
 
 node "$GOS" init 3 "auth" >/dev/null 2>&1
 
-# --- T5.1: write-class blocked outside project root ---
+# --- .1: write-class blocked outside project root
 mkdir -p sub && cd sub
 set +e; OUT=$(node "$GOS" checkpoint save --stage BUILD --unit x --done y 2>&1); RC=$?; set -e
 assert_exit "write-class blocked in subdir" 1 "$RC"
 assert_contains "error names project root" "project root" "$OUT"
 cd "$T5_DIR"
 
-# --- T5.2: read-class prints stderr banner, stdout stays clean ---
+# --- .2: read-class prints stderr banner, stdout stays clean
 set +e
 OUT_ONLY=$(node "$GOS" status 2>/dev/null)
 ERR_ONLY=$(node "$GOS" status 2>&1 >/dev/null)
@@ -38,19 +37,19 @@ else
 fi
 assert_contains "banner on stderr" "📍 $TESTBASE" "$ERR_ONLY"
 
-# --- T5.3: subdir init blocked with toplevel hint ---
+# --- .3: subdir init blocked with toplevel hint
 mkdir -p sub2 && cd sub2
 set +e; OUT=$(node "$GOS" init 3 "x" 2>&1); RC=$?; set -e
 assert_exit "init blocked in subdir" 1 "$RC"
 assert_contains "hint prints toplevel" "$T5_DIR" "$OUT"
 cd "$T5_DIR"
 
-# --- T5.4: worktree allowed while state.json is UNTRACKED (tracked → T95 die) ---
+# --- .4: worktree allowed while state.json is UNTRACKED (tracked → die)
 git worktree add -q "$T5_DIR-wt" -b wt5 2>/dev/null || true
 if [ -d "$T5_DIR-wt" ]; then
   cd "$T5_DIR-wt"
   # state lives in main tree (gitignored) — untracked state in a worktree stays writable;
-  # identity is de-pathed (D-12): no root anchoring, repo_id advisory-null without remotes
+ # identity is de-pathed : no root anchoring, repo_id advisory-null without remotes
   node "$GOS" init 3 "wt task" >/dev/null 2>&1   # init in worktree: toplevel = worktree → allowed
   WT_REPO_ID=$(python3 -c "import json; print(json.load(open('.gos/state.json')).get('repo_id'))" 2>/dev/null)
   assert_eq "worktree init stamps advisory-null repo_id (no remotes, D-18)" "None" "$WT_REPO_ID"
@@ -64,7 +63,7 @@ fi
 
 # --- T5.5 [T4a/D-18]: repo_id null + remotes → guard derives and stores on write ---
 # (the lazy project_root re-anchor is REMOVED — the derive+store stamp is the
-# guard's one sanctioned state write; T95 covers clone/worktree/foreign cases)
+# guard's one sanctioned state write; covers clone/worktree/foreign cases)
 git remote add origin https://github.com/octocat/widget.git
 node "$GOS" checkpoint save --stage BUILD --unit re --done anchor >/dev/null 2>&1
 EXPECT_ID=$(node -e '
@@ -73,7 +72,7 @@ EXPECT_ID=$(node -e '
 RID=$(python3 -c "import json; print(json.load(open('.gos/state.json')).get('repo_id'))")
 assert_eq "guard stamps repo_id from remotes on write (D-18)" "$EXPECT_ID" "$RID"
 
-# --- T5.6: lock — concurrent write blocked; stale lock (dead pid) gets break-lock hint ---
+# --- .6: lock — concurrent write blocked; stale lock (dead pid) gets break-lock hint
 node "$GOS" init 3 "auth2" --force >/dev/null 2>&1
 python3 - << 'PYEOF'
 import json, os
@@ -89,7 +88,7 @@ node "$GOS" checkpoint save --stage BUILD --unit z --done z --break-lock >/dev/n
 LOCKED_AFTER=$(ls .gos/.lock 2>/dev/null | wc -l)
 assert_eq "lock released after command" "0" "$LOCKED_AFTER"
 
-# --- T5.7: live lock (sleep holder) → blocked, hint WITHOUT break-lock ---
+# --- .7: live lock (sleep holder) → blocked, hint WITHOUT break-lock
 node "$GOS" init 3 "auth3" --force >/dev/null 2>&1
 python3 -c "
 import json
@@ -105,16 +104,16 @@ else
 fi
 rm -f .gos/.lock
 
-# --- T5.8: lock is gitignored (T5 setup wrote .gitignore with .gos/.lock) ---
+# --- .8: lock is gitignored ( setup wrote .gitignore with .gos/.lock)
 GI=$(grep -c "gos/.lock" .gitignore)
 assert_eq ".lock in .gitignore" "1" "$GI"
 
-# --- T5.9: static — no shell-assembled git calls ---
+# --- .9: static — no shell-assembled git calls
 SHELLGIT=$(grep -cE "execSync\(.+git .+-m|execSync\(\`git" "$GOS" || true)
 assert_eq "no shell-assembled git execSync" "0" "$SHELLGIT"
 
-# --- T5.10 [Phase C/T3]: 'stage' write-lock parity — removed from READ_CMDS only;
-# ternary (:3303 WRITE first) means behavior was already write-class. Static:
+# --- .10 : 'stage' write-lock parity — removed from READ_CMDS only;
+# ternary (3303 WRITE first) means behavior was already write-class. Static:
 # WRITE_CMDS keeps 'stage', READ_CMDS line no longer lists it. Dynamic: a LIVE
 # foreign lock blocks gos stage (write semantics engage the lock path).
 W=$(grep -c "const WRITE_CMDS = new Set(\['init', 'commit', 'archive', 'approve', 'checkpoint', 'config', 'auto', 'stage'," "$GOS_ROOT/bin/lib/nav/registry-consts.cjs" || true)

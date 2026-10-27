@@ -30,7 +30,7 @@ Full capability: `gos help [--json]`
 
 ```bash
 gos                # no args = status + what's next (zero-memorization)
-gos init <level> "<intent>"   # start a task (creates state.json + R-01)
+gos init <level> "<intent>" # start a task (creates state.json + )
 ```
 
 ## Progressive Disclosure
@@ -58,10 +58,10 @@ requests (bugfix, specific feature) — they go straight to step 1.
 
 1. Restate task in one sentence → WAIT for "yes"
 2. Present 2-3 design options with pros/cons (never just your preference)
-3. Show all levels (Lv0-Lv4) with 👉 marking recommendation → WAIT
+3. Show all levels with 👉 marking recommendation → WAIT
 4. After confirm: `gos init` then enter first stage
 
-**Level choice is a decision card (P15 D-62).** The level recommendation is the
+**Level choice is a decision card (P15 ).** The level recommendation is the
 biggest single decision a user makes — present it as the same card contract as
 THINK gray areas (`skills/gos-think/reference/dialogue-protocol.md` §Decision
 Card): options = the candidate levels, each with **premise** (when this level

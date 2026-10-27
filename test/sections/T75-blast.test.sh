@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd map,context
-# T75: gos map blast facade
+# gos map blast facade
 # Cases: report with header + reasons / zero-args usage die / unknown path human
 # refuse / unknown path print0 stderr+exit1 / zero-impact explicit line /
 # print0 NUL semantics / no anchor syntax in output / --json envelope /
@@ -37,7 +37,7 @@ EOF
 t75_g init 2 "t75 blast" >/dev/null 2>&1
 t75_g map edge add src/util.js src/app.js --type consumes --note "app consumes util" >/dev/null 2>&1
 
-# --- T75.1: report shape — self-labeling header + inputs + reasons ---
+# --- .1: report shape — self-labeling header + inputs + reasons
 OUT=$(t75_g map blast src/util.js 2>&1); RC=$?
 assert_exit "blast exits 0 on known path" "0" "$RC"
 assert_contains "self-labeling header" "blast report — human report; machine consumers: --json/--print0" "$OUT"
@@ -47,17 +47,17 @@ assert_contains "edge reason shown" "reason: hand:consumes" "$OUT"
 assert_contains "summary line" "summary: 1 impacted file(s)" "$OUT"
 assert_contains "next-step guidance" "plan Files" "$OUT"
 
-# --- T75.2: zero args → usage die (blast wording) ---
+# --- .2: zero args → usage die (blast wording)
 OUT=$(t75_g map blast 2>&1); RC=$?
 assert_exit "zero args dies" "1" "$RC"
 assert_contains "usage mentions what blast does" "must be checked and why" "$OUT"
 
-# --- T75.3: unknown path — human mode refuses with closureUnknownPath semantics ---
+# --- .3: unknown path — human mode refuses with closureUnknownPath semantics
 OUT=$(t75_g map blast no/such/file.js 2>&1); RC=$?
 assert_exit "unknown path refused" "1" "$RC"
 assert_contains "unknown-path wording under blast" "not in graph" "$OUT"
 
-# --- T75.4: unknown path --print0 → stderr diagnostic + exit 1 (never silent) ---
+# --- .4: unknown path --print0 → stderr diagnostic + exit 1 (never silent)
 OUT=$(t75_g map blast no/such/file.js --print0 2>t75-err.txt); RC=$?
 assert_exit "print0 unknown path exit 1" "1" "$RC"
 assert_contains "print0 stderr single-line diagnostic" "unknown path" "$(cat t75-err.txt)"
@@ -67,7 +67,7 @@ else
   echo "  ✓ print0 stdout empty on error"; PASS=$((PASS+1))
 fi
 
-# --- T75.5: zero-impact explicit line exit 0 + print0 empty success ---
+# --- .5: zero-impact explicit line exit 0 + print0 empty success
 echo "// standalone" > src/standalone.js
 OUT=$(t75_g map blast src/standalone.js 2>&1); RC=$?
 assert_exit "zero-impact exits 0" "0" "$RC"
@@ -80,7 +80,7 @@ else
   echo "  ✓ print0 empty NUL stream on zero impact"; PASS=$((PASS+1))
 fi
 
-# --- T75.6: rendering never emits anchor syntax (# separators) ---
+# --- .6: rendering never emits anchor syntax (# separators)
 OUT=$(t75_g map blast src/util.js 2>&1)
 if echo "$OUT" | grep -q "#fn:\|#cmd:"; then
   echo "  ✗ anchor syntax leaked into blast output"; FAIL=$((FAIL+1))
@@ -88,7 +88,6 @@ else
   echo "  ✓ no anchor syntax in blast render"; PASS=$((PASS+1))
 fi
 
-# --- T75.7: --json machine envelope ---
 OUT=$(t75_g map blast src/util.js --json 2>/dev/null)
 if python3 -c "
 import json,sys
@@ -103,7 +102,7 @@ else
   echo "  ✗ --json envelope malformed"; echo "    out: $OUT" | head -3; FAIL=$((FAIL+1))
 fi
 
-# --- T75.8: print0 NUL stream contains impacted files ---
+# --- .8: print0 NUL stream contains impacted files
 t75_g map blast src/util.js --print0 > t75-p0.bin 2>/dev/null; RC=$?
 assert_exit "print0 known path exits 0" "0" "$RC"
 if python3 -c "
@@ -117,7 +116,7 @@ else
   echo "  ✗ print0 stream wrong"; FAIL=$((FAIL+1))
 fi
 
-# --- T75.9: context build carries the blast hint when plan Files exist ---
+# --- .9: context build carries the blast hint when plan Files exist
 TID="$(python3 -c 'import json;print(json.load(open(".gos/state.json"))["task_head"][:8])')"
 mkdir -p ".gos/task/$TID"
 cat > ".gos/task/$TID/plan.md" <<'EOF'
@@ -138,11 +137,11 @@ PYEOF
 OUT=$(t75_g context build 2>&1)
 assert_contains "context build carries blast hint" "gos map blast" "$OUT"
 
-# --- T75.10: unknown flag → usage die ---
+# --- .10: unknown flag → usage die
 OUT=$(t75_g map blast src/util.js --bogus 2>&1); RC=$?
 assert_exit "unknown flag dies" "1" "$RC"
 
-# --- T75.11: anti-vacuity — exists-on-disk but unknown-to-graph dies (closure parity) ---
+# --- .11: anti-vacuity — exists-on-disk but unknown-to-graph dies (closure parity)
 printf 'notes\n' > notes.md
 OUT=$(t75_g map blast notes.md 2>&1); RC=$?
 assert_exit "existing-but-unscanned file dies (never vacuous green)" "1" "$RC"

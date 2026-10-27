@@ -36,50 +36,49 @@ const path = require('path');
 
 // ---------- helpers ----------
 
-// ---------- T1: atomic write + schema validation + migration (D-01/18/19) ----------
+// ---------- : atomic write + schema validation + migration
 
-// ops.registeredPaths(): whitelist structure for gate orphan-detection (T6) —
+// ops.registeredPaths(): whitelist structure for gate orphan-detection
 // { files: [abs exact-match], dirs: [abs prefix-match] }.
 
-// ---------- Phase W (T6, D-12/R-06): orphan detection ----------
 // Walk .gos/ tree; a FILE is an orphan when it is neither registry-exact nor inside a
 // registry dir-zone, and not in an exempt zone (archive/ history, active task/<id>/,
 // renderers/ user zone, .ship-staging/) nor transient (*.tmp*, *.lock).
 
-// task.archiveSlugParts(state): {date, slug} for archive dir naming (T4 extracted from
+// task.archiveSlugParts(state): {date, slug} for archive dir naming ( extracted from
 // cmdArchive so context SHIP can PREVIEW the same destination — single source).
 
-// ---------- Phase W (T3): gos paths — registry query (JSON, abs paths) +
+// ---------- Phase W: gos paths — registry query (JSON, abs paths) +
 // README auto-generation (--markdown, deterministic: no timestamps — regen diff
-// must be empty, R-03 gate check consumes this). ----------
+// must be empty, gate check consumes this).
 
-// ---------- Phase C (T1, D-14): COMMANDS registry — single source of truth for
-// command discovery (gos help renders from here; T3 self-check + T29 assert against
+// ---------- Phase C: COMMANDS registry — single source of truth for
+// command discovery (gos help renders from here; self-check + assert against
 // it). Entry types: normal (full fields) / sentinel '(no command)' (aliasOf delegate,
 // aliases:[''] — name is display-only, contributes aliases ONLY to switchUniverse) /
 // flagOnly (flag-shaped case host, no usage/subs/next). class mirrors the :3303
-// ternary classification result. desc is ENGLISH-only (D-16/R3-F3); CJK belongs to
-// render layer. next is NON-CONTRACTUAL static navigation (R3-F2) — makes no
+// ternary classification result. desc is ENGLISH-only; CJK belongs to
+// render layer. next is NON-CONTRACTUAL static navigation — makes no
 // same-source claim against runtime Next: chains. flags: {name, scope, effect, risk}
-// where risk is 'destructive'|'mutating'|'safe' (R1-F4). core:true = user-adjudicated
-// D-20 core set (exactly 10, feeds doc shortlists). This table mirrors main()'s
-// switch — same file, same PR (D-14). ----------
+// where risk is 'destructive'|'mutating'|'safe' . core:true = user-adjudicated
+// core set (exactly 10, feeds doc shortlists). This table mirrors main()'s
+// switch — same file, same PR .
 const NO_CMD_KEY = core.NO_CMD_KEY;
 const COMMANDS = core.COMMANDS;   // registry truth lives in core/state (EXTRACTORS in map/engine consume it); entry keeps the switch/dispatch face
-// switchUniverse normalization (R2-F1): flagOnly and sentinel entries contribute
+// switchUniverse normalization : flagOnly and sentinel entries contribute
 // ONLY their aliases; the sentinel name is a display key. Canonical formula —
-// runtime self-check (T3) and T29-2 source self-parse both anchor here.
+// runtime self-check and -2 source self-parse both anchor here.
 // Sub-class overrides — REGISTRY METADATA ONLY.
 // Dispatch consumption is limited to replacing the lessons inline special-case
 // below; 'concerns' deliberately STAYS read-class at dispatch level (repo-level,
 // not task-level — no state anchoring; mutating subs acquire .gos/.lock
 // themselves, [R2-F9] design intent preserved, zero behavior change).
-// Phase C (T3): nav.KNOWN_CASES hoisted to module level (was local to main) —
-// verifyCommandRegistry needs it, and T29-2 source self-parse greps it from
+// Phase C : nav.KNOWN_CASES hoisted to module level (was local to main)
+// verifyCommandRegistry needs it, and -2 source self-parse greps it from
 // anywhere. Dispatch self-check below is unchanged.
-// Phase C (T3, D-17): registry self-check — six structural assertions, single
+// Phase C: registry self-check — six structural assertions, single
 // die exit (state_semantics.commandRegistrySelfCheck). Placement iron rule
-// (R1-F9): pure in-memory constant comparison, called BEFORE guardCwd —
+// pure in-memory constant comparison, called BEFORE guardCwd
 // integrity checks precede ALL filesystem side effects (mkdir .gos / lock /
 // lazy re-anchor state writes).
 
@@ -90,23 +89,22 @@ const COMMANDS = core.COMMANDS;   // registry truth lives in core/state (EXTRACT
 // re-implement this logic. Catches hand-edited state: legacy string form, fake excerpt
 // (feature-regex miss), oversized fields, missing/traversing artifact_path.
 
-// ---------- T7: renderer — project.json → three GENERATED views (D-04/05/12) ----------
+// ---------- : renderer — project.json → three GENERATED views
 
 // `--replay` = argv JSON actually executed via execFileSync, excerpt taken from REAL
 // stdout (feature ②count/③path only — synthetic exit-code ① never counts [R2-6]),
-// receipt appended to .gos/truth-receipts.md (single O_APPEND appendFileSync, B-20).
+// receipt appended to .gos/truth-receipts.md (single O_APPEND appendFileSync).
 // All truth subcommands are write-class: lock held from guardCwd through writeState.
 
 // ---------- Phase 6 (defect-6): dependency map — scanner core + deps.json cache ----------
-// D-35/D-36/D-39 + red-team R1-F1/F4/F7/F8/F9, R2-F3/F11/F12/F13, R3-F7, plan W1-T1.
 // deps.json is a MACHINE cache: self-anchored (self_sha256), atomically written,
-// untracked (R3-F5 gitignore), NEVER read by gate (D-36 amended: gate recomputes
-// in memory, T3). `map` is READ-class for guardCwd on purpose: it never touches
+// untracked ( gitignore), NEVER read by gate ( amended: gate recomputes
+// in memory). `map` is READ-class for guardCwd on purpose: it never touches
 // state.json/project.json; deps.json concurrency is atomic-rename last-writer-wins
 // (the .gos/.lock protects state serialization, not this cache) [R4-F2].
 
 // ---------- concerns curation layer — command family + hash companion anchors + gap write-back ----------
-// D-41 + R1-F5 + R2-F8/F9/F10 + R3-F1/F2. Sidecar {.concerns-anchors.json} + .bak shadow;
+// + + /F9/F10 + /F2. Sidecar {.concerns-anchors.json} + .bak shadow;
 // line hashes are CR-stripped (CRLF checkout immune); WHOLE-FILE atomic rewrite (never
 // append — the append+sidecar crash window dies with it); ALL write paths (add/prune +
 // stage back write-back) share one sanitized entry point; anchor mismatch → exit 1,
@@ -114,41 +112,41 @@ const COMMANDS = core.COMMANDS;   // registry truth lives in core/state (EXTRACT
 
 // ---------- main ----------
 
-// Write-class commands (T5 will replace with full dispatch table incl. new families)
+// Write-class commands ( will replace with full dispatch table incl. new families)
 // Exec-class: runs user scripts (gate). Global: project-independent commands.
 // Read-class: known read-only commands. Unknown/unregistered → default WRITE (deny-by-default).
-// Phase C (T3): 'stage' was in BOTH nav.WRITE_CMDS and nav.READ_CMDS — the :3303 ternary
+// Phase C : 'stage' was in BOTH nav.WRITE_CMDS and nav.READ_CMDS — the :3303 ternary
 // resolves WRITE first, so runtime behavior was already write-class. Removed from
 // nav.READ_CMDS only (classification sets now partition exactly — self-check #2 asserts).
 
-// ---------- T5: concurrency lock + cwd guard (D-06/10/17) ----------
+// ---------- : concurrency lock + cwd guard
 
 process.on('exit', core.releaseLock);
 
 function main() {
   const argv = process.argv.slice(2);
   const breakLock = argv.includes('--break-lock');
-  core.setBreakLock(breakLock);   // [Phase D T2] pass-through for subcommand-level locks (map edge)
+ core.setBreakLock(breakLock); // pass-through for subcommand-level locks (map edge)
   const cleanArgs = argv.filter(a => a !== '--break-lock');
   const [cmd, ...args] = cleanArgs;
   const cname = (cmd || '').toLowerCase();
-  // Phase C (T3, R1-F9 placement iron rule): registry integrity check BEFORE any
+ // Phase C ( , placement iron rule): registry integrity check BEFORE any
   // filesystem side effect (guardCwd below mkdirs .gos and takes the lock).
   nav.verifyCommandRegistry();
-  // REVIEW F-8 (D-06): known reads → read; unknown/unregistered → WRITE (deny-by-default)
+ // REVIEW : known reads → read; unknown/unregistered → WRITE (deny-by-default)
   let cls = nav.WRITE_CMDS.has(cname) ? 'write' : nav.EXEC_CMDS.has(cname) ? 'exec' : nav.GLOBAL_CMDS.has(cname) ? 'global' : nav.READ_CMDS.has(cname) ? 'read' : 'write';
   if (cname === 'lessons') { const sc = nav.subclassOf(cname, (args[0] || 'list').toLowerCase()); if (sc) cls = sc; } // B-19: lessons list = read-class
   // 'concerns' stays read-class for guardCwd (repo-level, not task-level — no state
   // anchoring), but mutating subcommands acquire the .gos/.lock themselves [R2-F9].
-  // (Phase C/T3: concerns.* overrides in nav.SUBCLASS_OVERRIDES are registry metadata
+ // (Phase C/ : concerns.* overrides in nav.SUBCLASS_OVERRIDES are registry metadata
   // only — dispatch deliberately does NOT consume them; zero behavior change.)
   core.readState._mode = (cls === 'write' || cls === 'exec') ? 'write' : 'read';
   core.guardCwd(cls, cname, breakLock); // D-06/17: lock + anchor + banner (order matters: lock before state ops)
-  // D-01: write-class loads project.json too — fail-closed validation applies to both stores
+ // write-class loads project.json too — fail-closed validation applies to both stores
   if ((cls === 'write' || cls === 'exec') && fs.existsSync(path.join(core.PROJECT_DIR, 'project.json'))) {
     core.loadProject();
   }
-  // REVIEW F-8 (D-06): dispatch self-check — every switch case must be classified in one of the 4 sets
+ // REVIEW : dispatch self-check — every switch case must be classified in one of the 4 sets
   for (const c of nav.KNOWN_CASES) {
     if (!nav.WRITE_CMDS.has(c) && !nav.EXEC_CMDS.has(c) && !nav.GLOBAL_CMDS.has(c) && !nav.READ_CMDS.has(c)) {
       core.die(`dispatch self-check failed: command "${c}" unclassified — add to WRITE/EXEC/GLOBAL/READ set (deny-by-default requires explicit classification).`);
@@ -200,7 +198,7 @@ function main() {
   }
 }
 
-// ---------- D-11: model staffing system (team/solo/elite/lean) ----------
+// ---------- : model staffing system (team/solo/elite/lean)
 
 // Semantic tiers per agent per staffing profile (single source of truth).
 // Tiers: strong / current / fast / different / inherit
@@ -218,10 +216,10 @@ function main() {
 
 // ---------- trace: cross-phase requirement traceability (Lv4 gap fix) ----------
 
-// ---------- T3 (W2): decision command family — add/amend/cover/list/import ----------
-// Covers D-02 (conclusion-level shape + anchor whitelist), D-03, D-09 (merge semantics),
-// D-11 (argv charset + id space cap), D-19 (cover validation + P:n:T format),
-// D-20 (dual-store write), D-22 (brownfield import)
+// ---------- : decision command family — add/amend/cover/list/import
+// Covers (conclusion-level shape + anchor whitelist), , (merge semantics),
+// (argv charset + id space cap), (cover validation + P:n:T format),
+// (dual-store write), (brownfield import)
 
 // ---------- tiered auto mode (flagship+large: pass routine gates, hold decision gates) ----------
 
@@ -233,7 +231,7 @@ function main() {
 // git invocations always go through execFileSync argv (repo rule; the diffInvocations
 // spec pins the flags).
 
-// T5 runtime strings. NOT a CONTRACTS entry: T9 pins the exact top-level CONTRACTS
+// runtime strings. NOT a CONTRACTS entry: pins the exact top-level CONTRACTS
 // key set and the semantic_checks 15-key table is frozen — new user-visible strings
 // live here as a module const. Every degradation line keeps the word 'skip'.
 // REVIEW #9: runtime banner texts are user-visible → they live IN the frozen contract
@@ -242,20 +240,20 @@ function main() {
 // SEMANTIC_RUNTIME_BASE merge lives in ops/config.cjs (executed at load time).
 // Covers R-NN ⊆ state.requirements ids (one-way).
 
-// B-5 allowlist: defaults + state.semantic.allowlist[] extras (defensive read)
+// allowlist: defaults + state.semantic.allowlist[] extras (defensive read)
 // + verified-truth evidence.artifact_path exact-exempt. Load-time strength check:
 // bare ** / * / /* → exit 1 (fail-closed). '.gos/gates.json' + '.gos/gates/**' are
 // HARD-EXCLUDED from '.gos/**' (gate-config changes must be declared in Files).
 
-// B-4 diff baseline shas: task_head + every task_head_history row (append-only —
+// diff baseline shas: task_head + every task_head_history row (append-only
 // diff scope = union of all segments; re-claiming never launders it).
 
-// ② B-6 diffHitCheck — closureFn interface slot (reserved for the defect-6 impact closure):
+// ② diffHitCheck — closureFn interface slot (reserved for the defect-6 impact closure):
 // closureFn=null → direct mode (declared-Files literal membership). Once the impact
 // closure lands, a (file, task) => closureReachable predicate upgrades direct hits to
 // closure hits — initially null.
 
-// ② B-4 diff phase: degradation ladder first (skip banner / FAIL), then diff set +
+// ② diff phase: degradation ladder first (skip banner / FAIL), then diff set +
 // diffHitCheck. Prints its own ✓/⚠ lines; returns {failures, pass}.
 
 // D-01b: exit guard — every Fix line must match this whitelist or be suppressed (fail-closed, exit 2).

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/task/context.cjs#fn:cmdContext bin/lib/task/context.cjs#fn:archiveSlugParts bin/lib/core/state.cjs#fn:ensureTaskDir
 # gos-map:cmd context
-# T42: context artifact_paths supply + phase-id rules (conflict detection / ts-fallback / 'n' collapse removed)
+# context artifact_paths supply + phase-id rules (conflict detection / ts-fallback / 'n' collapse removed)
 T42_DIR=""
 
 t42_setup() {
@@ -36,7 +36,7 @@ except Exception as e:
 " 2>/dev/null
 }
 
-# T42.1 context build: artifact_paths.evidence_dir is absolute + directory exists
+# .1 context build: artifact_paths.evidence_dir is absolute + directory exists
 node "$GOS" context build > ctx1.json 2>/dev/null
 V1="$(vcheck '
 import json, os
@@ -56,7 +56,7 @@ else
   echo "  ✗ T42.1 $V1"; FAIL=$((FAIL+1))
 fi
 
-# T42.2 idempotent: second context build reports no conflict for the same path
+# .2 idempotent: second context build reports no conflict for the same path
 node "$GOS" context build >/dev/null 2>&1
 if [ $? -eq 0 ]; then
   echo "  ✓ T42.2 context idempotent (no false conflict on re-run)"; PASS=$((PASS+1))
@@ -64,7 +64,7 @@ else
   echo "  ✗ T42.2 re-run failed"; FAIL=$((FAIL+1))
 fi
 
-# T42.3 think/plan/verify stages each supply the right fields
+# .3 think/plan/verify stages each supply the right fields
 node "$GOS" context think > ct.json 2>/dev/null
 node "$GOS" context plan > cp.json 2>/dev/null
 node "$GOS" context verify > cv.json 2>/dev/null
@@ -82,7 +82,7 @@ else
   echo "  ✗ T42.3 $V3"; FAIL=$((FAIL+1))
 fi
 
-# T42.4 conflict detection: tampering with .task-head ownership -> die mentions the task-id conflict
+# .4 conflict detection: tampering with .task-head ownership -> die mentions the task-id conflict
 ED="$(vcheck 'import json; return json.load(open("ctx1.json"))["artifact_paths"]["evidence_dir"]' x)"
 TASK_DIR="$(dirname "$ED")"
 printf '%s\n' '{"task_head":"deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"}' > "$TASK_DIR/.task-head"
@@ -97,7 +97,7 @@ else
 fi
 printf '%s\n' '{"task_head": null}' > "$TASK_DIR/.task-head"
 
-# T42.5 ts-fallback: invalid task_head and no phase code -> ts-<timestamp> id + warning
+# .5 ts-fallback: invalid task_head and no phase code -> ts-<timestamp> id + warning
 python3 -c "
 import json
 d = json.load(open('.gos/state.json'))
@@ -116,7 +116,7 @@ else
   echo "  ✗ T42.5 rc=$RC4 out=${CTX4:0:120}"; FAIL=$((FAIL+1))
 fi
 
-# T42.6 'n' collapse removed (grep the source: the 'n' fallback no longer exists in slug computation)
+# .6 'n' collapse removed (grep the source: the 'n' fallback no longer exists in slug computation)
 if ! grep -q "|| 'n';" "$GOS_ROOT/bin/gos.cjs"; then
   echo "  ✓ T42.6 no-code phase no longer collapses to 'n'"; PASS=$((PASS+1))
 else

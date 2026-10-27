@@ -27,7 +27,7 @@ function cmdAnchor(args) {
   const state = core.readState();
   if (!state) core.die(core.CONTRACTS.state_semantics.noActiveTask);
   // [T4b/D-12] v4 identity is de-pathed: rescue re-binds repo_id to THIS
-  // checkout (remote-URL hash, D-18 canonicalization). The v3 project_root
+ // checkout (remote-URL hash, canonicalization). The v3 project_root
   // re-anchor died with the field — the repo root is runtime-derived now.
   state.repo_id = core.repoIdFromRemotes();
   core.writeState(state);
@@ -78,7 +78,7 @@ function validateAnchor(spec, root) {
   if (parsed.ban === 'traversal') return { ok: false, msg: `✗ ${SC.anchorVerifAbsPath}` };   // traversal treated as universe escape → same frozen text
   if (parsed.ban === 'line') return { ok: false, msg: `✗ ${SC.anchorVerifLineBan}` };
   const { path: p, anchor: a } = parsed;
-  // universe = git-tracked ∪ scan-set (MAP_EXTS, skip dirs) — spec §4.2.
+ // universe = git-tracked ∪ scan-set (MAP_EXTS, skip dirs) — spec
   // An on-disk but untracked+unscannable file is OUTSIDE the universe (dead):
   // legitimate new files enter via `edge add`'s forced git add, or by being scannable.
   const t = core.trackedFiles(root);
@@ -128,7 +128,7 @@ function validateAnchor(spec, root) {
     if (!new RegExp(`^#+\\s*${esc}\\s*$`, 'm').test(src)) return { ok: false, msg: `✗ ${SC.anchorVerifDeadAnchor.replace('<kind>', 'h').replace('<anchor>', a)}` };
     return { ok: true, type: 'h', detail: title };
   }
-  // bare word = contract key (D-23③ consumers target frozen keys)
+ // bare word = contract key ( ③ consumers target frozen keys)
   if (!contractKeysFlat().has(a)) return { ok: false, msg: `✗ ${SC.anchorVerifDeadAnchor.replace('<kind>', 'contractKey').replace('<anchor>', a)}` };
   return { ok: true, type: 'contractKey', detail: a };
 }

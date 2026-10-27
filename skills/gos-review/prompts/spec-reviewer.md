@@ -16,8 +16,6 @@ Task tool:
     ## Decisions To Audit
 
     [PASTE from state.json, one per line:]
-    D-01 — [title]
-    R-01 — [requirement text]
 
     ## Material
 
@@ -27,7 +25,7 @@ Task tool:
 
     | D-NN | Implemented? | Evidence (file:line or test) |
     |------|--------------|------------------------------|
-    | D-01 | ✅/❌/PARTIAL | [specific location, not "yes"] |
+ | | ✅/❌/PARTIAL | [specific location, not "yes"] |
 
     ## Scope Creep Check
 

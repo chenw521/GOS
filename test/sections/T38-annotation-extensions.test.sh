@@ -2,7 +2,7 @@
 # gos-map:fn bin/lib/ops/gate.cjs#fn:cmdGate bin/lib/map/index.cjs#fn:cmdMap
 # gos-map:cmd gate,map
 # gos-map:contract bidirectional
-# T38: annotation and edge-family extensions — fully-qualified validation + both sugar + sec_contracts
+# annotation and edge-family extensions — fully-qualified validation + both sugar + sec_contracts
 T38_DIR=""
 
 t38_setup() {
@@ -22,7 +22,7 @@ function cmdBeta(){ return cmdAlpha(); }
 function cmdGamma(){ return 3; }
 switch (sub) { case 'a': cmdAlpha(); break; case 'b': cmdBeta(); break; case 'g': cmdGamma(); break; }
 EOF
-# T38.1 three branches: bare hit / qualified owner match / qualified non-owner -> dead
+# .1 three branches: bare hit / qualified owner match / qualified non-owner -> dead
 cat > test/sections/TZ-bare.test.sh << 'EOF'
 # gos-map:fn cmdAlpha
 echo ok
@@ -35,18 +35,18 @@ cat > test/sections/TZ-bad.test.sh << 'EOF'
 # gos-map:fn nofile.js#fn:cmdAlpha
 echo ok
 EOF
-# T38.2 both: derive the cmdGamma fn edge from one line (cmd edge lives in the GOS_SELF domain, verified in the real repo)
+# .2 both: derive the cmdGamma fn edge from one line (cmd edge lives in the GOS_SELF domain, verified in the real repo)
 cat > test/sections/TZ-both.test.sh << 'EOF'
 # gos-map:both gamma
 echo ok
 EOF
-# T38.3 explicit wins: same section has explicit cmdBeta + both naming beta -> derivation skips cmdBeta, exactly 1 fn edge in the section
+# .3 explicit wins: same section has explicit cmdBeta + both naming beta -> derivation skips cmdBeta, exactly 1 fn edge in the section
 cat > test/sections/TZ-explicit.test.sh << 'EOF'
 # gos-map:fn cmdBeta
 # gos-map:both beta
 echo ok
 EOF
-# T38.4 contracts: legal key lands an edge + illegal key dead
+# .4 contracts: legal key lands an edge + illegal key dead
 cat > test/sections/TZ-con.test.sh << 'EOF'
 # gos-map:contract bidirectional,noSuchKeyXxx
 echo ok
@@ -60,7 +60,7 @@ if [ "$SRC" -ne 0 ]; then echo "  ✗ T38.0 scan failed: $G_SCAN"; FAIL=$((FAIL+
 DEPSCHK() { node -e "
 const d=require('./.gos/cache/deps.json');const s=d.semantic||{};$1"; }
 
-# --- T38.1a bare + qualified hits land as edges ---
+# --- .1a bare + qualified hits land as edges
 DEPSCHK="
 const t=s.testof_fn||[];
 const has=(sec,fn)=>t.some(e=>e.sec==='${sec}'&&e.fn===fn&&e.file==='bin/gos.cjs');
@@ -71,7 +71,7 @@ const has=(sec,fn)=>t.some(e=>e.sec===process.argv[1]&&e.fn===process.argv[2]&&e
 process.exit(has('TZ-bare','cmdAlpha')&&has('TZ-qual','cmdBeta')?0:1)" TZ-bare cmdAlpha
 [ $? -eq 0 ] && echo "  ✓ T38.1a bare + qualified hits land as edges" && PASS=$((PASS+1)) || { echo "  ✗ T38.1a qualified/bare edges missing"; FAIL=$((FAIL+1)); }
 
-# --- T38.1b qualified non-owner -> dead_fn_annotations, no edge ---
+# --- .1b qualified non-owner -> dead_fn_annotations, no edge
 node -e "
 const d=require('./.gos/cache/deps.json');const s=d.semantic||{};
 const bad=(s.testof_fn||[]).some(e=>e.sec==='TZ-bad');
@@ -79,20 +79,20 @@ const dead=(s.dead_fn_annotations||[]).some(x=>x.includes('TZ-bad'));
 process.exit((!bad&&dead)?0:1)"
 [ $? -eq 0 ] && echo "  ✓ T38.1b non-owner qualified → dead, no edge" && PASS=$((PASS+1)) || { echo "  ✗ T38.1b dead semantics wrong"; FAIL=$((FAIL+1)); }
 
-# --- T38.2 both derives the fn edge ---
+# --- .2 both derives the fn edge
 node -e "
 const d=require('./.gos/cache/deps.json');const t=(d.semantic||{}).testof_fn||[];
 process.exit(t.some(e=>e.sec==='TZ-both'&&e.fn==='cmdGamma')?0:1)"
 [ $? -eq 0 ] && echo "  ✓ T38.2 both sugar derives fn edge (cmdGamma)" && PASS=$((PASS+1)) || { echo "  ✗ T38.2 both derivation missing"; FAIL=$((FAIL+1)); }
 
-# --- T38.3 explicit priority: TZ-explicit has exactly 1 fn edge (cmdBeta, explicit), both derivation does not duplicate ---
+# --- .3 explicit priority: TZ-explicit has exactly 1 fn edge (cmdBeta, explicit), both derivation does not duplicate
 node -e "
 const d=require('./.gos/cache/deps.json');const t=(d.semantic||{}).testof_fn||[];
 const mine=t.filter(e=>e.sec==='TZ-explicit');
 process.exit(mine.length===1&&mine[0].fn==='cmdBeta'?0:1)"
 [ $? -eq 0 ] && echo "  ✓ T38.3 explicit annotation wins, no duplicate derivation" && PASS=$((PASS+1)) || { echo "  ✗ T38.3 explicit-priority broken"; FAIL=$((FAIL+1)); }
 
-# --- T38.4 sec_contracts: legal key lands an edge, illegal key does not ---
+# --- .4 sec_contracts: legal key lands an edge, illegal key does not
 node -e "
 const d=require('./.gos/cache/deps.json');const sc=(d.semantic||{}).sec_contracts||[];
 const ok=sc.some(e=>e.sec==='TZ-con'&&e.contract==='bidirectional');

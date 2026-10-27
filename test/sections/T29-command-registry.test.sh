@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd help,_contract
-# T29: command registry — COMMANDS ↔ switch ↔ docs three-layer consistency + fail-closed demo
-# Covers: plan T5 / spec §4.4 (T29-1..12) / D-14~D-20
+# command registry — COMMANDS ↔ switch ↔ docs three-layer consistency + fail-closed demo
 # Env: GOS (CLI path), TESTBASE (mktemp sandbox), assert helpers exported by runner
 # Discipline: sandbox base is mktemp-derived (never repo root); runner counts rc≠0 as FAIL.
 T29_DIR=""
@@ -14,7 +13,7 @@ t29_setup() {
 t29_teardown() { cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$T29_DIR"; }
 
 # contract-key value extracted from `gos _contract` (single source of truth — no
-# second hardcoding in tests; R4-F2). REVIEW-F6: guard — empty key would make every
+# second hardcoding in tests; ). REVIEW-F6: guard — empty key would make every
 # grep -q "" anchor pass vacuously.
 SELF_CHECK_KEY=$(node "$GOS" _contract 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["state_semantics"]["commandRegistrySelfCheck"])')
 if [ -z "$SELF_CHECK_KEY" ]; then echo "  ✗ SELF_CHECK_KEY extraction failed — mutation anchors would be vacuous"; exit 1; fi
@@ -37,7 +36,7 @@ def universe(cmds):
 PYH
 
 # ============ structure layer ============
-# T29-1: help --json is strict JSON from byte 0; gos_version === package.json version
+# -1: help --json is strict JSON from byte 0; gos_version === package.json version
 node "$GOS" help --json > env.json 2>err1.txt; RC=$?
 assert_exit "help --json exits 0" 0 "$RC"
 python3 - "$PKG" <<'PYEOF' && echo "  ✓ envelope strict-JSON + version match" || echo "  ✗ envelope strict-JSON + version match"
@@ -50,7 +49,7 @@ assert sorted(env['class_legend'].keys()) == ['exec','global','read','write']
 PYEOF
 [ ! -s err1.txt ] && echo "  ✓ stderr empty (no banners)" || echo "  ✗ stderr non-empty: $(head -1 err1.txt)"
 
-# T29-2: source self-parse — case labels inside function main() === registry universe
+# -2: source self-parse — case labels inside function main() === registry universe
 awk '/^function main\(\) \{/,/^}$/' "$GOS" | grep -o "case '[^']*':" | sed "s/^case '//;s/'.*//" | sort -u > cases.txt
 python3 - <<'PYEOF' && echo "  ✓ source self-parse: case labels === switchUniverse" || echo "  ✗ source self-parse mismatch"
 import universe
@@ -63,7 +62,7 @@ if u != cases:
     raise SystemExit(1)
 PYEOF
 
-# T29-3: usage/next non-empty for normal entries (subs MAY be empty — subcommand-less
+# -3: usage/next non-empty for normal entries (subs MAY be empty — subcommand-less
 # commands like status/resume legitimately have no subs); combo-die, unknown-die, sentinel
 python3 - <<'PYEOF' && echo "  ✓ normal entries have usage/next non-empty" || echo "  ✗ empty usage/next"
 import json
@@ -79,7 +78,7 @@ node "$GOS" help phase add >/dev/null 2>&1; assert_exit "extra args die (usage)"
 OUT=$(node "$GOS" help '' 2>&1); assert_contains "help '' renders status detail" "full status" "$OUT"
 OUT=$(node "$GOS" help '(no command)' 2>&1); assert_contains "sentinel by name renders status detail" "full status" "$OUT"
 OUT=$(node "$GOS" help PHASE 2>&1); assert_contains "case-insensitive lookup" "Lv4 phase lifecycle" "$OUT"
-# REVIEW-F3: alias routing (spec §4.2/R2-F7) — alias labels resolve to HOST entries
+# REVIEW-F3: alias routing — alias labels resolve to HOST entries
 OUT=$(node "$GOS" help -h 2>&1); assert_contains "alias -h renders help host detail" "rendered from COMMANDS registry" "$OUT"
 OUT=$(node "$GOS" help --help 2>&1); assert_contains "alias --help renders help host detail" "rendered from COMMANDS registry" "$OUT"
 OUT=$(node "$GOS" help -v 2>&1); assert_contains "alias -v renders flagOnly page" "flag — run" "$OUT"
@@ -100,8 +99,8 @@ def universe(cmds):
             u.add(name)
     return u
 PYH
-# T29-4: row grammar — human index rows === normal names ∪ sentinel; group headers
-# + tail note present (REVIEW-F14: T12/§4.7 delegated assertions live here)
+# -4: row grammar — human index rows === normal names ∪ sentinel; group headers
+# + tail note present (REVIEW-F14: / delegated assertions live here)
 node "$GOS" help > human.txt 2>&1
 grep -cE '^  (\(no command\)|[a-z_][a-z0-9_-]*)\s{2,}\S' human.txt > rowcount.txt
 assert_contains "index has group header (write)" "— write (" "$(cat human.txt)"
@@ -119,7 +118,7 @@ assert got == expect, ('missing', sorted(expect-got)[:6], 'extra', sorted(got-ex
 assert len(rows) == int(open('rowcount.txt').read().strip())
 PYEOF
 
-# T29-5: detail page literally contains usage + every sub string (pure python — no
+# -5: detail page literally contains usage + every sub string (pure python — no
 # generated bash, avoids quoting traps)
 python3 - "$GOS" <<'PYEOF' > detailout.txt 2>&1
 import json, subprocess, sys
@@ -143,7 +142,7 @@ PYEOF
 RC=$?
 [ "$RC" = "0" ] && echo "  ✓ T29-5 all details derived (0 mismatches)" || { echo "  ✗ T29-5 detail mismatches (see above)"; FAILROWS=$((FAILROWS+1)); }
 
-# T29-6: next anti-hallucination — every `gos <word>` in next[] ∈ universe ∪ {--break-lock}
+# -6: next anti-hallucination — every `gos <word>` in next[] ∈ universe ∪ {--break-lock}
 python3 - <<'PYEOF' && echo "  ✓ next[] anti-hallucination (0 ghost commands)" || echo "  ✗ next[] references ghost command"
 import universe
 import re
@@ -159,7 +158,7 @@ assert not ghost, ghost
 PYEOF
 
 # ============ contract layer ============
-# T29-7: contract keys bidirectional + python smoke on sentinel key
+# -7: contract keys bidirectional + python smoke on sentinel key
 python3 - "$GOS" <<'PYEOF' && echo "  ✓ contract keys bidirectional (no orphans)" || echo "  ✗ contract key orphan/mismatch"
 import json, subprocess, sys
 env = json.load(open('env.json'))
@@ -177,7 +176,7 @@ PYEOF
 python3 -c 'import json; e=json.load(open("env.json")); print(e["commands"]["(no command)"]["desc"], "|", e["gos_version"])' >/dev/null && echo "  ✓ python smoke: sentinel key + gos_version fetchable" || echo "  ✗ python smoke failed"
 
 # ============ fail-closed demo (copy isolation; last task to touch bin/gos.cjs) ============
-# T29-9: positive control, three mutations (delete entry / bad class / strip risk),
+# -9: positive control, three mutations (delete entry / bad class / strip risk),
 # syntax-corruption negative control, sha256 teardown. Copy layout preserves ../package.json.
 ORIG_SHA=$(sha256sum "$GOS" | cut -d' ' -f1)
 D="$T29_DIR/copy-$$"; mkdir -p "$D/bin" && cp "$GOS" "$D/bin/" && cp -r "$GOS_ROOT/bin/lib" "$D/bin/lib" && cp "$PKG" "$D/"
@@ -231,7 +230,7 @@ GS=$(cd "$GOSROOT_DIR" 2>/dev/null && git status --porcelain -- bin/gos.cjs | wc
 assert_eq "git status clean for bin/gos.cjs" "0" "$GS"
 
 # ============ document layer ============
-# T29-11: glob-wide scan — list/table rows with backticked `gos <word>` ∈ universe ∪ exemptions
+# -11: glob-wide scan — list/table rows with backticked `gos <word>` ∈ universe ∪ exemptions
 GOSROOT_DIR=$(dirname "$(dirname "$GOS")")
 python3 - "$GOSROOT_DIR" <<'PYEOF' > docscan.txt 2>&1 && echo "  ✓ doc glob scan: 0 out-of-registry command mentions" || { echo "  ✗ doc scan violations:"; head -8 docscan.txt; }
 import re, sys, glob, os
@@ -262,7 +261,7 @@ for b in bad: print(b)
 raise SystemExit(1 if bad else 0)
 PYEOF
 
-# T29-12: five delimited docs — shortlist name-set === core set (bidirectional); pointer sentence
+# -12: five delimited docs — shortlist name-set === core set (bidirectional); pointer sentence
 python3 - "$GOSROOT_DIR" <<'PYEOF' && echo "  ✓ five docs: delimited shortlist === core set + pointer" || echo "  ✗ shortlist mismatch (details above)"
 import json, re, sys, os
 env = json.load(open('env.json'))

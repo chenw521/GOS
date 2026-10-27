@@ -21,7 +21,7 @@ function cmdMap(args) {
   const here = fs.realpathSync('.');
   if (here !== root) console.error(`⚠ ${SC.mapCwdBanner.replace('<subdir>', path.relative(root, here) || '.').replace('<root>', root)}`);
   if (sub === 'graph') {   // T8+R-05: graph family — mermaid (default) | --ascii | --html | --dot | --renderer | --fn <anchor> (fn neighborhood)
-    // [Phase P T7 / F-H5] --fn requires an anchor argument: renders that fn's 1-hop
+ // --fn requires an anchor argument: renders that fn's 1-hop
     // neighborhood (callers + testing sections); --2hop extends caller depth. Bare --fn dies.
     const fnIdx = args.indexOf('--fn');
     if (fnIdx >= 0) {
@@ -157,8 +157,8 @@ function cmdMap(args) {
         console.log(`✓ seeded empty tracked edges.json (${edges.edgesPath(root)}) — git add forced`);
         return;
       }
-      // plain adopt = "I reviewed the current edges.json" → (re)freeze the tracked anchor (T5).
-      // LEGITIMATE rescue path after merges/rebases (R2-F3) — audit-logged.
+ // plain adopt = "I reviewed the current edges.json" → (re)freeze the tracked anchor .
+ // LEGITIMATE rescue path after merges/rebases — audit-logged.
       if (!fs.existsSync(edges.edgesPath(root))) core.die(`✗ ${SC.edgeAdoptNoLock}`);
       edges.freezeEdgesLock(root);
       try { execFileSync('git', ['-C', root, 'add', '--', '.gos/edges.lock']); } catch { /* non-git */ }
@@ -252,7 +252,7 @@ function cmdMap(args) {
       process.stdout.write(impacted.length ? impacted.map(([f]) => f).join('\0') + '\0' : '');
       return;
     }
-    // human report — fixed self-labeling header (D-65); qualification banners to
+ // human report — fixed self-labeling header ; qualification banners to
     // stderr when stdout is not a TTY (piped consumers keep clean data).
     console.log('blast report — human report; machine consumers: --json/--print0');
     console.log(`inputs: ${rel.join(', ')}`);
@@ -282,11 +282,11 @@ function cmdMap(args) {
     const forward = flags.includes('--forward');
     const print0 = flags.includes('--print0');
     const noRefresh = flags.includes('--no-refresh');
-    const semantic = flags.includes('--semantic');   // [Phase D T7] three-source human closure report
-    const graph = flags.includes('--graph');   // [Phase D T8] neighborhood mermaid (1 hop; --2hop explicit)
+ const semantic = flags.includes('--semantic'); // three-source human closure report
+ const graph = flags.includes('--graph'); // neighborhood mermaid (1 hop; --2hop explicit)
     const twohop = flags.includes('--2hop');
     if (sub === 'closure' && !paths.length) core.die('Usage: gos map closure <paths...> [--forward] [--print0] [--no-refresh]');
-    // [Phase D T4] show evolved: 0 args = legacy overview; 1 anchor arg = neighborhood (R-02). REVIEW #7 preserved for >1.
+ // show evolved: 0 args = legacy overview; 1 anchor arg = neighborhood . REVIEW #7 preserved for >1.
     if (flags.filter((f) => !['--forward', '--print0', '--no-refresh', '--semantic', '--graph', '--2hop', '--json'].includes(f)).length) core.die('Usage: unknown flag for map ' + sub);
     if (print0 && noRefresh) core.die('Usage: --print0 recomputes in memory by design — --no-refresh is contradictory here');   // REVIEW #8
     // load cache (triple fail-closed when file exists: tamper/parse/schema)
@@ -305,7 +305,7 @@ function cmdMap(args) {
     // unborn caches are pinned fresh — file changes since the
     // scan are undetectable without a HEAD anchor; say so instead of implying freshness.
     if (deps && deps.head === 'unborn') console.log('(unborn anchor — file changes since scan are not detectable; re-run gos map scan if in doubt)');
-    // [Phase P T5 / R-05] fn-level closure: `closure <path#fn:x> ...` — deps.json v3 is the
+ // fn-level closure: `closure <path#fn:x> ...` — deps.json v3 is the
     // ONLY data source (fnClosure); --print0 conflicts (fn mode is name-keyed, not path output).
     const fnPaths = paths.filter((p) => /#fn:/.test(p)).map((p) => {
       const i = p.lastIndexOf('#fn:');
@@ -357,7 +357,7 @@ function cmdMap(args) {
       else console.log('    must-run sections: (none — no gos-map:fn annotations cover this fn or its callers)');
       const pf = ((deps.semantic || {}).parse_failures || []).length;
       if (pf) console.log(`  ${SC.closureParseWarn.replace('<N>', String(pf))}`);
-      console.log(SC.mapBanner);   // [REVIEW m5] text form: banner on stdout like every other text closure form
+ console.log(SC.mapBanner); // text form: banner on stdout like every other text closure form
       return;
     }
     if (sub === 'closure' && semantic && !graph) {   // [T7] human semantic closure (block-headed, qualified)
@@ -409,7 +409,7 @@ function cmdMap(args) {
       console.log('Next:\n  gos map show — full dependency overview');
       return;
     }
-    // show: anchor neighborhood (T4/R-02) OR legacy overview + externals + banner
+ // show: anchor neighborhood OR legacy overview + externals + banner
     if (sub === 'show' && paths.length === 1) {
       const spec = paths[0];
       const v = anchor.validateAnchor(spec, root);
@@ -434,7 +434,7 @@ function cmdMap(args) {
         if (kind === 'cmd' && e.cmd === v.detail) rows.push([e.sec, 'tested-by', `#sec:${e.sec}`]);
         else if (kind === 'sec' && e.sec === v.detail) rows.push([e.sec, 'tests', `#cmd:${e.cmd}`]);
       }
-      // [Phase P T7 / R-05] fn-anchored neighborhood: callers + callees + testing sections (deps v3 families)
+ // fn-anchored neighborhood: callers + callees + testing sections (deps v3 families)
       if (kind === 'fn') {
         const fname = v.detail;
         for (const e of sem.callgraph || []) {
@@ -464,7 +464,7 @@ function cmdMap(args) {
       const seenRow = new Set();
       for (const [f, rel, tgt] of rows) {
         const rk = `${f}\u0000${rel}\u0000${tgt}`;
-        if (seenRow.has(rk)) continue;   // [Phase P T7] dedupe fn call edges (multiple call sites → one relation)
+ if (seenRow.has(rk)) continue; // dedupe fn call edges (multiple call sites → one relation)
         seenRow.add(rk);
         console.log(`  ${f}  --[${rel}]-->  ${tgt}`);
       }

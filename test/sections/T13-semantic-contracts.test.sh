@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/gate.cjs#fn:cmdGate bin/lib/map/contract.cjs#fn:cmdContract
 # gos-map:cmd gate,_contract
-# T13: CONTRACTS.semantic_checks contract layer + input constraint helpers + table-driven downgrade banner (existing subcommands)
+# CONTRACTS.semantic_checks contract layer + input constraint helpers + table-driven downgrade banner (existing subcommands)
 # Env: GOS (CLI path), TESTBASE (isolated base), assert helpers sourced by runner
 T13_DIR=""
 
@@ -25,7 +25,7 @@ else
   echo "  ✗ semantic_checks key count '${NKEYS:-<none>}' < 14"; FAIL=$((FAIL+1))
 fi
 
-# --- T13.2: required key set present (spec §2 13 keys + lazyFreeze) ---
+# --- .2: required key set present (spec 13 keys + lazyFreeze)
 KEYS=$(node "$GOS" _contract 2>/dev/null | python3 -c "import json,sys; print(','.join(sorted(json.load(sys.stdin)['semantic_checks'].keys())))" 2>/dev/null)
 MISSING=$(python3 - "$KEYS" <<'PYEOF'
 import sys
@@ -38,7 +38,7 @@ PYEOF
 )
 assert_eq "all 15 required keys present" "" "$MISSING"
 
-# --- T13.3: spec §2 texts frozen verbatim (banner + evidenceShape + allowlist array) ---
+# --- .3: spec texts frozen verbatim (banner + evidenceShape + allowlist array)
 BANNER=$(node "$GOS" _contract 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['semantic_checks']['banner'])")
 assert_eq "banner frozen verbatim from spec §2" "gate checks syntax+consistency only, not semantic quality" "$BANNER"
 EVID=$(node "$GOS" _contract 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['semantic_checks']['evidenceShape'])")
@@ -52,12 +52,12 @@ else
   echo "  ✗ lazyFreeze banner key missing/empty [F1]"; FAIL=$((FAIL+1))
 fi
 
-# --- T13.4: table-driven emission — banner text appears in CLI source exactly once (the table) ---
-# CONTRACTS table lives in core/state.cjs — counted surface is the T46-shared frozen set (multi-file grep)
+# --- .4: table-driven emission — banner text appears in CLI source exactly once (the table)
+# CONTRACTS table lives in core/state.cjs — counted surface is the -shared frozen set (multi-file grep)
 OCC=$(cat "$GOS" "$GOS_ROOT/bin/lib/core/fsio.cjs" "$GOS_ROOT/bin/lib/core/state.cjs" "$GOS_ROOT/bin/lib/core/lock.cjs" 2>/dev/null | grep -c "gate checks syntax+consistency only")
 assert_eq "banner text lives only in CONTRACTS table (not in cmdGate)" "1" "$OCC"
 
-# --- T13.5: sandbox state — covered decision + verified truth + lessons fixture ---
+# --- .5: sandbox state — covered decision + verified truth + lessons fixture
 # (T2 migration: string evidence → three-element object [D-30]; artifact must exist)
 node "$GOS" init 3 "semantic contracts" >/dev/null 2>&1
 mkdir -p test/out && echo "45 passed, 0 failed" > test/out/t13.log
@@ -67,12 +67,12 @@ s['decisions']=[{'id':'D-01','title':'semantic gates','covered':True}]
 s['observable_truths']=[{'id':'T-01','description':'banner emitted','verified':True,'evidence':{'command':'bash test/run-sections.sh T13','output_excerpt':'45 passed, 0 failed','artifact_path':'test/out/t13.log'}}]
 json.dump(s,open('.gos/state.json','w'),indent=2)"
 printf '# frozen lessons (test fixture)\n' > .gos/lessons.md
-# P15 D-64: lessons gate reads json truth — seed a real store (md fixture alone
+# P15 : lessons gate reads json truth — seed a real store (md fixture alone
 # is pre-migration and checks nothing)
 node "$GOS" lessons add --type project --scene "t13" --lesson "semantic contracts fixture" >/dev/null 2>&1
 
-# --- T13.6: four EXISTING subcommands — output has ✓ AND last non-empty line == table banner ---
-# (gate semantic deliberately NOT tested — T5 creates it, T19 asserts)
+# --- .6: four EXISTING subcommands — output has ✓ AND last non-empty line == table banner
+# (gate semantic deliberately NOT tested — creates it, asserts)
 for SUB in all truths coverage lessons; do
   set +e; GOUT=$(node "$GOS" gate "$SUB" 2>&1); RC=$?; set -e
   assert_exit "gate $SUB passes" 0 "$RC"
@@ -85,8 +85,8 @@ for SUB in all truths coverage lessons; do
   assert_eq "gate $SUB last line is table-driven ⚠ banner" "⚠ $BANNER" "$LAST"
 done
 
-# --- T13.7: no ✓ → no banner (gate lessons without any lessons truth = nothing to check) ---
-# (sentinel deleted D-09: the gate reads truth-file existence only — no config key)
+# --- .7: no ✓ → no banner (gate lessons without any lessons truth = nothing to check)
+# (sentinel deleted : the gate reads truth-file existence only — no config key)
 rm -f .gos/lessons.md .gos/lessons.json .gos/cache/.lessons-anchors.json
 set +e; LOUT=$(node "$GOS" gate lessons 2>&1); LRC=$?; set -e
 assert_exit "gate lessons without lessons truth exits 0" 0 "$LRC"
@@ -119,7 +119,7 @@ else
   echo "  ✓ canary: single-quote injection not executed (no side-effect file)"; PASS=$((PASS+1))
 fi
 
-# --- T13.9: `_contract` default mode unchanged — banner-free JSON (T9.5 parity for new layer) ---
+# --- .9: `_contract` default mode unchanged — banner-free JSON ( .5 parity for new layer)
 FIRST=$(node "$GOS" _contract 2>/dev/null | head -1)
 assert_eq "_contract stdout line 1 still '{' (no CLI banner)" "{" "$FIRST"
 

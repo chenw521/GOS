@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/core/lock.cjs#fn:guardCwd bin/lib/core/gitprobe.cjs#fn:isTracked
 # gos-map:cmd status,checkpoint,stage,init
-# T95: repo-id guard + worktree detection (T4a, D-12, D-18) — Truths T-01/T-02/T-03.
+# repo-id guard + worktree detection (T4a) — Truths T-01/T-02/T-03.
 # Facts asserted:
 #   - static: lock.cjs carries no project_root re-anchor (identity is de-pathed)
 #   - protocol-variant self-consistency: guard passes when state.repo_id is the
@@ -17,7 +17,7 @@
 #   - linked worktree + tracked state.json → die with guidance on BOTH the
 #     read and the write class (worktrees share one state file)
 #   - no remotes → advisory pass (no die): repo_id null is SILENT (null IS the
-#     D-18 advisory record); a stamped binding warns exactly once per invocation
+# advisory record); a stamped binding warns exactly once per invocation
 #   - repo_id null + remotes present → guard derives and stores (the ONE
 #     sanctioned opportunistic state write): untracked after init, and a
 #     tracked state whose ONLY delta is the repo_id stamp

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/task/changelog.cjs#fn:cmdChangelogLint
 # gos-map:cmd changelog
-# T55: gos changelog lint — post-hoc enforcement over CHANGELOG.md.
-# Covers: R-06 structural three-checks (single title / newest-first dates /
+# gos changelog lint — post-hoc enforcement over CHANGELOG.md.
+# Covers: structural three-checks (single title / newest-first dates /
 # today's obligation) exit 1 individually; missing-file semantics = advisory +
 # exit 0 (obligations start once the file exists; `gos changelog add` bootstraps
-# it); R-08 no-state (CI) downgrade of the today-obligation to advisory while
-# other checks stay enforced; R4-F12 discriminant — [Unreleased] entries get
+# it); no-state (CI) downgrade of the today-obligation to advisory while
+# other checks stay enforced; discriminant — [Unreleased] entries get
 # full validateEntry (generated zone), versioned sections structural checks
 # only (promote products + history zone); same-source consumption of
 # changelog-core (require-source grep, no drift).
@@ -106,7 +106,7 @@ assert_contains "U1 entry text quoted" "This entry breaks every rule" "$OUT"
 assert_contains "U1 file:line derivable" "CHANGELOG.md:5" "$OUT"
 t55_teardown
 
-# ===== U2: identical bad entry in a VERSION section -> NOT flagged (R4-F12) =====
+# ===== U2: identical bad entry in a VERSION section -> NOT flagged =====
 t55_new
 printf '# Log\n\n## [Unreleased]\n\n- Add today bullet one (D-42) [%s]\n\n## [1.0.0] - 2026-01-01\n\n- This entry breaks every rule T-9 (1) and then some [2026-01-01]\n' "$TODAY" > CHANGELOG.md
 set +e; OUT=$(node "$GOS" changelog lint 2>&1); RC=$?; set -e

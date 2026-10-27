@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Wave Aggregation Protocol (D-12) — one command instead of 3 manual steps.
+# Wave Aggregation Protocol — one command instead of 3 manual steps.
 # Exit: 0 = aggregated clean | 1 = issues found (see output)
 set -uo pipefail
 ISSUES=0

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:cmd help,status
 # T35b: status screen frozen pointer line + headless usage only in detail/--json, never the default page
-# Covers: D-33 (plan T5; R4-F8 grep -F discipline)
+# Covers: (plan ; grep -F discipline)
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 
 T35S_DIR=""

@@ -15,13 +15,13 @@ semantic exit codes (0 healthy / 1 issues).
 
 ## Requirements
 
-- **R-01**: Diagnose installation state and suggest fixes (from intent)
+- **R-nn**: Diagnose installation state and suggest fixes (from intent)
 
 ## Decisions
 
-### D-01': Fix suggestions come from a HARDCODED frozen table
+### D-nn': Fix suggestions come from a HARDCODED frozen table
 
-Decision card (P15 D-62 — every decision shows its options symmetrically):
+Decision card (P15 D-nn — every decision shows its options symmetrically):
 
 | Option | Premise | Pros | Cons | Risks |
 |:--|:--|:--|:--|:--|
@@ -49,14 +49,14 @@ safety-relevant and the frozen-value test channel already exists
 - **Rationale**: defense in depth — future edits to the table can't
   reintroduce dangerous output.
 
-### D-02: Anti-misread output contract
+### D-nn: Anti-misread output contract
 - **Decision**: explicit text states (`✓ OK:`/`⚠ MISSING:`/`⚠ BROKEN:`),
   mandatory trailing `RESULT: HEALTHY(n)/ISSUES FOUND(n) — exit code`,
   exit semantics documented in output tail.
 - **Rationale**: primary consumers are often weak models relaying to
   users; they must relay correctly with zero inference.
 
-### D-03: Unknown-exception fallback is reporting, never reinstall
+### D-nn: Unknown-exception fallback is reporting, never reinstall
 - **Decision**: `unknown → report issue at <repo>/issues with doctor
   output` (+ note that .gos/ task state survives reinstall).
 - **Rationale**: reinstall is the heaviest destructive op; unknown cases
@@ -64,10 +64,10 @@ safety-relevant and the frozen-value test channel already exists
 
 ## Observable Truths
 
-- **T1**: healthy env → all ✓, `RESULT: HEALTHY (0 warnings)`, exit 0 — verify: run doctor in clean fake-HOME
-- **T2**: broken link → precise MISSING/BROKEN + fix + exit 1 — verify: unlink one skill, run doctor
-- **T3**: discoverable — `gos help` lists doctor; no platforms → Fix: gos setup
-- **T4**: security — output greps 0 for rm/unlink/sudo; all Fix lines match whitelist; RESULT line present — verify: TD-05 assertions in test suite
+- **Tn**: healthy env → all ✓, `RESULT: HEALTHY (0 warnings)`, exit 0 — verify: run doctor in clean fake-HOME
+- **Tn**: broken link → precise MISSING/BROKEN + fix + exit 1 — verify: unlink one skill, run doctor
+- **Tn**: discoverable — `gos help` lists doctor; no platforms → Fix: gos setup
+- **Tn**: security — output greps 0 for rm/unlink/sudo; all Fix lines match whitelist; RESULT line present — verify: TD-05 assertions in test suite
 
 ## Deferred Ideas
 
@@ -84,15 +84,15 @@ safety-relevant and the frozen-value test channel already exists
 
 ## Lessons Applied
 
-- [2026-08-14] soft-text-whitelist lesson → D-01' hardened BEFORE any
+- [2026-08-14] soft-text-whitelist lesson → D-nn' hardened BEFORE any
   user challenge this time (the lesson working as designed)
 
 ## Red Team Record
 
 | Round | Perspective | Findings | Dispositions |
 |:---|:---|:---|:---|
-| 1 | Misuse/Safety | 2 (soft whitelist is text discipline; path interpolation risk) | ACCEPT×2 → D-01', D-01b (changes landed in spec above) |
-| 2 | Edge/Exception | 1 (unknown fallback implicitly reinstall) | ACCEPT → D-03 |
+| 1 | Misuse/Safety | 2 (soft whitelist is text discipline; path interpolation risk) | ACCEPT×2 → D-nn', D-01b (changes landed in spec above) |
+| 2 | Edge/Exception | 1 (unknown fallback implicitly reinstall) | ACCEPT → D-nn |
 | 3 | Completeness | 0 — converged (attacked: constraint verifiability / unasked gray areas / lessons.md cross-check) | — |
 
 > (This example shows ACCEPT-heavy rounds. A REJECT would need: finding ID,

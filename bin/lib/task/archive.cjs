@@ -1,4 +1,3 @@
-// task/archive — Split-③ ②-4 (T2)
 'use strict';
 
 const core = require('../core/index.cjs');
@@ -49,7 +48,7 @@ function archiveDirExists(date, slug) {
 }
 
 function cmdArchive(opts = {}) {
-  const fromCommit = !!opts.fromCommit; // [REVIEW P1-F2] invoked from cmdCommit — gates degrade to warn+skip (never kill the commit mid-flow)
+ const fromCommit = !!opts.fromCommit; // invoked from cmdCommit — gates degrade to warn+skip (never kill the commit mid-flow)
   // Registry-driven walker: one traversal for direct + nested fields (single-source consumption —
   // newly registered fields are picked up by the rewrite/normalization automatically)
   const walkPaths = (obj, fn) => {
@@ -113,7 +112,7 @@ function cmdArchive(opts = {}) {
   })();
   if (!state) core.die(core.CONTRACTS.state_semantics.noActiveTask);
 
-  // ---- F-1: lessons enforcement (fail-closed) ----
+ // ---- : lessons enforcement (fail-closed)
   // If this task had gaps or red-team findings, a lesson MUST be recorded first.
   const gapCount = (state.gaps || []).length; // any gap history counts
   const rtFindings = ((state.redteam_rounds || []).reduce((n, r) => n + (r.findings || 0), 0)) || 0;
@@ -141,7 +140,7 @@ function cmdArchive(opts = {}) {
   // design; CHANGELOG.md is deliberately not consulted for version truth.
   // GOS_SKIP_SHIP_CHECK=1 skips both (tests / non-release archives).
   if (!fromCommit && process.env.GOS_SKIP_SHIP_CHECK !== '1') {
-    // ---- D-06/R-33 (F-9/F-11): PROJECT.md pre-flight — same slot as the SHIP ritual ----
+ // ---- /: PROJECT.md pre-flight — same slot as the SHIP ritual
     // Validate-then-mutate (lesson 8a11d879): the refusal lands BEFORE any
     // project.json mutation, task collection (staging), or auto-render, so a
     // skeleton PROJECT.md never strands a half-archived phase. Applies only
@@ -164,7 +163,7 @@ function cmdArchive(opts = {}) {
         }
       }
     }
-    // D-07: the obligation reads through the single root-anchored resolver —
+ // the obligation reads through the single root-anchored resolver
     // a relocated changelog (gos config changelog-path) is honored here.
     let changelogText = null;
     try { changelogText = fs.readFileSync(clcore.resolveChangelogMd(), 'utf8'); } catch { /* absent */ }
@@ -197,13 +196,13 @@ function cmdArchive(opts = {}) {
   }
   if (hadIncidents) {
     // incident → two-of-one: today's lesson (either side) OR `gos lessons skip --reason`
-    // P15 D-64: reads json truth only (entries.at + json.audit) — no sidecar, no md parse
+ // P15 : reads json truth only (entries.at + json.audit) — no sidecar, no md parse
     const today = new Date().toISOString().slice(0, 10);
     const projDisp = knowledge.loadStoreDisplay(core.lessonsPaths('project'));
     const globDisp = knowledge.loadStoreDisplay(core.lessonsPaths('model'));
     const todayIn = (store) => store && Array.isArray(store.entries) && store.entries.some((e) => e && e.at === today);
     const hasTodayLesson = todayIn(projDisp.store) || todayIn(globDisp.store);
-    // REVIEW #3: D-34 is per-archive two-of-one — only a skip taken TODAY exempts THIS
+ // REVIEW #3: is per-archive two-of-one — only a skip taken TODAY exempts THIS
     // archive; a historical skip row must never become a permanent blanket exemption.
     let skipInfo = null;
     if (projDisp.ok && projDisp.store && Array.isArray(projDisp.store.audit)) {
@@ -252,10 +251,10 @@ function cmdArchive(opts = {}) {
     } catch (e) { if (e && e.message) console.log(`⚠ plan drift check skipped: ${String(e.message).split('\n')[0]}`); }
   }
 
-  // [REVIEW P2-F5] DRY: slug logic lives in sibContext.archiveSlugParts (single source — the
+ // DRY: slug logic lives in sibContext.archiveSlugParts (single source — the
   // context SHIP preview consumes the same function, no drift)
   const { date, slug } = sibContext.archiveSlugParts(state);
-  // ---- T8: idempotency — DONE + completed_at (this state WAS archived) + today's slug dir present ----
+ // ---- : idempotency — DONE + completed_at (this state WAS archived) + today's slug dir present
   // completed_at discriminates "this task already archived" from "another same-slug task archived today"
   // tid-based idempotency: re-running archive on an already-archived task after a slug change
   // (version bump / date rollover) is a no-op as long as an archive dest contains this task id
@@ -324,20 +323,20 @@ function cmdArchive(opts = {}) {
     }
     core.validateState(state, 'fail');   // pre-validate: fail fast at zero cost on a pre-existing bad state (the main repair is the adoption rewrite below)
   }
-  // ---- T8: dest collision — same-day same-slug task appends -2, -3... until free ----
+ // ---- : dest collision — same-day same-slug task appends -2, -3... until free
   let dest = path.join(core.ARCHIVE_DIR, `${date}-${slug}`);
   for (let i = 2; fs.existsSync(dest); i++) dest = path.join(core.ARCHIVE_DIR, `${date}-${slug}-${i}`);
   fs.mkdirSync(dest, { recursive: true });
   // spec/plan fallback to the canonical paths (pre-existing null spec_path state —
   // SHIP-dogfood fix: every other consumer falls back to '.gos/spec.md', moves didn't)
-  // ---- Phase W (T17/T18, D-13/R-07): two-phase ship transaction + orphan adoption ----
+ // ---- Phase W: two-phase ship transaction + orphan adoption
   // Phase A: stage everything into .gos/.ship-staging/ — tracked via `git mv` (rename
   // history preserved), untracked via fs.renameSync. Any failure rolls staging back to
   // the original paths; nothing half-moves. Phase B: git add + rename staging → dest +
   // commit. Idempotent re-entry: leftover staging from a crashed run is restored first.
   const staging = core.resolvePath('ship_staging');
   let moved = 0; // hoisted for the final archived summary line
-  // D-14/D-15 (§3.7, RT3-F11): gitprobe is the only fail-closed probing
+ // /: gitprobe is the only fail-closed probing
   // primitive. Its ignored-scan truth source lists exact files and collapses
   // covered directories to a single trailing-slash entry, so "rel is ignored"
   // = rel itself listed, or rel living under a listed directory — the same
@@ -410,12 +409,12 @@ function cmdArchive(opts = {}) {
       gitMvOrRename(taskDir, stTaskId);
       moved++;
     } else {
-      // legacy: spec/plan loose at root (pre-T5 states)
+ // legacy: spec/plan loose at root (pre- states)
       for (const p of [core.specPathOf(state), core.planPathOf(state)]) {
         if (fs.existsSync(p)) { gitMvOrRename(p, path.join(staging, path.basename(p))); moved++; }
       }
     }
-    // ③ orphan adoption (T18): registry-external files, with guards
+ // ③ orphan adoption : registry-external files, with guards
     //    - mtime quiet period <5min → skip + rescan-exempt (never mv in-flight BUILD files)
     //    - active anchor lock (.anchors.lock) → refuse adoption entirely
     const adoptDir = path.join(dest, 'orphans');
@@ -429,7 +428,7 @@ function cmdArchive(opts = {}) {
       let st; try { st = fs.statSync(src); } catch { continue; }
       if (now - st.mtimeMs < 5 * 60 * 1000) { skipped.push(rel); continue; } // quiet-period exempt
       if (anchorLockHeld) { skipped.push(rel); console.log(`⚠ anchor lock held — orphan adoption deferred: ${rel}`); continue; }
-      // [REVIEW P2-F2] adoption goes through staging too — "nothing half-moves" holds:
+ // adoption goes through staging too — "nothing half-moves" holds:
       // rollback restores staged orphans along with task/<id>/, dest only materializes in Phase B
       const dstRel = path.join('orphans', rel);
       const dstAbs = path.join(staging, dstRel);
@@ -439,7 +438,7 @@ function cmdArchive(opts = {}) {
       if (m && m[1].toLowerCase() !== String(tid || '').toLowerCase()) {
         const candidates = fs.existsSync(core.ARCHIVE_DIR) ? fs.readdirSync(core.ARCHIVE_DIR).filter((d) => d.includes(`phase-${m[1]}-`) || d.includes(`-phase-${m[1]}-`)) : [];
         if (candidates.length) {
-          const dirName = candidates.sort().pop(); // [REVIEW P2-F6] pop once, reuse for the log line
+ const dirName = candidates.sort().pop(); // pop once, reuse for the log line
           const target = path.join(staging, 'reroute', dirName, path.basename(rel));
           fs.mkdirSync(path.dirname(target), { recursive: true });
           gitMvOrRename(src, target);
@@ -473,7 +472,7 @@ function cmdArchive(opts = {}) {
     // ⑤ rescan zero-assertion: non-transient orphans must be zero (manual adjudication on failure)
     const rest = ops.detectOrphans(state).filter((r) => !skipped.includes(r));
     if (rest.length) {
-      // [REVIEW P2-F3] dest is born in THIS transaction — removing it avoids a half-archived
+ // dest is born in THIS transaction — removing it avoids a half-archived
       // stray that rescan can never reach again (archive/ is the exempt zone)
       try { fs.rmSync(dest, { recursive: true, force: true }); } catch { /* best effort */ }
       restoreStaging();
@@ -482,7 +481,7 @@ function cmdArchive(opts = {}) {
       process.exit(1);
     }
     if (adopted.length) console.log(`✓ ship adoption: ${adopted.length} orphan(s) → ${dest.includes('archive') ? 'archive' : dest} (${skipped.length} quiet-period/lock exempt)`);
-    // [REVIEW P1-F1] step6: README regen rides the ship transaction (machine-triggered, R-03)
+ // step6: README regen rides the ship transaction (machine-triggered)
   } catch (e) {
     rollback(e);
   }
@@ -502,12 +501,12 @@ function cmdArchive(opts = {}) {
     `- Requirements: ${state.requirements.map(r => r.id).join(', ')}`,
   ].join('\n');
   fs.writeFileSync(path.join(dest, 'delta.md'), delta + '\n');
-  // ---- T8: project.json integration (Lv4 truth source) — merge back, phase done, render views ----
+ // ---- : project.json integration (Lv4 truth source) — merge back, phase done, render views
   const project = core.loadProject();
   if (!project) {
     console.log(core.CONTRACTS.command_contracts.renderSkip); // no auto-vivify — truth source only via init --project / phase add
   } else {
-    // merge state→project, upsert by id, STATE VERSION WINS (fixes amend-then-archive deadlock F-3)
+ // merge state→project, upsert by id, STATE VERSION WINS (fixes amend-then-archive deadlock )
     const birthDefault = state.phase_name || 'legacy';
     const sDecs = Array.isArray(state.decisions) ? state.decisions : [];
     const sReqs = Array.isArray(state.requirements) ? state.requirements : [];
@@ -568,7 +567,7 @@ function cmdArchive(opts = {}) {
     }
   }
   state.current_stage = 'DONE';
-  // ---- F-5: clear checkpoints (prevent pollution of next task's resume) ----
+ // ---- : clear checkpoints (prevent pollution of next task's resume)
   state.checkpoints = [];
   state.completed_at = new Date().toISOString();
   // ---- adoption-time rewrite of state path references (registry field-level; full-text replace forbidden) ----

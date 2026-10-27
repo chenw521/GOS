@@ -5,7 +5,6 @@
 ### Decision Coverage Audit
 | D-NN | Decision | Implemented? | Evidence |
 |:---|:---|:---|:---|
-| D-01 | [decision] | ✅/❌ | [file:line] |
 
 ### Scope Boundary Check
 | Deferred Item | Implemented? (should be No) | Action |

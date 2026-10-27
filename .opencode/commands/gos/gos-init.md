@@ -9,7 +9,7 @@ permissions:
 ---
 
 <objective>
-Initialize a GOS task (creates .gos/state.json, records R-01 from intent). With --project, creates the Lv4 four-file set.
+Initialize a GOS task (creates .gos/state.json, records from intent). With --project, creates the Lv4 four-file set.
 </objective>
 
 <process>

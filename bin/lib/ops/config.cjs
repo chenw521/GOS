@@ -23,7 +23,7 @@ const MODEL_NAME_RE = /^[a-zA-Z0-9._/-]+$/; // F-2 whitelist
 
 const CONFIG_PATH = path.join(core.GOS_DIR, 'config.json');
 
-// D-09 two-layer system: GLOBAL layer (~/.config/gos/config.json — physical
+// two-layer system: GLOBAL layer (~/.config/gos/config.json — physical
 // path pinned, precedent i18n.cjs/persistLocale) is the seeded base; PROJECT
 // layer (.gos/config.json, tracked) overrides per-repo. Merge: scalars
 // project-wins; DEEP_MERGE_KEYS merge per sub-key so a project {checker} pin
@@ -69,10 +69,10 @@ function loadConfig() {
   return merged;
 }
 
-// One-time lessons_migrated strip for a layer (D-09 R2-6iii). Surgical: the
+// One-time lessons_migrated strip for a layer ( R2-6iii). Surgical: the
 // layer file is re-read fresh and only the sentinel key is removed, so a
 // concurrent `config models set` update to the other layer is never lost
-// (R3-F10: the strip lives ONLY inside this single locked write path;
+// (the strip lives ONLY inside this single locked write path;
 // loadConfig never writes).
 function stripSentinelFromLayer(p, layerObj, layer) {
   if (!layerObj || layerObj[SENTINEL_KEY] === undefined) return false;
@@ -136,10 +136,10 @@ Object.assign(core.CONTRACTS.semantic_checks, SEMANTIC_RUNTIME_BASE);
 
 const SEMANTIC_RUNTIME = core.CONTRACTS.semantic_checks;
 
-// plan tasks source for semantic checks: plan_snapshot (T2 frozen at commit plan)
+// plan tasks source for semantic checks: plan_snapshot ( frozen at commit plan)
 // first; absent → live task.parsePlanMd() fallback [B-2 source-of-truth rule]. null = no plan.
 
-// ① B-2 bidirectional: plan Covers ∪D-NN == state.decisions ids EXACT (both directions);
+// ① bidirectional: plan Covers ∪D-NN == state.decisions ids EXACT (both directions);
 
 function resolveSemanticTier(tier) {
   if (tier === 'inherit' || tier === 'current') return { model: 'inherit' };
@@ -201,7 +201,7 @@ function cmdResolveModel(args) {
   if (r.hint) console.error(`hint: ${r.hint}`);
 }
 
-// `gos config changelog-path <rel>` — D-07/R-32: record the changelog location
+// `gos config changelog-path <rel>` — : record the changelog location
 // in the PROJECT layer (tracked, clone-consistent) and move any existing file
 // there atomically. Lock order pinned .gos/.lock (held by write-class dispatch
 // since guardCwd) → changelog.lock, both held across the whole mv+save so a
