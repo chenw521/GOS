@@ -103,5 +103,10 @@
     "path": "test/sections/T98a-track-core.test.sh",
     "category": "fixture",
     "reason": "Deliberate CJK test data (track pre-scan CJK payloads; mirrored reason from sibling fixtures)."
+  },
+  {
+    "path": ".gos/ai-trace-sweep-ledger.ndjson",
+    "category": "fixture",
+    "reason": "Mechanical sweep ledger: deleted-anchor id extraction from swept comment lines can carry CJK punctuation tokens from mixed-language comments; data, not prose."
   }
 ]
