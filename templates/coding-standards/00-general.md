@@ -77,14 +77,14 @@ Link them from the issue tracker, the PR description, or the commit body.
 The full banned family, named digit-free — every digit-bearing shape of these
 is a trace artifact:
 
-- bracket decision anchors: `[D-NN]`, `[REVIEW Mn]`, `[R-NN/F-NN]`
+- bracket decision anchors: `[D-NN]`, `[REVIEW Mn]` (slash compounds stay parenthesized, see below)
 - bare and parenthesized decision/requirement ids: `D-nn`, `R-nn`, `F-nn`,
   `(R-nn/F-nn)`
 - wave and task ids: `Wn`, `Tn`, `Wn-Tn`
 - dash compounds: `RTn-Fn`
 - spec-section citations: `spec §n.n`, `§n.n`
-- task-narrative phrases: "this wave adds…", "this phase ships…", "this task
-  introduces…"
+- task-narrative phrases: this <phase|wave|task> <adds|ships|introduces> … —
+  narrating the task in a comment instead of describing WHAT
 
 **The rule: lineage lives in commit bodies and the CHANGELOG; comments keep
 the WHAT.** A trace-free comment states a constraint, a contract, or a reason

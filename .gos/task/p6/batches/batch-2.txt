@@ -1,0 +1,26 @@
+# ai-trace sweep batch members — one repo-relative tracked path per line
+bin/gos.cjs
+bin/lib/map/allowlist.cjs
+bin/lib/map/anchor.cjs
+bin/lib/map/contract.cjs
+bin/lib/map/edges.cjs
+bin/lib/map/engine.cjs
+bin/lib/map/index.cjs
+bin/lib/map/views.cjs
+bin/lib/nav/cmds.cjs
+bin/lib/nav/help.cjs
+bin/lib/nav/registry-consts.cjs
+bin/lib/nav/registry.cjs
+bin/lib/nav/status.cjs
+bin/lib/ops/brownfield-probe.cjs
+bin/lib/ops/brownfield.cjs
+bin/lib/ops/changelog-core.cjs
+bin/lib/ops/config.cjs
+bin/lib/ops/doctor.cjs
+bin/lib/ops/feedback.cjs
+bin/lib/ops/gate.cjs
+bin/lib/ops/gitseed.cjs
+bin/lib/ops/push.cjs
+bin/lib/ops/setup.cjs
+bin/lib/ops/track.cjs
+bin/lib/render/views.cjs

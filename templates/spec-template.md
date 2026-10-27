@@ -1,4 +1,4 @@
-# Spec: [Task/Feature Name]
+# Spec: [Task or Feature Name]
 
 > **Date**: YYYY-MM-DD | **Level**: Lv___ | **Status**: Draft
 
@@ -12,10 +12,10 @@
 
 ## Requirements (R-NN)
 
-<!-- R-01 is auto-extracted from intent. Add more during gray-area dialogue. -->
+<!-- R-nn is auto-extracted from intent. Add more during gray-area dialogue. -->
 
-- **R-01**: [Intent summary — auto from gos init]
-- **R-02**: [Additional commitment discovered during dialogue]
+- **R-nn**: [Intent summary — auto from gos init]
+- **R-nn**: [Additional commitment discovered during dialogue]
 
 ## Approach
 
@@ -30,11 +30,11 @@
 <!-- Each decision gets a D-NN ID. PLAN's Decision Coverage Gate checks all. -->
 <!-- Record each D-NN via: gos decision add D-NN "<conclusion>" --rationale "<why>" -->
 
-### D-01: [Decision title]
+### D-nn: [Decision title]
 - **Decision**: [What]
 - **Rationale**: [Why]
 
-### D-02: [Decision title]
+### D-nn: [Decision title]
 - **Decision**: ...
 - **Rationale**: ...
 
@@ -47,7 +47,7 @@
 - [Explicitly excluded]
 
 ## Deferred Ideas
-- [DI-1]: [description] ([when])
+- [DI-n]: [description] ([when])
 
 ## Red Team Record (Lv2+ mandatory before user approval)
 
@@ -62,4 +62,4 @@
 > Verdict line: converged (a zero-finding round) or escalated-to-user.
 
 ## Risks
-- [Risk 1] → [Mitigation]
+- [Risk n] → [Mitigation]

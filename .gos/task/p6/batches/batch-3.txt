@@ -1,0 +1,9 @@
+# ai-trace sweep batch members — one repo-relative tracked path per line
+test/checks/gitprobe-monopoly.sh
+test/checks/stale-verbs.sh
+test/fixtures/gh-stub/gh
+test/golden/pre-split/contract.txt
+test/gos-cli-tests.sh
+test/pack-check.sh
+test/run-sections.sh
+test/workflow-lint.sh

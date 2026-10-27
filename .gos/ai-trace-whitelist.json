@@ -530,54 +530,6 @@
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
-    "path": "templates/coding-standards/00-general.md",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "templates/coding-standards/node.md",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "templates/coding-standards/python.md",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "templates/coding-standards/shell.md",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "templates/plan-template.md",
-    "category": "in-flight-sweep",
-    "maxHits": 9,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "templates/review-checklist.md",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "templates/spec-template.md",
-    "category": "in-flight-sweep",
-    "maxHits": 8,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "templates/trace-template.md",
-    "category": "in-flight-sweep",
-    "maxHits": 6,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/checks/gitprobe-monopoly.sh",
     "category": "in-flight-sweep",
     "maxHits": 4,
@@ -588,6 +540,24 @@
     "category": "in-flight-sweep",
     "maxHits": 3,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/fixtures/ai-trace/anchors.json",
+    "category": "lint-fixture",
+    "maxHits": 4,
+    "reason": "Permanent red fixture for the ai-trace lint section; the anchors are the fixture content itself."
+  },
+  {
+    "path": "test/fixtures/ai-trace/anchors.md",
+    "category": "lint-fixture",
+    "maxHits": 3,
+    "reason": "Permanent red fixture for the ai-trace lint section; the anchors are the fixture content itself."
+  },
+  {
+    "path": "test/fixtures/ai-trace/anchors.sh",
+    "category": "lint-fixture",
+    "maxHits": 3,
+    "reason": "Permanent red fixture for the ai-trace lint section; the anchors are the fixture content itself."
   },
   {
     "path": "test/fixtures/gh-stub/gh",
@@ -641,6 +611,12 @@
     "path": "test/sections/T101-issue-tokens.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T102-ai-trace.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {

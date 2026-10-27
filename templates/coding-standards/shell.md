@@ -141,7 +141,7 @@ Before writing any comment in a shell script, apply the judgment test from
 # Added the -f flag because the release job kept failing (see incident nn)
 # v2: we now rsync instead of cp
 # [REVIEW Mn] quieted the shellcheck warning here
-# this task adds the stale-lock cleanup for the nightly job
+# this <task> adds the stale-lock cleanup for the nightly job
 rm -rf "${build_dir}"
 ```
 

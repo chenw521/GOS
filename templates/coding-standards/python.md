@@ -81,7 +81,7 @@ origins untraceable.
 
 ```python
 def parse_task_id(raw: str) -> tuple[str, int] | None:
-    """Parse a task ID string ("p12-t03") into (phase, number).
+    """Parse a task ID string ("pnn-tnn") into (phase, number).
 
     Returns None when raw is not a task ID; never raises on bad input —
     callers branch on the None return.
@@ -182,7 +182,7 @@ full list and rationale in `00-general.md`.
 ❌ — process narrative:
 
 ```python
-# this wave introduces batching for the export query
+# this <wave> introduces batching for the export query
 ```
 
 ✅ — the WHAT-only rewrite:

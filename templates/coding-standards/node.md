@@ -82,7 +82,7 @@ plus the names already say it, no comment. When it doesn't, be complete.
 
 ```js
 /**
- * Parse a task ID string ("p12-t03") into its parts.
+ * Parse a task ID string ("pnn-tnn") into its parts.
  * @param {string} raw
  * @returns {{ phase: string, task: string } | null} null when raw is not a task ID.
  */
@@ -159,7 +159,7 @@ applies with full force: delete the comment — what does the reader lose?
 // v2 switched to async iterators
 // [REVIEW Mn] narrowed the type here
 // T-nnn: added the guard clause
-// this phase adds a retry guard around the upload
+// this <phase> adds a retry guard around the upload
 ```
 
 ✅

@@ -18,20 +18,20 @@
 - **Deleted**: [files]
 
 ### Requirements Shipped
-- R-01: [requirement] → [how addressed]
-- R-02: [requirement] → [how addressed]
+- R-nn: [requirement] → [how addressed]
+- R-nn: [requirement] → [how addressed]
 
 ### Decisions Implemented
-- D-01: [decision] → [how implemented]
-- D-02: [decision] → [how implemented]
+- D-nn: [decision] → [how implemented]
+- D-nn: [decision] → [how implemented]
 
 ### Verified
 - `gos gate all`: exit 0
-- Tests: [N] passed
-- Truths: [N/N] confirmed
+- Tests: [count] passed
+- Truths: [count] confirmed
 
 ### Deferred
-- [DI-1]: [item] ([when])
+- [DI-n]: [item] ([when])
 
 ### Retrospective (Lv3+)
 - Well: [what went well]
