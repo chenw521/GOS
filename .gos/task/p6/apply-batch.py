@@ -47,6 +47,12 @@ def extend_token(tok, text):
     elif tok.startswith('§'):
         while end < len(text) and re.match(r'[0-9a-zA-Z.-]', text[end]):
             end += 1
+    # slash compounds: the census records the first element; absorb the chain
+    while end + 1 < len(text) and text[end] == '/' and re.match(r'[A-Za-z]+-\d+', text[end + 1:]):
+        nxt = text.index(' ', end + 1) if ' ' in text[end + 1:] else len(text)
+        seg = text[end + 1:nxt]
+        seg = re.match(r'[A-Za-z]+-\d+', seg).group(0)
+        end += 1 + len(seg)
     if idx > 0 and end < len(text) and text[idx - 1] in PAIRS and text[end] == PAIRS[text[idx - 1]]:
         inner = text[idx:end]
         if not re.search(r'[,;=]|->', inner):
