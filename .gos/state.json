@@ -36,9 +36,9 @@
       "description": "detectOrphans excludes git-tracked files from the orphan set, reporting them separately as unregisteredTracked",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\"test-20261027-171500-defect-batch/t1-replay.sh\"]",
-        "output_excerpt": "T1REPLAY orphans=[\"plain-stray.txt\"] unregisteredTracked=[\"unreg-tracked.md\"] probeFailure=null",
-        "artifact_path": "test-20261027-171500-defect-batch/t1-replay.sh",
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T43\"]",
+        "output_excerpt": "✓ T43.2 probe file → frozen advisory text, exit stays 0",
+        "artifact_path": "test/sections/T43-orphan-gate.test.sh",
         "replay": true
       }
     },

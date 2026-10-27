@@ -77,6 +77,30 @@ else
 fi
 rm -f .gos/tmpfile.tmp .gos/foo.lock
 
+# .10 function-level two-tier split: a fresh sandbox repo with one tracked
+#     unregistered file and one untracked stray — detectOrphans must return
+#     them in separate tiers with a healthy probe verdict
+T43_SUB="$T43_DIR/fn-probe"
+mkdir -p "$T43_SUB"
+( cd "$T43_SUB" && git init -q . && git commit -q --allow-empty -m root \
+  && mkdir -p .gos \
+  && echo live > .gos/unreg-tracked.md && git add -f .gos/unreg-tracked.md \
+  && echo stray > .gos/plain-stray.txt \
+  && node -e '
+    const d = require(process.argv[1] + "/bin/lib/ops/doctor.cjs");
+    const r = d.detectOrphans(null);
+    const ok = JSON.stringify(r.orphans) === JSON.stringify(["plain-stray.txt"])
+      && JSON.stringify(r.unregisteredTracked) === JSON.stringify(["unreg-tracked.md"])
+      && r.probeFailure === null;
+    console.log(ok ? "T43.10-OK" : "T43.10-FAIL " + JSON.stringify(r));
+  ' "$GOS_ROOT" ) > "$T43_DIR/fn.out" 2>&1
+if grep -q "T43.10-OK" "$T43_DIR/fn.out"; then
+  echo "  ✓ T43.10 two-tier split verified at function level"; PASS=$((PASS+1))
+else
+  echo "  ✗ T43.10 function-level verdict: $(cat "$T43_DIR/fn.out" | tail -1)"; FAIL=$((FAIL+1))
+fi
+rm -rf "$T43_SUB"
+
 # .6 README hand-edited -> regen diff check fails (anti-drift hard gate)
 printf 'hand-edited\n' >> .gos/README.md
 set +e
