@@ -157,7 +157,6 @@ function deriveRepoId(rawUrl) {
 // Read the repo's remotes (argv-only git calls — never a shell string) and
 // derive one repo_id: origin wins when identifiable; otherwise all remotes
 // must agree on a single id; no remotes / disagreement / unidentifiable URLs
-// → advisory null (D-18).
 function repoIdFromRemotes(rootDir) {
   const root = rootDir || currentRootRealpath() || process.cwd();
   let names;
@@ -182,7 +181,7 @@ function repoIdFromRemotes(rootDir) {
   return null;
 }
 
-// Tracked-state path discipline (D-12): task path fields are stored
+// Tracked-state path discipline : task path fields are stored
 // repo-relative so a tracked state.json never carries machine paths. A path
 // outside the repo root cannot be relativized and is dropped to null (the
 // lazy resolvers re-derive it); null/relative values pass through unchanged.
@@ -221,17 +220,17 @@ function migrateState(s) {
   const wasLegacy = s.schema_version === undefined;
   const fromV = wasLegacy ? 0 : s.schema_version;
   s.schema_version = STATE_SCHEMA_VERSION;
-  // [Phase W T9] v2→v3: pin spec_path/plan_path to task/<id>/ when absent (legacy
+ // [Phase W ] v2→v3: pin spec_path/plan_path to task/<id>/ when absent (legacy
   // states predate path pinning). Root-level legacy spec.md/plan.md — if still on
-  // disk — are migrated by the T5 batch, NOT here (no dual-read window, D-14).
-  // Values are stored repo-relative (D-12: no machine paths in tracked state).
+ // disk — are migrated by the batch, NOT here (no dual-read window, D-14).
+ // Values are stored repo-relative ( : no machine paths in tracked state).
   if (!s.spec_path) {
     pinTaskPaths(s);
   }
   // [T94/D-12] v3→v4: identity de-pathed — drop the dead `version` field and the
   // machine-path `project_root` anchor (repo root is runtime-derived from here
   // on); stamp repo_id from the origin remote URL hash (advisory null without
-  // remotes, D-18 — the raw URL is never persisted).
+ // remotes, — the raw URL is never persisted).
   if (fromV < 4) {
     delete s.version;
     delete s.project_root;
@@ -303,7 +302,7 @@ function readState() {
     // legacy/v3 → migrate in-memory (both read and write paths migrate; only write persists)
     s = migrateState(s);
   }
-  // D-12 path discipline: cure absolute task paths on every read (v4 states
+ // path discipline: cure absolute task paths on every read (v4 states
   // migrated before this normalization existed still carry machine paths);
   // persisted only by the next write-class command.
   normalizeTaskPaths(s);
@@ -356,14 +355,14 @@ function firstCJKLeaf(v, p = 'state') {
 // (state.json / concerns.md / lessons.json — and gap text, which flows into
 // concerns.md via stage-back write-back): tracked stores are English-only
 // because knowledge files travel with clones. Fires only when the candidate
-// text carries CJK AND gitprobe.isTracked(<store file>) — the T1 primitive is
+// text carries CJK AND gitprobe.isTracked(<store file>) — the primitive is
 // fail-closed (ANY git failure counts as tracked), so the boundary never falls
 // open. Guidance is bilingual by design, rendered through t() from the locale
 // dot-key 'langBoundary.trackedStore' (en.cjs + zh.cjs); the zh line is forced
 // via a GOS_LANG flip on the die path (the process exits immediately, so the
 // env mutation cannot leak). i18n is required lazily same-directory — the
 // locale catalogs themselves must NOT be required from here: locales → state
-// is a banned cross-directory cycle edge (T46 DAG).
+// is a banned cross-directory cycle edge ( DAG).
 function dieTrackedStoreCJK(file, text) {
   if (!fsio.hasCJK(text)) return false;
   if (!gitprobe.isTracked(file)) return false;
@@ -429,7 +428,7 @@ function loadProject() {
   }
   const mode = (readState._mode === 'write') ? 'fail' : 'warn';
   const errs = validateProject(obj, mode);
-  // REVIEW F-3 (D-01/F-8): read-class encountering a FUTURE schema version must REFUSE the data
+ // REVIEW (D-01/F-8): read-class encountering a FUTURE schema version must REFUSE the data
   // (status/resume still work off state.json) — not just warn and consume it
   if (errs.includes('__FUTURE__')) return null;
   return obj;
@@ -447,7 +446,7 @@ const CONTRACTS = {
     gateFailedPrefix: '✗ GATE FAILED',           // used as `✗ GATE FAILED (N):`
     passPrefix: '✓ ',                             // per-gate pass line prefix
     failPrefix: '✗ ',                             // per-gate fail line prefix
-    // Phase W (T6, R-06): orphan advisory — FROZEN (spec Appendix A literal). <N> placeholder.
+ // Phase W ( , R-06): orphan advisory — FROZEN (spec Appendix A literal). <N> placeholder.
     // Advisory by default; `--strict` escalates to FAIL. Do NOT reword (tests assert it).
     orphanAdvisory: '[orphan-advisory] <N> unregistered entr(y|ies) under .gos/ (scan excludes archive/, active task/, renderers/, *tmp*/lock patterns). If BUILD is in progress, ignore this advisory. Do NOT delete manually — `gos commit ship` (or `gos commit verify` for non-project tasks) adopts them automatically.',
     orphanAdvisoryOne: '[orphan-advisory] 1 unregistered entry under .gos/ (scan excludes archive/, active task/, renderers/, *tmp*/lock patterns). If BUILD is in progress, ignore this advisory. Do NOT delete manually — `gos commit ship` (or `gos commit verify` for non-project tasks) adopts them automatically.',
@@ -484,8 +483,8 @@ const CONTRACTS = {
     snapshotMonotonic: 'plan_snapshot monotonicity violated (∪Files / per-task Covers may only grow)',
     snapshotFileSpace: 'plan.md Files entry contains whitespace',
     taskHeadReset: 'task_head_history reset by init --force — diff baseline restarts at current HEAD',
-    // Phase C (T3, D-17): command-registry self-check — single die exit for all six
-    // structural assertions (T29-9 stderr anchor; extracted from `gos _contract`).
+ // Phase C ( , D-17): command-registry self-check — single die exit for all six
+ // structural assertions ( -9 stderr anchor; extracted from `gos _contract`).
     commandRegistrySelfCheck: 'command registry self-check failed:',
   },
   command_contracts: {
@@ -499,7 +498,7 @@ const CONTRACTS = {
     manualMarker: '<!-- MANUAL:notes -->',
     phaseAdded: '✓ Phase added: ',                // + phase name
     phaseClaimed: '✓ Phase claimed: ',            // + phase name
-    // Phase W (T3, D-10): paths command output contracts (additive-only)
+ // Phase W ( , D-10): paths command output contracts (additive-only)
     readmeGenerated: '✓ README rendered:',
     readmeHeader: '<!-- GENERATED by gos paths --markdown',
     phaseUnclaimed: '✓ Phase ',                   // + name + ' unclaimed — ...'
@@ -543,7 +542,7 @@ const CONTRACTS = {
     feedbackOwnerRefuse: '✗ refusing push: repo owner',  // owner-mismatch guard head
     feedbackPublished: '✓ published: ',                  // push success URL prefix
     feedbackGhMissing: "'gh' executable not found on PATH",
-    // brownfield adoption — frozen closed sets (D-88/D-99; tests assert from `_contract`):
+ // brownfield adoption — frozen closed sets ( /D-99; tests assert from `_contract`):
     // per-asset outcome taxonomy, dormant-hook state flags, the exit-code table,
     // and the preflight refusal reason vocabulary (placeholders absent — literal sets).
     brownfieldStatusSet: 'created | kept_identical | kept_conflict | locked_user_owned | report_only',
@@ -552,7 +551,7 @@ const CONTRACTS = {
     brownfieldPreflightReasons: 'path occupied by non-directory | dangling symlink | unwritable ancestor | symlink escape',
   },
   // semantic_checks — Phase B (defect-1 semantic gates) check registry [D-33]:
-  // texts frozen from spec §2; skills/tests assert from here (gos _contract).
+ // texts frozen from spec ; skills/tests assert from here (gos _contract).
   // B-3 [R1-F11+R3-F9]: gate subcommand emitting ✓ for a table check ends with `banner`.
   semantic_checks: {
     banner: 'gate checks syntax+consistency only, not semantic quality',
@@ -626,7 +625,7 @@ const CONTRACTS = {
     exemptCleared: 'exemptions consumed and cleared (auto-expiry — one commit per exemption)',
     concernsBootstrap: 'concerns sidecar bootstrapped this run (anchor created from current file)',
     concernsAnchorFail: 'concerns anchor mismatch — restore .gos/concerns.md from git history or .bak',
-    // Phase C (T4, D-15/R1-F5/R3-F4): help envelope + machine-consumption discipline.
+ // Phase C ( , D-15/ /R3-F4): help envelope + machine-consumption discipline.
     jsonHelpEnvelope: 'envelope {gos_version, schema_version, class_legend, commands} — strict JSON from byte 0 (no banners)',
     jsonMachineMode: '--json is the sole legal machine consumption mode; consumer MUST JSON.parse-verify AND reject schema_version > known — pre-Phase-C gos prints human text with exit 0 on `help --json`',
     // Section-runner freshness enrichment (product `gos section run`):
@@ -662,7 +661,7 @@ const CONTRACTS = {
     // single-point-commit iron rule — frozen phrase; skills (gos-build) and
     // tests assert from this table.
     waveSinglePointCommit: 'during parallel waves executors never run gos commit — the main session commits once per wave after aggregation',
-    // Phase U (D-33/T4): in-flow discovery pointer — frozen exact string, asserted by T35-u-status
+ // Phase U (D-33/ ): in-flow discovery pointer — frozen exact string, asserted by T35-u-status
     fullCapabilityPointer: 'Full capability: gos help [--json]',
   },
 };
@@ -710,7 +709,7 @@ function ensureTaskDir(stateL) {
   return { tid, dir };
 }
 
-// Stored values are repo-relative (D-12); resolve against the runtime repo
+// Stored values are repo-relative ; resolve against the runtime repo
 // root so every consumer receives an absolute path it can stat directly.
 function absTaskPath(v) {
   if (typeof v !== 'string' || !v) return v;
@@ -778,7 +777,7 @@ const EVIDENCE_FEATURE_RES_REPLAY = [
 // npm_config_*} — `PATH=/usr/.../x.js` can never win the excerpt; (c) ANSI
 // CSI sequences are stripped before classification. Widened families raise
 // convenience, not authenticity (echo-forgeable; artifact-on-disk is the
-// non-forgeable leg) — spec D-04 honest note.
+// non-forgeable leg) — spec honest note.
 function replayEvidenceHit(stdoutText) {
   const normLhs = (s) => s.toLowerCase().replace(/[_\s-]/g, '');
   const VETO = new Set(['exit', 'exitcode', 'rc', 'returncode', 'returned', 'code', 'status', 'ret']);
@@ -839,7 +838,7 @@ function validateEvidenceObject(ev, repoRoot) {
     if (path.isAbsolute(ap)) errs.push('evidence.artifact_path: must be relative to repo root');
     if (ap.split('/').includes('..')) errs.push('evidence.artifact_path: no .. segments');
     if (/[\n\r]/.test(ap)) errs.push('evidence.artifact_path: newline rejected');
-    // Machine-local zones (gitignored by design — D-01/D-08 logs/cache, census
+ // Machine-local zones (gitignored by design — /D-08 logs/cache, census
     // audit for archive): evidence artifacts there are guaranteed on the
     // AUTHORING machine at verify time (receipt-logged) but never travel with
     // git — a fresh clone must not fail schema validation for their absence.
@@ -857,7 +856,7 @@ function validateEvidenceObject(ev, repoRoot) {
 const idNum = (prefix, id) => parseInt((new RegExp(`^${prefix}-(\\d+)`).exec(String(id)) || [0, 0])[1], 10) || 0;
 
 function extractRequirement(intentText, level) {
-  // R-01 = the intent sentence itself. Implicit at Lv0-3, explicit in state.
+ // = the intent sentence itself. Implicit at Lv0-3, explicit in state.
   const text = (intentText || '').trim() || '(task)';
   return [{ id: 'R-01', text: text.length > 120 ? text.slice(0, 117) + '...' : text, phase: null, level }];
 }
@@ -884,7 +883,7 @@ function defaultState(level, intentText) {
 const STAGE_ORDER = ['INTENT', 'THINK', 'PLAN', 'BUILD', 'REVIEW', 'VERIFY', 'SHIP', 'DONE'];
 
 function lessonsPaths(type) {
-  // P15 D-64: truth = lessons.json (tracked); md = regenerated view; anchor =
+ // P15 : truth = lessons.json (tracked); md = regenerated view; anchor =
   // derived {live_ids} cache; backup = one-time migration backup (latest generation).
   const ymd = new Date().toISOString().slice(0, 10);
   if (type === 'model') {

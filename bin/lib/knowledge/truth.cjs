@@ -24,7 +24,7 @@ function truthFind(state, id) {
 }
 
 function appendTruthReceipt(id, commandStr, truthText) {
-  // B-18-class hardening: a tracked symlink (.gos/truth-receipts.md → arbitrary
+ // -class hardening: a tracked symlink (.gos/truth-receipts.md → arbitrary
   // file) must not redirect receipt content; lstat regular-file check + O_NOFOLLOW.
   if (fs.existsSync(TRUTH_RECEIPTS_PATH) && !fs.lstatSync(TRUTH_RECEIPTS_PATH).isFile()) {
     core.die(`truth receipt: ${TRUTH_RECEIPTS_PATH} is not a regular file (symlink?) — write refused (B-18)`);
@@ -32,7 +32,7 @@ function appendTruthReceipt(id, commandStr, truthText) {
   let needsNl = false;
   fs.mkdirSync(path.dirname(TRUTH_RECEIPTS_PATH), { recursive: true }); // logs/ may not exist yet
   try { const prev = fs.readFileSync(TRUTH_RECEIPTS_PATH, 'utf8'); needsNl = prev.length > 0 && !prev.endsWith('\n'); } catch { /* first receipt */ }
-  // D-02/R-35 write-side enrichment: `<iso8601> <id> replay-verified: <cmd> :: <truth text>`
+ // /R-35 write-side enrichment: `<iso8601> <id> replay-verified: <cmd> :: <truth text>`
   // — the receipt carries the truth text (single line, first 80 codepoints) so the
   // `gos logs` view can show it without joining state.
   const text = String(truthText == null ? '' : truthText).replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -118,7 +118,7 @@ function cmdTruth(args) {
         const tail = String(e.stderr || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(-3).join(' | ');
         core.die(`truth verify --replay: command failed (${msg.split('\n')[0]})${tail ? ` — last stderr: ${tail}` : ''}; evidence NOT set [B-1]`);
       }
-      // Tiered selection (D-04): count > path > KV over ANSI-stripped lines;
+ // Tiered selection : count > path > KV over ANSI-stripped lines;
       // synthetic exit/status keys vetoed, env-dump RHS paths never win.
       const hit = core.replayEvidenceHit(stdout);
       if (!hit) {
@@ -132,7 +132,7 @@ function cmdTruth(args) {
       truthL.evidence = ev;
       core.writeState(state);
       appendTruthReceipt(id, commandStr, truthL.description);
-      // R-35: the echo names the registry rel (stale .gos/truth-receipts.md path
+ // : the echo names the registry rel (stale .gos/truth-receipts.md path
       // fixed — the ledger actually lives under logs/ per GOS_PATHS).
       console.log(`✓ truth ${id} replay-verified (evidence from actual stdout; receipt appended to .gos/${core.GOS_PATHS.truth_receipts.rel})`);
       return;

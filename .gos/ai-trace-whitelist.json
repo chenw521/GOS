@@ -106,13 +106,13 @@
   {
     "path": "bin/lib/core/fsio.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 12,
+    "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/core/gitprobe.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 4,
+    "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -129,7 +129,7 @@
   {
     "path": "bin/lib/core/i18n.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 4,
+    "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -150,7 +150,7 @@
   {
     "path": "bin/lib/core/locales/en.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 14,
+    "maxHits": 5,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -179,7 +179,7 @@
   {
     "path": "bin/lib/core/locales/zh.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 16,
+    "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -212,12 +212,6 @@
         "sha256": "dd2f1c2a6b864313fc5e5b3e887b9f1f21ed7dad532b89d8dd9b77b19b6f5c39"
       }
     ]
-  },
-  {
-    "path": "bin/lib/core/lock.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 10,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/core/state.cjs",
@@ -353,7 +347,7 @@
   {
     "path": "bin/lib/core/state.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 69,
+    "maxHits": 11,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -384,12 +378,6 @@
     ]
   },
   {
-    "path": "bin/lib/knowledge/concerns.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 13,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "bin/lib/knowledge/decisions.cjs",
     "category": "in-flight-sweep",
     "maxHits": 1,
@@ -405,12 +393,6 @@
         "sha256": "67750376a4a7aaab8e9319a6355ff79bde57bb360098d91f0816ec1bde7abfdb"
       }
     ]
-  },
-  {
-    "path": "bin/lib/knowledge/lessons-json.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 15,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/knowledge/lessons.cjs",
@@ -438,7 +420,7 @@
   {
     "path": "bin/lib/knowledge/lessons.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 6,
+    "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -455,13 +437,13 @@
   {
     "path": "bin/lib/knowledge/phase.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 4,
+    "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/knowledge/requirements.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 2,
+    "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -502,7 +484,7 @@
   {
     "path": "bin/lib/knowledge/truth.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 13,
+    "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -671,7 +653,7 @@
   {
     "path": "bin/lib/task/archive.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 28,
+    "maxHits": 10,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -684,18 +666,6 @@
         "sha256": "c48475dd626dd15e3b041b50d13844f649e7f926c7a2fee4cf81a054fa0617a4"
       }
     ]
-  },
-  {
-    "path": "bin/lib/task/changelog.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "bin/lib/task/checkpoint.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/task/commit.cjs",
@@ -743,7 +713,7 @@
   {
     "path": "bin/lib/task/commit.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 38,
+    "maxHits": 6,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -760,13 +730,7 @@
   {
     "path": "bin/lib/task/context.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 11,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "bin/lib/task/index.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
+    "maxHits": 3,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -791,7 +755,7 @@
   {
     "path": "bin/lib/task/init.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 25,
+    "maxHits": 4,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -806,12 +770,6 @@
     ]
   },
   {
-    "path": "bin/lib/task/plansnap.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "bin/lib/task/stage.cjs",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -821,12 +779,6 @@
         "sha256": "2779b7e742532f5c08386a4732902c01f491d8f2920b4825d9f2eb15fd6e9a0f"
       }
     ]
-  },
-  {
-    "path": "bin/lib/task/stage.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 5,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "hooks/commit-msg.sh",

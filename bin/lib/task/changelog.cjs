@@ -17,7 +17,7 @@
 //     '/'-joined; empty derivation → refuse (fail-closed).
 //   - date stamp: changelog-core.utcToday() — the single UTC time source.
 // Write safety: the changelog location resolves through the single
-// root-anchored resolver in ops/changelog-core (D-07 — never process cwd, so
+// root-anchored resolver in ops/changelog-core ( — never process cwd, so
 // subdir invocations can no longer bootstrap a foreign CHANGELOG); a missing
 // file bootstraps from templates/git/CHANGELOG.md.tpl resolved off
 // GOS_SELF_ROOT (a decoy ./templates in the target repo cannot shadow the

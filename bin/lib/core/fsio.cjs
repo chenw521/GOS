@@ -85,7 +85,7 @@ const GOS_PATHS = {
   concerns_anchors: { rel: 'cache/.concerns-anchors.json', producer: 'cli', readers: 'concerns anchor guard', purge: 'regen', tracked: false, granularity: 'file' },
   concerns_anchors_bak: { rel: 'cache/.concerns-anchors.bak', producer: 'cli', readers: 'recovery shadow', purge: 'regen', tracked: false, granularity: 'file' },
   lessons_anchors:  { rel: 'cache/.lessons-anchors.json', producer: 'cli', readers: 'lessons derived cache (live_ids; rebuildable via lessons anchor-rebuild)', purge: 'regen', tracked: false, granularity: 'file' },
-  // --- logs/: runtime audit ledgers, machine-local by design (D-01: durable audit = archive/ + CHANGELOG + commits) ---
+ // --- logs/: runtime audit ledgers, machine-local by design ( : durable audit = archive/ + CHANGELOG + commits)
   truth_receipts:   { rel: 'logs/truth-receipts.md', producer: 'cli (truth verify)', readers: 'verify/audit', purge: 'runtime state, machine-local', tracked: false, granularity: 'file' },
   exemptions:       { rel: 'logs/exemptions.log', producer: 'cli (gate --exempt)', readers: 'exempt audit', purge: 'runtime state, machine-local', tracked: false, granularity: 'file' },
   edge_audit:       { rel: 'logs/edge-audit.log', producer: 'cli (commit gate)', readers: 'edge audit', purge: 'runtime state, machine-local', tracked: false, granularity: 'file' },
@@ -294,7 +294,7 @@ function globToRegex(g) {
 
 function shellQ(s) { return `'${String(s).replace(/'/g, `'\\''`)}'`; }
 
-// D-66 gate-evidence command-builder: the ONE sanctioned way to build fix lines
+// gate-evidence command-builder: the ONE sanctioned way to build fix lines
 // containing dynamic values. Flags/subcommands live in `prog`; every value arg
 // is shell-quoted, and `--` is inserted before the first value that looks like
 // a path or starts with '-' (argv injection guard — adversarial filenames
@@ -313,9 +313,9 @@ function gateCmd(prog, ...values) {
   return parts.join(' ');
 }
 
-// D-66 single failure constructor: {code, verdict, evidence[], fix}. Throws on
+// single failure constructor: {code, verdict, evidence[], fix}. Throws on
 // missing mandatory fields (3-part discipline enforced by construction, F11).
-// Locale invariants (D-63): code/evidence/fix NEVER pass through t(); verdict
+// Locale invariants : code/evidence/fix NEVER pass through t(); verdict
 // may resolve from the i18n catalog by code (wave 3) — this is the only field.
 function gateFail(code, fields) {
   const f = fields || {};

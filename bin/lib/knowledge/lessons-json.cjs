@@ -1,6 +1,6 @@
 // knowledge/lessons-json.cjs — lessons JSON truth store.
-// Canonical serialization + entry id engine (pure — spec §8 normative).
-// Truth store + derived sidecar + five invariants (spec §3.3).
+// Canonical serialization + entry id engine (pure — spec normative).
+// Truth store + derived sidecar + five invariants (spec ).
 'use strict';
 
 const fs = require('node:fs');
@@ -9,7 +9,7 @@ const { execFileSync } = require('node:child_process');
 
 const core = require('../core/index.cjs');
 
-// §8 v2 hash-input field order (FROZEN per schema_version): 9 segments, 8 '|'.
+// v2 hash-input field order (FROZEN per schema_version): 9 segments, 8 '|'.
 // Absent values emit empty segments; tags comma-joined; id/origin excluded.
 const V2_SEGMENTS = ['at', 'type', 'scene', 'text', 'lesson', 'tags', 'expires', 'permanent', 'salt'];
 
@@ -32,7 +32,7 @@ function canonV2(entry) {
   return V2_SEGMENTS.map(seg).join('|');
 }
 
-// §8 legacy-line reconstruction: `- [<at>] [<type>] <text>` + ` (expires <d>)`.
+// legacy-line reconstruction: `- [<at>] [<type>] <text>` + ` (expires <d>)`.
 // Defined only when the entry carries verbatim at/type/text (raw legacy shape).
 // Byte-exact against the legacy lessons.md line whose sha16 is the kept id.
 function canonLegacy(entry) {
@@ -71,7 +71,7 @@ function sha16Of(entry) {
 }
 
 // Mint a v2-canonical id, asserting global uniqueness via the caller-supplied
-// membership test. Collision → ordinal salt field + rehash (§8: salt joins the
+// membership test. Collision → ordinal salt field + rehash ( : salt joins the
 // canonical string, so salted ids recompute stably; same-text-different-id is
 // intended semantics). Returns { id, salt } — salt null when unsalted.
 // [T5/D-17] mint is the sole new-payload chokepoint shared by add + amend
@@ -170,7 +170,7 @@ const MINT_WHATS = new Set(['add', 'edit']);
 
 // Disposal coverage set: single-entry rows carry `old_id`; batch rows (prune,
 // anchor-rebuild --force) carry `old_ids[]`. Both spellings must retire ids or
-// a sanctioned batch disposal reads as a hand deletion (B-8 false alarm).
+// a sanctioned batch disposal reads as a hand deletion ( false alarm).
 function disposalIdSet(rows) {
   const s = new Set();
   for (const r of rows) {
@@ -211,7 +211,7 @@ function appendAuditRow(store, what, why, details = {}) {
   return row;
 }
 
-// Invariant ③ — chain verify (B-14, byte-identical semantics to the sidecar era).
+// Invariant ③ — chain verify ( , byte-identical semantics to the sidecar era).
 function chainViolations(store, where) {
   const errs = [];
   if (!store || typeof store !== 'object' || !Array.isArray(store.audit) || !Array.isArray(store.entries) || typeof store.chain_head !== 'string') {
@@ -297,7 +297,7 @@ function sidecarViolations(store, sidecar, where) {
   return errs;
 }
 
-// Git out-of-band channel (B-9 precedent): json is tracked, so a hand-deleted
+// Git out-of-band channel ( precedent): json is tracked, so a hand-deleted
 // entry shows in the HEAD diff even after the sidecar has been laundered via
 // anchor-rebuild. Skipped when HEAD copy is unavailable (first commit pending,
 // non-git). Global side has no git — sidecar channel is its only diff witness.
@@ -499,7 +499,7 @@ function lf(code, verdict, fix, evidence = []) {
 }
 
 
-// Verbatim parse: at/type/text/expires kept exactly as written so the §8 legacy
+// Verbatim parse: at/type/text/expires kept exactly as written so the legacy
 // line reconstruction is byte-exact and the kept line-hash ids re-verify.
 function parseLegacyMd(text) {
   const entries = [];
@@ -517,7 +517,7 @@ function parseLegacyMd(text) {
   return { entries };
 }
 
-// D-09 sentinel deletion: the lessons_migrated sentinel is gone outright.
+// sentinel deletion: the lessons_migrated sentinel is gone outright.
 // Its launder-protection role moved to the genesis guards below + the
 // generated-md header guard (generatedMdPresent).
 
@@ -558,7 +558,7 @@ function readOldAnchor(P) {
   } catch { return null; }
 }
 
-// One-time md→json migration (spec §3.3 pinned state machine; D-09 sentinel-free):
+// One-time md→json migration (spec pinned state machine; sentinel-free):
 // resume = state-derived (json parses ⇒ ingest done — never re-parse md) and may
 // only REGENERATE the md view after chain verification — the sidecar is NEVER
 // rewritten here (a stale sidecar is the sanctioned witness of hand edits;
@@ -582,7 +582,7 @@ function migrateLegacy(P, opts = {}) {
     }
     core.die(`lessons ${side}: lessons.json exists but is unusable — recover via git restore${P.global ? ` or cp ${P.truthBak} ${P.truth}` : ''}; never delete-and-remigrate (the audit chain lives in the json)`);
   }
-  // genesis guards (D-09, sentinel replacement): a store that ever existed must
+ // genesis guards ( , sentinel replacement): a store that ever existed must
   // be restored, never re-migrated through a fresh (laundered) audit chain
   if (!P.global) {
     const ancestors = genesisHistoryCount(P);

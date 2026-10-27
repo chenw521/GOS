@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Remove legacy anchor comments across the bin core, task and knowledge modules with deleted ids reconciled into the tracked sweep ledger and contract strings pinned as frozen surface (D-24/R-43) [2026-10-27]
 - Fix gitprobe HEAD-negative stderr matrix now recognizes the git 2.55 phrasing so clean negatives stop poisoning the fail-closed cache on CI runners (D-12) [2026-10-26]
 - Fix review fixes cure machine paths in tracked state by storing task spec and plan paths repo-relative with read-time normalization, and track rollback now sweeps the git index and surfaces incomplete rollbacks (D-12/D-15) [2026-10-26]
 - Add self-repo gap migrate cured 88 auto mirrors into the ledger with two deferred anchors parked and full suite green (D-16/D-13) [2026-10-22]

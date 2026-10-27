@@ -1,4 +1,3 @@
-// task/init — Split-③ ②-4 (T2)
 'use strict';
 
 const core = require('../core/index.cjs');
@@ -40,7 +39,7 @@ function cmdInit(args) {
   if (positional[0] === 'git') { cmdInitGit(args).catch((e) => core.die(e.message)); return; }
   if (positional[0] === 'coding') { cmdInitCoding(args).catch((e) => core.die(e.message)); return; }
 
-  // D-34 confirm-only path: zero positional + --confirm/--confirmed. Repairs the
+ // confirm-only path: zero positional + --confirm/--confirmed. Repairs the
   // r234 root cause (bare `init --confirm` used to core.die on the in-flight guard) and
   // pins the state-machine semantics: touch ONLY intent.confirmed, never rebuild.
   if (wantsConfirm && positional.length === 0) {
@@ -56,7 +55,7 @@ function cmdInit(args) {
     return;
   }
 
-  // gos init <level> "<intent summary>" — D-30 two-stage normalization
+ // gos init <level> "<intent summary>" — two-stage normalization
   let level = null;
   let intentText = '';
   if (positional.length >= 1) {
@@ -80,12 +79,12 @@ function cmdInit(args) {
     console.log('  Use --force to overwrite, or continue the current task.');
     return nav.printStatus(existing);
   }
-  // T10: --force must not silently destroy unarchived spec/plan (v0.8 loss incident).
+ // : --force must not silently destroy unarchived spec/plan (v0.8 loss incident).
   // A spec/plan on disk whose content has NO identical git-committed copy is
   // unarchived work — refuse. Archived tasks have spec/plan moved away, so the
   // normal post-archive `init --force` flow is unaffected.
   if (existing && args.includes('--force')) {
-    // T5: task/<id>/ dirs are in-flight work — --force is the EXPLICIT discard path
+ // : task/<id>/ dirs are in-flight work — --force is the EXPLICIT discard path
     // (spec: "archive first, or discard via an explicit --force"), so wipe with a warning, never silently orphan.
     const taskZone = path.join(core.GOS_DIR, 'task');
     if (fs.existsSync(taskZone)) {
@@ -120,7 +119,7 @@ function cmdInit(args) {
       }
     }
   }
-  // D-34/R4-F2: single-shot confirm hole closed — creating a task WITH --confirm in
+ // / : single-shot confirm hole closed — creating a task WITH --confirm in
   // one call dies in BOTH environments (the old `level !== null && --confirm` set the
   // bit as a parameter side-effect; `--confirmed` alias was equally live at :1389).
   if (wantsConfirm) {
@@ -131,7 +130,7 @@ function cmdInit(args) {
 
   const headless = core.isHeadlessEnv();
   const state = core.defaultState(level, intentText);
-  // D-29: intent confirmation is a USER act (interactive two-step) or an audited env
+ // : intent confirmation is a USER act (interactive two-step) or an audited env
   // fact (headless one-shot). Audit lands in state — bypass visible, never silent.
   if (headless) {
     state.intent.confirmed = true;
@@ -143,21 +142,21 @@ function cmdInit(args) {
   const inGit = core.gitInWorkTree();
   state.task_head = inGit ? core.gitHeadSha() : null;
   if (inGit && !state.task_head) state.task_head_pending = true;
-  // D-12 (T4b): v4 identity is de-pathed — no project_root anchor is stored;
+ // (T4b): v4 identity is de-pathed — no project_root anchor is stored;
   // repo identity = repo_id (stamped by defaultState), repo root is
   // runtime-derived via currentRootRealpath() wherever a root is needed.
   const root = core.currentRootRealpath() || fs.realpathSync('.');
-  // T5 (D-11): pin spec/plan to task/<id>/ at birth — single resolution from here on.
+ // (D-11): pin spec/plan to task/<id>/ at birth — single resolution from here on.
   // (project tasks get phase_name later at claim; core.currentTaskId falls to task_head[0:8].)
-  // Stored repo-relative (D-12): tracked state must not carry machine paths.
+ // Stored repo-relative : tracked state must not carry machine paths.
   if (!state.spec_path) core.pinTaskPaths(state);
   core.writeState(state);
 
-  // [Phase D T5] seed the anchor-network sidecar from birth (§14 rollout: missing == anomaly)
+ // [Phase D ] seed the anchor-network sidecar from birth (§14 rollout: missing == anomaly)
   if (seedEdgesIfAbsent(root)) {
     console.log('✓ seeded .gos/edges.json (map 2.0 anchor network — first gos commit freezes its lock)');
   }
-  // [Phase W T6] seed the generated README from birth — README regen guard (gate) fails on absence
+ // [Phase W ] seed the generated README from birth — README regen guard (gate) fails on absence
   try {
     const readmeP = core.resolvePath('readme');
     if (!fs.existsSync(readmeP)) { fs.mkdirSync(path.dirname(readmeP), { recursive: true }); fs.writeFileSync(readmeP, render.renderPathsMarkdown()); console.log('✓ seeded .gos/README.md (registry navigation — regen via gos paths --markdown)'); }
@@ -165,7 +164,7 @@ function cmdInit(args) {
 
   if (isProject) {
     fs.mkdirSync(core.PROJECT_DIR, { recursive: true });
-    // D-06/R-33: PROJECT.md sections seed with TODO guidance lines — the
+ // /R-33: PROJECT.md sections seed with TODO guidance lines — the
     // approve-archive gate and brownfield detection both key on them.
     const files = {
       'PROJECT.md': [
@@ -189,10 +188,10 @@ function cmdInit(args) {
       const p = path.join(core.PROJECT_DIR, name);
       if (!fs.existsSync(p)) fs.writeFileSync(p, content);
     }
-    // D-01: project.json truth source skeleton (only creation point alongside phase add)
+ // : project.json truth source skeleton (only creation point alongside phase add)
     const pj = path.join(core.PROJECT_DIR, 'project.json');
     if (!fs.existsSync(pj)) core.saveProject(core.emptyProject());
-    // D-22: brownfield detection — handwritten 4-file content → suggest import, never silently overwrite
+ // : brownfield detection — handwritten 4-file content → suggest import, never silently overwrite
     const brown = knowledge.detectBrownfield();
     if (brown) {
       console.log(`⚠ existing handwritten content detected in: ${brown.join(', ')}`);
@@ -262,7 +261,7 @@ async function cmdInitGit(args) {
     return;
   }
 
-  // Seeding anchors at the git toplevel, not the cwd (R-03): a non work-tree is refused.
+ // Seeding anchors at the git toplevel, not the cwd : a non work-tree is refused.
   const root = core.gitToplevelRealpath();
   if (!root) core.die('not a git work-tree — run `git init` first, then re-run `gos init git`');
 

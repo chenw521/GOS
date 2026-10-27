@@ -1,4 +1,3 @@
-// task/commit — Split-③ ②-4 (T2)
 'use strict';
 
 const core = require('../core/index.cjs');
@@ -26,7 +25,7 @@ function runCommitSemanticChecks(state, stage) {
   const repoRoot = core.currentRootRealpath() || fs.realpathSync('.');
   // escape hatch — sandbox-bound only [B-10/R2-11]
   // REVIEW #4: the skip exempts ONLY the semantic engine call. State repairs (pending
-  // auto-anchor) and the independent anti-tamper embeds (B-22 spec hash, B-8 lessons
+ // auto-anchor) and the independent anti-tamper embeds ( spec hash, B-8 lessons
   // anchor) are NOT "semantic checks" — they run unconditionally.
   let skipSemantic = false;
   if (process.env.GOS_SKIP_SEMANTIC === '1') {
@@ -40,7 +39,7 @@ function runCommitSemanticChecks(state, stage) {
     state.semantic_skips = [...(state.semantic_skips || []), new Date().toISOString()]; // sole writer [R4-F7]
     skipSemantic = true;
   }
-  // B-4③ pending auto-anchor: zero-commit at init, commits exist now → anchor to root commit
+ // ③ pending auto-anchor: zero-commit at init, commits exist now → anchor to root commit
   if (state.task_head_pending) {
     let firstSha = null;
     try { firstSha = execFileSync('git', ['rev-list', '--max-parents=0', 'HEAD'], { encoding: 'utf8' }).trim().split('\n')[0]; } catch { /* still zero commits */ }
@@ -51,7 +50,7 @@ function runCommitSemanticChecks(state, stage) {
       console.log(`⚠ task_head auto-anchored to first commit ${firstSha.slice(0, 10)} (B-4 pending bootstrap)`);
     }
   }
-  // F1 companion (T9 dogfood finding): pre-Phase-B task whose init predates T2 has NO
+ // F1 companion ( dogfood finding): pre-Phase-B task whose init predates T2 has NO
   // task_head field — lazy-anchor to the most recent think-stage commit (BUILD diff scope
   // = THINK output onward; spec/plan sit under the .gos/** allowlist so only real code
   // work is diff-hit checked). The generator emits a fixed "advance think" phrase in the
@@ -73,7 +72,7 @@ function runCommitSemanticChecks(state, stage) {
       console.log(`⚠ task_head lazy-anchored to ${anchorSha.slice(0, 10)} (pre-Phase-B task, F1)`);
     }
   }
-  // B-22: spec_sha256 consistency (freeze exists → must match current spec.md)
+ // : spec_sha256 consistency (freeze exists → must match current spec.md)
   if (state.spec_sha256) {
     const sp = core.specPathOf(state);
     if (fs.existsSync(sp)) {
@@ -101,7 +100,7 @@ function runCommitSemanticChecks(state, stage) {
       process.exit(1);
     }
   }
-  // the semantic engine itself — same function as gate semantic (D-33, non-copy)
+ // the semantic engine itself — same function as gate semantic ( , non-copy)
   if (!skipSemantic) {
     const res = ops.semanticChecks({ state });
     if (res.failures.length) {
@@ -131,7 +130,7 @@ function cmdCommit(argv) {
   }
   const state = core.readState();
   if (!state) core.die(core.CONTRACTS.state_semantics.noActiveTask);
-  // T2: flag-aware stage parsing (`gos commit plan --force` — B-15 monotonic override)
+ // : flag-aware stage parsing (`gos commit plan --force` — B-15 monotonic override)
   const forceFlag = args.includes('--force');
   const stageArg = args.find((a) => !a.startsWith('--'));
   const stage = (stageArg || state.current_stage || '').toUpperCase();
@@ -189,10 +188,10 @@ function cmdCommit(argv) {
   // commit fails below, so a failed commit never advances the task state.
   const stateSnapshot = (hasGit && fs.existsSync(core.STATE_PATH)) ? fs.readFileSync(core.STATE_PATH) : null;
 
-  // ---- D-03: filesystem fallback (artifact must EXIST — model's word is not evidence) ----
+ // ---- : filesystem fallback (artifact must EXIST — model's word is not evidence)
   const lv = state.level ?? 0;
   const failures = [];
-  // [REVIEW P1-F2] R-07 trigger alignment: the frozen orphan-advisory text promises
+ // [REVIEW P1-F2] trigger alignment: the frozen orphan-advisory text promises
   // `gos commit ship` (project) / `gos commit verify` (non-project) adopt orphans —
   if (stage === 'THINK' && lv >= 2) {
     const sp = core.specPathOf(state);
@@ -223,7 +222,7 @@ function cmdCommit(argv) {
   }
   if (stage === 'VERIFY') {
     // T2 [R4-F13]: object-form evidence validation — the old `evidence.length < 5`
-    // string check is dead code under the D-30 object schema (removed).
+ // string check is dead code under the object schema (removed).
     const badEv = [];
     for (const t of state.observable_truths) {
       if (!t.verified) continue;
@@ -240,7 +239,7 @@ function cmdCommit(argv) {
 
   // ---- T2 [B-15/B-22/F1]: freeze-field lifecycle (all BEFORE the git commit, so a
   // freeze failure never leaves a git commit without its state side) ----
-  // [REVIEW P1-F2] R-07 trigger alignment: the frozen orphan-advisory text promises
+ // [REVIEW P1-F2] trigger alignment: the frozen orphan-advisory text promises
   // `gos commit ship` (project) / `gos commit verify` (non-project) adopt orphans —
   // wire cmdArchive here so the promise is code, not copy. Idempotent: archive exits 0
   // on "already archived" when the stage rolled past.
@@ -250,7 +249,7 @@ function cmdCommit(argv) {
   if (stage === 'THINK' && lv >= 2) {
     const sp = core.specPathOf(state);
     if (fs.existsSync(sp)) {
-      // D-62 spec card floor: born here (objects, F11) — a spec that freezes
+ // spec card floor: born here (objects, F11) — a spec that freezes
       // under this CLI must carry option cards for every decision it records.
       const cardFails = ops.specCardFloorFailures(fs.readFileSync(sp, 'utf8'), state.decisions, ops.projectDecisionIds());
       if (cardFails.length) {
@@ -297,7 +296,7 @@ function cmdCommit(argv) {
   else {
     const dList = state.decisions.map(d => d.id).join(', ') || 'none';
     const rList = state.requirements.map(r => r.id).join(', ') || 'none';
-    // R-01 choke point: the whole message (subject + body) passes through the
+ // choke point: the whole message (subject + body) passes through the
     // shared neutralizer so a close/fix keyword before `#N` never ships in a
     // gos commit (GitHub would close the issue on push).
     const msg = clcore.neutralizeIssueTriggers(`chore(task): advance ${stage.toLowerCase()} — ${commitSubject}\n\nDecisions: ${dList}\nRequirements: ${rList}\nLevel: Lv${state.level ?? '?'}`);
@@ -307,18 +306,18 @@ function cmdCommit(argv) {
       // files silently missed, producing hollow commits (BUILD shipped 0 files for a
       // 26-file diff). Explicit top-level paths (NOT `add -A` — [08-21] parallel-wave
       // lesson forbids blind staging of in-flight files).
-      // [Phase D T7] commit-time semantic closure report (code-enforced pre-run routing):
+ // [Phase D ] commit-time semantic closure report (code-enforced pre-run routing):
       // the must-check/must-run list rides along every stage commit — no skill discipline needed.
       try {
         const changed = execFileSync('git', ['-c', 'core.quotepath=off', 'diff', 'HEAD', '--name-only', '--diff-filter=d', '-z'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 32 * 1024 * 1024 })
           .split('\0').map((l) => l.trim()).filter(Boolean);
-        // [Phase W T16] print UNCONDITIONALLY — empty-diff silence was previously masked
+ // [Phase W ] print UNCONDITIONALLY — empty-diff silence was previously masked
         // by tracked-but-uncommitted edges.json (E8 lesson regression: silence ≠ checked)
         map.printSemanticClosure(core.mapRootDir(), changed);   // [R2-C1 fix] root was .gos dir — freeze/embed were no-ops
       } catch { /* non-git or unborn — skip */ }
-      // [Phase D T10] consume exemptions at commit (auto-expiry, R2-F11)
+ // [Phase D ] consume exemptions at commit (auto-expiry, R2-F11)
       try { ops.consumeExemptions(core.mapRootDir()); } catch { /* non-git — skip */ }   // [R2-C1 fix]
-      // [Phase D T5] freeze edges.json integrity anchor into the SAME commit (tracked lock)
+ // [Phase D ] freeze edges.json integrity anchor into the SAME commit (tracked lock)
       try { if (map.freezeEdgesLock(core.mapRootDir())) console.log('✓ edges.lock frozen into this commit'); } catch { /* no edges.json — skip */ }   // [R2-C1 fix]
       const ADD_PATHS = ['.gos/', 'docs/', 'skills/', 'src/', 'test/', 'bin/', '.opencode/',
         'commands/', 'templates/', '.claude-plugin/', '.codex/', 'package.json', 'AGENTS.md',
@@ -341,7 +340,7 @@ function cmdCommit(argv) {
       process.exit(1);
     }
   }
-  // ---- F-5: auto-checkpoint on build commit (code-timed, not model-discipline) ----
+ // ---- : auto-checkpoint on build commit (code-timed, not model-discipline)
   if (stage === 'BUILD') {
     const tasks = sibPlansnap.parsePlanMd();
     if (tasks && tasks.length) {

@@ -1,4 +1,3 @@
-// task/plansnap — Split-③ ②-4 (T2)
 'use strict';
 
 const core = require('../core/index.cjs');
@@ -24,7 +23,7 @@ function parsePlanMd() {
       seenIds.add(taskMatch[1]);
       if (currentTask) tasks.push(currentTask);
       // files: null = no **Files** key (undeclared); '' = `**Files**: ` empty value (also
-      // undeclared — B-21 pins the distinction; both freeze to snapshot files: [])
+ // undeclared — pins the distinction; both freeze to snapshot files: [])
       currentTask = { id: taskMatch[1], name: taskMatch[2].trim(), wave: currentWave, covers: [], files: null, readFirst: '', doneWhen: '', depends: '' };
       continue;
     }

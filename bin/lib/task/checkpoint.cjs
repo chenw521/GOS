@@ -1,4 +1,3 @@
-// task/checkpoint — Split-③ ②-4 (T2)
 'use strict';
 
 const core = require('../core/index.cjs');

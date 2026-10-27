@@ -252,7 +252,7 @@ function cmdLessons(args) {
       ensureMigratedLocked(P);
       const res = j.loadStore(P);
       if (res.status === 'corrupt' || res.failures.length) {
-        // adjudicating read: fail closed (spec §3.3 load semantics)
+ // adjudicating read: fail closed (spec load semantics)
         dieFailures('lessons list', res.status === 'corrupt' ? res.failures : res.failures);
       }
       const store = res.store;
