@@ -37,13 +37,13 @@ Best when: technical approach is unproven.
 
 <Good>
 ```
- : Create User model + password hashing (D-02, R-01)
+ : Create User model + password hashing ( , )
   Files: src/models/User.ts, src/models/User.test.ts
   Read first: src/models/Base.ts
   Done when: grep "bcrypt" src/models/User.ts AND 4 tests pass
   Wave: 1
 
- : Create DB migration for users table (D-01)
+ : Create DB migration for users table
   Files: migrations/001_users.sql
   Read first: existing migrations in migrations/
   Done when: migration runs clean on empty DB
@@ -69,5 +69,5 @@ Executor has to reverse-engineer the entire plan.
 | **God task** ("implement auth") | 2-hour task touching 10 files | Split by concern: model, service, route, test |
 | **Vague done-when** ("works correctly") | Can't verify programmatically | Use grep/test command as done-when |
 | **Missing Read first** | Executor reads wrong files first | List the 1-3 files that contain relevant patterns |
-| **Implicit dependency** (" probably needs T1") | Parallel execution breaks | Make explicit: `Depends on: T1` |
+| **Implicit dependency** (" probably needs ") | Parallel execution breaks | Make explicit: `Depends on: ` |
 | **Test after** ("write tests when done") | Tests never get written | Include test files in each task's Files |

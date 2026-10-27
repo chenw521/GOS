@@ -56,7 +56,7 @@ function cmdRequirement(args) {
     if (phaseL === '') phaseL = null;
     if (phaseL) { const pbt = core.badText(phaseL); if (pbt) core.die(`phase rejected (${pbt})`); }
     if (state.level === 4 && !phaseL) core.die('phase required at Lv4: gos requirement add "text" --phase "P1: name"');
- // auto id: max numeric across state ∪ project, +1; floor at (R-01 init-exclusive)
+ // auto id: max numeric across state ∪ project, +1; floor at ( init-exclusive)
     const nums = [];
     for (const r of (state.requirements || [])) { const m = /^R-(\d+)$/.exec(r.id || ''); if (m) nums.push(parseInt(m[1], 10)); }
     if (proj) for (const r of (proj.requirements || [])) { const m = /^R-(\d+)$/.exec(r.id || ''); if (m) nums.push(parseInt(m[1], 10)); }

@@ -110,7 +110,7 @@ After each gray area is resolved:
 
 If session crashes during THINK:
 - Resume reads state.json
-- Shows "Areas resolved: , D-02. Remaining: [list]"
+- Shows "Areas resolved: , . Remaining: [list]"
 - Asks "Continue from Area C?"
 
 ## Lv4 Adaptation

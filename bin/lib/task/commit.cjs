@@ -25,7 +25,7 @@ function runCommitSemanticChecks(state, stage) {
   const repoRoot = core.currentRootRealpath() || fs.realpathSync('.');
   // escape hatch — sandbox-bound only [B-10/R2-11]
   // REVIEW #4: the skip exempts ONLY the semantic engine call. State repairs (pending
- // auto-anchor) and the independent anti-tamper embeds ( spec hash, B-8 lessons
+ // auto-anchor) and the independent anti-tamper embeds ( spec hash, lessons
   // anchor) are NOT "semantic checks" — they run unconditionally.
   let skipSemantic = false;
   if (process.env.GOS_SKIP_SEMANTIC === '1') {
@@ -50,7 +50,7 @@ function runCommitSemanticChecks(state, stage) {
       console.log(`⚠ task_head auto-anchored to first commit ${firstSha.slice(0, 10)} (B-4 pending bootstrap)`);
     }
   }
- // F1 companion ( dogfood finding): pre-Phase-B task whose init predates T2 has NO
+ // F1 companion ( dogfood finding): pre-Phase-B task whose init predates has NO
   // task_head field — lazy-anchor to the most recent think-stage commit (BUILD diff scope
   // = THINK output onward; spec/plan sit under the .gos/** allowlist so only real code
   // work is diff-hit checked). The generator emits a fixed "advance think" phrase in the
@@ -130,7 +130,7 @@ function cmdCommit(argv) {
   }
   const state = core.readState();
   if (!state) core.die(core.CONTRACTS.state_semantics.noActiveTask);
- // : flag-aware stage parsing (`gos commit plan --force` — B-15 monotonic override)
+ // : flag-aware stage parsing (`gos commit plan --force` — monotonic override)
   const forceFlag = args.includes('--force');
   const stageArg = args.find((a) => !a.startsWith('--'));
   const stage = (stageArg || state.current_stage || '').toUpperCase();
@@ -191,7 +191,7 @@ function cmdCommit(argv) {
  // ---- : filesystem fallback (artifact must EXIST — model's word is not evidence)
   const lv = state.level ?? 0;
   const failures = [];
- // [REVIEW P1-F2] trigger alignment: the frozen orphan-advisory text promises
+ // trigger alignment: the frozen orphan-advisory text promises
   // `gos commit ship` (project) / `gos commit verify` (non-project) adopt orphans —
   if (stage === 'THINK' && lv >= 2) {
     const sp = core.specPathOf(state);
@@ -239,7 +239,7 @@ function cmdCommit(argv) {
 
   // ---- T2 [B-15/B-22/F1]: freeze-field lifecycle (all BEFORE the git commit, so a
   // freeze failure never leaves a git commit without its state side) ----
- // [REVIEW P1-F2] trigger alignment: the frozen orphan-advisory text promises
+ // trigger alignment: the frozen orphan-advisory text promises
   // `gos commit ship` (project) / `gos commit verify` (non-project) adopt orphans —
   // wire cmdArchive here so the promise is code, not copy. Idempotent: archive exits 0
   // on "already archived" when the stage rolled past.
@@ -315,7 +315,7 @@ function cmdCommit(argv) {
         // by tracked-but-uncommitted edges.json (E8 lesson regression: silence ≠ checked)
         map.printSemanticClosure(core.mapRootDir(), changed);   // [R2-C1 fix] root was .gos dir — freeze/embed were no-ops
       } catch { /* non-git or unborn — skip */ }
- // [Phase D ] consume exemptions at commit (auto-expiry, R2-F11)
+ // [Phase D ] consume exemptions at commit (auto-expiry, )
       try { ops.consumeExemptions(core.mapRootDir()); } catch { /* non-git — skip */ }   // [R2-C1 fix]
  // [Phase D ] freeze edges.json integrity anchor into the SAME commit (tracked lock)
       try { if (map.freezeEdgesLock(core.mapRootDir())) console.log('✓ edges.lock frozen into this commit'); } catch { /* no edges.json — skip */ }   // [R2-C1 fix]

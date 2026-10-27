@@ -31,7 +31,7 @@ function cmdContext(args) {
     completed_stages: state.completed_stages,
     read_files: [], produce: '', gates: [],
   };
- // Phase W ( , R-04): artifact_paths supply — agents consume, never invent.
+ // Phase W ( , ): artifact_paths supply — agents consume, never invent.
   // core.ensureTaskDir owns id resolution + conflict guard + mkdir(fail-fast).
   {
     const { tid, dir } = core.ensureTaskDir(state);
@@ -56,7 +56,7 @@ function cmdContext(args) {
   if (stage === 'THINK') {
     out.read_files = ['.gos/state.json'];
     if (fs.existsSync(path.join(core.PROJECT_DIR, 'DECISIONS.md'))) out.read_files.push('.gos/project/DECISIONS.md');
- // /R-33: a FILLED PROJECT.md joins the THINK read set — a TODO-only
+ // / : a FILLED PROJECT.md joins the THINK read set — a TODO-only
     // skeleton must not pose as project vision (predicate shared with the
     // approve-archive gate; see knowledge/phase.cjs).
     {
@@ -94,7 +94,7 @@ function cmdContext(args) {
       out.has_codebase_map = false;
       out.suggest = 'existing repo without .gos/codebase/ map — offer one-time mapping (see skills/gos-think/reference/codebase-mapping.md)';
     }
- // /D-20: navigator tiers — tell THINK which map knowledge travels with
+ // / : navigator tiers — tell THINK which map knowledge travels with
     // clones (git-tracked tier) vs regenerates per machine (byproduct carries
     // its own provenance header). Additive field; consumers keep working.
     out.navigator = {

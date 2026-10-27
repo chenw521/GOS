@@ -68,12 +68,6 @@
     ]
   },
   {
-    "path": "bin/gos.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "bin/lib/core/fsio.cjs",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -97,18 +91,6 @@
     ]
   },
   {
-    "path": "bin/lib/core/fsio.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "bin/lib/core/gitprobe.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "bin/lib/core/i18n.cjs",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -118,12 +100,6 @@
         "sha256": "b8d57cca5c353c8284b87dcc3c6f0759162d725085a8490ec0ec24913fd09f83"
       }
     ]
-  },
-  {
-    "path": "bin/lib/core/i18n.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/core/locales/en.cjs",
@@ -139,12 +115,6 @@
         "sha256": "fa281827af2a018981bf990b310d983e8858b7031e9ef93a031f7de68461541f"
       }
     ]
-  },
-  {
-    "path": "bin/lib/core/locales/en.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 5,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/core/locales/zh.cjs",
@@ -168,12 +138,6 @@
         "sha256": "494559409849c5c2685fa26f213780054ae24ac85ebb9f42f5bc41c4dbb65726"
       }
     ]
-  },
-  {
-    "path": "bin/lib/core/locales/zh.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/core/lock.cjs",
@@ -338,12 +302,6 @@
     ]
   },
   {
-    "path": "bin/lib/core/state.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 11,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "bin/lib/knowledge/concerns.cjs",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -369,12 +327,6 @@
         "sha256": "f08b205d377aa6d1a36ecc4fa03fe5c9ab19b05a1d1b3c96585999f732a61f1c"
       }
     ]
-  },
-  {
-    "path": "bin/lib/knowledge/decisions.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/knowledge/lessons-json.cjs",
@@ -411,12 +363,6 @@
     ]
   },
   {
-    "path": "bin/lib/knowledge/lessons.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "bin/lib/knowledge/phase.cjs",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -426,18 +372,6 @@
         "sha256": "ecb6baa6f011bd679616ca0bf5a11c0b62ac00020fe38d1f3dbcada9cf81c480"
       }
     ]
-  },
-  {
-    "path": "bin/lib/knowledge/phase.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "bin/lib/knowledge/requirements.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/knowledge/truth.cjs",
@@ -475,12 +409,6 @@
     ]
   },
   {
-    "path": "bin/lib/knowledge/truth.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "bin/lib/map/allowlist.cjs",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -513,12 +441,6 @@
         "sha256": "f0b9c3cf95a107fe42376cfdc444f39d8620c4c0ec681dde52b6ed0c2f633838"
       }
     ]
-  },
-  {
-    "path": "bin/lib/map/anchor.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/map/edges.cjs",
@@ -577,12 +499,6 @@
         "sha256": "5465ad10817e1dfff6020182260d6323fe94285bf9b773de6109c92a268d611e"
       }
     ]
-  },
-  {
-    "path": "bin/lib/map/engine.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 11,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/map/index.cjs",
@@ -652,12 +568,6 @@
     ]
   },
   {
-    "path": "bin/lib/map/index.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "bin/lib/map/views.cjs",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -679,12 +589,6 @@
         "sha256": "8c3d4919c8764ebc48c3a8e597ab89fe31673ab45e154e38ff451e72f15323fc"
       }
     ]
-  },
-  {
-    "path": "bin/lib/map/views.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/nav/cmds.cjs",
@@ -727,18 +631,6 @@
         "sha256": "e2f32563838b9bb71dfc253355479799d0df5b0685738417890014693cfd1624"
       }
     ]
-  },
-  {
-    "path": "bin/lib/nav/status.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "bin/lib/ops/brownfield.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/ops/changelog-core.cjs",
@@ -983,12 +875,6 @@
     ]
   },
   {
-    "path": "bin/lib/task/archive.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 10,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "bin/lib/task/changelog.cjs",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -1043,12 +929,6 @@
     ]
   },
   {
-    "path": "bin/lib/task/commit.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 6,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "bin/lib/task/context.cjs",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -1058,12 +938,6 @@
         "sha256": "76c80b1496534dac1007fa92e21c2cf96e52cbc1287f1dff7d05a3e764fa8609"
       }
     ]
-  },
-  {
-    "path": "bin/lib/task/context.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 3,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/task/init.cjs",
@@ -1083,12 +957,6 @@
         "sha256": "e3ab1267f11cdf86dd0e194d4a44a052dde959fc7bc504e7c80eb5da385e7817"
       }
     ]
-  },
-  {
-    "path": "bin/lib/task/init.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/task/plansnap.cjs",
@@ -1136,24 +1004,6 @@
     ]
   },
   {
-    "path": "skills/gos-plan/reference/revision-loop.md",
-    "category": "in-flight-sweep",
-    "maxHits": 3,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-plan/reference/task-decomposition.md",
-    "category": "in-flight-sweep",
-    "maxHits": 3,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-plan/reference/thinking-models.md",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "skills/gos-router/SKILL.md",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -1174,24 +1024,6 @@
         "sha256": "3d0a7b3535d77faef03146e9dac7b113997f6e7f0ef919450a698b8ce148bd7b"
       }
     ]
-  },
-  {
-    "path": "skills/gos-think/prompts/red-team-attacker.md",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-think/reference/dialogue-protocol.md",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-verify/SKILL.md",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/checks/stale-verbs.sh",
@@ -1264,18 +1096,6 @@
     ]
   },
   {
-    "path": "test/sections/T10-security-e2e.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T100-navigator.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T12-wiring.test.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -1335,8 +1155,28 @@
         "sha256": "3958a51c8be79c315875db26867accfa8afa4a63e775fe29ff287cdacb937b5e"
       },
       {
+        "line": 105,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 107,
+        "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
+      },
+      {
         "line": 134,
         "sha256": "93fc81e9f10c55748c94d9dbab13da58a6b5393c7061a2eca09b637e44705f5a"
+      },
+      {
+        "line": 143,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 145,
+        "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
+      },
+      {
+        "line": 158,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
       },
       {
         "line": 160,
@@ -1347,12 +1187,20 @@
         "sha256": "87c9e469bcc566c5374296bb4ab6ca6cca220187f95e07f1b021fee93ec5ce6b"
       },
       {
+        "line": 188,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
         "line": 190,
         "sha256": "651f122a1b984500eee72f31511166a8ac303335a52fcf6b6c2a024c94374995"
       },
       {
         "line": 194,
         "sha256": "cdf567cfa8d89112f184e2ddaa0165ebbd4787cdb86247a162bc62d86c3beb36"
+      },
+      {
+        "line": 222,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
       },
       {
         "line": 240,
@@ -1375,12 +1223,6 @@
         "sha256": "c3279c86a04c48b98deef6ab60f51abc6706263f71ea3c828f9c574d837f160c"
       }
     ]
-  },
-  {
-    "path": "test/sections/T14-state-b.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 7,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T15-lessons.test.sh",
@@ -1454,12 +1296,28 @@
         "sha256": "afbccda2005c7a6c297e7bd36565f14fcda065ba56d21f4361952b36021c776a"
       },
       {
+        "line": 42,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 44,
+        "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
+      },
+      {
         "line": 55,
         "sha256": "1ff9a18610a4701e813ee2068d5b82a6b00e5ca05d4785788e364e7037764ff8"
       },
       {
         "line": 112,
         "sha256": "d61bb81cdf0d4b5198987fd719e58ec3c419fbe4be1ca61a678bed85673edf82"
+      },
+      {
+        "line": 149,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 151,
+        "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
       },
       {
         "line": 178,
@@ -1482,12 +1340,6 @@
         "sha256": "d2638c91e6862c54b75745b678fc46a034fa20f2d3ce42a557a810881d402cb7"
       }
     ]
-  },
-  {
-    "path": "test/sections/T17-semantic-engine.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T18-f1-gate-lessons.test.sh",
@@ -1577,9 +1429,14 @@
   },
   {
     "path": "test/sections/T20-map-scan.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+    "category": "frozen-string",
+    "reason": "Functional fixture data: heredoc plan and whitelist parse inputs quote digit ids by design; pinned as frozen surface.",
+    "lines": [
+      {
+        "line": 98,
+        "sha256": "9ed4ed82125436c4a11b3ac25c931a42f51add7752fd77613976f9ff30b0a10d"
+      }
+    ]
   },
   {
     "path": "test/sections/T21-map-closure.test.sh",
@@ -1623,12 +1480,6 @@
     ]
   },
   {
-    "path": "test/sections/T26-nav-hints.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T29-command-registry.test.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -1657,9 +1508,14 @@
   },
   {
     "path": "test/sections/T30-map-edges.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+    "category": "frozen-string",
+    "reason": "Functional fixture data: heredoc plan and whitelist parse inputs quote digit ids by design; pinned as frozen surface.",
+    "lines": [
+      {
+        "line": 144,
+        "sha256": "b0f51b7742b34b52984ea31bb171e0951e801d837ec29bc02ab7d4d610419611"
+      }
+    ]
   },
   {
     "path": "test/sections/T31-map-gate.test.sh",
@@ -1688,12 +1544,6 @@
     ]
   },
   {
-    "path": "test/sections/T36-callgraph.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T37-phase-ux.test.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -1718,12 +1568,6 @@
         "sha256": "972c2e565b38141a6853f07e5155fc042175df26714cedeb15552a68e1ebf2b5"
       }
     ]
-  },
-  {
-    "path": "test/sections/T4-requirement.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T44-static-splice.test.sh",

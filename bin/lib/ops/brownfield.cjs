@@ -11,7 +11,7 @@
 // Prompt-free by construction: no interactive primitive is imported or
 // reached; the engine always runs nonInteractive. Status/state-flag/exit
 // tokens are imported from command_contracts (single frozen source, loud on
-// drift — same pattern as brownfield-probe.cjs). Wave 4 (T6) landed the
+// drift — same pattern as brownfield-probe.cjs). landed the
 // handoff block ( map preview, platform probe), the
 // --print-agents-skeleton (stdout only) and the core.t() locale migration:
 // EVERY human-readable string flows through brownfield.* locale keys (en

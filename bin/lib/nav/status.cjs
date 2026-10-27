@@ -80,11 +80,11 @@ function doneHint(state) {
       if (!pend.length && !parked.length) lines.push(core.CONTRACTS.command_contracts.doneHintAllDone);
     }
   } else {
-    // [phase-ux L3] DONE+unarchived splits by the REAL gate state — the model/user must
+ // DONE+unarchived splits by the REAL gate state — the model/user must
     // not guess whether the archive approval is pending (user gate) or ready to run.
     if ((state.approvals || {}).ARCHIVE) lines.push('archive ready — run: `gos archive`');
     else lines.push('⏸ archive awaiting YOUR approval (user gate) — `gos approve archive`, then `gos archive`');
-    // [phase-ux L3] unmerged-branch visibility: global sync (npm i -g) consumes the default
+ // unmerged-branch visibility: global sync (npm i -g) consumes the default
     // branch — shipping commits on a feature branch silently misses every other repo.
  // -guard compliance: execFileSync argv form only, NO shell-assembled git calls.
     try {

@@ -109,7 +109,7 @@ function resolvePath(key, subst) {
     rel = rel.split(ph).join(String(v));
   }
   const out = path.join(GOS_DIR, rel);
-  // [REVIEW P2-F1] escape guard: resolved path must stay inside GOS_DIR (fail-fast, never guess)
+ // escape guard: resolved path must stay inside GOS_DIR (fail-fast, never guess)
   if (path.relative(GOS_DIR, out).startsWith('..')) throw new Error(`GOS_PATHS: resolved path escapes .gos/ for key '${key}'`);
   return out;
 }

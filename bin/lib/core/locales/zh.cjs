@@ -119,7 +119,7 @@ module.exports = {
   'track.preset.err.missing': 'track --knowledge: {path} 缺失——预设要求三份导览文件齐备（.gos/codebase/structure.md、conventions.md、concerns.md）',
   'track.knowledge.done': '✓ knowledge 预设完成：{n} 个文件已加 born-at: {head} 戳',
 
- // ---- /D-15 gate 翻转对账腿（tracked .gos 文件的 census/git/清单三方
+ // ---- / gate 翻转对账腿（tracked .gos 文件的 census/git/清单三方
   'gate.flip-git-probe-failed': {
     what: '翻转对账腿无法确立 git 事实',
     why: '故障关闭：没有探测事实时 gate 拒绝对账，绝不猜测',

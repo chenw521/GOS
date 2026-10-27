@@ -273,7 +273,7 @@ function cmdLessons(args) {
   if (sub === 'prune') {
     let type = 'project';
     for (let i = 0; i < rest.length; i++) if (rest[i] === '--type') type = rest[++i];
-    if (type !== 'model' && type !== 'project') core.die(`lessons: --type must be model|project (got '${type}') [R1-F9]`);
+ if (type !== 'model' && type !== 'project') core.die(`lessons: --type must be model|project (got '${type}') `);
     const force = rest.includes('--force');
     const P = core.lessonsPaths(type);
     withSide(P, 'prune', () => {

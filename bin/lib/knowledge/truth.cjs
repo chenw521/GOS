@@ -32,7 +32,7 @@ function appendTruthReceipt(id, commandStr, truthText) {
   let needsNl = false;
   fs.mkdirSync(path.dirname(TRUTH_RECEIPTS_PATH), { recursive: true }); // logs/ may not exist yet
   try { const prev = fs.readFileSync(TRUTH_RECEIPTS_PATH, 'utf8'); needsNl = prev.length > 0 && !prev.endsWith('\n'); } catch { /* first receipt */ }
- // /R-35 write-side enrichment: `<iso8601> <id> replay-verified: <cmd> :: <truth text>`
+ // / write-side enrichment: `<iso8601> <id> replay-verified: <cmd> :: <truth text>`
   // — the receipt carries the truth text (single line, first 80 codepoints) so the
   // `gos logs` view can show it without joining state.
   const text = String(truthText == null ? '' : truthText).replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();

@@ -128,7 +128,7 @@ function validateAnchor(spec, root) {
     if (!new RegExp(`^#+\\s*${esc}\\s*$`, 'm').test(src)) return { ok: false, msg: `✗ ${SC.anchorVerifDeadAnchor.replace('<kind>', 'h').replace('<anchor>', a)}` };
     return { ok: true, type: 'h', detail: title };
   }
- // bare word = contract key (D-23③ consumers target frozen keys)
+ // bare word = contract key ( ③ consumers target frozen keys)
   if (!contractKeysFlat().has(a)) return { ok: false, msg: `✗ ${SC.anchorVerifDeadAnchor.replace('<kind>', 'contractKey').replace('<anchor>', a)}` };
   return { ok: true, type: 'contractKey', detail: a };
 }

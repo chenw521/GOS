@@ -108,7 +108,7 @@ function t(key, params) {
   return params || typeof v === 'object' ? interpolate(v, params) : v;
 }
 
-// ↔D-66 join (C4): localized what/why for a gate failure code; evidence and
+// ↔ join (C4): localized what/why for a gate failure code; evidence and
 // fix NEVER pass through here (locale-invariant by construction).
 function gateVerdictParts(code) {
   const v = t(`gate.${code}`);

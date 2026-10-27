@@ -18,8 +18,8 @@ self-review finds MECE violations, OR Pre-Mortem identifies a critical gap.
 3. Pass? → Done. Fail? → Iteration 2.
 
 <Good>
-"D-05 (rate limiting) uncovered → extend (middleware) to include
-rate limiting logic, add Covers: D-05 to ."
+" (rate limiting) uncovered → extend (middleware) to include
+rate limiting logic, add Covers: to ."
 </Good>
 
 <Bad>
@@ -58,7 +58,7 @@ Present to user:
 Revision Loop stalled after 3 iterations.
 
 Unresolved gaps:
-- : rate limiting — conflicts with D-02 (session design)
+- : rate limiting — conflicts with (session design)
 - : audit logging — no clear integration point
 
 Options:

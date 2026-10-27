@@ -68,7 +68,7 @@ module.exports = {
   'setup.lang.saved': 'language saved: {locale} ({source})',
   'help.contractKeysHeader': '  contract keys (not commands — used by test assertions):',
 
- // ---- logs view surfaces ( /R-35: runtime ledger rendering; paths/counts
+ // ---- logs view surfaces ( / : runtime ledger rendering; paths/counts
   // interpolate — the ledgers themselves are locale-invariant machine files) ----
   'logs.receipts.title': 'truth receipts — {path} (showing last {n} of {total})',
   'logs.exemptions.title': 'gate exemptions — {path} (showing last {n} of {total})',
@@ -84,10 +84,10 @@ module.exports = {
   'lessons.projectLabel': 'repo knowledge · never expires',
   'lessons.modelLabel': 'cross-repo behavior · expires on date',
 
- // ---- /D-17 language boundary (tracked stores are English-only)
+ // ---- / language boundary (tracked stores are English-only)
   'langBoundary.trackedStore': 'language boundary: {file} is git-tracked — tracked GOS stores are English-only; rewrite the content in English before saving (untracked stores accept any language)',
 
- // ---- /D-16 gap migrate/history + concerns anchor bootstrap predicate
+ // ---- / gap migrate/history + concerns anchor bootstrap predicate
   'gap.migrate.removed': '✓ migrated {n} stage-back mirror line(s) from concerns.md to the gap-history ledger — state.gaps stays the single source',
   'gap.migrate.none': 'no (auto) mirror lines in concerns.md — nothing to migrate',
   'gap.migrate.dupes': '⚠ {n} mirror line(s) already in the ledger (deduped by text) — cured from concerns.md without re-appending',
@@ -124,7 +124,7 @@ module.exports = {
   'track.preset.err.missing': 'track --knowledge: {path} is missing — the preset requires all three guide-trio files (.gos/codebase/structure.md, conventions.md, concerns.md)',
   'track.knowledge.done': '✓ knowledge preset complete: {n} file(s) stamped born-at: {head}',
 
- // ---- /D-15 gate flip-reconcile leg (census/git/manifest agreement on
+ // ---- / gate flip-reconcile leg (census/git/manifest agreement on
  // tracked .gos files; failure codes join the locale renderer)
   'gate.flip-git-probe-failed': {
     what: 'git truth could not be established for the flip-reconcile leg',
@@ -212,7 +212,7 @@ module.exports = {
   "map.allowlist.dirViolation": "require direction violation: {from} → {to} (module direction {fr}→{tr} not in the allowlist{drift})",
   "map.allowlist.moduleDrift": "; module drift — endpoint not under any registered moduleRoot",
 
- // ---- brownfield adoption surfaces ( : D-90/D-92/D-98/D-100; status/
+ // ---- brownfield adoption surfaces ( : ; status/
   // state-flag/exit tokens and JSON field names stay locale-invariant) ----
   'brownfield.fatal.line': '✗ {msg}',
   'brownfield.title': 'brownfield adoption report — {root}',

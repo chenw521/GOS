@@ -235,7 +235,7 @@ function renderNetworkMd(root, sem, hand) {
   if (byFn.size) {
     for (const [fn, secs] of [...byFn.entries()].sort()) lines.push(`| ${core.escCellMd(fn)} | ${core.escCellMd([...secs].sort().join(', '))} |`);
   } else {
-    lines.push('| (none — annotate test section headers with `gos-map:fn <name>`) | |');   // [REVIEW m6] 2 cells to match header
+ lines.push('| (none — annotate test section headers with `gos-map:fn <name>`) | |'); // 2 cells to match header
   }
   // mermaid full graph (same pairs logic as map graph)
   const pairs = [];

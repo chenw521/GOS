@@ -232,7 +232,7 @@ assert_contains "already-archived message" "already archived" "$OUT"
 # (archive now MOVES spec/plan into the archive dir — SHIP-dogfood fix; rebuild both here)
 echo "fresh spec content" > "$(gos_spec)"
 echo "# fresh plan" > "$(gos_plan)"
-# [REVIEW P2-F4] UNCOMMITTED task-zone spec/plan + --force = HARD block (v0.8-loss protection survives the layout change)
+# UNCOMMITTED task-zone spec/plan + --force = HARD block (v0.8-loss protection survives the layout change)
 set +e; OUT=$(node "$GOS" init 3 "next task" --force 2>&1); RC=$?; set -e
 assert_exit "uncommitted task spec blocks --force" 1 "$RC"
 assert_contains "block message names unarchived" "unarchived spec/plan would be overwritten" "$OUT"

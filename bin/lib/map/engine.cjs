@@ -278,7 +278,7 @@ const EXTRACTORS = [
         const sec = f.replace(/\.test\.sh$/, '');
         let lines = [];
         try { lines = fs.readFileSync(path.join(secDir, f), 'utf8').split('\n').slice(0, 5); } catch { lines = []; }
-        const ann = lines.find((l) => /^#\s*gos-map:(cmd|both)\s/.test(l));   // [Phase S/D-02] both lines also carry cmd edges
+ const ann = lines.find((l) => /^#\s*gos-map:(cmd|both)\s/.test(l)); // both lines also carry cmd edges
         const none = lines.some((l) => /^#\s*gos-map:none/.test(l));
         // fn/file-only sections are annotated too (testof_fn / file-anchor
  // linkage) — they must not count against
@@ -337,7 +337,7 @@ const EXTRACTORS = [
       if (!ctx) ctx = buildExtractorCtx(root, files, readFile);
       if (ctx.acornMissing) {
         console.error(`⚠ ${core.CONTRACTS.semantic_checks.acornMissing}`);
-        // [REVIEW M1] capability absent ≠ data broken: keep FAIL-channels empty, mark separately
+ // capability absent ≠ data broken: keep FAIL-channels empty, mark separately
         return { callgraph: [], parse_failures: [], acorn_missing: true };
       }
       const out = [], failures = [];
@@ -347,7 +347,7 @@ const EXTRACTORS = [
         const calls = [];   // {name, stack}
         (function walk(node, stack) {
           if (!node || typeof node !== 'object') return;
-          if (node.type === 'FunctionDeclaration' && node.id) stack = [node.id.name, ...stack];   // nested fns DO enter walk — correctness comes from the topFns filter below (R-03) [REVIEW m8]
+ if (node.type === 'FunctionDeclaration' && node.id) stack = [node.id.name, ...stack]; // nested fns DO enter walk — correctness comes from the topFns filter below
           if (node.type === 'CallExpression' && node.callee && node.callee.type === 'Identifier') calls.push({ name: node.callee.name, stack });
           for (const k of Object.keys(node)) {
             const v = node[k];
@@ -356,7 +356,7 @@ const EXTRACTORS = [
           }
         })(r.ast, []);
         const ownerOf = (stack) => stack.find((nm) => topFns.has(nm)) || null;   // nearest outer top-level fn
-        const pushed = new Set();   // [REVIEW m4] dedupe at the source — consumers no longer must
+ const pushed = new Set(); // dedupe at the source — consumers no longer must
         for (const c of calls) {
           if (!topFns.has(c.name)) continue;
           const owner = ownerOf(c.stack);
@@ -371,7 +371,7 @@ const EXTRACTORS = [
         console.error(`⚠ ${core.CONTRACTS.semantic_checks.parseFailures.replace('<N>', String(failures.length)).replace('<files>', failures.map((x) => x.file).join(', '))}`);
       }
       let fnCount = 0;
-      for (const names of ctx.fns.values()) fnCount += names.size;   // [Phase P T6] gate self-consistency baseline
+ for (const names of ctx.fns.values()) fnCount += names.size; // gate self-consistency baseline
       return { callgraph: out, parse_failures: failures, fn_count: fnCount };
     },
   },
@@ -406,7 +406,7 @@ const EXTRACTORS = [
             if (name.includes('#')) name = name.slice(name.indexOf('#') + 1).replace(/^fn:/, '');
             explicitFns.add(name);
           }
-        const bothAnns = lines.filter((l) => /^#\s*gos-map:both\s/.test(l));   // [Phase S/D-02] one line → cmd + fn edges
+ const bothAnns = lines.filter((l) => /^#\s*gos-map:both\s/.test(l)); // one line → cmd + fn edges
         if (!anns.length && !bothAnns.length) continue;
         annotated++;
         for (const ann of anns)
@@ -414,7 +414,7 @@ const EXTRACTORS = [
           // DI-2 reserved: fully-qualified `path#fn:name` parses here; bare name = primary monolith default
           let fileSpec = null;
           if (name.includes('#')) { const i = name.indexOf('#'); fileSpec = name.slice(0, i); name = name.slice(i + 1).replace(/^fn:/, ''); }
-          // [REVIEW M2] bare name → resolve owning file; qualified `path#fn:name` → the named file must OWN that fn
+ // bare name → resolve owning file; qualified `path#fn:name` → the named file must OWN that fn
           const hosts = byName.get(name);
           let hit = null, why = null;
           if (fileSpec) {
@@ -437,7 +437,7 @@ const EXTRACTORS = [
       }
       if (ctx.acornMissing && annotated) {
         console.error(`⚠ ${core.CONTRACTS.semantic_checks.fnSetUnavailable.replace('<M>', String(annotated))}`);
-        return { testof_fn: out, dead_fn_annotations: [], dup_names: [] };   // [REVIEW M1] unvalidated ≠ dead — gate must NOT FAIL on a missing dep
+ return { testof_fn: out, dead_fn_annotations: [], dup_names: [] }; // unvalidated ≠ dead — gate must NOT FAIL on a missing dep
       } else if (dead.length) {
         console.error(`⚠ ${dead.length} dead gos-map:fn annotation(s) — fn not in scan set: [${dead.join(', ')}]`);
       }
@@ -447,7 +447,7 @@ const EXTRACTORS = [
     },
   },
   {
-    name: 'sec_contracts',   // ⑧ [Phase S/D-03] `# gos-map:contract <key>` → sec↔contract edges (data-first: consumers later)
+ name: 'sec_contracts', // ⑧ `# gos-map:contract <key>` → sec↔contract edges (data-first: consumers later)
     extract(root) {
       const out = [];
       const secDir = path.join(core.mapRootDir(), 'test', 'sections');   // same clone-isolation domain as ⑦
@@ -501,7 +501,7 @@ function writeDeps(root, scan) {
   const info = mapGitInfo(root);
  // semantic families run on the SAME file set the import scanner saw
   const semantic = runExtractors(root, (scan && scan.files) || [], (f) => fs.readFileSync(path.join(root, f), 'utf8'));
-  const obj = Object.assign({ schema_version: 3, note: MAP_NOTE, generated: new Date().toISOString() }, info, scan, { semantic });   // [Phase P T2 / D-40] v3 = +callgraph/testof_fn/parse_failures
+ const obj = Object.assign({ schema_version: 3, note: MAP_NOTE, generated: new Date().toISOString() }, info, scan, { semantic }); // v3 = +callgraph/testof_fn/parse_failures
   obj.self_sha256 = depsSelfHash(obj);   // set LAST: body order frozen for verifier parity
   core.writeAtomicJson(path.join(root, '.gos', core.GOS_PATHS.deps.rel), obj);
   try {   // two-layer baseline: edge-baseline.json = {current, peak} (git-tracked) + edge-history.ndjson (append-only, gitignored)
@@ -712,7 +712,7 @@ function layerOf(node) {   // [P1-M5] five-layer classification (network.md B-ta
 }
 
 function buildGraphPairs(root, opts) {   // shared source for every render form
-  const fnMode = !!(opts && opts.fn);   // [Phase P T7 / R-08] fn families are OFF by default (494 edges would drown the full graph)
+ const fnMode = !!(opts && opts.fn); // fn families are OFF by default (494 edges would drown the full graph)
   const sem = runExtractors(root, scanSources(root).files, (f) => fs.readFileSync(path.join(root, f), 'utf8'));
   const pairs = [];
   const seen = new Set();

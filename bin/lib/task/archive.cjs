@@ -48,7 +48,7 @@ function archiveDirExists(date, slug) {
 }
 
 function cmdArchive(opts = {}) {
-  const fromCommit = !!opts.fromCommit; // [REVIEW P1-F2] invoked from cmdCommit — gates degrade to warn+skip (never kill the commit mid-flow)
+ const fromCommit = !!opts.fromCommit; // invoked from cmdCommit — gates degrade to warn+skip (never kill the commit mid-flow)
   // Registry-driven walker: one traversal for direct + nested fields (single-source consumption —
   // newly registered fields are picked up by the rewrite/normalization automatically)
   const walkPaths = (obj, fn) => {
@@ -140,7 +140,7 @@ function cmdArchive(opts = {}) {
   // design; CHANGELOG.md is deliberately not consulted for version truth.
   // GOS_SKIP_SHIP_CHECK=1 skips both (tests / non-release archives).
   if (!fromCommit && process.env.GOS_SKIP_SHIP_CHECK !== '1') {
- // ---- /R-33 (F-9/F-11): PROJECT.md pre-flight — same slot as the SHIP ritual
+ // ---- / ( ): PROJECT.md pre-flight — same slot as the SHIP ritual
     // Validate-then-mutate (lesson 8a11d879): the refusal lands BEFORE any
     // project.json mutation, task collection (staging), or auto-render, so a
     // skeleton PROJECT.md never strands a half-archived phase. Applies only
@@ -251,7 +251,7 @@ function cmdArchive(opts = {}) {
     } catch (e) { if (e && e.message) console.log(`⚠ plan drift check skipped: ${String(e.message).split('\n')[0]}`); }
   }
 
-  // [REVIEW P2-F5] DRY: slug logic lives in sibContext.archiveSlugParts (single source — the
+ // DRY: slug logic lives in sibContext.archiveSlugParts (single source — the
   // context SHIP preview consumes the same function, no drift)
   const { date, slug } = sibContext.archiveSlugParts(state);
  // ---- : idempotency — DONE + completed_at (this state WAS archived) + today's slug dir present
@@ -329,14 +329,14 @@ function cmdArchive(opts = {}) {
   fs.mkdirSync(dest, { recursive: true });
   // spec/plan fallback to the canonical paths (pre-existing null spec_path state —
   // SHIP-dogfood fix: every other consumer falls back to '.gos/spec.md', moves didn't)
- // ---- Phase W ( /T18, D-13/R-07): two-phase ship transaction + orphan adoption
+ // ---- Phase W ( / , ): two-phase ship transaction + orphan adoption
   // Phase A: stage everything into .gos/.ship-staging/ — tracked via `git mv` (rename
   // history preserved), untracked via fs.renameSync. Any failure rolls staging back to
   // the original paths; nothing half-moves. Phase B: git add + rename staging → dest +
   // commit. Idempotent re-entry: leftover staging from a crashed run is restored first.
   const staging = core.resolvePath('ship_staging');
   let moved = 0; // hoisted for the final archived summary line
- // /D-15 (§3.7, ): gitprobe is the only fail-closed probing
+ // / ( , ): gitprobe is the only fail-closed probing
   // primitive. Its ignored-scan truth source lists exact files and collapses
   // covered directories to a single trailing-slash entry, so "rel is ignored"
   // = rel itself listed, or rel living under a listed directory — the same
@@ -428,7 +428,7 @@ function cmdArchive(opts = {}) {
       let st; try { st = fs.statSync(src); } catch { continue; }
       if (now - st.mtimeMs < 5 * 60 * 1000) { skipped.push(rel); continue; } // quiet-period exempt
       if (anchorLockHeld) { skipped.push(rel); console.log(`⚠ anchor lock held — orphan adoption deferred: ${rel}`); continue; }
-      // [REVIEW P2-F2] adoption goes through staging too — "nothing half-moves" holds:
+ // adoption goes through staging too — "nothing half-moves" holds:
       // rollback restores staged orphans along with task/<id>/, dest only materializes in Phase B
       const dstRel = path.join('orphans', rel);
       const dstAbs = path.join(staging, dstRel);
@@ -438,7 +438,7 @@ function cmdArchive(opts = {}) {
       if (m && m[1].toLowerCase() !== String(tid || '').toLowerCase()) {
         const candidates = fs.existsSync(core.ARCHIVE_DIR) ? fs.readdirSync(core.ARCHIVE_DIR).filter((d) => d.includes(`phase-${m[1]}-`) || d.includes(`-phase-${m[1]}-`)) : [];
         if (candidates.length) {
-          const dirName = candidates.sort().pop(); // [REVIEW P2-F6] pop once, reuse for the log line
+ const dirName = candidates.sort().pop(); // pop once, reuse for the log line
           const target = path.join(staging, 'reroute', dirName, path.basename(rel));
           fs.mkdirSync(path.dirname(target), { recursive: true });
           gitMvOrRename(src, target);
@@ -472,7 +472,7 @@ function cmdArchive(opts = {}) {
     // ⑤ rescan zero-assertion: non-transient orphans must be zero (manual adjudication on failure)
     const rest = ops.detectOrphans(state).filter((r) => !skipped.includes(r));
     if (rest.length) {
-      // [REVIEW P2-F3] dest is born in THIS transaction — removing it avoids a half-archived
+ // dest is born in THIS transaction — removing it avoids a half-archived
       // stray that rescan can never reach again (archive/ is the exempt zone)
       try { fs.rmSync(dest, { recursive: true, force: true }); } catch { /* best effort */ }
       restoreStaging();
@@ -481,7 +481,7 @@ function cmdArchive(opts = {}) {
       process.exit(1);
     }
     if (adopted.length) console.log(`✓ ship adoption: ${adopted.length} orphan(s) → ${dest.includes('archive') ? 'archive' : dest} (${skipped.length} quiet-period/lock exempt)`);
- // [REVIEW P1-F1] step6: README regen rides the ship transaction (machine-triggered, )
+ // step6: README regen rides the ship transaction (machine-triggered, )
   } catch (e) {
     rollback(e);
   }

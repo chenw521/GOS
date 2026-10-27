@@ -1,4 +1,4 @@
-// core/gitprobe.cjs — fail-closed git probing primitives ( ; /D-15/D-17):
+// core/gitprobe.cjs — fail-closed git probing primitives ( ; / ):
 // clone-resume's tracked-flip gate refuses whenever git truth cannot be
 // established. isTracked answers `true` (assume tracked) on ANY git failure
 // (rc!=0, stderr chatter on rc=0, spawn exception, poisoned GIT_INDEX_FILE /

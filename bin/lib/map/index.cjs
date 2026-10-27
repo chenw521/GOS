@@ -282,8 +282,8 @@ function cmdMap(args) {
     const forward = flags.includes('--forward');
     const print0 = flags.includes('--print0');
     const noRefresh = flags.includes('--no-refresh');
-    const semantic = flags.includes('--semantic');   // [Phase D T7] three-source human closure report
-    const graph = flags.includes('--graph');   // [Phase D T8] neighborhood mermaid (1 hop; --2hop explicit)
+ const semantic = flags.includes('--semantic'); // three-source human closure report
+ const graph = flags.includes('--graph'); // neighborhood mermaid (1 hop; --2hop explicit)
     const twohop = flags.includes('--2hop');
     if (sub === 'closure' && !paths.length) core.die('Usage: gos map closure <paths...> [--forward] [--print0] [--no-refresh]');
  // show evolved: 0 args = legacy overview; 1 anchor arg = neighborhood . REVIEW #7 preserved for >1.
@@ -357,7 +357,7 @@ function cmdMap(args) {
       else console.log('    must-run sections: (none — no gos-map:fn annotations cover this fn or its callers)');
       const pf = ((deps.semantic || {}).parse_failures || []).length;
       if (pf) console.log(`  ${SC.closureParseWarn.replace('<N>', String(pf))}`);
-      console.log(SC.mapBanner);   // [REVIEW m5] text form: banner on stdout like every other text closure form
+ console.log(SC.mapBanner); // text form: banner on stdout like every other text closure form
       return;
     }
     if (sub === 'closure' && semantic && !graph) {   // [T7] human semantic closure (block-headed, qualified)
@@ -464,7 +464,7 @@ function cmdMap(args) {
       const seenRow = new Set();
       for (const [f, rel, tgt] of rows) {
         const rk = `${f}\u0000${rel}\u0000${tgt}`;
-        if (seenRow.has(rk)) continue;   // [Phase P T7] dedupe fn call edges (multiple call sites → one relation)
+ if (seenRow.has(rk)) continue; // dedupe fn call edges (multiple call sites → one relation)
         seenRow.add(rk);
         console.log(`  ${f}  --[${rel}]-->  ${tgt}`);
       }

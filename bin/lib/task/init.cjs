@@ -90,7 +90,7 @@ function cmdInit(args) {
     if (fs.existsSync(taskZone)) {
       const leftovers = fs.readdirSync(taskZone).filter((x) => !x.startsWith('.'));
       if (leftovers.length) {
-        // [REVIEW P2-F4] same protection as the root-level probe: an UNCOMMITTED spec/plan
+ // same protection as the root-level probe: an UNCOMMITTED spec/plan
         // inside task/<id>/ is unrecoverable work — refuse; committed content still clears
         const unprotected = [];
         for (const x of leftovers) {
@@ -146,13 +146,13 @@ function cmdInit(args) {
   // repo identity = repo_id (stamped by defaultState), repo root is
   // runtime-derived via currentRootRealpath() wherever a root is needed.
   const root = core.currentRootRealpath() || fs.realpathSync('.');
- // (D-11): pin spec/plan to task/<id>/ at birth — single resolution from here on.
+ // : pin spec/plan to task/<id>/ at birth — single resolution from here on.
   // (project tasks get phase_name later at claim; core.currentTaskId falls to task_head[0:8].)
  // Stored repo-relative : tracked state must not carry machine paths.
   if (!state.spec_path) core.pinTaskPaths(state);
   core.writeState(state);
 
- // [Phase D ] seed the anchor-network sidecar from birth (§14 rollout: missing == anomaly)
+ // [Phase D ] seed the anchor-network sidecar from birth ( rollout: missing == anomaly)
   if (seedEdgesIfAbsent(root)) {
     console.log('✓ seeded .gos/edges.json (map 2.0 anchor network — first gos commit freezes its lock)');
   }
@@ -164,7 +164,7 @@ function cmdInit(args) {
 
   if (isProject) {
     fs.mkdirSync(core.PROJECT_DIR, { recursive: true });
- // /R-33: PROJECT.md sections seed with TODO guidance lines — the
+ // / : PROJECT.md sections seed with TODO guidance lines — the
     // approve-archive gate and brownfield detection both key on them.
     const files = {
       'PROJECT.md': [

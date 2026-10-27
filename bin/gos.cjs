@@ -126,7 +126,7 @@ process.on('exit', core.releaseLock);
 function main() {
   const argv = process.argv.slice(2);
   const breakLock = argv.includes('--break-lock');
-  core.setBreakLock(breakLock);   // [Phase D T2] pass-through for subcommand-level locks (map edge)
+ core.setBreakLock(breakLock); // pass-through for subcommand-level locks (map edge)
   const cleanArgs = argv.filter(a => a !== '--break-lock');
   const [cmd, ...args] = cleanArgs;
   const cname = (cmd || '').toLowerCase();

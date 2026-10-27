@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:cmd requirement
 # : requirement command family (add/list/drop/claim) + dual-store
-# Covers: D-20 (plan Wave 2)
+# Covers: (plan )
 T4_DIR=""
 
 t4_setup() {

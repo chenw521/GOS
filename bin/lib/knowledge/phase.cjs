@@ -28,7 +28,7 @@ function detectBrownfield() {
   return found.length ? found : null;
 }
 
-// /R-33 (F-8): PROJECT.md per-section predicate. Every `## ` section must
+// / : PROJECT.md per-section predicate. Every `## ` section must
 // carry at least one content line: non-TODO, >=20 codepoints, and not a
 // separator/dash string (three junk lines like `-`/`x`/`n/a` still fail). A
 // section-less file never passes vacuously — at least one `## ` section is

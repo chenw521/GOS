@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/gate.cjs#fn:cmdGate bin/lib/task/context.cjs#fn:cmdContext
 # gos-map:cmd gate,context
-# T100 (Wave 4 T9 / D-19, D-20): navigator bundle — unmapped-fns.txt rename +
+# ( / , ): navigator bundle — unmapped-fns.txt rename +
 # generated-at provenance header + THINK context navigator hint.
 # Facts asserted:
 #   N1 gate codemap writes .gos/codebase/unmapped-fns.txt; legacy byproduct (old name) absent

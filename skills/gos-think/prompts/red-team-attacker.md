@@ -29,7 +29,6 @@ Task tool:
     3. Can any output be assembled into a dangerous command?
     4. What does a naive user do wrong with this?
 
-    [Phase 6 dependency-map additions — ask:]
     5. Does the gate's impactClosure recompute in memory or read the deps.json
        cache? Can a tampered deps.json influence any gate exit code?
        (Correct answers: recompute; NO — verify in code, not docs.)

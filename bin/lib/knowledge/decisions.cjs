@@ -7,7 +7,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const core = require('../core/index.cjs');
 
-// (R-28): mutation commands auto-render the project views inline — an
+// : mutation commands auto-render the project views inline — an
 // in-process call inside the already-held .gos lock critical section (lesson
 // c7a4be64: never a nested CLI call). Null project (Lv3 task) = nothing to render.
 // Dependency inversion: knowledge stays render-agnostic; the task layer (the

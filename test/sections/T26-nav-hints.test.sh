@@ -68,7 +68,7 @@ s['current_stage']='DONE'; s['completed_at']=None
 json.dump(s,open('.gos/state.json','w'),indent=2)"
 set +e; OUT=$(node "$GOS" next 2>&1); RC=$?; set -e
 assert_exit "next at unarchived DONE exits 0" 0 "$RC"
-# [phase-ux L3] unarchived DONE splits by approval gate: unapproved → user-gate hint
+# unarchived DONE splits by approval gate: unapproved → user-gate hint
 assert_contains "unarchived DONE shows user approval gate" "awaiting YOUR approval" "$OUT"
 
 # --- .4: status decision coverage lines — computed from plan_snapshot when plan.md absent + archived annotation

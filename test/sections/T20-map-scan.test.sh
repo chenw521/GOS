@@ -153,7 +153,7 @@ set +e; OUT=$(node "$GOS" map closure lib/a.js 2>&1); RC=$?; set -e
 assert_exit "unparseable deps.json → exit 1" 1 "$RC"
 assert_contains "depsParseFail frozen text" "deps.json unreadable (parse failed) — refusing cached map" "$OUT"
 python3 -c "
-import json; d = json.load(open('deps.bak.json')); d['schema_version'] = 4   # [Phase P T2/D-40] future = >3 → upgrade hint, not rescan hint
+import json; d = json.load(open('deps.bak.json')); d['schema_version'] = 4 # future = >3 → upgrade hint, not rescan hint
 json.dump(d, open('.gos/cache/deps.json','w'), indent=2)"
 set +e; OUT=$(node "$GOS" map closure lib/a.js 2>&1); RC=$?; set -e
 assert_exit "future schema_version → exit 1" 1 "$RC"

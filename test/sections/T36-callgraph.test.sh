@@ -38,7 +38,7 @@ t36_teardown() {
 }
 
 t36_setup
-trap t36_teardown EXIT   # [REVIEW M3] restore live-repo acorn even on Ctrl-C / assert-exit
+trap t36_teardown EXIT # restore live-repo acorn even on Ctrl-C / assert-exit
 echo "--- T36: callgraph fn-level drilling ---"
 
 # --- .1 : lazy require — CLI boots without acorn (help = side-effect-free boot probe)

@@ -37,8 +37,8 @@ Record evidence via the command family — never hand-edit state.json:
 
 ```bash
 gos truth add "what user can observe"                      # auto-numbered T-NN
-gos truth verify --command '["bash","test/run-sections.sh"]' --replay --artifact test/out/T1.log
-gos truth verify --command "<cmd>" --excerpt "12 passed, 0 failed" --artifact test/out/T2.log
+gos truth verify --command '["bash","test/run-sections.sh"]' --replay --artifact test/out/ .log
+gos truth verify --command "<cmd>" --excerpt "12 passed, 0 failed" --artifact test/out/ .log
 ```
 
 - `--replay` executes the command (JSON argv) and takes the excerpt from REAL stdout — preferred; manual mode (`--command/--excerpt/--artifact` without `--replay`) marks the truth `manual:true` and gate prints a warning banner.

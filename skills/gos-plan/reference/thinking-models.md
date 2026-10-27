@@ -44,7 +44,7 @@ Mitigation: reads existing schema first, uses IF NOT EXISTS."
 **Steps**:
 1. Identify the hardest technical constraint (performance, compatibility,
    external API, legacy code integration)
-2. Check: is there a task addressing it in Wave 1-2?
+2. Check: is there a task addressing it in -2?
 3. If it's in the LAST wave → move it earlier
    - Rationale: if the hardest thing fails, you want to know BEFORE doing
      all the easy work
