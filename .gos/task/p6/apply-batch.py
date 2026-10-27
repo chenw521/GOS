@@ -17,6 +17,59 @@ DISPOSITION = '.gos/task/p6/disposition.md'
 PAIRS = {'(': ')', '[': ']'}
 MARKERS = re.compile(r'^\s*(#|//|/\*|\*|<!--|\*/)?\s*$')
 
+# The lint records only the first match per tier per line, so a comment
+# line can hold several anchors; the strip runs the lint's own grammar
+# to exhaustion so nothing anchor-shaped survives on a swept line.
+TIER_A = [
+    re.compile(r'\[[A-Za-z]+(?:[ -][A-Za-z]+)*[ -]?[0-9/]'),
+    re.compile(r'\b[A-Za-z]+\d+-[A-Za-z]+\d+\b'),
+    re.compile(r'§\s*\d'),
+]
+TIER_B = [
+    re.compile(r'\bWave\s+\d+\b'),
+    re.compile(r'\bW\d+\b'),
+    re.compile(r'\bT\d+\b'),
+    re.compile(r'\b(?:D|R|B|F)-\d+\b'),
+    re.compile(r'\bthis\s+(?:phase|wave|task)\s+(?:adds|ships|introduces)\b', re.I),
+]
+
+
+def strip_all_anchors(text):
+    """Remove every anchor shape from a comment line, extending brackets,
+    section citations and slash compounds to their full human form."""
+    out = text
+    changed = True
+    while changed:
+        changed = False
+        for pat in TIER_A + TIER_B:
+            m = pat.search(out)
+            if not m:
+                continue
+            tok = m.group(0)
+            i, e = m.start(), m.end()
+            if tok.startswith('['):
+                close = out.find(']', e)
+                if close >= 0:
+                    e = close + 1
+                else:
+                    while e < len(out) and out[e] not in ' \t,.;:':
+                        e += 1
+            elif tok.lstrip().startswith('§'):
+                while e < len(out) and re.match(r'[0-9a-zA-Z.-]', out[e]):
+                    e += 1
+            if i > 0 and e < len(out) and out[i - 1] in PAIRS and out[e] == PAIRS[out[i - 1]]:
+                inner = out[i:e]
+                if not re.search(r'[,;=]|->', inner):
+                    i -= 1
+                    e += 1
+            while e + 1 < len(out) and out[e] == '/' and re.match(r'[A-Za-z]+-\d+|[0-9]+', out[e + 1:]):
+                nxt = out.index(' ', e + 1) if ' ' in out[e + 1:] else len(out)
+                seg = re.match(r'[A-Za-z]+-\d+|[0-9]+', out[e + 1:nxt]).group(0)
+                e += 1 + len(seg)
+            out = out[:i] + ' ' + out[e:]
+            changed = True
+    return out
+
 
 def load_rows():
     rows = collections.defaultdict(lambda: collections.defaultdict(list))
@@ -96,16 +149,19 @@ def main():
                 stats['B'] += 1
                 continue
             text = lines[ln - 1]
-            spans = []
-            for tier, tok, letter in rs:
-                i, e = extend_token(tok, text)
-                if i is None:
-                    print(f'WARN miss {p}:{ln} {tok!r}')
-                    continue
-                spans.append((i, e))
-            for i, e in sorted(spans, reverse=True):
-                text = text[:i] + ' ' + text[e:]
             is_comment = bool(re.match(r'^\s*(#|//|/\*|\*|<!--)', text))
+            if is_comment:
+                text = strip_all_anchors(text)
+            else:
+                spans = []
+                for tier, tok, letter in rs:
+                    i, e = extend_token(tok, text)
+                    if i is None:
+                        print(f'WARN miss {p}:{ln} {tok!r}')
+                        continue
+                    spans.append((i, e))
+                for i, e in sorted(spans, reverse=True):
+                    text = text[:i] + ' ' + text[e:]
             text2 = tidy_comment(text) if is_comment else tidy(text)
             if MARKERS.match(text2):
                 del lines[ln - 1]
