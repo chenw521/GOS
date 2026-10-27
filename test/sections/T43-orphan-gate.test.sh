@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/gate.cjs#fn:cmdGate bin/lib/ops/doctor.cjs#fn:detectOrphans
 # gos-map:cmd gate
-# T43: gate orphan detection (advisory frozen text / --strict escalation / exempt set) + README regen hard check
+# : gate orphan detection (advisory frozen text / --strict escalation / exempt set) + README regen hard check
 T43_DIR=""
 
 t43_setup() {
@@ -22,7 +22,7 @@ git init -q . && git commit -q --allow-empty -m root
 node "$GOS" init 1 "t43 orphan probe" >/dev/null 2>&1
 node "$GOS" paths --markdown >/dev/null 2>&1   # README exists (init seeds it post-T6; explicit here for pre-seed compat)
 
-# T43.1 clean repo: gate all emits no orphan warning
+# .1 clean repo: gate all emits no orphan warning
 set +e
 OUT1="$(node "$GOS" gate all 2>&1)"; RC1=$?
 set -e
@@ -32,7 +32,7 @@ else
   echo "  ✗ T43.1 clean repo flagged (rc=$RC1): $(printf '%s' "$OUT1" | grep -o 'orphan-advisory.*' | head -1)"; FAIL=$((FAIL+1))
 fi
 
-# T43.2 probe file -> advisory (frozen text) + exit stays 0
+# .2 probe file -> advisory (frozen text) + exit stays 0
 echo probe > .gos/probe.txt
 set +e
 OUT2="$(node "$GOS" gate all 2>&1)"; RC2=$?
@@ -43,14 +43,14 @@ else
   echo "  ✗ T43.2 rc=$RC2 out=$(printf '%s' "$OUT2" | grep -o '\[orphan-advisory\][^,]*' | head -1)"; FAIL=$((FAIL+1))
 fi
 
-# T43.3 BUILD mid-flight pre-declaration appears in the advisory block
+# .3 BUILD mid-flight pre-declaration appears in the advisory block
 if printf '%s' "$OUT2" | grep -q "BUILD is in progress"; then
   echo "  ✓ T43.3 BUILD-in-progress precondition present"; PASS=$((PASS+1))
 else
   echo "  ✗ T43.3 precondition line missing"; FAIL=$((FAIL+1))
 fi
 
-# T43.4 --strict escalates to fail (exit != 0)
+# .4 --strict escalates to fail (exit != 0)
 set +e
 node "$GOS" gate all --strict >/dev/null 2>&1; RC4=$?
 set -e
@@ -60,7 +60,7 @@ else
   echo "  ✗ T43.4 --strict still exits 0"; FAIL=$((FAIL+1))
 fi
 
-# T43.5 exempt set: archive/, current task/, transient tmp/lock do not warn
+# .5 exempt set: archive/, current task/, transient tmp/lock do not warn
 rm -f .gos/probe.txt
 mkdir -p .gos/archive/some-phase .gos/cache/backups
 echo x > .gos/archive/some-phase/old.md
@@ -77,7 +77,7 @@ else
 fi
 rm -f .gos/tmpfile.tmp .gos/foo.lock
 
-# T43.6 README hand-edited -> regen diff check fails (anti-drift hard gate)
+# .6 README hand-edited -> regen diff check fails (anti-drift hard gate)
 printf 'hand-edited\n' >> .gos/README.md
 set +e
 node "$GOS" gate all >/dev/null 2>&1; RC6=$?
@@ -88,7 +88,7 @@ else
   echo "  ✗ T43.6 hand-edited README not caught (rc=$RC6)"; FAIL=$((FAIL+1))
 fi
 
-# T43.7 regen restores -> gate green
+# .7 regen restores -> gate green
 node "$GOS" paths --markdown >/dev/null 2>&1
 set +e
 node "$GOS" gate all >/dev/null 2>&1; RC7=$?
@@ -99,7 +99,7 @@ else
   echo "  ✗ T43.7 still red after regen (rc=$RC7)"; FAIL=$((FAIL+1))
 fi
 
-# T43.8 freeze non-regression: existing verdicts keys untouched
+# .8 freeze non-regression: existing verdicts keys untouched
 for key in allPass gateFailedPrefix passPrefix failPrefix; do
   if node "$GOS" _contract 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); assert '$key' in d['gate_verdicts']" 2>/dev/null; then
     echo "  ✓ T43.8 verdict key intact: $key"; PASS=$((PASS+1))

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none   # sandbox builds its own project container; no live-repo truth source
-# T37: phase claim/list UX fixes (idx column / actionable out-of-range error / name prefix)
+# : phase claim/list UX fixes (idx column / actionable out-of-range error / name prefix)
 PASS=0; FAIL=0
 command -v assert_exit >/dev/null || assert_exit() {
   local label="$1" expected="$2" actual="$3"

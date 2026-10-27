@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/gate.cjs#fn:cmdGate
 # gos-map:cmd gate,changelog,commit
-# T61: gate wiring — audit mode for stateless trees, changelog lint joins
+# : gate wiring — audit mode for stateless trees, changelog lint joins
 # gate all (same-source subprocess), CHANGELOG.md allowlist default entry
 # (runtime patterns + contract copy), and gos commit staging CHANGELOG.md.
 T61_DIR=""

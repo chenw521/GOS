@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd map
-# T21: map closure/show — bidirectional closure + read-only print0 + out-of-graph refusal +
+# : map closure/show — bidirectional closure + read-only print0 + out-of-graph refusal +
 #      three staleness dimensions + root-anchored input normalization + deleted-node traversal
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 T21_DIR=""
@@ -35,7 +35,7 @@ t21_setup
 echo "--- T21: map closure/show semantics ---"
 node "$GOS" map scan >/dev/null 2>&1
 
-# --- T21.1: reverse closure (default) — full transitive dependents listed + input itself included ---
+# --- .1: reverse closure (default) — full transitive dependents listed + input itself included
 set +e; OUT=$(node "$GOS" map closure lib/util.js 2>/dev/null); RC=$?; set -e
 assert_exit "reverse closure exits 0" 0 "$RC"
 for f in lib/util.js lib/a.js lib/b.ts lib/entry.mjs; do
@@ -48,7 +48,6 @@ assert_exit "py reverse closure exits 0" 0 "$RC"
 assert_contains "py closure includes lib/util.py itself" "lib/util.py" "$OUT"
 assert_contains "py closure includes app/main.py (import lib.util)" "app/main.py" "$OUT"
 
-# --- T21.2: forward closure --forward ---
 set +e; OUT=$(node "$GOS" map closure lib/entry.mjs --forward 2>/dev/null); RC=$?; set -e
 assert_exit "forward closure exits 0" 0 "$RC"
 for f in lib/entry.mjs lib/b.ts lib/a.js lib/util.js; do
@@ -60,7 +59,7 @@ else
   echo "  ✓ forward closure stays in entry.mjs subtree"; PASS=$((PASS+1))
 fi
 
-# --- T21.3: --print0 — NUL-separated bare paths, zero banners, exit 0 ---
+# --- .3: --print0 — NUL-separated bare paths, zero banners, exit 0
 set +e; P0=$(node "$GOS" map closure lib/util.js --print0 2>/dev/null | tr '\0' '\n'); RC=$?; set -e
 assert_exit "print0 exits 0" 0 "$RC"
 assert_contains "print0 lists dependents" "lib/entry.mjs" "$P0"
@@ -71,7 +70,7 @@ else
   echo "  ✓ print0 output free of banners/hints"; PASS=$((PASS+1))
 fi
 
-# --- T21.4: out-of-graph path — exit 1 + closureUnknownPath verbatim; print0 emits zero bytes ---
+# --- .4: out-of-graph path — exit 1 + closureUnknownPath verbatim; print0 emits zero bytes
 set +e; OUT=$(node "$GOS" map closure lib/typo.js 2>&1); RC=$?; set -e
 assert_exit "unknown path exits 1" 1 "$RC"
 assert_contains "closureUnknownPath exact" "closure input not in graph (lib/typo.js) — typo, deleted, or not in scan set — refusing vacuous answer" "$OUT"
@@ -79,7 +78,7 @@ set +e; P0OUT=$(node "$GOS" map closure lib/typo.js --print0 2>/dev/null); RC=$?
 assert_exit "unknown path print0 exits 1" 1 "$RC"
 if [ -z "$P0OUT" ]; then echo "  ✓ unknown path print0 emits zero bytes"; PASS=$((PASS+1)); else echo "  ✗ print0 emitted bytes on error: '$P0OUT'"; FAIL=$((FAIL+1)); fi
 
-# --- T21.5: print0 is read-only — no disk writes while stale (read-only .gos directory) ---
+# --- .5: print0 is read-only — no disk writes while stale (read-only .gos directory)
 git commit -q --allow-empty -m bump          # HEAD advances → cache goes stale
 chmod a-w .gos
 set +e; OUT=$(node "$GOS" map closure lib/util.js --print0 2>/dev/null | tr '\0' '\n'); RC=$?; set -e
@@ -87,13 +86,13 @@ assert_exit "print0 works in read-only .gos (in-memory recompute)" 0 "$RC"
 assert_contains "print0 read-only still answers" "lib/entry.mjs" "$OUT"
 chmod u+w .gos
 
-# --- T21.6: HEAD advance → interactive auto-rescan (cache semantics) ---
+# --- .6: HEAD advance → interactive auto-rescan (cache semantics)
 CURHEAD=$(git rev-parse HEAD)
 node "$GOS" map closure lib/util.js >/dev/null 2>&1
 AFTER=$(python3 -c "import json; print(json.load(open('.gos/cache/deps.json'))['head'])")
 assert_eq "interactive auto-rescan advances head anchor" "$CURHEAD" "$AFTER"
 
-# --- T21.7: --no-refresh + staleNote (only when the path is in the graph) ---
+# --- .7: --no-refresh + staleNote (only when the path is in the graph)
 git commit -q --allow-empty -m bump2
 set +e; OUT=$(node "$GOS" map closure lib/util.js --no-refresh 2>/dev/null); RC=$?; set -e
 assert_exit "--no-refresh serves stale cache, exit 0" 0 "$RC"
@@ -109,7 +108,7 @@ else
   echo "  ✓ no staleNote when path unknown"; PASS=$((PASS+1))
 fi
 
-# --- T21.8: dirty worktree (-uno semantics) → auto-rescan; no rescan once clean ---
+# --- .8: dirty worktree (-uno semantics) → auto-rescan; no rescan once clean
 node "$GOS" map scan >/dev/null 2>&1          # clean-state scan
 echo "// dirty" >> lib/util.js                 # tracked modification → porcelain -uno non-empty
 G1=$(python3 -c "import json; print(json.load(open('.gos/cache/deps.json'))['generated'])")
@@ -125,7 +124,7 @@ node "$GOS" map closure lib/util.js >/dev/null 2>&1
 G4=$(python3 -c "import json; print(json.load(open('.gos/cache/deps.json'))['generated'])")
 if [ "$G3" = "$G4" ]; then echo "  ✓ clean+fresh cache NOT rewritten"; PASS=$((PASS+1)); else echo "  ✗ fresh cache rewritten anyway"; FAIL=$((FAIL+1)); fi
 
-# --- T21.9: unborn does not force a rescan ---
+# --- .9: unborn does not force a rescan
 mkdir -p sub/unborn && cd sub/unborn && git init -q .
 node "$GOS" map scan >/dev/null 2>&1
 G1=$(python3 -c "import json; print(json.load(open('.gos/cache/deps.json'))['generated'])")
@@ -135,7 +134,7 @@ G2=$(python3 -c "import json; print(json.load(open('.gos/cache/deps.json'))['gen
 if [ "$G1" = "$G2" ]; then echo "  ✓ unborn cache served without forced rescan"; PASS=$((PASS+1)); else echo "  ✗ unborn forced a rescan"; FAIL=$((FAIL+1)); fi
 cd "$T21_DIR" >/dev/null
 
-# --- T21.10: non-git repo rescans on every query (unanchored is always stale) ---
+# --- .10: non-git repo rescans on every query (unanchored is always stale)
 mkdir -p nogit && cd nogit
 GIT_CEILING_DIRECTORIES="$T21_DIR" node "$GOS" map scan >/dev/null 2>&1
 G1=$(python3 -c "import json; print(json.load(open('.gos/cache/deps.json'))['generated'])")
@@ -145,7 +144,7 @@ G2=$(python3 -c "import json; print(json.load(open('.gos/cache/deps.json'))['gen
 if [ "$G1" != "$G2" ]; then echo "  ✓ non-git (unanchored) rescan on every query"; PASS=$((PASS+1)); else echo "  ✗ unanchored cache treated as fresh"; FAIL=$((FAIL+1)); fi
 cd "$T21_DIR" >/dev/null
 
-# --- T21.11: root anchoring — run from a subdir: mapCwdBanner + writes only root .gos/ + input normalization ---
+# --- .11: root anchoring — run from a subdir: mapCwdBanner + writes only root .gos/ + input normalization
 cd lib
 set +e; OUT=$(node "$GOS" map closure util.js 2>/dev/null); RC=$?; set -e
 assert_exit "subdir closure with cwd-relative input exits 0" 0 "$RC"
@@ -155,7 +154,7 @@ assert_contains "stderr mapCwdBanner" "anchored to repo root" "$ERR"
 if [ -e .gos ]; then echo "  ✗ second .gos/ created in subdir (truth-source fork)"; FAIL=$((FAIL+1)); else echo "  ✓ no .gos/ in subdir"; PASS=$((PASS+1)); fi
 cd "$T21_DIR" >/dev/null
 
-# --- T21.12: deleted query node still traverses (dangling dependents specs rebuild virtual edges) ---
+# --- .12: deleted query node still traverses (dangling dependents specs rebuild virtual edges)
 rm lib/a.js
 node "$GOS" map scan >/dev/null 2>&1
 set +e; OUT=$(node "$GOS" map closure lib/a.js 2>/dev/null); RC=$?; set -e
@@ -163,7 +162,7 @@ assert_exit "deleted query node still traversable" 0 "$RC"
 assert_contains "dependent of deleted node found (b.ts via dangling './a')" "lib/b.ts" "$OUT"
 git checkout -q -- lib/a.js
 
-# --- T21.13: show rendering — table + externals JSON escaping + mapBanner ---
+# --- .13: show rendering — table + externals JSON escaping + mapBanner
 node "$GOS" map scan >/dev/null 2>&1
 set +e; OUT=$(node "$GOS" map show 2>/dev/null); RC=$?; set -e
 assert_exit "show exits 0" 0 "$RC"
@@ -172,7 +171,7 @@ assert_contains "show stats line" "files:" "$OUT"
 BANNER=$(node "$GOS" _contract 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['semantic_checks']['mapBanner'])")
 assert_contains "show prints frozen mapBanner" "$BANNER" "$OUT"
 
-# --- T21.14: show rejects positional args / print0+no-refresh combo rejected / out-of-root input rejected ---
+# --- .14: show rejects positional args / print0+no-refresh combo rejected / out-of-root input rejected
 set +e; OUT=$(node "$GOS" map show extra 2>&1); RC=$?; set -e
 assert_exit "show rejects stray path args" 1 "$RC"
 set +e; OUT=$(node "$GOS" map closure lib/util.js --print0 --no-refresh 2>&1); RC=$?; set -e

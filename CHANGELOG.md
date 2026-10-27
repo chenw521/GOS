@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Remove legacy anchor comments across the section suite with deleted ids reconciled into the tracked sweep ledger (D-24/R-43) [2026-10-27]
 - Remove legacy anchor comments across the test checks, fixtures and golden trees with deleted ids reconciled into the tracked sweep ledger (D-24/R-43) [2026-10-27]
 - Remove legacy anchor comments across the bin ops, map, nav and render modules and the CLI entry with deleted ids reconciled into the tracked sweep ledger (D-24/R-43) [2026-10-27]
 - Remove legacy anchor comments across the bin core, task and knowledge modules with deleted ids reconciled into the tracked sweep ledger and contract strings pinned as frozen surface (D-24/R-43) [2026-10-27]

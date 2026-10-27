@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:cmd gate
-# T44: static assertion — bin/gos.cjs must not gain unregistered .gos/ path literals (anti-regression)
-# legal = root-level reserved items + directory-level registered prefixes + contract glob strings + T5 legacy markers; illegal = unknown .gos/ subpaths
+# : static assertion — bin/gos.cjs must not gain unregistered .gos/ path literals (anti-regression)
+# legal = root-level reserved items + directory-level registered prefixes + contract glob strings + legacy markers; illegal = unknown .gos/ subpaths
 T44_DIR=""
 
 t44_setup() {
@@ -47,8 +47,8 @@ for i, ln in enumerate(src, 1):
 print('OK' if not viol else 'VIOLATIONS:\n' + '\n'.join(viol[:10]))
 PYEOF
 
-# T44.1 scan surface = the T46 frozen set from the same source (a single-file surface silently shrinks as literals migrate)
-# frozen set = the 19 files matching the T46 terminal state
+# .1 scan surface = the frozen set from the same source (a single-file surface silently shrinks as literals migrate)
+# frozen set = the 19 files matching the terminal state
 GOS_SRC_FILES="$(ls $GOS_ROOT/bin/gos.cjs $GOS_ROOT/bin/lib/*/[a-z]*.cjs 2>/dev/null)"
 [ -z "$(ls $GOS_ROOT/bin/lib/core/index.cjs 2>/dev/null)" ] && GOS_SRC_FILES="$GOS_ROOT/bin/gos.cjs"
 SCAN_ALL_OK=1; SCAN_OUT=""

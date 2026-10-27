@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/gate.cjs#fn:flipReconcileLeg bin/lib/core/gitprobe.cjs#fn:trackedUnder
 # gos-map:cmd gate,track
-# T99: D-15/D-14 gate flip-reconcile leg — census/git/manifest agreement on
-# every tracked .gos file at gate time (file-granular, RT2-F4).
+# : gate flip-reconcile leg — census/git/manifest agreement on
+# every tracked .gos file at gate time (file-granular, ).
 # Facts asserted:
 #   - V1 census entry git:true (non-lifecycle) with nothing tracked under it
 #     → FAIL flip-census-phantom + gateCmd fix line
@@ -21,7 +21,7 @@
 #     .gos/.gitignore surgery store and the manifest itself)
 #   - G1 wiring: gitprobe exports trackedUnder; gate.cjs carries no
 #     probe-family git call (monopoly check green)
-#   - S1 self-repo negative assertion (D-14): guide trio cover key
+# - S1 self-repo negative assertion : guide trio cover key
 #     (.gos/codebase) + concerns + lessons entries stay git:false in the real
 #     census.json AND `gate flip` on this repo exits 0 with the ✓ line
 # Env: GOS, TESTBASE, assert helpers sourced by runner (standalone-safe).
@@ -192,7 +192,7 @@ assert_exit "G1 gitprobe exports trackedUnder" "0" "$GRC"
 bash "$GOS_ROOT/test/checks/gitprobe-monopoly.sh" >/dev/null 2>&1
 assert_exit "G1 probe-family monopoly holds (gate.cjs clean)" "0" "$?"
 
-# --- S1: self-repo negative assertion (D-14) + self-repo leg green ---
+# --- S1: self-repo negative assertion + self-repo leg green
 # Guide trio (.gos/codebase cover key) + concerns + lessons stay git:false in
 # the REAL census.json; `gate flip` on this repository must pass.
 cd "$GOS_ROOT" || exit 1

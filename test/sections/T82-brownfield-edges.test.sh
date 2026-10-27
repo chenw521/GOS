@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/brownfield.cjs#fn:cmdBrownfield,bin/lib/ops/brownfield.cjs#fn:bfGuardEntry,bin/lib/ops/brownfield.cjs#fn:bfRun
 # gos-map:cmd brownfield
-# T82: brownfield edge & invariant section (T7, D-97, R-01).
+# : brownfield edge & invariant section ( , , ).
 # Seven deterministic case groups via $GOS in sandbox repos (plus one
 # sandbox clone that runs its OWN bin/gos.cjs for the self-repo guard):
 # (1) subdirectory invocation — cwd != toplevel dies exit 4 with the

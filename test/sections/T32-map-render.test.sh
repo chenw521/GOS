@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # gos-map:cmd map
-# T32: mermaid renderer (escape/dict-order/parallel-aggregation/external-dashed) +
-#      graph three forms + closure --json strict envelope (R-03/R-09)
+# : mermaid renderer (escape/dict-order/parallel-aggregation/external-dashed) +
+# graph three forms + closure --json strict envelope ( )
 T32_DIR=""
 
 t32_setup() {
   T32_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-t32"
   mkdir -p "$T32_DIR" && cd "$T32_DIR" || exit 1
 }
-# --- T32.8 network.md hybrid rendering (idempotent / marker die / manual region preserved / backup) ---
+# --- .8 network.md hybrid rendering (idempotent / marker die / manual region preserved / backup)
 t32_setup
 git init -q . && mkdir -p bin docs
 printf "function cmdMap(){ }\nswitch (sub) { case 'map': cmdMap(); }\n" > bin/gos.cjs
@@ -52,13 +52,13 @@ node "$GOS" map edge add docs/plain.md "bin/gos.cjs#cmd:map" --type greps >/dev/
 node "$GOS" map edge add docs/plain.md "bin/gos.cjs#cmd:map" --type consumes >/dev/null 2>&1
 node "$GOS" map edge add "docs/中文笔记.md" "bin/gos.cjs#cmd:map" --type consumes --note "备注→转义" >/dev/null 2>&1 || echo "  (CJK edge add failed — check anchor)"
 
-# --- T32.1 whole-graph mermaid syntax skeleton ---
+# --- .1 whole-graph mermaid syntax skeleton
 set +e; G=$(node "$GOS" map graph 2>/dev/null); GRC=$?; set +e
 assert_exit "T32.1a map graph exits 0" 0 "$GRC"
 assert_contains "T32.1b mermaid fence present" '```mermaid' "$G"
 assert_contains "T32.1c graph directive" "graph" "$G"
 
-# --- T32.2 escaping: special-char paths/titles must not break the syntax ---
+# --- .2 escaping: special-char paths/titles must not break the syntax
 assert_contains "T32.2a special-char path present (escaped label)" "weird" "$G"
 python3 - "$G" <<'PYEOF2'
 import sys, re
@@ -72,14 +72,14 @@ if printf '%s\n' "$G" | grep -q "中文笔记"; then
   echo "  ✓ CJK path rendered (in quoted label)"; PASS=$((PASS+1))
 else echo "  ✗ CJK path missing from graph"; FAIL=$((FAIL+1)); fi
 
-# --- T32.3 parallel-edge aggregation: same from-to with two types -> single counted label ---
+# --- .3 parallel-edge aggregation: same from-to with two types -> single counted label
 N_AGG=$(printf '%s\n' "$G" | grep -cE '\-\-\>\|.*greps\+consumers?\|\||-->\|?"greps+consumes"|greps\+consumes' || true)
 N_AGG=$(printf '%s\n' "$G" | grep -c "greps+consumes" || true)
 if [ "${N_AGG:-0}" -eq 1 ]; then
   echo "  ✓ parallel edges aggregated into ONE edge line (greps+consumes)"; PASS=$((PASS+1))
 else echo "  ✗ parallel aggregation broken (agg lines: $N_AGG)"; FAIL=$((FAIL+1)); fi
 
-# --- T32.4 external edge dashed (manual external:true) ---
+# --- .4 external edge dashed (manual external:true)
 printf '{"schema_version":1,"note":"MAINTAINED","edges":[{"from":"docs/plain.md","to":"docs/elsewhere.md","type":"owns","external":true}]}' > /tmp/t32edges.json 2>/dev/null
 cp .gos/cache/edges.json .gos/cache/edges.json.bak && cp /tmp/t32edges.json .gos/cache/edges.json && node "$GOS" map edge adopt >/dev/null 2>&1
 set +e; G2=$(node "$GOS" map graph 2>/dev/null); set +e
@@ -88,12 +88,12 @@ if printf '%s\n' "$G2" | grep -q -- "-\.->"; then
 else echo "  ✗ external edge not dashed"; FAIL=$((FAIL+1)); fi
 cp .gos/cache/edges.json.bak .gos/cache/edges.json && node "$GOS" map edge adopt >/dev/null 2>&1 && rm -f .gos/cache/edges.json.bak /tmp/t32edges.json
 
-# --- T32.5 neighborhood subgraph: show --graph defaults to 1 hop ---
+# --- .5 neighborhood subgraph: show --graph defaults to 1 hop
 set +e; NG=$(node "$GOS" map show "bin/gos.cjs#cmd:map" --graph 2>/dev/null); NGRC=$?; set +e
 assert_exit "T32.5a neighborhood graph exits 0" 0 "$NGRC"
 assert_contains "T32.5b neighborhood includes caller" "plain.md" "$NG"
 
-# --- T32.6 closure --json strict envelope ---
+# --- .6 closure --json strict envelope
 printf '// touch\n' >> bin/gos.cjs
 set +e; J=$(node "$GOS" map closure bin/gos.cjs --json 2>/dev/null); JRC=$?; set +e
 assert_exit "T32.6a closure --json exits 0" 0 "$JRC"
@@ -117,13 +117,13 @@ if printf '%s\n' "$J" | head -1 | grep -q "📍\|Next"; then
   echo "  ✗ banner/Next leaked into --json stdout"; FAIL=$((FAIL+1))
 else echo "  ✓ no banner/Next pollution in --json mode"; PASS=$((PASS+1)); fi
 
-# --- T32.7 --print0 stays paths-only permanently ---
+# --- .7 --print0 stays paths-only permanently
 set +e; P0=$(node "$GOS" map closure bin/gos.cjs --print0 2>/dev/null | tr '\0' '\n' | head -2); PRC=$?; set +e
 if printf '%s\n' "$P0" | grep -qv "/" && [ -n "$(printf '%s\n' "$P0" | grep -v '^$' | grep -v '/')" ]; then
   echo "  ✗ non-path content leaked into print0"; FAIL=$((FAIL+1))
 else echo "  ✓ print0 stays paths-only"; PASS=$((PASS+1)); fi
 
-# --- T32.9 human-visible map (ascii/html/dot/renderer plugins) ---
+# --- .9 human-visible map (ascii/html/dot/renderer plugins)
 t32_setup
 git init -q . && mkdir -p bin docs
 printf "function cmdMap(){ }\nswitch (sub) { case 'map': cmdMap(); }\n" > bin/gos.cjs

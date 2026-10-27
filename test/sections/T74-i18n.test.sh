@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd setup,status,gate,lessons
-# T74: i18n zh lint + goldens + locale invariants
+# : i18n zh lint + goldens + locale invariants
 # Cases: zh command-token lint against CLI registry / goldens per surface family
 # (gate FAIL, status Next, setup prompt) run under en + zh-CN / locale-invariant
 # fields byte-equal across locales / normalization edges / unknown-locale
@@ -25,7 +25,7 @@ t74_g() { HOME="$T74_HOME" node "$GOS" "$@"; }
 t74_setup
 echo "--- T74: i18n zh lint + goldens + locale invariants ---"
 
-# --- T74.1: zh lint — every command-like token in zh.cjs validates against the CLI registry ---
+# --- .1: zh lint — every command-like token in zh.cjs validates against the CLI registry
 OUT=$(node -e '
 const zh = require(process.env.GOS_ROOT + "/bin/lib/core/locales/zh.cjs");
 const state = require(process.env.GOS_ROOT + "/bin/lib/core/state.cjs");
@@ -47,7 +47,6 @@ console.log("zh-lint-clean");
 assert_exit "zh command-token lint green" "0" "$RC"
 assert_contains "lint clean marker" "zh-lint-clean" "$OUT"
 
-# --- T74.2: normalization edges ---
 OUT=$(node -e '
 const core = require(process.env.GOS_ROOT + "/bin/lib/core/index.cjs");
 const n = core.normalizeLocale;
@@ -61,13 +60,13 @@ console.log("normalization-ok");
 assert_exit "normalization edges (zh/zh_*/zh-*/en/en_* case-insensitive)" "0" "$RC"
 assert_contains "normalization marker" "normalization-ok" "$OUT"
 
-# --- T74.3: unknown locale → advisory + en fallback, exit 0 ---
+# --- .3: unknown locale → advisory + en fallback, exit 0
 OUT=$(GOS_LANG=klingon t74_g status 2>&1); RC=$?
 assert_exit "unknown GOS_LANG exits 0 with en fallback" "0" "$RC"
 assert_contains "unknown locale advisory on stderr" "falling back to English" "$OUT"
 assert_contains "en fallback line rendered" "locale: en" "$OUT"
 
-# --- T74.4: goldens — gate FAIL block under en + zh (3-part, localized verdict, invariant fields) ---
+# --- .4: goldens — gate FAIL block under en + zh (3-part, localized verdict, invariant fields)
 t74_g init 3 "t74 goldens" >/dev/null 2>&1
 python3 - <<'PYEOF'
 import json
@@ -94,7 +93,7 @@ EN_EV=$(printf '%s\n' "$EN" | grep "evidence:" | head -1)
 ZH_EV=$(printf '%s\n' "$ZH" | grep "evidence:" | head -1)
 assert_eq "evidence byte-equal across locales" "$EN_EV" "$ZH_EV"
 
-# --- T74.5: goldens — status guidance under en + zh ---
+# --- .5: goldens — status guidance under en + zh
 EN_S=$(GOS_LANG=en t74_g status 2>&1)
 ZH_S=$(GOS_LANG=zh-CN t74_g status 2>&1)
 assert_contains "en status locale line" "locale: en (source: env (GOS_LANG))" "$EN_S"
@@ -102,7 +101,7 @@ assert_contains "zh status locale line" "语言: zh-CN" "$ZH_S"
 # cmd placeholder resolved from registry, both locales
 assert_contains "zh placeholder resolves to registry command" "gos setup --lang" "$ZH_S"
 
-# --- T74.6: setup --lang validation + persistence ---
+# --- .6: setup --lang validation + persistence
 OUT=$(t74_g setup --lang xx 2>&1); RC=$?
 assert_exit "invalid --lang dies listing valid values" "1" "$RC"
 assert_contains "valid values listed" "en | zh-CN" "$OUT"
@@ -122,10 +121,10 @@ p='.gos/config.json'
 c=json.load(open(p)); c['locale']='en'
 json.dump(c,open(p,'w'),indent=2)"
 
-# --- T74.7: runner pin — the section runner exports GOS_LANG=en ---
+# --- .7: runner pin — the section runner exports GOS_LANG=en
 assert_contains "runner pins GOS_LANG=en" "GOS_LANG=en" "$(cat "$GOS_ROOT/test/run-sections.sh")"
 
-# --- T74.8: en catalog vs CONTRACTS full-set alias check (fail-closed) ---
+# --- .8: en catalog vs CONTRACTS full-set alias check (fail-closed)
 # Every contract.* en key must byte-equal its CONTRACTS source (references,
 # never copies); no NON-contract key may equal any CONTRACTS string either.
 OUT=$(node -e '
@@ -157,7 +156,7 @@ console.log("aliases-fullset-clean");
 assert_exit "en CONTRACTS aliases full-set check (references only, no copies)" "0" "$RC"
 assert_contains "alias full-set marker" "aliases-fullset-clean" "$OUT"
 
-# --- T74.9: console taxonomy labels localized via t(); md view stays locale-invariant en ---
+# --- .9: console taxonomy labels localized via t(); md view stays locale-invariant en
 GOS_LANG=zh-CN t74_g lessons add --type project --scene t74 --lesson taxonomy-console >/dev/null 2>&1
 GOS_LANG=zh-CN t74_g lessons add --type model --scene t74 --lesson taxonomy-global >/dev/null 2>&1
 OUT_ZH=$(GOS_LANG=zh-CN t74_g lessons list 2>&1)
@@ -176,7 +175,7 @@ else
   echo "  ✓ md view locale-invariant (no zh leak)"; PASS=$((PASS+1))
 fi
 
-# --- T74.10: key parity — zh⊆en, and en keys missing zh are EXACTLY the known-gap set ---
+# --- .10: key parity — zh⊆en, and en keys missing zh are EXACTLY the known-gap set
 # Fail-closed: any gap fails immediately. The pilot batch backfilled the 5
 # contract keys, so the gap set is empty — any future en key without a zh
 # entry fails here.

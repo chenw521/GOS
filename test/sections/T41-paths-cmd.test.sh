@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/paths.cjs#fn:cmdPaths bin/lib/core/state.cjs#fn:currentTaskId
 # gos-map:cmd paths
-# T41: gos paths command — JSON absolute-path output + --markdown README generation idempotent
+# : gos paths command — JSON absolute-path output + --markdown README generation idempotent
 T41_DIR=""
 
 t41_setup() {
@@ -27,7 +27,7 @@ else
   echo "  ✗ T41.0 init failed (rc=$GOS_INIT_RC)"; FAIL=$((FAIL+1))
 fi
 
-# T41.1 JSON valid + project_root correct (stderr banner must not pollute stdout)
+# .1 JSON valid + project_root correct (stderr banner must not pollute stdout)
 set +e
 PJSON="$(node "$GOS" paths 2>/dev/null)"
 PJRC=$?
@@ -39,7 +39,7 @@ else
   echo "  ✗ T41.1 paths JSON invalid (rc=$PJRC)"; FAIL=$((FAIL+1))
 fi
 
-# T41.2 project_root + absolute paths + dynamic key resolution (active task exists)
+# .2 project_root + absolute paths + dynamic key resolution (active task exists)
 set +e
 V2="$(python3 - <<'PYEOF'
 import json, os
@@ -68,7 +68,7 @@ else
   echo "  ✗ T41.2 $V2"; FAIL=$((FAIL+1))
 fi
 
-# T41.3 with no active task: dynamic key abs=null + hint (state removed before querying)
+# .3 with no active task: dynamic key abs=null + hint (state removed before querying)
 set +e
 mv .gos/state.json state.bak
 PJSON2="$(node "$GOS" paths 2>/dev/null)"
@@ -100,7 +100,7 @@ else
   echo "  ✗ T41.3b $V3"; FAIL=$((FAIL+1))
 fi
 
-# T41.4 --markdown generates the README: GENERATED header + table carries registry entries + idempotent
+# .4 --markdown generates the README: GENERATED header + table carries registry entries + idempotent
 set +e
 node "$GOS" paths --markdown >/dev/null 2>&1
 MKRC=$?
@@ -123,7 +123,7 @@ else
   echo "  ✗ T41.4c README regen NOT idempotent"; FAIL=$((FAIL+1))
 fi
 
-# T41.5 contract additive-only: _contract emits the new readmeGenerated key + existing keys unchanged
+# .5 contract additive-only: _contract emits the new readmeGenerated key + existing keys unchanged
 if node "$GOS" _contract 2>/dev/null | grep -q "readmeGenerated"; then
   echo "  ✓ T41.5 contract additive: readmeGenerated present"; PASS=$((PASS+1))
 else

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/core/state.cjs#fn:migrateState bin/lib/core/state.cjs#fn:deriveRepoId
 # gos-map:cmd init,status,checkpoint
-# T94: schema v4 (D-12, D-18) — migrateState v3→v4 + repo_id URL derivation.
+# : schema v4 ( , ) — migrateState v3→v4 + repo_id URL derivation.
 # Facts asserted:
 #   - STATE_SCHEMA_VERSION=4; fresh init writes schema_version 4 and drops the
 #     dead `version` key; repo_id derived from origin (advisory null w/o remotes)
@@ -14,7 +14,7 @@
 #     both keys deleted, repo_id present (origin) or null (no remote)
 #   - read-class leaves a v3 disk state untouched; write-class persists v4
 #   - raw URL never stored in state.json bytes
-#   - U7 (D-12 path discipline): spec_path/plan_path stored repo-relative —
+# - U7 ( path discipline): spec_path/plan_path stored repo-relative
 #     taskPathRel relativizes repo-root absolutes, drops outside-repo
 #     absolutes to null; readState normalizes legacy v4 states carrying
 #     machine paths and the next write persists the cure; specPathOf/planPathOf
@@ -173,7 +173,7 @@ if printf '%s\n' "$U3" | tail -n 1 | grep -qx 'OK' && ! printf '%s' "$U3" | grep
   t94_ok "U3 v3 fixture migrates: version/project_root dropped, repo_id derived, idempotent, legacy→4"; else t94_bad "U3 migration: $U3"
 fi
 
-# --- U4: no-remote repo — repo_id advisory null (D-18) ---
+# --- U4: no-remote repo — repo_id advisory null
 mkdir -p ../repo-bare && cd ../repo-bare && git init -q . && git commit -q --allow-empty -m root
 unset T94_REMOTE_URL
 U4=$(node ../t94-migrate.cjs 2>&1)
@@ -254,7 +254,7 @@ if [ "$IRC" -eq 0 ] && [ "$FRESH" = "OK" ]; then
   t94_ok "U6 fresh init: schema 4, no version key, repo_id derived, URL never stored"; else t94_bad "U6 fresh init: rc=$IRC fresh=$FRESH"
 fi
 
-# --- U7: D-12 path discipline — task path fields are repo-relative on disk ---
+# --- U7: path discipline — task path fields are repo-relative on disk
 cd "$T94_DIR" && mkdir -p repo-paths && cd repo-paths
 git init -q . && git commit -q --allow-empty -m root
 git remote add origin git@github.com:octocat/widget.git

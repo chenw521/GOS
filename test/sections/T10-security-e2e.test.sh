@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # gos-map:cmd setup,doctor
-# T10: security test pack (hostile-string canaries / execSync-git static audit / version tripwire / repo identity rescue)
+# : security test pack (hostile-string canaries / execSync-git static audit / version tripwire / repo identity rescue)
 #      + E2E full scenario (Lv3 full cycle → Lv4 dual storage/archive → init --force unarchived guard → P2 claim / same-day -2 dir)
 # Env: GOS (CLI path), TESTBASE (scratch root), assert helpers exported by runner.
 # This section only echoes ✓/✗ lines — the runner counts pass/fail from the output.
 T10A_DIR=""
 T10B_DIR=""
 
-# [Phase W T5] fixture paths follow the CLI supply (task/<id>/) — never hardcode .gos/ root
+# fixture paths follow the CLI supply (task/<id>/) — never hardcode .gos/ root
 gos_spec() { node "$GOS" context think 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["spec"])' 2>/dev/null; }
 gos_plan() { node "$GOS" context plan 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["plan"])' 2>/dev/null; }
 
@@ -63,7 +63,7 @@ assert_exit "phase canary exits 1" 1 "$RC"
 assert_not_file "phase canary: no file created" "pwned-t10c"
 assert_contains "phase canary names rejection" "rejected" "$OUT"
 
-# --- P1.4: decision amend canary (needs a clean D-01 first) ---
+# --- P1.4: decision amend canary (needs a clean first)
 node "$GOS" decision add D-01 "clean base" --rationale r >/dev/null 2>&1
 set +e; OUT=$(node "$GOS" decision amend D-01 --title '$(touch pwned-t10d)' 2>&1); RC=$?; set -e
 assert_exit "amend canary exits 1" 1 "$RC"
@@ -77,7 +77,7 @@ PAT2='execSync\(\`git|execSync\('"'"'git|execSync\("git'
 C2=$(grep -cE "$PAT2" "$GOS" || true)
 assert_eq "static: no literal execSync-git forms (backtick/quote)" "0" "$C2"
 
-# --- P1.6: repo identity rescue (D-12/D-18) — foreign repo_id blocks writes, `gos anchor fix` re-derives ---
+# --- P1.6: repo identity rescue ( ) — foreign repo_id blocks writes, `gos anchor fix` re-derives
 # v4 identity is de-pathed: the state binds via repo_id (remote-URL hash). A
 # cloned/copied state carries a foreign id → write-class dies naming the
 # mismatch; `gos anchor fix` re-derives from THIS repo's remotes and unblocks.
@@ -121,13 +121,13 @@ node "$GOS" init 3 "grand e2e" >/dev/null 2>&1
 OUT=$(node "$GOS" status 2>&1)
 assert_contains "status shows Lv3" "(Lv3)" "$OUT"
 
-# --- E2E.2: uncovered decision → gate coverage exit 1 naming D-01 ---
+# --- E2E.2: uncovered decision → gate coverage exit 1 naming
 node "$GOS" decision add D-01 "use atomic writes" --rationale "crash safety" >/dev/null 2>&1
 set +e; OUT=$(node "$GOS" gate coverage 2>&1); RC=$?; set -e
 assert_exit "gate coverage exit 1 on uncovered" 1 "$RC"
 assert_contains "failure names D-01" "D-01" "$OUT"
 
-# --- E2E.3: fake plan T1 → cover → covered_by P0:T1 → gate coverage passes (truths seeded) ---
+# --- E2E.3: fake plan → cover → covered_by P0: → gate coverage passes (truths seeded)
 mkdir -p .gos && printf '# plan\n\n#### T1: impl atomic writes\n' > "$(gos_plan)"
 set +e; OUT=$(node "$GOS" decision cover D-01 --task T1 2>&1); RC=$?; set -e
 assert_exit "cover exits 0" 0 "$RC"
@@ -146,13 +146,13 @@ json.dump(s,open('.gos/state.json','w'),indent=2)"
 set +e; OUT=$(node "$GOS" gate coverage 2>&1); RC=$?; set -e
 assert_exit "gate coverage passes after cover" 0 "$RC"
 
-# --- E2E.4: add D-02 → amend title → list shows amended ---
+# --- E2E.4: add → amend title → list shows amended
 node "$GOS" decision add D-02 "second decision" >/dev/null 2>&1
 node "$GOS" decision amend D-02 --title "second amended" >/dev/null 2>&1
 OUT=$(node "$GOS" decision list 2>&1)
 assert_contains "amended title in list" "second amended" "$OUT"
 
-# --- E2E.5: D-03 supersedes D-02 → default list hides it, --all shows ---
+# --- E2E.5: supersedes → default list hides it, --all shows
 node "$GOS" decision add D-03 "supersedes d2" --supersedes D-02 >/dev/null 2>&1
 OUT=$(node "$GOS" decision list 2>&1)
 assert_not_contains "default list hides superseded D-02" "D-02" "$OUT"
@@ -160,7 +160,6 @@ OUT=$(node "$GOS" decision list --all 2>&1)
 assert_contains "--all shows superseded D-02" "superseded" "$OUT"
 assert_contains "--all shows D-02 row" "| D-02 |" "$OUT"
 
-# --- E2E.6: requirement add → R-02 ---
 set +e; OUT=$(node "$GOS" requirement add "extra req" 2>&1); RC=$?; set -e
 assert_exit "requirement add exits 0" 0 "$RC"
 assert_contains "auto id R-02" "R-02 added" "$OUT"
@@ -237,7 +236,7 @@ echo "# fresh plan" > "$(gos_plan)"
 set +e; OUT=$(node "$GOS" init 3 "next task" --force 2>&1); RC=$?; set -e
 assert_exit "uncommitted task spec blocks --force" 1 "$RC"
 assert_contains "block message names unarchived" "unarchived spec/plan would be overwritten" "$OUT"
-# [Phase W T5] COMMITTED task-zone artifacts + --force = explicit discard (warn): exit 0 + banner
+# COMMITTED task-zone artifacts + --force = explicit discard (warn): exit 0 + banner
 git add "$(gos_spec)" "$(gos_plan)" && git commit -q -m "commit task spec+plan"
 set +e; OUT=$(node "$GOS" init 3 "next task" --force 2>&1); RC=$?; set -e
 assert_exit "committed task dirs + --force discards with exit 0" 0 "$RC"

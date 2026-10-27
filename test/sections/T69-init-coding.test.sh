@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/task/init.cjs#fn:cmdInitCoding
 # gos-map:cmd init
-# T69: gos init coding — seed the coding-standards book set
+# : gos init coding — seed the coding-standards book set
 # (00-general/shell/node/python) into <repo>/docs/coding-standards/, reusing
 # the gitseed seed() conflict contract (create / identical-skip / keep on
 # conflict, .gos-bak only on explicit overwrite), task-state immunity, and

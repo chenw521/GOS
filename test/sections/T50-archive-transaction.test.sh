@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/task/archive.cjs#fn:cmdArchive bin/lib/core/state.cjs#fn:validateState
 # gos-map:cmd archive
-# T50: archive transaction fix
 # Cases: A = evidence pointing at old task/ paths rewritten during archive; B = crash injection, rerun idempotently completes; C = absolute path normalization
 T50_DIR=""
 
@@ -34,7 +33,7 @@ seed_ship() {
   node "$GOS" approve archive >/dev/null 2>&1
 }
 
-# --- T50.A: regression — evidence points at old task/ paths, archive must succeed and rewrite all three paths ---
+# --- .A: regression — evidence points at old task/ paths, archive must succeed and rewrite all three paths
 seed_ship a
 set +e; AOUT=$(GOS_SKIP_SHIP_CHECK=1 node "$GOS" archive 2>&1); ARC=$?; set -e
 assert_exit "A1 deadlock regression: archive succeeds" 0 "$ARC"
@@ -53,7 +52,7 @@ console.log((specOK&&evOK)?'OK rewritten spec='+s.spec_path+' ev='+ev:'BAD spec=
 " > t50a.txt 2>&1 || true
 assert_contains "A3 state paths rewritten to archive (registry-driven)" "OK rewritten" "$(cat t50a.txt)"
 
-# --- T50.B: crash injection (after-dest) -> die; rerun -> idempotent completion ---
+# --- .B: crash injection (after-dest) -> die; rerun -> idempotent completion
 seed_ship b
 set +e; BOUT=$(GOS_TEST_BREAK_SHIP=after-dest GOS_SKIP_SHIP_CHECK=1 node "$GOS" archive 2>&1); BRC=$?; set -e
 assert_exit "B1 crash injection dies in window" 1 "$BRC"
@@ -73,7 +72,7 @@ console.log(ok?'OK done+rewritten':'BAD stage='+s.current_stage+' spec='+s.spec_
 " > t50b.txt 2>&1 || true
 assert_contains "B5 state DONE + spec_path rewritten" "OK done+rewritten" "$(cat t50b.txt)"
 
-# --- T50.C: absolute path normalization — truths evidence stored absolute -> archive still succeeds ---
+# --- .C: absolute path normalization — truths evidence stored absolute -> archive still succeeds
 seed_ship c
 ROOT_ABS="$(pwd -P)"
 node -e "
@@ -91,7 +90,7 @@ console.log(ev.includes('archive/') && !ev.startsWith('/') ? 'OK relative archiv
 " > t50c.txt 2>&1 || true
 assert_contains "C2 final evidence path is archive-relative" "OK relative archive path" "$(cat t50c.txt)"
 
-# --- T50.D: registry single-source static assertion — all three consumers reference STATE_PATH_FIELDS, zero hardcoded lists ---
+# --- .D: registry single-source static assertion — all three consumers reference STATE_PATH_FIELDS, zero hardcoded lists
 N_REG=$(grep -c "STATE_PATH_FIELDS" "$GOS_ROOT/bin/lib/task/archive.cjs" 2>/dev/null || echo 0)
 if [ "${N_REG:-0}" -ge 3 ]; then
   echo "  ✓ D1 archive consumes registry ($N_REG sites)"; PASS=$((PASS+1))

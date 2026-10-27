@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:cmd map,gate
 # gos-map:fn bin/lib/map/engine.cjs#fn:runExtractors bin/lib/ops/gate.cjs#fn:cmdGate
-# T48: byName three-tier resolution
+# : byName three-tier resolution
 # A: multi-host loser fully-qualified resolves; bare x ambiguous -> refuses + points at qualified form; B: scan dup_names list; C: self-repo gate assertion + injection turns red
 T48_DIR=""
 
@@ -61,7 +61,7 @@ assert_contains "② loser annotated fully-qualified (multi-host)" "OK multi-hos
 assert_contains "③ non-dup bare shortcut works" "OK non-dup" "$(cat t48a.txt)"
 assert_contains "④ bare×dup rejected + fully-qualified hint" "OK bare×dup" "$(cat t48a.txt)"
 
-# --- T48.B: self-repo gate dup_names=∅ assertion + injection turns red ---
+# --- .B: self-repo gate dup_names=∅ assertion + injection turns red
 set +e; GOUT=$(cd "$GOS_ROOT" && node "$GOS" gate codemap 2>&1); GRC=$?; set -e
 assert_exit "self-repo gate codemap exit 0" 0 "$GRC"
 assert_contains "self-repo zero-duplicate assertion green" "dup_names = ∅" "$GOUT"

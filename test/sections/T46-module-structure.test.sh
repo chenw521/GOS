@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:cmd gate,map
 # gos-map:fn bin/gos.cjs#fn:main bin/lib/ops/gate.cjs#fn:cmdGate bin/lib/map/index.cjs#fn:cmdMap bin/lib/core/fsio.cjs#fn:die bin/lib/knowledge/lessons.cjs#fn:cmdLessons
-# T46: module structure guard — twelve contracts on the split module layout
+# : module structure guard — twelve contracts on the split module layout
 # Data source: independent acorn/grep scan, deps.json must not be consumed;
 # acorn require pins to the repo root.
 # Expected values are in-section literals (spec + aspect-rosters.json) — keep
@@ -235,25 +235,25 @@ T46EOF
 t46_setup
 echo "--- T46: module structure guard (12 contracts, ②-3 terminal state) ---"
 
-# --- T46.0: main scan (single-file expectations), expect exit 0 ---
+# --- .0: main scan (single-file expectations), expect exit 0
 set +e; OUT=$(t46_scan "$GOS_ROOT"); RC=$?; set -e
 echo "$OUT"
 assert_exit "T46 main scan (single-file expectations)" 0 "$RC"
 
-# --- T46.1: fault injection 1, destructured require (contract #5; name avoids existing monolith declarations to prevent a false parse signal) ---
+# --- .1: fault injection 1, destructured require (contract #5; name avoids existing monolith declarations to prevent a false parse signal)
 mkdir -p inj1/bin && cp "$GOS_ROOT/bin/gos.cjs" inj1/bin/gos.cjs
 printf "\nconst { rogueProbeXyz } = require('./lib/core/index.cjs');\n" >> inj1/bin/gos.cjs
 set +e; OUT=$(t46_scan "$T46_DIR/inj1"); RC=$?; set -e
 assert_exit "injection 1: destructured require FAILs" 1 "$RC"
 assert_contains "injection 1 names the violation" "destructive require" "$OUT"
 
-# --- T46.2: fault injection 2, fn count drift (contract #2: removing one fn breaks the total) ---
+# --- .2: fault injection 2, fn count drift (contract #2: removing one fn breaks the total)
 mkdir -p inj2/bin && sed 's/^function nulNames(/function nulNames_DISABLED(/' "$GOS_ROOT/bin/gos.cjs" > inj2/bin/gos.cjs
 set +e; OUT=$(t46_scan "$T46_DIR/inj2"); RC=$?; set -e
 assert_exit "injection 2: fn count drift FAILs" 1 "$RC"
 assert_contains "injection 2 names fn total mismatch" "fn total" "$OUT"
 
-# --- T46.3: fault injection 3, .js file under bin/lib (contract #7) ---
+# --- .3: fault injection 3, .js file under bin/lib (contract #7)
 mkdir -p inj3/bin/lib/core && cp "$GOS_ROOT/bin/gos.cjs" inj3/bin/ && echo "module.exports={};" > inj3/bin/lib/core/rogue.js
 set +e; OUT=$(t46_scan "$T46_DIR/inj3"); RC=$?; set -e
 assert_exit "injection 3: non-.cjs in bin/lib FAILs" 1 "$RC"

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd requirement
-# T4: requirement command family (add/list/drop/claim) + D-20 dual-store
+# : requirement command family (add/list/drop/claim) + dual-store
 # Covers: D-20 (plan Wave 2)
 T4_DIR=""
 
@@ -28,7 +28,7 @@ assert_contains_f() {
 t4_setup
 echo "--- T4: requirement command family ---"
 
-# --- T4.1: add auto-assigns R-02 (init created R-01) ---
+# --- .1: add auto-assigns (init created )
 node "$GOS" init 2 "demo task" >/dev/null 2>&1
 set +e; OUT=$(node "$GOS" requirement add "second need" 2>&1); RC=$?; set -e
 assert_exit "add exits 0" 0 "$RC"
@@ -36,36 +36,34 @@ assert_contains "auto R-02 after init R-01" "R-02 added" "$OUT"
 assert_contains_f "exact add line" "✓ Requirement R-02 added: second need" "$OUT"
 assert_contains "next hint list" "Next: gos requirement list" "$OUT"
 
-# --- T4.2: second add → R-03 ---
 set +e; OUT=$(node "$GOS" requirement add "third need" 2>&1); RC=$?; set -e
 assert_exit "second add exits 0" 0 "$RC"
 assert_contains "auto R-03" "R-03 added" "$OUT"
 
-# --- T4.3: positional R-NN rejected (R-01 init-exclusive) ---
+# --- .3: positional R-NN rejected ( init-exclusive)
 set +e; OUT=$(node "$GOS" requirement add R-09 extra 2>&1); RC=$?; set -e
 assert_exit "R-09 positional exit 1" 1 "$RC"
 assert_contains "init-exclusive message" "init-exclusive" "$OUT"
 
-# --- T4.4: hostile text rejected, no side effects ---
+# --- .4: hostile text rejected, no side effects
 set +e; OUT=$(node "$GOS" requirement add 'x $(touch pwned-t4)' 2>&1); RC=$?; set -e
 assert_exit "hostile text exit 1" 1 "$RC"
 if [ ! -e pwned-t4 ]; then echo "  ✓ pwned-t4 not created"; PASS=$((PASS+1)); else echo "  ✗ pwned-t4 WAS created"; FAIL=$((FAIL+1)); fi
 
-# --- T4.5: list shows header + R-01 + added ---
+# --- .5: list shows header + + added
 OUT=$(node "$GOS" requirement list 2>&1 || true)
 assert_contains_f "list header" "| ID | Requirement | Phase | Status |" "$OUT"
 assert_contains_f "R-01 row" "| R-01 |" "$OUT"
 assert_contains_f "R-02 row" "| R-02 |" "$OUT"
 assert_contains_f "R-03 row" "| R-03 |" "$OUT"
 
-# --- T4.6: drop R-02 → list shows dropped ---
+# --- .6: drop → list shows dropped
 set +e; OUT=$(node "$GOS" requirement drop R-02 2>&1); RC=$?; set -e
 assert_exit "drop exits 0" 0 "$RC"
 assert_contains_f "drop message" "✓ Requirement R-02 dropped" "$OUT"
 OUT=$(node "$GOS" requirement list 2>&1 || true)
 assert_contains_f "dropped status in list" "| R-02 | second need | - | dropped |" "$OUT"
 
-# --- T4.7: claim R-03 --phase ---
 set +e; OUT=$(node "$GOS" requirement claim R-03 --phase "P1: x" 2>&1); RC=$?; set -e
 assert_exit "claim exits 0" 0 "$RC"
 assert_contains_f "claim message" "✓ Requirement R-03 claimed by P1: x" "$OUT"
@@ -74,24 +72,23 @@ import json; s=json.load(open('.gos/state.json'))
 print([r.get('phase') for r in s['requirements'] if r['id']=='R-03'][0])")
 assert_eq "R-03 phase persisted in state" "P1: x" "$PH"
 
-# --- T4.8: drop unknown id → exit 1 ---
 set +e; OUT=$(node "$GOS" requirement drop R-99 2>&1); RC=$?; set -e
 assert_exit "drop unknown exit 1" 1 "$RC"
 assert_contains "not found message" "not found" "$OUT"
 
-# --- T4.9: Lv4 (plain init, no --project) add without --phase → exit 1 ---
+# --- .9: Lv4 (plain init, no --project) add without --phase → exit 1
 t4_teardown; t4_setup
 node "$GOS" init 4 "lv4 plain" >/dev/null 2>&1
 set +e; OUT=$(node "$GOS" requirement add "must claim" 2>&1); RC=$?; set -e
 assert_exit "Lv4 add without phase exit 1" 1 "$RC"
 assert_contains "phase required message" "phase required" "$OUT"
 
-# --- T4.10: Lv4 add WITH --phase → succeeds (state-only) ---
+# --- .10: Lv4 add WITH --phase → succeeds (state-only)
 set +e; OUT=$(node "$GOS" requirement add "must claim" --phase "P1: name" 2>&1); RC=$?; set -e
 assert_exit "Lv4 add with phase exits 0" 0 "$RC"
 assert_contains "R-02 added at Lv4" "R-02 added" "$OUT"
 
-# --- T4.11: dual-store (init 4 --project): add lands in both stores ---
+# --- .11: dual-store (init 4 --project): add lands in both stores
 t4_teardown; t4_setup
 node "$GOS" init 4 "platform" --project >/dev/null 2>&1
 set +e; OUT=$(node "$GOS" requirement add "shared need" --phase "P2: later" 2>&1); RC=$?; set -e

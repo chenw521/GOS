@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd track
-# T98a: D-15/D-14 gos track — validation steps 1-5 + tri-store/target pre-scan
+# T98a: gos track — validation steps 1-5 + tri-store/target pre-scan
 # + .gos/.gitignore relative-anchored negation surgery + census-if-present edit
 # + git add (flip core; manifest/backups/adopt/no-op are T7b on this seam).
 # Facts asserted:
@@ -9,7 +9,7 @@
 #     rc!=0, target staged via git add, no census.json created (census-if-present)
 #   - flip core green WITH census: exact git:false entry flips git:true,
 #     census.json itself staged
-#   - brownfield not-ignored target (RT2-F2): no surgery (advisory), covering
+# - brownfield not-ignored target : no surgery (advisory), covering
 #     git:false dir entry untouched, EXACT census key added git:true, staged
 #   - negatives die (validation, die-before-touch): .env secrets, symlink,
 #     never-track zone (.gos/cache/**), unborn HEAD, case collision on disk,
@@ -19,7 +19,7 @@
 #     (/home/) dies with the hit line
 #   - registry 3-way: COMMANDS.track + KNOWN_CASES/WRITE_CMDS + gos.cjs
 #     dispatch + `track --json` no-target help envelope rc=0 (byte-0 JSON)
-#   - D-14 self-repo negative: knowledge stores stay git:false in the real
+# - self-repo negative: knowledge stores stay git:false in the real
 #     repo census after this wave (self-repo opts out of tracking)
 # Env: GOS, TESTBASE, assert helpers sourced by runner (standalone-safe).
 T98A_STANDALONE=0
@@ -44,7 +44,7 @@ t98a_fresh() {
   git init -q . && git commit -q --allow-empty -m root
   printf ".gos/state.json\n.gos/cache/\n" > .gitignore && git add .gitignore && git commit -q -m gi
   # write-class dispatch guard: TESTBASE sits inside GOS_ROOT (an ancestor with
-  # .gos/state.json) — every fixture carries its own task state (T97 pattern).
+ # .gos/state.json) — every fixture carries its own task state ( pattern).
   node "$GOS" init 1 "t98a track fixture" >/dev/null 2>&1
 }
 
@@ -218,7 +218,7 @@ assert_exit "N5 case-collision target dies" "1" "$RC"
 assert_contains "N5 case-collision wording" "case" "$OUT"
 t98a_teardown
 
-# --- N6: already-tracked target → adopt bookkeeping (T7b landed RT3-F7: the
+# --- N6: already-tracked target → adopt bookkeeping (T7b landed : the
 # T7a die is replaced by {adopted:true} manifest record + exit 0; deep
 # adopt/no-op/rollback coverage lives in T98b) ---
 t98a_fresh
@@ -315,7 +315,7 @@ set +e; OUT=$(node "$GOS" track .gos/concerns.md extra 2>&1); RC=$?; set -e
 assert_exit "R2 extra positional dies" "1" "$RC"
 t98a_teardown
 
-# --- R3: D-14 self-repo negative — knowledge stores stay git:false in census ---
+# --- R3: self-repo negative — knowledge stores stay git:false in census
 SELF=$(python3 -c '
 import json, os
 c = json.load(open(os.path.join(os.environ["GOS_ROOT"], "census.json")))

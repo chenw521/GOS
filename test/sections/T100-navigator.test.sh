@@ -57,7 +57,7 @@ node "$GOS" init 1 "t100 navigator fixture" >/dev/null 2>&1
 node "$GOS" map scan >/dev/null 2>&1
 
 # legacy byproduct name is split so the repo-wide old-name grep guard (see the
-# task plan done-when) stays empty by construction; D-20 rename swept every
+# task plan done-when) stays empty by construction; rename swept every
 # live reference, this file must not reintroduce the literal
 T100_LEGACY=".gos/codebase/un""tested-fns.txt"
 
@@ -96,7 +96,7 @@ mkdir -p bin test/sections .gos
 printf 'function cmdAlpha(){ return 1; }\nfunction cmdBeta(){ return cmdAlpha(); }\n' > bin/gos.cjs
 printf '# gos-map:fn cmdAlpha\necho ok\n' > test/sections/TX-alpha.test.sh
 # gos init silently no-ops on an unborn repo (no HEAD anchor) — hand-write the
-# minimal state so the lock-layer root detection stops HERE (T99 ancestor-walk
+# minimal state so the lock-layer root detection stops HERE ( ancestor-walk
 # guard: without it the fixture resolves to the GOS self repo above TESTBASE)
 cat > .gos/state.json << 'EOF'
 {"schema_version":4,"repo_id":null,"level":1,"intent":{"summary":"t100 unborn fixture"},"current_stage":"INTENT","completed_stages":[],"decisions":[],"requirements":[],"observable_truths":[],"gaps":[]}

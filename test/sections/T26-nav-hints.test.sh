@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd status,next
-# T26: next/status archived-state navigation + pending phase hints + snapshot coverage
+# : next/status archived-state navigation + pending phase hints + snapshot coverage
 #      computation + commit handoff block + phase mark-done
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 T26_DIR=""
@@ -41,7 +41,7 @@ PYEOF
 t26_setup
 echo "--- T26: archived-state navigation + handoff + mark-done ---"
 
-# --- T26.1: archived DONE → next drops the archive hint, shows Task archived + pending claim ---
+# --- .1: archived DONE → next drops the archive hint, shows Task archived + pending claim
 t26_archived_fixture
 set +e; OUT=$(node "$GOS" next 2>&1); RC=$?; set -e
 assert_exit "next at archived DONE exits 0" 0 "$RC"
@@ -51,7 +51,7 @@ else echo "  ✓ no stale archive hint"; PASS=$((PASS+1)); fi
 assert_contains "archived acknowledgment" "archived" "$OUT"
 assert_contains "pending phase claim hint (index derived from project.json)" "pending phase: R: final → \`gos phase claim 2\`" "$OUT"
 
-# --- T26.2: same state via bare `gos` (no-arg status) — identical Next tail ---
+# --- .2: same state via bare `gos` (no-arg status) — identical Next tail
 set +e; OUT=$(node "$GOS" 2>&1); RC=$?; set -e
 assert_exit "bare status exits 0" 0 "$RC"
 assert_contains "status Next tail shows pending claim" "gos phase claim 2" "$OUT"
@@ -59,7 +59,7 @@ if echo "$OUT" | grep -q "archive if not yet archived"; then
   echo "  ✗ status stale archive hint"; FAIL=$((FAIL+1))
 else echo "  ✓ status clean"; PASS=$((PASS+1)); fi
 
-# --- T26.3: unarchived DONE (completed_at empty) → archive hint retained ---
+# --- .3: unarchived DONE (completed_at empty) → archive hint retained
 t26_teardown; t26_setup
 node "$GOS" init 2 "plain task" >/dev/null 2>&1
 python3 -c "
@@ -71,7 +71,7 @@ assert_exit "next at unarchived DONE exits 0" 0 "$RC"
 # [phase-ux L3] unarchived DONE splits by approval gate: unapproved → user-gate hint
 assert_contains "unarchived DONE shows user approval gate" "awaiting YOUR approval" "$OUT"
 
-# --- T26.4: status decision coverage lines — computed from plan_snapshot when plan.md absent + archived annotation ---
+# --- .4: status decision coverage lines — computed from plan_snapshot when plan.md absent + archived annotation
 t26_teardown; t26_setup
 t26_archived_fixture
 set +e; OUT=$(node "$GOS" status 2>&1); RC=$?; set -e
@@ -82,7 +82,7 @@ else echo "  ✓ no misleading 0/N line"; PASS=$((PASS+1)); fi
 assert_contains "coverage computed from frozen snapshot, archived-annotated" "2/2" "$OUT"
 assert_contains "archived annotation present" "(archived)" "$OUT"
 
-# --- T26.5: commit stage handoff block — resume + skill + instructions (Lv3 → THINK) ---
+# --- .5: commit stage handoff block — resume + skill + instructions (Lv3 → THINK)
 t26_teardown; t26_setup
 node "$GOS" init 3 "handoff task" >/dev/null 2>&1
 set +e; OUT=$(node "$GOS" commit intent 2>&1); RC=$?; set -e
@@ -94,7 +94,7 @@ assert_contains "handoff block: first command" "gos instructions think" "$OUT"
 set +e; OUT=$(node "$GOS" next 2>&1); set -e
 assert_contains "next tail has handoff block" "gos resume" "$OUT"
 
-# --- T26.6: phase mark-done — pending→done; active rejected; out-of-range rejected ---
+# --- .6: phase mark-done — pending→done; active rejected; out-of-range rejected
 t26_teardown; t26_setup
 node "$GOS" init --project 4 "batch2" --force >/dev/null 2>&1
 node "$GOS" phase add "X1: one" --goal "g1" >/dev/null 2>&1

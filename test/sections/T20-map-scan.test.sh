@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # gos-map:cmd map
-# T20: map scan E2E — four-language fixture golden set + symlink/binary/huge skips + probe +
+# : map scan E2E — four-language fixture golden set + symlink/binary/huge skips + probe +
 #     triple fail-closed + CRLF normalization + unborn/null texts + help/Next + concurrency smoke
-# Covers: full green requires the T2 (map closure) consumer in place
+# Covers: full green requires the (map closure) consumer in place
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 T20_DIR=""
 
@@ -79,7 +79,7 @@ t20_setup
 echo "--- T20: map scan — fixture golden + guards ---"
 t20_fixture
 
-# --- T20.1: scan basic flow: exit 0 + deps.json + trailing mapBanner + Next hint ---
+# --- .1: scan basic flow: exit 0 + deps.json + trailing mapBanner + Next hint
 set +e; OUT=$(node "$GOS" map scan 2>&1); RC=$?; set -e
 assert_exit "map scan exits 0" 0 "$RC"
 assert_file "deps.json created" ".gos/cache/deps.json"
@@ -89,7 +89,7 @@ LAST=$(echo "$OUT" | awk '/^Next:/{print prev} {prev=$0}')
 assert_eq "line before Next: == frozen mapBanner (exact)" "$BANNER" "$LAST"
 assert_contains "scan summary counts edges" "edge(" "$OUT"
 
-# --- T20.2: deps.json schema + head anchor ---
+# --- .2: deps.json schema + head anchor
 python3 - <<'PYEOF'
 import json, subprocess, sys
 d = json.load(open(".gos/cache/deps.json"))
@@ -133,14 +133,14 @@ sys.exit(1 if bad else 0)
 PYEOF
 assert_exit "deps.json content: golden superset + traps excluded" 0 "$?"
 
-# --- T20.3: probeHint detection (verbatim text, concrete filename substituted) ---
+# --- .3: probeHint detection (verbatim text, concrete filename substituted)
 echo 'module.exports = {}' > .dependency-cruiser.cjs
 set +e; OUT=$(node "$GOS" map scan 2>&1); RC=$?; set -e
 assert_exit "scan with probe file exits 0" 0 "$RC"
 assert_contains "probeHint exact (file substituted)" "dedicated dep tool config detected (.dependency-cruiser.cjs) — prefer it for precision (not guaranteed)" "$OUT"
 rm .dependency-cruiser.cjs
 
-# --- T20.4: triple fail-closed (tampered / bad JSON / future schema) — consumer is T2 (map closure) ---
+# --- .4: triple fail-closed (tampered / bad JSON / future schema) — consumer is (map closure)
 cp .gos/cache/deps.json deps.bak.json
 python3 -c "
 import json; d = json.load(open('.gos/cache/deps.json')); d['edges'].append({'from':'lib/a.js','to':'lib/b.ts'})
@@ -159,14 +159,14 @@ set +e; OUT=$(node "$GOS" map closure lib/a.js 2>&1); RC=$?; set -e
 assert_exit "future schema_version → exit 1" 1 "$RC"
 assert_contains "depsSchemaFuture upgrade text" "upgrade gos" "$OUT"
 
-# --- T20.5: self-anchor still passes after CRLF rewrite (parse normalization) ---
+# --- .5: self-anchor still passes after CRLF rewrite (parse normalization)
 python3 -c "
 raw = open('deps.bak.json','rb').read().replace(b'\n', b'\r\n')
 open('.gos/cache/deps.json','wb').write(raw)"
 set +e; OUT=$(node "$GOS" map closure lib/a.js --no-refresh 2>&1); RC=$?; set -e
 assert_exit "CRLF-rewritten deps.json still verifies (algorithm normalizes)" 0 "$RC"
 
-# --- T20.6: unborn (zero-commit repo) and non-git directory ---
+# --- .6: unborn (zero-commit repo) and non-git directory
 mkdir -p sub/unborn && cd sub/unborn && git init -q .
 set +e; OUT=$(node "$GOS" map scan 2>&1); RC=$?; set -e
 assert_exit "scan in unborn repo exits 0" 0 "$RC"
@@ -182,7 +182,7 @@ GIT_CEILING_DIRECTORIES="$T20_DIR" python3 -c "import json; assert json.load(ope
 assert_exit "non-git deps.json head == null" 0 "$?"
 cd "$T20_DIR" >/dev/null
 
-# --- T20.7: help contains the map row; concurrency smoke (atomic write) ---
+# --- .7: help contains the map row; concurrency smoke (atomic write)
 # help rendered from COMMANDS registry — row-grammar line `  map  <desc>`
 HELP=$(node "$GOS" help 2>&1)
 assert_contains "help mentions map command family" "anchor-network map" "$HELP"   # [Phase D compat] desc evolved map→map2.0 (output-compat migration)

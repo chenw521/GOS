@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/task/commit.cjs#fn:cmdCommit bin/lib/nav/status.cjs#fn:cmdStatus
 # gos-map:cmd commit,status
-# T12: wiring completeness + SHIP ritual gate (legacy instruction strings zeroed / help family / context routing /
+# : wiring completeness + SHIP ritual gate (legacy instruction strings zeroed / help family / context routing /
 #      contract round-trip / CHANGELOG.md same-day duty gate: fail-closed + skippable + version-discipline warn)
 # Env: GOS (CLI path), TESTBASE (repo root for sandbox), + assert helpers sourced by runner
 T12_DIR=""
 
-# [Phase W T5] fixture paths follow the CLI supply (task/<id>/) — never hardcode .gos/ root
+# fixture paths follow the CLI supply (task/<id>/) — never hardcode .gos/ root
 gos_spec() { node "$GOS" context think 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["spec"])' 2>/dev/null; }
 gos_plan() { node "$GOS" context plan 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["plan"])' 2>/dev/null; }
 
@@ -23,11 +23,11 @@ t12_setup
 echo "--- T12: wiring completeness + SHIP gate ---"
 unset GOS_SKIP_SHIP_CHECK   # this section exercises the gate for real
 
-# --- T12.1: old hand-edit instruction eradicated (source-level wiring audit) ---
+# --- .1: old hand-edit instruction eradicated (source-level wiring audit)
 OLD=$(grep -c "record D-NN in state.json" "$GOS_ROOT/bin/gos.cjs" || true)
 assert_eq "no 'record D-NN in state.json' left in gos.cjs" "0" "$OLD"
 
-# --- T12.2: help lists every command family (decision/requirement/phase/anchor/_contract) ---
+# --- .2: help lists every command family (decision/requirement/phase/anchor/_contract)
 HELP=$(node "$GOS" help 2>&1)
 MISSING=""
 for kw in decision requirement phase anchor _contract; do
@@ -35,15 +35,15 @@ for kw in decision requirement phase anchor _contract; do
 done
 assert_eq "help covers decision/requirement/phase/anchor/_contract" "" "$MISSING"
 
-# --- T12.3: context think routes decisions via the command (not hand-editing) ---
+# --- .3: context think routes decisions via the command (not hand-editing)
 node "$GOS" init 3 "wiring" >/dev/null 2>&1
 CTX=$(node "$GOS" context think 2>&1)
 assert_contains "context think mentions gos decision add" "gos decision add" "$CTX"
 
-# --- T12.4: spec template teaches the command ---
+# --- .4: spec template teaches the command
 assert_contains "spec-template records via gos decision add" "gos decision add" "$(cat "$GOS_ROOT/templates/spec-template.md")"
 
-# --- T12.5: contract round-trip — frozen table value + live phase add emission match ---
+# --- .5: contract round-trip — frozen table value + live phase add emission match
 PA=$(node "$GOS" _contract 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['command_contracts']['phaseAdded'])")
 assert_eq "table phaseAdded frozen value" "✓ Phase added: " "$PA"
 t12_teardown; t12_setup
@@ -52,7 +52,7 @@ set +e; OUT=$(node "$GOS" phase add "P1: core" --goal "g" 2>&1); RC=$?; set -e
 assert_exit "phase add exits 0" 0 "$RC"
 assert_contains "live phase add emits table prefix" "${PA}P1: core" "$OUT"
 
-# --- T12.6: SHIP gate fail-closed — archive preconditions met but no CHANGELOG.md today → blocked ---
+# --- .6: SHIP gate fail-closed — archive preconditions met but no CHANGELOG.md today → blocked
 t12_teardown; t12_setup
 node "$GOS" init 3 "ship gate" >/dev/null 2>&1
 python3 -c "
@@ -68,13 +68,13 @@ printf '# Changelog\n\n## [Unreleased]\n\n- Test stale stamp (R-01) [%s]\n' "$(d
 set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
 assert_exit "archive blocked without today-stamped bullet" 1 "$RC"
 
-# --- T12.7: today's CHANGELOG.md [Unreleased] bullet → archive passes + version-discipline warn on success path ---
+# --- .7: today's CHANGELOG.md [Unreleased] bullet → archive passes + version-discipline warn on success path
 printf '# Changelog\n\n## [Unreleased]\n\n- Test wiring ship gate (R-01) [%s]\n' "$(date -u +%F)" > CHANGELOG.md
 set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
 assert_exit "archive passes with today-stamped CHANGELOG bullet" 0 "$RC"
 assert_contains "version discipline warn on success path" "version discipline" "$OUT"
 
-# --- T12.8: GOS_SKIP_SHIP_CHECK=1 bypasses the ritual gate (tests/non-release archives) ---
+# --- .8: GOS_SKIP_SHIP_CHECK=1 bypasses the ritual gate (tests/non-release archives)
 t12_teardown; t12_setup
 node "$GOS" init 3 "skip check" >/dev/null 2>&1
 python3 -c "
@@ -87,7 +87,7 @@ assert_exit "skip-env archive proceeds without CHANGELOG.md" 0 "$RC"
 
 t12_teardown; t12_setup
 
-# --- T12.9 (Phase B T8): help wires semantic gate + truth/lessons families ---
+# --- .9 (Phase B ): help wires semantic gate + truth/lessons families
 HELP=$(node "$GOS" help 2>&1)
 CNT=$(printf '%s\n' "$HELP" | grep -ci "truth\|lessons\|semantic" || true)
 if [ "${CNT:-0}" -ge 3 ]; then
@@ -97,7 +97,7 @@ else
 fi
 assert_contains "help gate line lists semantic" "semantic" "$HELP"
 
-# --- T12.10 (T8): four SKILL.md files carry the new keywords ---
+# --- .10 : four SKILL.md files carry the new keywords
 for pair in "gos-verify:semantic" "gos-verify:truth" "gos-think:lessons" "gos-build:gos commit" "gos-ship:truth-receipts"; do
   SK="${pair%%:*}"; KW="${pair#*:}"
   if grep -q "$KW" "$GOS_ROOT/skills/$SK/SKILL.md" 2>/dev/null; then
@@ -107,7 +107,7 @@ for pair in "gos-verify:semantic" "gos-verify:truth" "gos-think:lessons" "gos-bu
   fi
 done
 
-# --- T12.11 (T8): frozen single-point-commit phrase in gos-build SKILL.md + CONTRACTS ---
+# --- .11 : frozen single-point-commit phrase in gos-build SKILL.md + CONTRACTS
 if grep -q "executors never run gos commit" "$GOS_ROOT/skills/gos-build/SKILL.md"; then
   echo "  ✓ gos-build SKILL carries the single-point-commit rule"; PASS=$((PASS+1))
 else

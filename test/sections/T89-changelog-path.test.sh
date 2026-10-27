@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/changelog-core.cjs#fn:resolveChangelogMd bin/lib/ops/config.cjs#fn:cmdConfigChangelogPath bin/lib/task/archive.cjs#fn:cmdArchive
 # gos-map:cmd config,changelog,archive
-# T89: changelog location config + single resolver + atomic mv (P1 D-07, R-32)
+# : changelog location config + single resolver + atomic mv (P1 , )
 # Covers: `gos config changelog-path` moves the existing file atomically and
 #         records the PROJECT-layer key; next `gos changelog add` writes to the
 #         configured path; `gos archive` SHIP obligation reads it there (no
@@ -79,7 +79,7 @@ assert_file "W2 file landed at the configured path" "docs/CHANGELOG.md"
 if [ ! -e CHANGELOG.md ]; then echo "  ✓ W3 old root location vacated"; PASS=$((PASS+1)); else echo "  ✗ W3 root CHANGELOG.md still present"; FAIL=$((FAIL+1)); fi
 if grep -qF -- '- Add relocation seed (D-42) [2026-01-01]' docs/CHANGELOG.md; then echo "  ✓ W4 moved content intact (grep -F, bracketed stamp)"; PASS=$((PASS+1)); else echo "  ✗ W4 content lost in move"; FAIL=$((FAIL+1)); fi
 if grep -qF '"changelog_path": "docs/CHANGELOG.md"' .gos/config.json; then echo "  ✓ W5 project layer records changelog_path"; PASS=$((PASS+1)); else echo "  ✗ W5 changelog_path missing from .gos/config.json: $(cat .gos/config.json 2>/dev/null)"; FAIL=$((FAIL+1)); fi
-# R3-F8: the post-mv git intermediate state is real — deleted + untracked until next commit
+# : the post-mv git intermediate state is real — deleted + untracked until next commit
 PORC="$(git status --porcelain 2>/dev/null || true)"
 if printf '%s\n' "$PORC" | grep -qE '^ D CHANGELOG.md'; then echo "  ✓ W6 git intermediate: old path deleted"; PASS=$((PASS+1)); else echo "  ✗ W6 old path not reported deleted: $PORC"; FAIL=$((FAIL+1)); fi
 if printf '%s\n' "$PORC" | grep -qE '^\?\? docs/'; then echo "  ✓ W7 git intermediate: new path untracked"; PASS=$((PASS+1)); else echo "  ✗ W7 new path not untracked: $PORC"; FAIL=$((FAIL+1)); fi

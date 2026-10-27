@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # gos-map:cmd decision
-# T6: brownfield import detection
 T6_DIR=""
 
 t6_setup() {
@@ -15,7 +14,7 @@ t6_teardown() { cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$T6_DIR"; }
 t6_setup
 echo "--- T6: brownfield import detection ---"
 
-# --- T6.1: existing handwritten DECISIONS.md → init --project warns + suggests import ---
+# --- .1: existing handwritten DECISIONS.md → init --project warns + suggests import
 mkdir -p .gos/project
 cat > .gos/project/DECISIONS.md << 'EOF'
 # Decision Index
@@ -30,13 +29,13 @@ assert_exit "init succeeds with brownfield present" 0 "$RC"
 assert_contains "detects brownfield content" "existing" "$OUT"
 assert_contains "suggests import command" "decision import" "$OUT"
 
-# --- T6.2: import --all pulls brownfield entries in ---
+# --- .2: import --all pulls brownfield entries in
 set +e; OUT=$(node "$GOS" decision import --all 2>&1); RC=$?; set -e
 assert_exit "import --all runs" 0 "$RC"
 CNT=$(python3 -c "import json; print(len(json.load(open('.gos/project/project.json'))['decisions']))")
 assert_eq "project.json has 2 imported decisions" "2" "$CNT"
 
-# --- T6.3: empty template files → no brownfield warning ---
+# --- .3: empty template files → no brownfield warning
 t6_teardown; t6_setup
 set +e; OUT=$(node "$GOS" init 4 "platform" --project 2>&1); RC=$?; set -e
 assert_exit "init succeeds on greenfield" 0 "$RC"

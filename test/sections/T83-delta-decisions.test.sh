@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/task/archive.cjs#fn:specDecisionTitles
 # gos-map:cmd archive
-# T83: delta.md decision rendering — decision-less states (Lv1/2) extract
+# : delta.md decision rendering — decision-less states (Lv1/2) extract
 # decision titles from the archived spec.md instead of printing the false
 # vacancy "Decisions: none"; states that DO carry decisions render unchanged.
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
@@ -24,7 +24,7 @@ FAIL=0
 
 echo "--- T83: delta.md renders spec decisions for decision-less states ---"
 
-# Harness (T45 pattern): Lv1 task through approve-archive, custom spec content
+# Harness ( pattern): Lv1 task through approve-archive, custom spec content
 t83_run() {
   node "$GOS" init --force 1 "t83 delta $1" >/dev/null 2>&1
   node "$GOS" commit intent >/dev/null 2>&1
@@ -58,7 +58,7 @@ SPEC_WITHOUT='# Spec — fixture
 1. something observable.
 '
 
-# --- T83.1 spec decisions present -> delta lists titles, never "none" ---
+# --- .1 spec decisions present -> delta lists titles, never "none"
 D1="$(t83_run with-decisions "$SPEC_WITH")"
 DLINE1="$(printf '%s\n' "$D1" | grep '^- Decisions:')"
 if printf '%s' "$DLINE1" | grep -q 'Decision-alpha (guard wiring)' && printf '%s' "$DLINE1" | grep -q 'Decision-beta (doc placement)'; then
@@ -77,7 +77,7 @@ else
   echo "  ✗ T83.1c still prints none"; FAIL=$((FAIL+1))
 fi
 
-# --- T83.2 spec WITHOUT decisions section -> graceful vacancy with pointer ---
+# --- .2 spec WITHOUT decisions section -> graceful vacancy with pointer
 D2="$(t83_run without-decisions "$SPEC_WITHOUT")"
 DLINE2="$(printf '%s\n' "$D2" | grep '^- Decisions:')"
 if printf '%s' "$DLINE2" | grep -q 'none recorded' && printf '%s' "$DLINE2" | grep -q 'spec.md'; then
@@ -86,7 +86,7 @@ else
   echo "  ✗ T83.2 Decisions line: $DLINE2"; FAIL=$((FAIL+1))
 fi
 
-# --- T83.3 unit: extractor is pure and closed over the section ---
+# --- .3 unit: extractor is pure and closed over the section
 cat > "$T83_DIR/unit-spec.md" <<'SPECEOF'
 # Spec — fixture
 ## Decisions (Lv1/2 — prose)

@@ -49,3 +49,105 @@
 {"batch":"batch-3","ts":"2026-10-27T02:34:13Z","path":"test/pack-check.sh","ids":["R-09"]}
 {"batch":"batch-3","ts":"2026-10-27T02:34:13Z","path":"test/run-sections.sh","ids":[" "," "," "," ","(","(","D-29","D-63","F-1","R4-F3","R4-F4","U3-U6","[Phase D T10]"]}
 {"batch":"batch-3","ts":"2026-10-27T02:34:13Z","path":"test/workflow-lint.sh","ids":["R4-F8"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T1-schema.test.sh","ids":[" "," "," "," "," "," "," "," ","(","D-01","D-12","D-18","D-19","F-8","W1-T1"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T10-security-e2e.test.sh","ids":[" "," ",":","D-01","D-01","D-02","D-02","D-03","D-12","D-18","R-02","[Phase W T5]","[Phase W T5]"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T100-navigator.test.sh","ids":["(","D-20"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T101-issue-tokens.test.sh","ids":[" ","R-01"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T102-ai-trace.test.sh","ids":[" "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T12-wiring.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "," "," ","(","(","[Phase W T5]"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T13-semantic-contracts.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," ","(","D-09","D-64"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T14-state-b.test.sh","ids":[" ","D-01","D-08","[Phase W T5]"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T15-lessons.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," ","D-09","D-64","D-64"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T16-truth.test.sh","ids":[" "," "," "," ","→","→"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T17-semantic-engine.test.sh","ids":[" "," "," ","/","D-01","D-02","D-99","D-99","R-99","R-99","W3-T5","[Phase W T5]"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T18-f1-gate-lessons.test.sh","ids":[" "," "," ","B-11","B-16","B-21","B-8","D-34","D-64","F-1","F-1","R4-F7","R4-F8"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T19-mounting.test.sh","ids":[" "," "," "," ","B-10","B-19","B-22","B-22","B-8","B-9","B-9","D-33","R4-F1","R4-F7","R4-F9","[Phase W T5]","[Phase W T6 debug-keep]"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T2-project.test.sh","ids":[" "," "," "," "," "," ","D-01","W1-T2"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T20-map-scan.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T21-map-closure.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "," "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T22-map-gate-impact.test.sh","ids":[" "," "," "," "," "," "," "," "," ","D-01","[Phase W T5]"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T23-concerns.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "," ","D-41","[Phase W T5]"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T24-map-contracts.test.sh","ids":[" "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T25-map-selfcheck.test.sh","ids":[" "," "," "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T26-nav-hints.test.sh","ids":[" "," "," "," "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T27-archive-slug.test.sh","ids":[" "," "," "," ","[Phase W T5]"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T28-router-state-first.test.sh","ids":[" "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T29-command-registry.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "," "," ","(","D-14","D-20","R2-F7","R4-F2"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T3-decision.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "," "," "," ","D-01","D-02","D-03","D-09","D-11","D-19","D-20","D-20","D-22","D-22","D-98","D-98","D-99","D-99","W2-T3","[Phase W T5]"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T30-map-edges.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "," "," "," ","D-21","D-22"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T31-map-gate.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "," "," ","(","D-01","D-22","R-07","R-07","[Phase W T5]"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T32-map-render.test.sh","ids":[" "," "," "," "," "," "," "," "," "," ","R-03","R-09"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T33-map-manifest.test.sh","ids":[" "," "," "," "," "," "," "," "," ","(","B-5","D-01","R-34","[Phase W T5]"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T34-map-tsection.test.sh","ids":[" "," "," "," "," "," ","R-10"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T35-codemap-coverage.test.sh","ids":[" "," "," "," "," ","D-20"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T35-u-closure-summary.test.sh","ids":[" ","D-35"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T35-u-init.test.sh","ids":[" "," "," "," "," "," ","(","D-29","D-30","D-31","D-34","R2-M1","T1-T4"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T35-u-negative.test.sh","ids":[" ","D-32"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T35-u-status.test.sh","ids":[" ","D-33","R4-F8"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T36-callgraph.test.sh","ids":[" "," "," "," "," "," "," "," "," "," ","(","(","(","(","(","(","(","(","D-29","D-36","D-41","R-01","R-03","R-03","R-09"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T37-phase-ux.test.sh","ids":[" "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T38-annotation-extensions.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T39-render-park.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," ","T1-T12"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T4-requirement.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "," ","D-20","R-01","R-01","R-01","R-02","R-02","R-03","R-03"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T40-paths-registry.test.sh","ids":[" "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T41-paths-cmd.test.sh","ids":[" "," "," "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T42-context-paths.test.sh","ids":[" "," "," "," "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T43-orphan-gate.test.sh","ids":[" "," "," "," "," "," "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T44-static-splice.test.sh","ids":[" "," "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T45-ship-transaction.test.sh","ids":[" "," "," "," "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T46-module-structure.test.sh","ids":[" "," "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T47-module-require-direction.test.sh","ids":[" "," "," "," "," "," "," "," ","/"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T48-byname-tiers.test.sh","ids":[" "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T49-baseline-c4.test.sh","ids":[" "," "," "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T5-guard.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "," ","(","D-06","D-10","D-11","D-12","D-17","W3-T5","[Phase C/T3]"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T50-archive-transaction.test.sh","ids":[" "," "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T51-commit-guard.test.sh","ids":[" ","D-17"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T52-gitseed-render.test.sh","ids":[" ","D-44","D-48","R-01","R-02","R-03","R-04","R-04"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T53-changelog-core.test.sh","ids":[" ","(","(","D-42","D-43","R-05","R-06","R-08"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T54-changelog-add.test.sh","ids":[" ","("]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T55-changelog-lint.test.sh","ids":[" ","R-06","R-08","R4-F12","R4-F12"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T56-init-git.test.sh","ids":[" ","(","R-01","R-03"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T57-archive-single-track.test.sh","ids":[" "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T6-brownfield.test.sh","ids":[" "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T60-commitlint-hook.test.sh","ids":[" ","D-94","D-94","D6-D8"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T61-gate-wiring.test.sh","ids":[" "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T63-cli-wiring.test.sh","ids":[" "," ","("]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T64-context-template-paths.test.sh","ids":[" "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T65-allowlist-product.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "," "," ","/"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T66-census-reconcile.test.sh","ids":[" "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T67-gates-trust.test.sh","ids":[" "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T68-section-run.test.sh","ids":[" "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T69-init-coding.test.sh","ids":[" "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T7-render.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "," "," ","D-08","D-08","D-08","D-08","D-08","D-08","D-08"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T70-feedback-cmds.test.sh","ids":[" "," ","/"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T71-phase-amend-reposlug.test.sh","ids":[" "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T72-lessons-json.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," ","B-8"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T73-gate-evidence.test.sh","ids":[" "," "," "," "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T74-i18n.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T75-blast.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T76-aggregate-push.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," ","D-85"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T77-gitseed-neveroverwrite.test.sh","ids":[" ","D-95","D-97","R-01"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T78-registry-brownfield.test.sh","ids":[" "," "," "," "," "," ","D-88","D-99","R4-F1"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T79-brownfield-probe.test.sh","ids":[" "," "," "," "," ","(","D-94","D-96","R-01"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T8-phase-archive.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T80-brownfield-adopt.test.sh","ids":[" ","(","D-89","D-89","D-89","D-91","D-94","D-96","D-97","D-99"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T81-brownfield-handoff.test.sh","ids":[" "," "," ","(","D-100","D-100","D-100","D-90","D-90","D-90","D-92","D-92","D-92","D-98","D-98","D-98","Lv0-Lv4","R3-F5","R3-F5"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T82-brownfield-edges.test.sh","ids":[" ","(","D-97","R-01"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T83-delta-decisions.test.sh","ids":[" "," "," "," ","("]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T85-security-depth.test.sh","ids":[" "," "," "," ","D-11","D-11","D-11","R-25"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T86-truth-replay-surface.test.sh","ids":[" "," "," ","/","D-04","D-05","D-05","R-26","R-27"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T87-config-twolayer.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "," ","D-09","R-31"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T88-autorender.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "," "," "," "," "," ","(","D-03"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T89-changelog-path.test.sh","ids":[" ","D-07","R-32","R3-F8"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T9-contract.test.sh","ids":[" "," "," "," "," "," "," "," "," "," "]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T90-projectmd-gate.test.sh","ids":[" "," "," "," "," "," "," ","(","D-06","R-33"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T91-ledger-reconcile.test.sh","ids":[" "," "," "," "," "," "," "," "," ","D-01","D-01","R-34"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T92-logs-cmd.test.sh","ids":[" ","(","(","D-02","R-35"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T93-gitprobe.test.sh","ids":[" ","D-14","D-15","D-17"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T94-schemav4.test.sh","ids":[" ","D-12","D-12","D-12","D-18","D-18"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T95-repo-id-guard.test.sh","ids":[" ","D-12","D-18","D-18"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T96-lang-boundary.test.sh","ids":[" "," ","D-17"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T97-gap-migrate.test.sh","ids":[" ","D-16"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T98a-track-core.test.sh","ids":["(","D-14","D-14","D-14","D-15","RT2-F2","RT3-F7"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T98b-track-txn.test.sh","ids":["B1-B3","B1-B3","D-14","D-15","RT3-F7"]}
+{"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T99-gate-flip-leg.test.sh","ids":[" ","D-14","D-14","D-14","D-15","RT2-F4"]}

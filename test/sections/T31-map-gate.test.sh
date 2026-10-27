@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 # gos-map:cmd map
-# T31: edges.json integrity freeze — edges.lock (tracked) / adopt / transactional re-freeze /
-#      tracked-missing die / no-lazy-freeze / worktree-clone cross-machine line (R-07)
-# Covers: D-22, R-07 (plan r2 T5)
+# : edges.json integrity freeze — edges.lock (tracked) / adopt / transactional re-freeze /
+# tracked-missing die / no-lazy-freeze / worktree-clone cross-machine line
 T31_DIR=""
 
-# [Phase W T5] fixture paths follow the CLI supply (task/<id>/) — never hardcode .gos/ root
+# fixture paths follow the CLI supply (task/<id>/) — never hardcode .gos/ root
 gos_spec() { node "$GOS" context think 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["spec"])' 2>/dev/null; }
 gos_plan() { node "$GOS" context plan 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["plan"])' 2>/dev/null; }
 
@@ -32,11 +31,11 @@ V() { # V <label> <wantRC> <wantGrep|->
   LAST_V_OUT="$out"
 }
 
-# --- T31.1 unfrozen after seed = advisory (no lazy freeze until first commit) ---
+# --- .1 unfrozen after seed = advisory (no lazy freeze until first commit)
 node "$GOS" map edge adopt --bootstrap >/dev/null 2>&1
 V "T31.1a unfrozen seed verifies as advisory (no die)" 0 "no lazy freeze"
 
-# --- T31.2 adopt resets the freeze anchor -> lock on disk carries the current sha ---
+# --- .2 adopt resets the freeze anchor -> lock on disk carries the current sha
 node "$GOS" map edge adopt >/dev/null 2>&1
 assert_file "T31.2a edges.lock created by adopt" ".gos/cache/edges.lock"
 V "T31.2b frozen state verifies ok" 0 "verified"
@@ -46,25 +45,25 @@ d=hashlib.sha256(open('.gos/cache/edges.json','rb').read()).hexdigest()
 l=json.load(open('.gos/cache/edges.lock'))
 exit(0 if l.get('edges_sha256')==d else 1)" && echo "  ✓ lock sha256 == disk content" && PASS=$((PASS+1)) || { echo "  ✗ lock sha mismatch after adopt"; FAIL=$((FAIL+1)); }
 
-# --- T31.3 direct edit (bypassing the CLI) -> verify dies, message embeds the recovery command ---
+# --- .3 direct edit (bypassing the CLI) -> verify dies, message embeds the recovery command
 node "$GOS" map edge add docs/usage.md bin/gos.cjs#cmd:map --type greps >/dev/null 2>&1   # legitimate add triggers the transactional re-freeze
 V "T31.3a CLI add keeps verify green (transactional re-freeze)" 0 "verified"
 printf '  {"tampered": true}\n' >> .gos/cache/edges.json
 V "T31.3b hand edit → verify die" 1 "hand edit detected"
 assert_contains "T31.3b recovery text embeds adopt" "gos map edge adopt" "$LAST_V_OUT"
 
-# --- T31.4 recovery after adopt (merge/rescue exit) ---
+# --- .4 recovery after adopt (merge/rescue exit)
 node "$GOS" map edge adopt >/dev/null 2>&1   # legitimate rescue (merge/rebase exit)
 V "T31.4a after adopt verify green again" 0 "verified"
 
-# --- T31.5 tracked-missing die (defense torn down) ---
+# --- .5 tracked-missing die (defense torn down)
 git add -A >/dev/null 2>&1 && git commit -qm frozen-edge >/dev/null 2>&1
 rm -f .gos/cache/edges.json
 V "T31.5a tracked-but-deleted → die" 1 "git-tracked but missing"
 git checkout -q -- .gos/cache/edges.json
 V "T31.5b restored → green" 0 "verified"
 
-# --- T31.6 worktree clone cross-machine defense ---
+# --- .6 worktree clone cross-machine defense
 git add -A >/dev/null 2>&1 && git commit -qm wip >/dev/null 2>&1
 CLONE_DIR="$T31_DIR/../t31-clone-$$"
 git clone -q . "$CLONE_DIR" 2>/dev/null
@@ -74,14 +73,14 @@ assert_exit "T31.6a clone: hand edit → verify die (cross-machine line)" 1 "$CL
 assert_contains "T31.6b clone die text embeds recovery" "adopt\|checkout" "$CLONE_OUT"
 rm -rf "$CLONE_DIR"
 
-# --- T31.7 untracked repo without edges.json = advisory bootstrap (npm consumer semantics) ---
+# --- .7 untracked repo without edges.json = advisory bootstrap (npm consumer semantics)
 mkdir -p sub && cd sub && git init -q . && mkdir -p bin && printf 'x\n' > bin/gos.cjs && git add -A && git commit -qm bare >/dev/null 2>&1
 set +e; OUT=$(node "$GOS" map edge verify 2>&1); RC=$?; set -e
 assert_exit "T31.7a bare repo (no edges.json, untracked) verifies advisory" 0 "$RC"
 assert_contains "T31.7b advisory mentions bootstrap" "bootstrap" "$OUT"
 cd "$T31_DIR"
 
-# --- T31.8 init seeding (a fresh repo holds a tracked empty version right after init) ---
+# --- .8 init seeding (a fresh repo holds a tracked empty version right after init)
 INIT_DIR="$T31_DIR/initrepo"
 mkdir -p "$INIT_DIR" && cd "$INIT_DIR" && git init -q .
 set +e; node "$GOS" init 1 "t31-seed-test" >/dev/null 2>&1; INITRC=$?; set -e
@@ -89,12 +88,12 @@ assert_file "T31.8a init seeds .gos/cache/edges.json" ".gos/cache/edges.json"
 python3 -c "import json;d=json.load(open('.gos/cache/edges.json'));exit(0 if d.get('edges')==[] and d.get('schema_version')==1 else 1)" && echo "  ✓ init seed schema valid" && PASS=$((PASS+1)) || { echo "  ✗ init seed schema wrong"; FAIL=$((FAIL+1)); }
 cd "$T31_DIR" && rm -rf "$INIT_DIR"
 
-# --- T31.9 static: .lock ignored; cache/ whole-dir ignored (edges.lock/json moved in); logs/ machine-local (D-01) ---
+# --- .9 static: .lock ignored; cache/ whole-dir ignored (edges.lock/json moved in); logs/ machine-local
 if grep -qx "\.gos/\.lock" "$GOS_ROOT/.gitignore" && grep -qx "\.gos/cache/" "$GOS_ROOT/.gitignore" && grep -qx "\.gos/logs/" "$GOS_ROOT/.gitignore" && ! grep -q '!\.gos/logs' "$GOS_ROOT/.gitignore"; then
   echo "  ✓ .gitignore: .lock+cache/ ignored; logs/ machine-local (no reversal)"; PASS=$((PASS+1))
 else echo "  ✗ .gitignore coverage wrong"; FAIL=$((FAIL+1)); fi
 
-# --- T31.10 gate integration hook exists (integrity function + die message family) ---
+# --- .10 gate integration hook exists (integrity function + die message family)
 if grep -q "function checkEdgesIntegrity" "$GOS_ROOT/bin/lib/map/edges.cjs"; then
   echo "  ✓ checkEdgesIntegrity exported for gate wiring"; PASS=$((PASS+1))
 else echo "  ✗ checkEdgesIntegrity missing"; FAIL=$((FAIL+1)); fi
@@ -102,7 +101,7 @@ N_LOCK=$(node "$GOS" _contract 2>/dev/null | grep -c "edgesLockMismatch\|edgesTr
 if [ "${N_LOCK:-0}" -ge 4 ]; then echo "  ✓ CONTRACTS lock key family ($N_LOCK)"; PASS=$((PASS+1))
 else echo "  ✗ CONTRACTS lock keys missing"; FAIL=$((FAIL+1)); fi
 
-# --- T31.11 gate semantic-closure section (three-source merge + advisory + qualified text + integrity die) ---
+# --- .11 gate semantic-closure section (three-source merge + advisory + qualified text + integrity die)
 t31_setup
 git init -q . && git commit -q --allow-empty -m root
 printf ".gos/state.json\n.gos/cache/deps.json\n" > .gitignore && git add .gitignore && git commit -q -m gi
@@ -116,7 +115,6 @@ printf "switch (sub) { case 'map': cmdMap(); }
 " >> bin/gos.cjs
 printf 'calls gos map scan somewhere\n' > docs/usage.md
 git add -A && git commit -q -m chain
-# Lv3 fixture (T22 pattern)
 node "$GOS" init 3 "semantic closure" >/dev/null 2>&1
 node "$GOS" commit intent >/dev/null 2>&1
 cat > "$(gos_spec)" <<'SPECEOF'

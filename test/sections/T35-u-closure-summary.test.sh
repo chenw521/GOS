@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:cmd commit,gate
 # T35c: closure human summary (one-line commit/gate tail summary; explicit hint on an empty edge net; advisory)
-# Covers: D-35 (cmdCommit region shares serial execution with T4)
+# Covers: (cmdCommit region shares serial execution with )
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 
 T35C_DIR=""

@@ -1366,12 +1366,6 @@
     ]
   },
   {
-    "path": "test/sections/T1-schema.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 11,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T10-security-e2e.test.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -1389,23 +1383,11 @@
   {
     "path": "test/sections/T10-security-e2e.test.sh",
     "category": "in-flight-sweep",
-    "maxHits": 16,
+    "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T100-navigator.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 3,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T101-issue-tokens.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T102-ai-trace.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -1420,12 +1402,6 @@
         "sha256": "ac5b54754427d965a1cd77f8eaed6261271ced29a77a637ec9b72ba593ec7246"
       }
     ]
-  },
-  {
-    "path": "test/sections/T12-wiring.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 16,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T13-semantic-contracts.test.sh",
@@ -1457,12 +1433,6 @@
         "sha256": "131f320587720a074132bb67eb67cd46bff09fd2c05b8433a615231b8c1f3f70"
       }
     ]
-  },
-  {
-    "path": "test/sections/T13-semantic-contracts.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 23,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T14-state-b.test.sh",
@@ -1526,7 +1496,7 @@
   {
     "path": "test/sections/T14-state-b.test.sh",
     "category": "in-flight-sweep",
-    "maxHits": 24,
+    "maxHits": 7,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -1551,12 +1521,6 @@
         "sha256": "6ec931d7a70b916d6b2a9c57bd37f3694b80bfb0ab9bdb53c50680f5bb2d7f2b"
       }
     ]
-  },
-  {
-    "path": "test/sections/T15-lessons.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 29,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T16-truth.test.sh",
@@ -1596,12 +1560,6 @@
         "sha256": "655c9f0893dd00016139f03c2fa4f4c6faa97ae1db3985fbac5d0822d70178f0"
       }
     ]
-  },
-  {
-    "path": "test/sections/T16-truth.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 20,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T17-semantic-engine.test.sh",
@@ -1645,7 +1603,7 @@
   {
     "path": "test/sections/T17-semantic-engine.test.sh",
     "category": "in-flight-sweep",
-    "maxHits": 23,
+    "maxHits": 4,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -1692,12 +1650,6 @@
     ]
   },
   {
-    "path": "test/sections/T18-f1-gate-lessons.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 20,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T19-mounting.test.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -1741,21 +1693,9 @@
     ]
   },
   {
-    "path": "test/sections/T19-mounting.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 31,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T2-project.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 8,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T20-map-scan.test.sh",
     "category": "in-flight-sweep",
-    "maxHits": 11,
+    "maxHits": 2,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -1768,12 +1708,6 @@
         "sha256": "f57302f36727583d849b90e779a5374e087960a43da0e3b135903e2f5c4de55f"
       }
     ]
-  },
-  {
-    "path": "test/sections/T21-map-closure.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 16,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T22-map-gate-impact.test.sh",
@@ -1795,12 +1729,6 @@
     ]
   },
   {
-    "path": "test/sections/T22-map-gate-impact.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 14,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T23-concerns.test.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -1812,39 +1740,9 @@
     ]
   },
   {
-    "path": "test/sections/T23-concerns.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 16,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T24-map-contracts.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T25-map-selfcheck.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 6,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T26-nav-hints.test.sh",
     "category": "in-flight-sweep",
-    "maxHits": 8,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T27-archive-slug.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 6,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T28-router-state-first.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
+    "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -1875,21 +1773,9 @@
     ]
   },
   {
-    "path": "test/sections/T29-command-registry.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 22,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T3-decision.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 20,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T30-map-edges.test.sh",
     "category": "in-flight-sweep",
-    "maxHits": 15,
+    "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -1902,18 +1788,6 @@
         "sha256": "afbccda2005c7a6c297e7bd36565f14fcda065ba56d21f4361952b36021c776a"
       }
     ]
-  },
-  {
-    "path": "test/sections/T31-map-gate.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 18,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T32-map-render.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 11,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T33-map-manifest.test.sh",
@@ -1931,51 +1805,9 @@
     ]
   },
   {
-    "path": "test/sections/T33-map-manifest.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 16,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T34-map-tsection.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 7,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T35-codemap-coverage.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 6,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T35-u-closure-summary.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T35-u-init.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 10,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T35-u-negative.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T35-u-status.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T36-callgraph.test.sh",
     "category": "in-flight-sweep",
-    "maxHits": 14,
+    "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -1988,18 +1820,6 @@
         "sha256": "e7cd3bdab3813362e649e736e8f2c3d54ceb3f5fd3471b75d8f0db50d9427fca"
       }
     ]
-  },
-  {
-    "path": "test/sections/T37-phase-ux.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T38-annotation-extensions.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 10,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T39-render-park.test.sh",
@@ -2017,39 +1837,9 @@
     ]
   },
   {
-    "path": "test/sections/T39-render-park.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 22,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T4-requirement.test.sh",
     "category": "in-flight-sweep",
-    "maxHits": 13,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T40-paths-registry.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T41-paths-cmd.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 6,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T42-context-paths.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 7,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T43-orphan-gate.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 9,
+    "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -2064,12 +1854,6 @@
     ]
   },
   {
-    "path": "test/sections/T44-static-splice.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 5,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T45-ship-transaction.test.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -2081,42 +1865,12 @@
     ]
   },
   {
-    "path": "test/sections/T45-ship-transaction.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 9,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T46-module-structure.test.sh",
     "category": "drift-ledger",
     "reason": "Module-structure drift ledger: the expected-count line quotes process ids by design; listed lines are the sanctioned ledger.",
     "lines": [
       50
     ]
-  },
-  {
-    "path": "test/sections/T46-module-structure.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 5,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T47-module-require-direction.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 8,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T48-byname-tiers.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T49-baseline-c4.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 6,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T5-guard.test.sh",
@@ -2128,24 +1882,6 @@
         "sha256": "28b6c1f6d96ac92d9b780401239cb0b867a86a1be4a7744a22d431eb84b1c045"
       }
     ]
-  },
-  {
-    "path": "test/sections/T5-guard.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 17,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T50-archive-transaction.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 5,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T51-commit-guard.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T52-gitseed-render.test.sh",
@@ -2167,12 +1903,6 @@
     ]
   },
   {
-    "path": "test/sections/T52-gitseed-render.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 6,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T53-changelog-core.test.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -2182,84 +1912,6 @@
         "sha256": "933a27fd36bd0cb7b717347d7cd2835cd1770d017dd0822ab1cd3015586145f3"
       }
     ]
-  },
-  {
-    "path": "test/sections/T53-changelog-core.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 3,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T54-changelog-add.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T55-changelog-lint.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 5,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T56-init-git.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T57-archive-single-track.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T6-brownfield.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T60-commitlint-hook.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T61-gate-wiring.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T63-cli-wiring.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 3,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T64-context-template-paths.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 3,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T65-allowlist-product.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 13,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T66-census-reconcile.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T67-gates-trust.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T68-section-run.test.sh",
@@ -2277,30 +1929,6 @@
     ]
   },
   {
-    "path": "test/sections/T68-section-run.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T69-init-coding.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T7-render.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 14,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T70-feedback-cmds.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T71-phase-amend-reposlug.test.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -2310,12 +1938,6 @@
         "sha256": "37b66347f4db4cee6f957d0212485ee61b976b20cb92805170b512d0b3d78c90"
       }
     ]
-  },
-  {
-    "path": "test/sections/T71-phase-amend-reposlug.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T72-lessons-json.test.sh",
@@ -2329,12 +1951,6 @@
     ]
   },
   {
-    "path": "test/sections/T72-lessons-json.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 17,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T73-gate-evidence.test.sh",
     "category": "frozen-string",
     "reason": "Plan-format fixture data, contract strings and regex classes quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -2344,12 +1960,6 @@
         "sha256": "2afd042dababe4a9a05cf7845d2975b7302b3069d6404dbb053c26002c1819c7"
       }
     ]
-  },
-  {
-    "path": "test/sections/T73-gate-evidence.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 8,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T74-i18n.test.sh",
@@ -2365,12 +1975,6 @@
         "sha256": "e52b141f7bd250cb772772b148802f3182fc54d075db66432b462e36f4277b19"
       }
     ]
-  },
-  {
-    "path": "test/sections/T74-i18n.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 13,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T75-blast.test.sh",
@@ -2396,24 +2000,6 @@
     ]
   },
   {
-    "path": "test/sections/T75-blast.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 16,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T76-aggregate-push.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 20,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T77-gitseed-neveroverwrite.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T78-registry-brownfield.test.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -2423,24 +2009,6 @@
         "sha256": "38cce0e6f0d3aec2a170c78f83b1fd3f3e75309230b8b5b4da4ac48358143e95"
       }
     ]
-  },
-  {
-    "path": "test/sections/T78-registry-brownfield.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 9,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T79-brownfield-probe.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 5,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T8-phase-archive.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 18,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T80-brownfield-adopt.test.sh",
@@ -2458,18 +2026,6 @@
     ]
   },
   {
-    "path": "test/sections/T80-brownfield-adopt.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 5,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T81-brownfield-handoff.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 13,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T82-brownfield-edges.test.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -2485,18 +2041,6 @@
     ]
   },
   {
-    "path": "test/sections/T82-brownfield-edges.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T83-delta-decisions.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 5,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T85-security-depth.test.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -2506,18 +2050,6 @@
         "sha256": "968200d11d3ba4d4e1f9559e5df1d8e3098ce4fe6897566942cb523d2ebc1379"
       }
     ]
-  },
-  {
-    "path": "test/sections/T85-security-depth.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 7,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T86-truth-replay-surface.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 6,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T87-config-twolayer.test.sh",
@@ -2535,18 +2067,6 @@
     ]
   },
   {
-    "path": "test/sections/T87-config-twolayer.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 14,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T88-autorender.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 15,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T89-changelog-path.test.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -2556,60 +2076,6 @@
         "sha256": "4bcc95d368ef63114ce31ac8a833d28c84f56fcf8c6d440c86704696ebe57faa"
       }
     ]
-  },
-  {
-    "path": "test/sections/T89-changelog-path.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 3,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T9-contract.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 10,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T90-projectmd-gate.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 8,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T91-ledger-reconcile.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 9,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T92-logs-cmd.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 3,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T93-gitprobe.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T94-schemav4.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T95-repo-id-guard.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T96-lang-boundary.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T97-gap-migrate.test.sh",
@@ -2625,30 +2091,6 @@
         "sha256": "b48c456784e029f450667af4f06b7dbdcc8b3570545834aa6e4bbf5b870bdbe8"
       }
     ]
-  },
-  {
-    "path": "test/sections/T97-gap-migrate.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 3,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T98a-track-core.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 6,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T98b-track-txn.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T99-gate-flip-leg.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/workflow-lint.sh",

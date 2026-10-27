@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd gate
-# T73: gate-evidence meta-tests
+# : gate-evidence meta-tests
 # Cases: meta grep zero raw string pushes / renderer unit (string injection
 # crashes post-switch) / 3-part block render / adversarial-filename fix lines
 # single-command-safe / --json object-only / spec-gate floor (good card pass,
@@ -25,11 +25,11 @@ echo "--- T73: gate evidence chain meta-tests ---"
 
 t73_g init 3 "t73 gate evidence" >/dev/null 2>&1
 
-# --- T73.1: meta grep — zero raw string failure pushes in the gate family ---
+# --- .1: meta grep — zero raw string failure pushes in the gate family
 RAW_PUSH=$(grep -cE "failures\.push\((\`|'|\")" "$GOS_ROOT/bin/lib/ops/gate.cjs" "$GOS_ROOT/bin/lib/map/allowlist.cjs" "$GOS_ROOT/bin/lib/knowledge/lessons-json.cjs" | awk -F: '{s+=$NF} END {print s+0}')
 assert_eq "meta grep: zero raw string failure pushes (gate family)" "0" "$RAW_PUSH"
 
-# --- T73.2: renderer unit — object renders 3-part; string injection CRASHES ---
+# --- .2: renderer unit — object renders 3-part; string injection CRASHES
 OUT=$(node -e '
 const gate = require(process.env.GOS_ROOT + "/bin/lib/ops/gate.cjs");
 const core = require(process.env.GOS_ROOT + "/bin/lib/core/index.cjs");
@@ -44,7 +44,7 @@ console.log("OK");
 assert_exit "renderer unit: 3-part block + string injection crashes (post-switch)" "0" "$RC"
 assert_contains "renderer OK marker" "OK" "$OUT"
 
-# --- T73.3: adversarial fix lines are single-command-safe under sh -c ---
+# --- .3: adversarial fix lines are single-command-safe under sh -c
 ADV="$T73_DIR/adv"
 mkdir -p "$ADV"
 echo "victim" > "$ADV/normal-file.cjs"
@@ -66,7 +66,7 @@ else
 fi
 rm -rf "$ADV"
 
-# --- T73.4: gate --json failures object-only ---
+# --- .4: gate --json failures object-only
 python3 - <<'PYEOF'
 import json
 p='.gos/state.json'
@@ -88,13 +88,13 @@ else
   echo "  ✗ --json failures not object-only"; FAIL=$((FAIL+1))
 fi
 
-# --- T73.5: 3-part block in human render (coverage failure path) ---
+# --- .5: 3-part block in human render (coverage failure path)
 OUT=$(t73_g gate coverage 2>&1)
 assert_contains "head line is ✗ <code>: <verdict>" "✗ coverage-uncovered:" "$OUT"
 assert_contains "evidence line present" "evidence:" "$OUT"
 assert_contains "fix line present" "fix:" "$OUT"
 
-# --- T73.6: spec-gate floor — good card passes; grandfather vacuous-pass ---
+# --- .6: spec-gate floor — good card passes; grandfather vacuous-pass
 SPEC="$(python3 -c 'import json,os;print(json.load(open(".gos/state.json")).get("spec_path") or "")')"
 T73_TID="$(python3 -c 'import json;print(json.load(open(".gos/state.json"))["task_head"][:8])')"
 mkdir -p ".gos/task/$T73_TID"

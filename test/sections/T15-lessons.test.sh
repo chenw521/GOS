@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:cmd lessons
-# T15: lessons JSON truth store + command family (P15 D-64 wave 1 rewrite)
-# Covers: D-64 five invariants, migrate state machine, add/rm/amend/list/prune/
+# : lessons JSON truth store + command family (P15 wave 1 rewrite)
+# Covers: five invariants, migrate state machine, add/rm/amend/list/prune/
 #         skip/anchor-rebuild/migrate, canary injection, promotion lineage
 # Env: GOS (CLI path), TESTBASE (isolated base), assert helpers sourced by runner
 # ALL global-path assertions use fake-HOME (HOME=$T15_DIR/home) [R3-F7]
@@ -30,14 +30,13 @@ echo "--- T15: lessons json truth + command family ---"
 
 t15_g init 2 "t15 project lessons" >/dev/null 2>&1
 
-# --- T15.0: fake-HOME sanity ---
 if [ -e "$HOME/.config/gos/lessons.json" ]; then
   echo "  ✗ REAL HOME polluted before test"; FAIL=$((FAIL+1))
 else
   echo "  ✓ real HOME clean before test"; PASS=$((PASS+1))
 fi
 
-# --- T15.1: structured model add → global json truth + truth-bak + auto+90d + audit row ---
+# --- .1: structured model add → global json truth + truth-bak + auto+90d + audit row
 OUT=$(t15_g lessons add --type model --scene "deploy" --lesson "canary model lesson for T15" --tags ops,canary 2>&1)
 GJSON="$T15_HOME/.config/gos/lessons.json"
 EXP90=$(date -d "+90 days" +%F 2>/dev/null || date -v+90d +%F)
@@ -59,7 +58,7 @@ else
   echo "  ✗ add audit row missing"; FAIL=$((FAIL+1))
 fi
 
-# --- T15.2: project add → .gos/lessons.json + derived sidecar + generated md ---
+# --- .2: project add → .gos/lessons.json + derived sidecar + generated md
 OUT=$(t15_g lessons add --type project --scene "build" --lesson "project lesson entry" --tags p15 2>&1)
 if [ -f ".gos/lessons.json" ] && grep -q "project lesson entry" ".gos/lessons.json"; then
   echo "  ✓ project lesson in .gos/lessons.json (tracked truth)"; PASS=$((PASS+1))
@@ -77,7 +76,7 @@ else
   echo "  ✗ md view missing/ungenerated"; FAIL=$((FAIL+1))
 fi
 
-# --- T15.2b: --text legacy shorthand accepted with advisory ---
+# --- .2b: --text legacy shorthand accepted with advisory
 OUT=$(t15_g lessons add --type project --text "bare text shorthand" 2>&1); RC=$?
 assert_exit "--text shorthand accepted" "0" "$RC"
 if python3 -c "import json; s=json.load(open('.gos/lessons.json')); e=[x for x in s['entries'] if x.get('text')=='bare text shorthand']; assert e and e[0]['origin']=='v2'" 2>/dev/null; then
@@ -87,7 +86,7 @@ else
 fi
 assert_contains "advisory recommends structured fields" "structured" "$OUT"
 
-# --- T15.3: list grouped render — taxonomy labels + id prefix + source ---
+# --- .3: list grouped render — taxonomy labels + id prefix + source
 OUT=$(t15_g lessons list 2>&1); RC=$?
 assert_exit "list exits 0" "0" "$RC"
 assert_contains "plain taxonomy project label" "repo knowledge" "$OUT"
@@ -107,7 +106,6 @@ OUT=$(t15_g lessons add --type project --scene "s" --lesson $'- line\n- [injecte
 assert_exit "newline list-entry injection rejected" "1" "$RC"
 if grep -q "injected" ".gos/lessons.json" 2>/dev/null; then echo "  ✗ injected line landed in json"; FAIL=$((FAIL+1)); else echo "  ✓ no injected line in json"; PASS=$((PASS+1)); fi
 
-# --- T15.5: input constraints ---
 OUT=$(t15_g lessons add --type wrong --lesson x 2>&1); RC=$?
 assert_exit "illegal --type rejected" "1" "$RC"
 OUT=$(t15_g lessons add --type model --lesson x --expires 2020-01-01 2>&1); RC=$?
@@ -117,7 +115,7 @@ assert_exit "malformed --expires rejected" "1" "$RC"
 OUT=$(t15_g lessons add --type project --lesson x --tags "a,b|c" 2>&1); RC=$?
 assert_exit "tag with reserved pipe rejected" "1" "$RC"
 
-# --- T15.6: hand-delete entry from json → adjudicating read fails closed; anchor-rebuild --force recovers ---
+# --- .6: hand-delete entry from json → adjudicating read fails closed; anchor-rebuild --force recovers
 T15_TARGET=$(python3 -c "import json; s=json.load(open('.gos/lessons.json')); print([e['id'] for e in s['entries'] if e.get('scene')=='build'][0])")
 python3 - "$T15_TARGET" <<'PYEOF'
 import json, sys
@@ -149,7 +147,7 @@ assert_exit "tampered audit row → chain broken fail-closed" "1" "$RC"
 assert_contains "B-14 named" "B-14" "$OUT"
 cp lessons.bak.json .gos/lessons.json
 
-# --- T15.8: preserve-id mutation (F2) — edit content keep id → drift ---
+# --- .8: preserve-id mutation (F2) — edit content keep id → drift
 python3 - <<'PYEOF'
 import json
 p = '.gos/lessons.json'
@@ -162,7 +160,7 @@ OUT=$(t15_g lessons list 2>&1); RC=$?
 assert_exit "content mutated with preserved id → fail-closed" "1" "$RC"
 cp lessons.bak.json .gos/lessons.json
 
-# --- T15.9: shape injection into a raw legacy entry (fifth invariant; isolated sandbox) ---
+# --- .9: shape injection into a raw legacy entry (fifth invariant; isolated sandbox)
 T15_SHAPE="$TESTBASE/test-$(date +%s)-$RANDOM-t15shape"
 mkdir -p "$T15_SHAPE/.gos/cache" && cd "$T15_SHAPE" || exit 1
 git init -q . && git commit -q --allow-empty -m root
@@ -185,7 +183,7 @@ assert_contains "shape whitelist named" "non-legacy field" "$OUT"
 cd "$T15_DIR" || exit 1
 rm -rf "$T15_SHAPE"
 
-# --- T15.10: auto-migration on first mutation — kept line-hash ids + backup + sentinel ---
+# --- .10: auto-migration on first mutation — kept line-hash ids + backup + sentinel
 T15_MIG="$TESTBASE/test-$(date +%s)-$RANDOM-t15mig"
 mkdir -p "$T15_MIG/.gos" && cd "$T15_MIG" || exit 1
 git init -q . && git commit -q --allow-empty -m root
@@ -216,7 +214,7 @@ if ls .gos/lessons-migration-backup-*.md >/dev/null 2>&1 && grep -q "legacy mode
 else
   echo "  ✗ migration backup missing"; FAIL=$((FAIL+1))
 fi
-# genesis guard (D-09, sentinel deleted): a deleted-but-committed lessons.json
+# genesis guard ( , sentinel deleted): a deleted-but-committed lessons.json
 # must be RESTORED, never re-migrated (fresh chain would launder the deletion)
 git add .gos/lessons.json >/dev/null 2>&1 && git commit -q -m "lessons: track migrated truth"
 rm -f .gos/lessons.json
@@ -226,7 +224,7 @@ assert_contains "genesis guard says restore, don't remigrate" "restore, don't re
 cd "$T15_DIR" || exit 1
 rm -rf "$T15_MIG"
 
-# --- T15.11: rm — reason mandatory, disposal audit row ---
+# --- .11: rm — reason mandatory, disposal audit row
 T15_RM=$(python3 -c "import json; s=json.load(open('.gos/lessons.json')); print([e for e in s['entries'] if e.get('text')=='bare text shorthand'][0]['id'][:6])")
 OUT=$(t15_g lessons rm "$T15_RM" 2>&1); RC=$?
 assert_exit "rm without --reason rejected" "1" "$RC"
@@ -245,7 +243,7 @@ fi
 OUT=$(t15_g lessons rm "$T15_RM" --reason "again" 2>&1); RC=$?
 assert_exit "rm unknown prefix → no match die" "1" "$RC"
 
-# --- T15.12: prefix ambiguity → reject + list candidates ---
+# --- .12: prefix ambiguity → reject + list candidates
 t15_node '
 const j = require(process.env.GOS_ROOT + "/bin/lib/knowledge/lessons-json.cjs");
 const core = require(process.env.GOS_ROOT + "/bin/lib/core/index.cjs");
@@ -273,7 +271,7 @@ else
   echo "  ✗ ambiguity pair not fabricated"; FAIL=$((FAIL+1))
 fi
 
-# --- T15.13: amend promotion — origin stays legacy, new id, lineage row ---
+# --- .13: amend promotion — origin stays legacy, new id, lineage row
 T15_PROM="$TESTBASE/test-$(date +%s)-$RANDOM-t15prom"
 mkdir -p "$T15_PROM/.gos/cache" && cd "$T15_PROM" || exit 1
 git init -q . && git commit -q --allow-empty -m root
@@ -310,7 +308,7 @@ assert_exit "store still verifies after promotion" "0" "$RC"
 cd "$T15_DIR" || exit 1
 rm -rf "$T15_PROM"
 
-# --- T15.14: prune — expired batch + permanent block ---
+# --- .14: prune — expired batch + permanent block
 t15_node '
 const j = require(process.env.GOS_ROOT + "/bin/lib/knowledge/lessons-json.cjs");
 const fs = require("fs");
@@ -339,7 +337,7 @@ else
   echo "  ✗ expired entries still present"; FAIL=$((FAIL+1))
 fi
 
-# --- T15.15: skip → json audit row + cumulative count; sealed .changes.md untouched ---
+# --- .15: skip → json audit row + cumulative count; sealed .changes.md untouched
 OUT=$(t15_g lessons skip --reason "t15 skip reason canary" 2>&1); RC=$?
 assert_exit "skip exits 0" "0" "$RC"
 assert_contains "skip output shows audit-row record" "audit row" "$OUT"
@@ -350,12 +348,12 @@ else
   echo "  ✗ skip audit row missing"; FAIL=$((FAIL+1))
 fi
 
-# --- T15.16: legacy spelling rebase-anchor rejected with pointer ---
+# --- .16: legacy spelling rebase-anchor rejected with pointer
 OUT=$(t15_g lessons rebase-anchor --type project 2>&1); RC=$?
 assert_exit "rebase-anchor rejected" "1" "$RC"
 assert_contains "pointer to anchor-rebuild" "anchor-rebuild" "$OUT"
 
-# --- T15.17: json missing + generated md view present → header guard fails closed ---
+# --- .17: json missing + generated md view present → header guard fails closed
 # (genesis degradation: this sandbox never committed the json, so the git-log
 # genesis guard has no ancestor to catch — the generated-md header guard owns it)
 rm -f .gos/lessons.json
@@ -372,7 +370,7 @@ assert_exit "symlinked global lessons.json write rejected" "1" "$RC"
 rm -f "$T15_HOME/.config/gos/lessons.json"
 mv "$T15_HOME/.config/gos2/real.json" "$T15_HOME/.config/gos/lessons.json" 2>/dev/null
 
-# --- T15.19: fresh-clone semantics — sidecar discardable, anchor-rebuild legal ---
+# --- .19: fresh-clone semantics — sidecar discardable, anchor-rebuild legal
 T15_FC="$TESTBASE/test-$(date +%s)-$RANDOM-t15fc"
 mkdir -p "$T15_FC/.gos/cache" && cd "$T15_FC" || exit 1
 git init -q . && git commit -q --allow-empty -m root
@@ -392,7 +390,7 @@ fi
 cd "$T15_DIR" || exit 1
 rm -rf "$T15_FC"
 
-# --- T15.20: dispatch registered — no 'Unknown command' ---
+# --- .20: dispatch registered — no 'Unknown command'
 OUT=$(t15_g lessons list 2>&1)
 if echo "$OUT" | grep -q "Unknown command"; then
   echo "  ✗ lessons still unknown in dispatch"; FAIL=$((FAIL+1))

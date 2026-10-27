@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/config.cjs#fn:loadConfig bin/lib/ops/config.cjs#fn:saveConfig bin/lib/knowledge/lessons-json.cjs#fn:migrateLegacy
 # gos-map:cmd config,resolve-model,lessons
-# T87: config two-layer system + sentinel deletion + genesis guards (P1 D-09, R-31)
+# : config two-layer system + sentinel deletion + genesis guards (P1 , )
 # Covers: global-base/project-overlay merge precedence, models deep-merge,
 #         corrupt-layer quarantine+die, missing-global empty base, saveConfig-only
 #         one-time lessons_migrated strip (loadConfig never writes), layer-separating
@@ -79,14 +79,13 @@ echo "--- T87: config two-layer + sentinel deletion + genesis guards ---"
 
 t87_g init 1 "t87 config two-layer fixture" >/dev/null 2>&1
 
-# --- T87.0: fake-HOME sanity ---
 if [ -e "$HOME/.config/gos/config.json" ] || [ -e "$HOME/.config/gos/lessons.json" ]; then
   echo "  ✗ REAL HOME polluted before test"; FAIL=$((FAIL+1))
 else
   echo "  ✓ real HOME clean before test"; PASS=$((PASS+1))
 fi
 
-# --- T87.1: two-layer merge precedence — scalars project-wins, deep-merged models ---
+# --- .1: two-layer merge precedence — scalars project-wins, deep-merged models
 t87_json "$T87_HOME/.config/gos/config.json" '{"model_profile":"team","models":{"planner":"zai/glm-5.3"},"locale":"en","lessons_migrated":true}'
 t87_json ".gos/config.json" '{"model_profile":"solo","models":{"checker":"glm-5.3flash"},"lessons_migrated":true}'
 OUT=$(t87_g config models show 2>&1); RC=$?
@@ -94,7 +93,7 @@ assert_exit "merged config loads (both layers present)" "0" "$RC"
 MERGED=$(printf '%s\n' "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['model_profile'], d['models'].get('planner'), d['models'].get('checker'))")
 assert_eq "scalar: project model_profile wins over global" "solo zai/glm-5.3 glm-5.3flash" "$MERGED"
 
-# --- T87.2: missing global layer = legal empty base (defaults apply) ---
+# --- .2: missing global layer = legal empty base (defaults apply)
 T87_HOME2="$T87_DIR/home2"; mkdir -p "$T87_HOME2"
 T87_PLAIN="$T87_DIR/nogos"; mkdir -p "$T87_PLAIN" && cd "$T87_PLAIN" || exit 1
 OUT=$(HOME="$T87_HOME2" node "$GOS" resolve-model checker 2>&1); RC=$?
@@ -102,7 +101,7 @@ assert_exit "missing global layer is a legal empty base" "0" "$RC"
 assert_contains "defaults apply when both layers absent" '"profile":"team"' "$OUT"
 cd "$T87_DIR" || exit 1
 
-# --- T87.3: corrupt project layer → quarantine rename + die ---
+# --- .3: corrupt project layer → quarantine rename + die
 T87_CORRUPT="$T87_DIR/test-corrupt-proj"
 mkdir -p "$T87_CORRUPT/.gos" && (cd "$T87_CORRUPT" && git init -q . && git commit -q --allow-empty -m root) || exit 1
 (cd "$T87_CORRUPT" && HOME="$T87_HOME" node "$GOS" init 1 "t87 corrupt-proj fixture" >/dev/null 2>&1)
@@ -118,7 +117,7 @@ fi
 OUT=$(cd "$T87_CORRUPT" && HOME="$T87_HOME" node "$GOS" config models show 2>&1); RC=$?
 assert_exit "post-quarantine command works (missing layer = defaults)" "0" "$RC"
 
-# --- T87.4: corrupt global layer → quarantine rename + die ---
+# --- .4: corrupt global layer → quarantine rename + die
 T87_HOME3="$T87_DIR/home3"; mkdir -p "$T87_HOME3/.config/gos"
 printf '{corrupt\n' > "$T87_HOME3/.config/gos/config.json"
 OUT=$(HOME="$T87_HOME3" node "$GOS" config models show 2>&1); RC=$?
@@ -130,7 +129,7 @@ else
   echo "  ✗ corrupt global layer quarantine failed"; FAIL=$((FAIL+1))
 fi
 
-# --- T87.5: saveConfig-only one-time lessons_migrated strip (loadConfig never writes) ---
+# --- .5: saveConfig-only one-time lessons_migrated strip (loadConfig never writes)
 # read-only command first: the key must SURVIVE (loadConfig never writes)
 OUT=$(t87_g resolve-model checker 2>&1); RC=$?
 assert_exit "read command under sentinel-carrying layers" "0" "$RC"
@@ -162,7 +161,7 @@ else
   echo "  ✓ strip is one-time (no notice on second write)"; PASS=$((PASS+1))
 fi
 
-# --- T87.6: layer-separating project write — deep-merge survives, global pins not copied ---
+# --- .6: layer-separating project write — deep-merge survives, global pins not copied
 if python3 -c "
 import json
 p = json.load(open('.gos/config.json'))
@@ -177,7 +176,7 @@ fi
 OUT=$(t87_g config models show 2>&1)
 assert_contains "merged view still exposes global planner pin after save" '"planner": "zai/glm-5.3"' "$OUT"
 
-# --- T87.7: resolve-model under pinned fixture env (HOME + OPENCODE_CONFIG_DIR) ---
+# --- .7: resolve-model under pinned fixture env (HOME + OPENCODE_CONFIG_DIR)
 T87_FIX="$T87_DIR/ocfix"; mkdir -p "$T87_FIX"
 t87_json "$T87_FIX/opencode.json" '{"provider":{"zai":{"models":{"glm-5.3":{"name":"glm-5.3"},"glm-5.3flash":{"name":"glm-5.3flash"}}}}}'
 OUT=$(HOME="$T87_FIX" OPENCODE_CONFIG_DIR="$T87_FIX" node "$GOS" resolve-model checker 2>&1); RC=$?
@@ -205,7 +204,7 @@ else
   echo "  ✗ repo pin not glm-5.3flash: $OUT"; FAIL=$((FAIL+1))
 fi
 
-# --- T87.8: project genesis guard — git history carries lessons.json → restore, don't remigrate ---
+# --- .8: project genesis guard — git history carries lessons.json → restore, don't remigrate
 T87_GEN="$T87_DIR/test-genesis-proj"
 mkdir -p "$T87_GEN" && cd "$T87_GEN" || exit 1
 git init -q . && git commit -q --allow-empty -m root
@@ -223,7 +222,7 @@ else
 fi
 cd "$T87_DIR" || exit 1
 
-# --- T87.9: global genesis guard — migration backup witness → restore, don't remigrate ---
+# --- .9: global genesis guard — migration backup witness → restore, don't remigrate
 T87_HOMEG="$T87_DIR/homeg"; mkdir -p "$T87_HOMEG/.config/gos"
 printf -- '- [2026-01-01] [model] legacy global line\n' > "$T87_HOMEG/.config/gos/lessons-migration-backup-2026-01-01.md"
 OUT=$(HOME="$T87_HOMEG" node "$GOS" lessons add --type model --scene "gg" --lesson "global genesis probe" 2>&1); RC=$?
@@ -248,7 +247,7 @@ rm -f "$T87_HOMEG/.config/gos/.lessons.json.bak"
 OUT=$(HOME="$T87_HOMEG" node "$GOS" lessons add --type model --scene "gg" --lesson "fresh global entry" 2>&1); RC=$?
 assert_exit "global fresh bootstrap legal once witnesses cleared" "0" "$RC"
 
-# --- T87.10: resume-heal = md regeneration only, after chain verification ---
+# --- .10: resume-heal = md regeneration only, after chain verification
 T87_RES="$T87_DIR/test-resume"
 mkdir -p "$T87_RES/.gos/cache" && cd "$T87_RES" || exit 1
 git init -q . && git commit -q --allow-empty -m root
