@@ -2,9 +2,10 @@
   "schema_version": 4,
   "repo_id": "85af56a090a78924",
   "level": 2,
-  "current_stage": "BUILD",
+  "current_stage": "VERIFY",
   "completed_stages": [
-    "THINK"
+    "THINK",
+    "BUILD"
   ],
   "intent": {
     "summary": "Fix two live product defects diagnosed during the P6 closeout: (1) archive orphan-adoption swallows census-tracked live files (.gos/ai-trace-whitelist.json + sweep ledger) — add GOS_PATHS registry entries and exempt census-tracked files from adoption; (2) concerns add corrupts the anchor chain when the sidecar is absent — untracked-store bootstrap returns an empty hash set without writing, add pushes a single hash, every later add dies anchor-mismatch (drove the P6 BUILD-era hand-edit cycle).",
@@ -33,20 +34,35 @@
     {
       "id": "T1",
       "description": "detectOrphans excludes git-tracked files from the orphan set, reporting them separately as unregisteredTracked",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test-20261027-171500-defect-batch/t1-replay.sh\"]",
+        "output_excerpt": "T1REPLAY orphans=[\"plain-stray.txt\"] unregisteredTracked=[\"unreg-tracked.md\"] probeFailure=null",
+        "artifact_path": "test-20261027-171500-defect-batch/t1-replay.sh",
+        "replay": true
+      }
     },
     {
       "id": "T2",
       "description": "gos archive leaves every git-tracked file in place even when its GOS_PATHS entry is missing",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T45\"]",
+        "output_excerpt": "--- T45 summary: 8 passed, 0 failed ---",
+        "artifact_path": "test/sections/T45-ship-transaction.test.sh",
+        "replay": true
+      }
     },
     {
       "id": "T3",
       "description": "after deleting .gos/cache/.concerns-anchors.json, two consecutive concerns add calls both succeed with no anchor-mismatch",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T23\"]",
+        "output_excerpt": "✓ first add exits 0 (exit 0)",
+        "artifact_path": "test/sections/T23-concerns.test.sh",
+        "replay": true
+      }
     }
   ],
   "gaps": [],
