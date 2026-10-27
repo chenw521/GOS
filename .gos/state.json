@@ -2,12 +2,13 @@
   "schema_version": 4,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "VERIFY",
+  "current_stage": "DONE",
   "completed_stages": [
     "THINK",
     "PLAN",
     "BUILD",
-    "REVIEW"
+    "REVIEW",
+    "VERIFY"
   ],
   "intent": {
     "summary": "Root-cure AI-process artifacts in file content: mechanized ai-trace lint (anchor patterns, spec-section citations, task narrative) wired into gate all as blocking; sweep the ~300 legacy anchor comments across 40 files in bin/ and test/ in batches; ship mainstream language-specific coding-standard templates (shell/node/python) under templates/coding-standards/ seedable by gos setup; apply the same lint to product-seeded assets so user repositories inherit the discipline. Closes 39dad6a4 59ce99c5 db3d0fd8 FB-4.",
@@ -15,7 +16,8 @@
   },
   "approvals": {
     "THINK": "2026-10-26T09:14:48.476Z",
-    "PLAN": "2026-10-26T09:50:23.640Z"
+    "PLAN": "2026-10-26T09:50:23.640Z",
+    "ARCHIVE": "2026-10-27T07:39:04.484Z"
   },
   "spec_path": null,
   "plan_path": null,
@@ -178,7 +180,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T102\"]",
         "output_excerpt": "✓ A1 scratch red lint exit (exit 1)",
-        "artifact_path": ".gos/task/p6/evidence/T1-lint-redgreen.log",
+        "artifact_path": ".gos/archive/2026-10-27-v1.0.0-dev-phase-p6-root-cure-ai-process-artifacts/task/p6/evidence/T1-lint-redgreen.log",
         "replay": true
       }
     },
@@ -189,7 +191,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T102\"]",
         "output_excerpt": "✓ A1 scratch red lint exit (exit 1)",
-        "artifact_path": ".gos/task/p6/evidence/T2-gate-blocking.log",
+        "artifact_path": ".gos/archive/2026-10-27-v1.0.0-dev-phase-p6-root-cure-ai-process-artifacts/task/p6/evidence/T2-gate-blocking.log",
         "replay": true
       }
     },
@@ -200,7 +202,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T102\"]",
         "output_excerpt": "✓ A1 scratch red lint exit (exit 1)",
-        "artifact_path": ".gos/task/p6/evidence/T3-equality.log",
+        "artifact_path": ".gos/archive/2026-10-27-v1.0.0-dev-phase-p6-root-cure-ai-process-artifacts/task/p6/evidence/T3-equality.log",
         "replay": true
       }
     },
@@ -211,7 +213,7 @@
       "evidence": {
         "command": "[\"bash\",\".gos/task/p6/evidence/verify-terminal.sh\"]",
         "output_excerpt": "lint_exit=0 in_flight_sweep_entries=0",
-        "artifact_path": ".gos/task/p6/evidence/T4-terminal-state.log",
+        "artifact_path": ".gos/archive/2026-10-27-v1.0.0-dev-phase-p6-root-cure-ai-process-artifacts/task/p6/evidence/T4-terminal-state.log",
         "replay": true
       }
     },
@@ -222,7 +224,7 @@
       "evidence": {
         "command": "[\"bash\",\".gos/task/p6/evidence/verify-templates.sh\"]",
         "output_excerpt": "templates_hit_records=0 general_book_placeholder_families=5",
-        "artifact_path": ".gos/task/p6/evidence/T5-templates-books.log",
+        "artifact_path": ".gos/archive/2026-10-27-v1.0.0-dev-phase-p6-root-cure-ai-process-artifacts/task/p6/evidence/T5-templates-books.log",
         "replay": true
       }
     },
@@ -233,7 +235,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T102\"]",
         "output_excerpt": "✓ A1 scratch red lint exit (exit 1)",
-        "artifact_path": ".gos/task/p6/evidence/T6-hint-locales.log",
+        "artifact_path": ".gos/archive/2026-10-27-v1.0.0-dev-phase-p6-root-cure-ai-process-artifacts/task/p6/evidence/T6-hint-locales.log",
         "replay": true
       }
     }
@@ -497,15 +499,7 @@
       }
     ]
   },
-  "checkpoints": [
-    {
-      "stage": "BUILD",
-      "unit": "all-waves (auto at commit)",
-      "done": "T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13",
-      "remaining": "",
-      "at": "2026-10-27T04:29:11.455Z"
-    }
-  ],
+  "checkpoints": [],
   "review_findings": {
     "phase1_spec_compliance": "PASS — D-21..D-31 all implemented with file:line evidence; R-01/R-40..R-44 shipped; zero scope creep (DI-1/DI-2 correctly parked in concerns.md); T102 20/20 green; baseline byte-stable; shrink guard green; .changes.md untouched",
     "phase2_code_quality": "initial FAIL — 4 Major + 5 Minor; all Majors fixed in-review, minors parked (concerns.md entry 2026-10-27)",
@@ -565,5 +559,7 @@
       "sweep_self_test": "27 passed, 0 failed",
       "shrink": "exit 0 (first-landing path)"
     }
-  }
+  },
+  "changelog_user_summary": "Fix the sweep ledger extractor prefix-capture defect and rebuild its deleted-id records from repository history, clear anchor-strip punctuation shells across the product tree, close a whitelist ASCII fail-open gap and re-anchor the curated concern ledger after an unanchored write",
+  "completed_at": "2026-10-27T07:39:05.861Z"
 }
