@@ -1,0 +1,26 @@
+=== T102-ai-trace ===
+--- T102: ai-trace lint boundary evidence ---
+  ✓ A1 scratch red lint exit (exit 1)
+  ✓ A2 machine verdict
+  ✓ A3 machine verdict
+  ✓ B1 tracked tree lint exit (exit 0)
+  ✓ C1 equality exact green exit (exit 0)
+  ✓ C2 excess probe exit (exit 1)
+  ✓ C3 deficit probe exit (exit 1)
+  ✓ C2 machine verdict
+  ✓ C3 machine verdict
+  ✓ E1 ghost probe exit (exit 1)
+  ✓ E1 machine verdict
+  ✓ F1 mutated count fails the check (exit 1)
+  ✓ F2 baseline emission exit (exit 0)
+  ✓ F3 machine verdict
+  ✓ G1 machine verdict
+  ✓ G2 machine verdict
+  ✓ H1 hits census emission exit (exit 0)
+  ✓ H2 machine verdict
+  ✓ I1 en hint names the seeding command
+  ✓ I2 zh hint names the seeding command
+--- T102 summary: 9 passed, 0 failed ---
+--- T102-ai-trace: 20 passed, 0 failed ---
+
+=== Sections total: 20 passed, 0 failed ===
