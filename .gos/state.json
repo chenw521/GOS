@@ -2,7 +2,7 @@
   "schema_version": 4,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "PLAN",
+  "current_stage": "BUILD",
   "completed_stages": [
     "THINK",
     "PLAN"
@@ -348,7 +348,17 @@
         ],
         "files": [
           "test/sections/T102-ai-trace.test.sh",
-          "test/fixtures/ai-trace/",
+          "test/fixtures/ai-trace/anchors.json",
+          "test/fixtures/ai-trace/anchors.md",
+          "test/fixtures/ai-trace/anchors.sh",
+          "templates/coding-standards/00-general.md",
+          "templates/coding-standards/node.md",
+          "templates/coding-standards/python.md",
+          "templates/coding-standards/shell.md",
+          "templates/plan-template.md",
+          "templates/spec-template.md",
+          "templates/trace-template.md",
+          "templates/review-checklist.md",
           ".gos/ai-trace-whitelist.json"
         ]
       },
@@ -408,8 +418,9 @@
           "R-43"
         ],
         "files": [
-          "test/checks/",
-          "test/fixtures/",
+          "test/checks/gitprobe-monopoly.sh",
+          "test/checks/stale-verbs.sh",
+          "test/fixtures/gh-stub/gh",
           "test/golden/",
           "test/sections/*.test.sh",
           "test/*.sh",
@@ -447,6 +458,11 @@
         ]
       }
     ],
-    "audit": []
+    "audit": [
+      {
+        "at": "2026-10-27T04:29:03.706Z",
+        "what": "snapshot-force"
+      }
+    ]
   }
 }
