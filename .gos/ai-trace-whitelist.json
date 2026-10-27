@@ -100,9 +100,39 @@
   },
   {
     "path": "bin/lib/core/locales/en.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings in prompts, level labels and error text quote finding ids by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 60,
+        "sha256": "eaab1cd5c1dc4a8379d3564ad0e02e38cc23ef821047e93e2e528de1b4f7338b"
+      },
+      {
+        "line": 160,
+        "sha256": "fa281827af2a018981bf990b310d983e8858b7031e9ef93a031f7de68461541f"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/core/locales/en.cjs",
     "category": "in-flight-sweep",
     "maxHits": 14,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/core/locales/zh.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings in prompts, level labels and error text quote finding ids by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 70,
+        "sha256": "085bca11a0ebc8b937fb750a2786b876dd85a7040824244907fcd383dc73819e"
+      },
+      {
+        "line": 161,
+        "sha256": "494559409849c5c2685fa26f213780054ae24ac85ebb9f42f5bc41c4dbb65726"
+      }
+    ]
   },
   {
     "path": "bin/lib/core/locales/zh.cjs",
@@ -122,8 +152,16 @@
     "reason": "Contract sidecar-hash table: the lessonsAnchor verdict string is a frozen product contract line asserted by suite sections.",
     "lines": [
       {
-        "line": 565,
+        "line": 564,
         "sha256": "7fcd673dc9ddc9c9c56e250d68b08d2f407dff8f70f2e274d72d520296a99c4e"
+      },
+      {
+        "line": 624,
+        "sha256": "7534bfb1adb03e24ac3349f274b3c9e4d78cca372208083c10d10d2e50b9e1a3"
+      },
+      {
+        "line": 647,
+        "sha256": "297a8678f34ca3d871efbb7374e5c459608519a709f012e2a17797987175075b"
       }
     ]
   },
@@ -153,6 +191,21 @@
   },
   {
     "path": "bin/lib/knowledge/lessons.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings in prompts, level labels and error text quote finding ids by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 99,
+        "sha256": "2fb0396d0df1ca4513acf5260b85c1c2d4305c6bf3a2b35c2ce37610518b27bc"
+      },
+      {
+        "line": 102,
+        "sha256": "09ace9da9add63f35757ef737d67b327ded4a1c33ca02a6f7c659ed2c58033ff"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/knowledge/lessons.cjs",
     "category": "in-flight-sweep",
     "maxHits": 6,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -168,6 +221,21 @@
     "category": "in-flight-sweep",
     "maxHits": 2,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/knowledge/truth.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings in prompts, level labels and error text quote finding ids by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 112,
+        "sha256": "24d64081cfd6973d2f70f1eeea16cee66cf0b3638020eff58a782f316cc44f8e"
+      },
+      {
+        "line": 115,
+        "sha256": "711ebc2e880f7e4d08b87ac28ceee74f55a4d3d6777bbadda58bcd8453768658"
+      }
+    ]
   },
   {
     "path": "bin/lib/knowledge/truth.cjs",
