@@ -18,28 +18,27 @@ gos gate semantic          # semantic layer: bidirectional coverage + diff-hit +
 gos gate all               # hard gate: must exit 0 before SHIP
 ```
 
-### impactClosure advisory lines (Phase 6 D-36/D-38 — read them, never ignore them)
+### impactClosure advisory lines (Phase 6 — read them, never ignore them)
 
 `gate semantic` tail prints ONE of three states about diff dependents NOT covered by task Files:
 - `impact closure: N diff dependents ... (advisory, regex-based, may be incomplete)` — N>0: your diff's blast radius exceeds declared task Files. The banner is ADVISORY (exit stays 0) and `impactClean` is NOT a pass verdict. Follow the `run: gos map closure <file> --print0` hint and judge coverage yourself.
 - `impact closure: 0 uncovered dependents ...` — impactClean ≠ blast radius verified (regex-based scan; deletions/renames covered via dangling edges, dynamic imports never are).
 - `impact closure vacuous (...)` — impactVacuous ≠ clean: nothing was computable (0 scannable sources or diff fully allowlisted).
 
-### Semantic closure section (Phase D D-26 — consume it, qualified wording is part of the contract)
+### Semantic closure section (Phase D — consume it, qualified wording is part of the contract)
 
 - `must-check set (regex-extracted ... NOT exhaustive ...)` — semantic dependents of your diff (calls/contracts/hand edges). Each line names a file + the edge family that links it. Read EVERY line: these files are co-responsible for your change's correctness.
 - `must-run test sections (...)` — sections whose commands you touched (hunk→function→cmd mapping). If a section is absent from the last run, `bash test/run-sections.sh <section>` BEFORE claiming verification; the gate manifest check will FAIL on mismatch.
 - `run-manifest stale` (gate all FAIL) — sections last ran against a different content tree. Re-run the suite; only use `gos gate --exempt <section> --reason "<why>"` (reason mandatory, ≥10 chars) when you can justify the exemption in your verify notes (one-shot, audited in .gos/logs/exemptions.log).
 - Machine consumers: `gos map closure <path> --json` (strict envelope, byte-0 JSON) is the sole structured mode; `--print0` stays paths-only.
 
-### Truth recording (Phase B D-25/D-30)
 
 Record evidence via the command family — never hand-edit state.json:
 
 ```bash
 gos truth add "what user can observe"                      # auto-numbered T-NN
-gos truth verify T1 --command '["bash","test/run-sections.sh"]' --replay --artifact test/out/T1.log
-gos truth verify T2 --command "<cmd>" --excerpt "12 passed, 0 failed" --artifact test/out/T2.log
+gos truth verify --command '["bash","test/run-sections.sh"]' --replay --artifact test/out/T1.log
+gos truth verify --command "<cmd>" --excerpt "12 passed, 0 failed" --artifact test/out/T2.log
 ```
 
 - `--replay` executes the command (JSON argv) and takes the excerpt from REAL stdout — preferred; manual mode (`--command/--excerpt/--artifact` without `--replay`) marks the truth `manual:true` and gate prints a warning banner.

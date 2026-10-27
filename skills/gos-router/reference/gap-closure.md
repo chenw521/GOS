@@ -26,7 +26,6 @@ Gap found in VERIFY
 
 ## Level-Specific Loop Destinations (B2 Fix)
 
-| Gap Type | Lv0-Lv1 | Lv2 | Lv3-Lv4 |
 |:---|:---|:---|:---|
 | **Minor** | Fix directly | Fix in BUILD | Fix in BUILD |
 | **Major** | Upgrade to Lv2 → THINK | Return to **THINK** | Return to **PLAN** (add gap-closure tasks) |

@@ -2,7 +2,7 @@
 # templates/git/node masters — the node layer is exempt from the master-diff
 # invariant, this repo keeps its own CI file). Never uses pull_request_target.
 #
-# Core trio per R-09: gate (--audit: CI has no task state), sections
+# Core trio per : gate (--audit: CI has no task state), sections
 # regression, npm pack manifest integrity. Plus master-consistency (re-render
 # the universal layer and require a zero diff), commitlint on PRs, and the
 # aggregate-push guard on pushes to main.

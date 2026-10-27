@@ -12,16 +12,16 @@ Lv4 task and `.gos/project/PROJECT.md` does not exist.
    - "Who is it for? What does success look like in 3 months?"
    - Surface requirements one by one. Each user commitment = one R-NN line
      appended to `.gos/project/REQUIREMENTS.md`:
-     `| R-01 | user auth with JWT | |`
+ `| | user auth with JWT | |`
    - Scope creep → defer explicitly (Deferred section in PROJECT.md), never silently.
 
 3. **Milestone + phase breakdown** (2-6 phases per milestone):
    - Fill ROADMAP.md: `| P1 | foundation: models + migrations | pending |`
-   - Each phase claims requirements: REQUIREMENTS.md `R-01 → P1`.
+ - Each phase claims requirements: REQUIREMENTS.md ` → P1`.
    - **Hard rule**: every R-NN must be claimed by some phase (`gos gate requirements` enforces).
 
 4. **Seed DECISIONS.md** with any decisions already made during this dialogue
-   (format: `- D-01: monorepo over polyrepo — user chose`).
+ (format: `- : monorepo over polyrepo — user chose`).
 
 5. **User approval gate**: show ROADMAP + REQUIREMENTS summary.
    > "Project initialized: [N] requirements → [M] phases. Approve to start Phase 1?"

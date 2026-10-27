@@ -6,7 +6,7 @@
 set -uo pipefail
 
 PATTERNS_SECRETS='(api[_-]?key|secret|password|token)\s*[:=]\s*["'"'"'][A-Za-z0-9+/_-]{16,}'
-# D-11 (R-25): the rm branch left this regex for the token classifier below —
+# : the rm branch left this regex for the token classifier below
 # a flat `rm -rf /x` regex both over-blocks Dockerfile cleanup lines
 # (/var/lib/apt/lists/*, /home/user/.cache) and under-blocks flag/target
 # permutations (-fr, -r -f, --force --recursive, quoted or $HOME targets).
@@ -14,7 +14,7 @@ PATTERNS_DANGER='(eval\s*\(\s*["'"'"']|child_process.*shell.*true|curl.*\|\s*sud
 
 FAILED=0
 
-# rm-invocation classifier (D-11 depth-aware default-deny).
+# rm-invocation classifier ( depth-aware default-deny).
 # Preprocessing per line: join `\<newline>` continuations, strip surrounding
 # quotes on target tokens, ${VAR} -> $VAR. Flags tokenized: recursive and
 # force must BOTH be present — short-flag letters (any order/grouping, e.g.
@@ -129,7 +129,7 @@ for f in $FILES; do
     grep -En "$PATTERNS_DANGER" "$f" 2>/dev/null | head -3 >&2
     FAILED=1
   fi
-  # D-11 (R-25): rm branch — tokenized depth-aware classification
+ # : rm branch — tokenized depth-aware classification
   RM_ALL="$(awk "$RM_DANGER_AWK" "$f" 2>/dev/null)"
   if [ $? -ne 0 ]; then
     echo "DANGEROUS pattern in $f: (rm classifier failed — failing closed)" >&2

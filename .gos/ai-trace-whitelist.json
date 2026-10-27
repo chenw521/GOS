@@ -11,24 +11,6 @@
     }
   },
   {
-    "path": ".github/RELEASE.md",
-    "category": "in-flight-sweep",
-    "maxHits": 3,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": ".github/workflows/ci.yml",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": ".github/workflows/triage-gate.yml",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": ".gitignore",
     "category": "meta-doc-quoting",
     "maxHits": 5,
@@ -40,18 +22,6 @@
     }
   },
   {
-    "path": ".opencode/commands/gos/gos-brownfield.md",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": ".opencode/commands/gos/gos-init.md",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "AGENTS.md",
     "category": "meta-doc-quoting",
     "maxHits": 4,
@@ -61,18 +31,6 @@
       "minLine": 41,
       "regionSha256": "ed5ec68230485118158149a0d063420d0db257dacbc39c5b2909fec0eac908c1"
     }
-  },
-  {
-    "path": "README.md",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "README.zh-CN.md",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/gos.cjs",
@@ -1155,12 +1113,6 @@
     ]
   },
   {
-    "path": "hooks/commit-msg.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "scripts/census-dispose.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -1184,73 +1136,19 @@
     ]
   },
   {
-    "path": "scripts/census-dispose.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-build/reference/build-patterns.md",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-build/scripts/aggregate.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-plan/SKILL.md",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-plan/examples/complete-plan.md",
-    "category": "in-flight-sweep",
-    "maxHits": 13,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "skills/gos-plan/reference/revision-loop.md",
     "category": "in-flight-sweep",
-    "maxHits": 7,
+    "maxHits": 3,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "skills/gos-plan/reference/task-decomposition.md",
     "category": "in-flight-sweep",
-    "maxHits": 21,
+    "maxHits": 3,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "skills/gos-plan/reference/thinking-models.md",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-project/reference/evolve.md",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-project/reference/new-project.md",
-    "category": "in-flight-sweep",
-    "maxHits": 3,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-review/prompts/spec-reviewer.md",
-    "category": "in-flight-sweep",
-    "maxHits": 3,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-review/reference/review-checklists.md",
     "category": "in-flight-sweep",
     "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -1267,30 +1165,6 @@
     ]
   },
   {
-    "path": "skills/gos-router/SKILL.md",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-router/reference/gap-closure.md",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-ship/SKILL.md",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-ship/reference/artifact-lifecycle.md",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "skills/gos-ship/scripts/security.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -1302,31 +1176,7 @@
     ]
   },
   {
-    "path": "skills/gos-ship/scripts/security.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-think/SKILL.md",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-think/examples/spec-with-redteam.md",
-    "category": "in-flight-sweep",
-    "maxHits": 12,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "skills/gos-think/prompts/red-team-attacker.md",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-think/reference/codebase-mapping.md",
     "category": "in-flight-sweep",
     "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -1334,25 +1184,13 @@
   {
     "path": "skills/gos-think/reference/dialogue-protocol.md",
     "category": "in-flight-sweep",
-    "maxHits": 3,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-think/reference/red-team.md",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "skills/gos-think/scripts/prune-decisions.sh",
-    "category": "in-flight-sweep",
     "maxHits": 1,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "skills/gos-verify/SKILL.md",
     "category": "in-flight-sweep",
-    "maxHits": 5,
+    "maxHits": 2,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {

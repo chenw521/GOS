@@ -151,3 +151,35 @@
 {"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T98a-track-core.test.sh","ids":["(","D-14","D-14","D-14","D-15","RT2-F2","RT3-F7"]}
 {"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T98b-track-txn.test.sh","ids":["B1-B3","B1-B3","D-14","D-15","RT3-F7"]}
 {"batch":"batch-4","ts":"2026-10-27T03:03:35Z","path":"test/sections/T99-gate-flip-leg.test.sh","ids":[" ","D-14","D-14","D-14","D-15","RT2-F4"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":".github/RELEASE.md","ids":["D-50","D-69","D-74","D-78"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":".github/workflows/ci.yml","ids":["R-09"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":".github/workflows/triage-gate.yml","ids":["(","D-10","D-10","D-10","R-37"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":".opencode/commands/gos/gos-brownfield.md","ids":["D-22"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":".opencode/commands/gos/gos-init.md","ids":["R-01"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"README.md","ids":[" "]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"README.zh-CN.md","ids":[" "]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"hooks/commit-msg.sh","ids":["D-94"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-build/reference/build-patterns.md","ids":[" "]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-build/scripts/aggregate.sh","ids":["D-12"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-plan/SKILL.md","ids":["D-05"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-plan/examples/complete-plan.md","ids":[" "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," ","D-01","D-02","D-03","D-04","R-01","R-02"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-plan/reference/revision-loop.md","ids":[" "," ","D-05","D-05","D-05","D-05","D-08","D-08"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-plan/reference/task-decomposition.md","ids":[" "," "," "," "," "," "," ","\"","D-03","R-01","T1","T1","T1","T1","T2","T2","T2","T2","T3","T3","T3","T3","T4"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-plan/reference/thinking-models.md","ids":[" "," ","T1"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-project/reference/evolve.md","ids":["D-05","R-03"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-project/reference/new-project.md","ids":["D-01","R-01","R-01"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-review/prompts/spec-reviewer.md","ids":["D-01","D-01","R-01"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-review/reference/review-checklists.md","ids":["D-01"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-router/SKILL.md","ids":["D-62","Lv0-Lv4","R-01"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-router/reference/gap-closure.md","ids":["Lv0-Lv1","Lv3-Lv4"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-ship/SKILL.md","ids":["D-34"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-ship/reference/artifact-lifecycle.md","ids":["[Phase W T17]"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-ship/scripts/security.sh","ids":["D-11","D-11","D-11","R-25","R-25"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-think/SKILL.md","ids":["D-34"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-think/examples/spec-with-redteam.md","ids":["*","*","*","*","D-01","D-01","D-01","D-01","D-02","D-03","D-03","D-62","R-01"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-think/prompts/red-team-attacker.md","ids":["[MISUSE/SAFETY | EDGE/EXCEPTION | COMPLETENESS]"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-think/reference/codebase-mapping.md","ids":["D-20"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-think/reference/dialogue-protocol.md","ids":["D-01","D-62","D-62"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-think/reference/red-team.md","ids":["F-1","F-2","F-3","F-4"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-think/scripts/prune-decisions.sh","ids":["D-23"]}
+{"batch":"batch-5","ts":"2026-10-27T03:23:47Z","path":"skills/gos-verify/SKILL.md","ids":[" "," ","D-25","D-26","D-30","D-36","D-38"]}

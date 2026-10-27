@@ -19,7 +19,7 @@ Task tool:
 
     [PASTE: intent + spec decisions + key design points]
 
-    ## Your Perspective This Round: [MISUSE/SAFETY | EDGE/EXCEPTION | COMPLETENESS]
+ ## Your Perspective This Round:
 
     [MISUSE round — ask:]
     1. Who consumes this design's output (human/agent/weak model/script)?

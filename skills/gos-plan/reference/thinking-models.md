@@ -15,10 +15,10 @@ Run these BEFORE presenting the plan to the user. Each takes 1-2 minutes.
 
 <Good>
 "Failure 1: bcrypt slows down registration under load.
-Mitigation: add benchmark test in T4 (max 100ms per hash)."
+Mitigation: add benchmark test in (max 100ms per hash)."
 
 "Failure 2: migration conflicts with existing users table.
-Mitigation: T2 reads existing schema first, uses IF NOT EXISTS."
+Mitigation: reads existing schema first, uses IF NOT EXISTS."
 </Good>
 
 <Bad>
@@ -51,7 +51,7 @@ Mitigation: T2 reads existing schema first, uses IF NOT EXISTS."
 
 <Good>
 "Hardest constraint: external payment API has 2s timeout.
-T1 includes a timeout test. If it fails, we pivot before building UI."
+ includes a timeout test. If it fails, we pivot before building UI."
 </Good>
 
 ## 4. Reversibility Test

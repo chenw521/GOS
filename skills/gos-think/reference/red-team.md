@@ -85,10 +85,10 @@ disposition table — free-form responses are forbidden:
 
 | Finding | Disposition (one of 4, no blanks) | Evidence |
 |:---|:---|:---|
-| F-1 | ACCEPT → design change X | new spec section (grep-able) |
-| F-2 | ACCEPT-PARTIAL → change Y | spec edit |
-| F-3 | REJECT → factual counter-evidence required | code line / doc quote |
-| F-4 | DEFER → to DI-n | Deferred Ideas entry |
+| | ACCEPT → design change X | new spec section (grep-able) |
+| | ACCEPT-PARTIAL → change Y | spec edit |
+| | REJECT → factual counter-evidence required | code line / doc quote |
+| | DEFER → to DI-n | Deferred Ideas entry |
 
 Hard rules:
 - **REJECT requires FACTS** (file:line, doc quote, test output) — opinion-level

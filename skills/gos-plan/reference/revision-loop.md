@@ -18,12 +18,12 @@ self-review finds MECE violations, OR Pre-Mortem identifies a critical gap.
 3. Pass? → Done. Fail? → Iteration 2.
 
 <Good>
-"D-05 (rate limiting) uncovered → extend T4 (middleware) to include
-rate limiting logic, add Covers: D-05 to T4."
+"D-05 (rate limiting) uncovered → extend (middleware) to include
+rate limiting logic, add Covers: D-05 to ."
 </Good>
 
 <Bad>
-"D-05 uncovered → I'll handle it during BUILD" (deferred silently)
+" uncovered → I'll handle it during BUILD" (deferred silently)
 </Bad>
 
 ### Iteration 2: Strategy Change
@@ -58,12 +58,12 @@ Present to user:
 Revision Loop stalled after 3 iterations.
 
 Unresolved gaps:
-- D-05: rate limiting — conflicts with D-02 (session design)
-- D-08: audit logging — no clear integration point
+- : rate limiting — conflicts with D-02 (session design)
+- : audit logging — no clear integration point
 
 Options:
 1. Re-plan: completely different approach (back to Step 3)
-2. Defer: mark D-05/D-08 as deferred, add to spec's Deferred Ideas
+2. Defer: mark as deferred, add to spec's Deferred Ideas
 3. Guidance: you suggest how to handle these
 4. Proceed: accept gaps, handle adaptively during BUILD
 ```
@@ -73,7 +73,7 @@ Options:
 {"revision_history": [
   {"iter": 1, "issues": 3, "fixed": 2},
   {"iter": 2, "issues": 1, "fixed": 0, "strategy": "by-feature"},
-  {"iter": 3, "issues": 1, "stalled": true, "user_decision": "defer D-05"}
+ {"iter": 3, "issues": 1, "stalled": true, "user_decision": "defer "}
 ]}
 ```
 

@@ -5,7 +5,7 @@
 **One question per message.** Present ONE decision point, wait for response,
 then move to next. Never batch unrelated decisions.
 
-## Decision Card (mandatory contract — P15 D-62)
+## Decision Card (mandatory contract — P15 )
 
 Every gray area is presented as a **decision card** — a symmetric options
 table plus the rejected side made explicit. A decision without shown
@@ -47,7 +47,7 @@ Rules:
 ### Rendered example
 
 ```
-D-62: Decision card = skill contract + thin spec gate
+ : Decision card = skill contract + thin spec gate
 
 | Option | Premise | Pros | Cons | Risks |
 |:--|:--|:--|:--|:--|
@@ -110,7 +110,7 @@ After each gray area is resolved:
 
 If session crashes during THINK:
 - Resume reads state.json
-- Shows "Areas resolved: D-01, D-02. Remaining: [list]"
+- Shows "Areas resolved: , D-02. Remaining: [list]"
 - Asks "Continue from Area C?"
 
 ## Lv4 Adaptation

@@ -14,7 +14,7 @@
 
 ```bash
 mkdir -p .gos/archive/[date]/
-# [Phase W T17] ship is now a two-phase transaction — task/<id>/ moves WHOLESALE:
+# ship is now a two-phase transaction — task/<id>/ moves WHOLESALE:
 #   .gos/task/<id>/  →  .gos/archive/<date-slug>/task/<id>/  (+ orphans/ adoption)
 # manual mv is obsolete — never hand-move
 

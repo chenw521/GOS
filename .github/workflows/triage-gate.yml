@@ -1,4 +1,4 @@
-# Triage gate (D-10 / R-37): every issue must carry a `bug` or
+# Triage gate ( / ): every issue must carry a `bug` or
 # `enhancement` type label (the .github/ISSUE_TEMPLATE forms attach one
 # automatically and the blank form is disabled, so the web channel is
 # already constrained). This workflow is the fail-closed backstop for the
@@ -15,7 +15,7 @@
 # first: kind/bug + type/bug -> bug; kind/enhancement + type/enhancement +
 # feat -> enhancement.
 # workflow_dispatch is a dry run: pass an issue number, get the decision
-# printed, nothing mutated (T13 replayable evidence - no live issue spam).
+# printed, nothing mutated ( replayable evidence - no live issue spam).
 name: Triage gate
 
 on:
@@ -58,7 +58,7 @@ jobs:
 
           marker_tag='<!-- gos-triage-gate -->'
 
-          # Decision core (D-10): a pure function of (live labels, live
+ # Decision core : a pure function of (live labels, live
           # state, marker bool). Inline and verbatim on purpose - local
           # fixture tests extract exactly this block (between the
           # GATE_DECIDE_EOF markers) and drive it without GitHub.
@@ -184,7 +184,7 @@ jobs:
             exit 0
           fi
 
-          # Pinned guidance copy (D-10): English, carries the marker, and
+ # Pinned guidance copy : English, carries the marker, and
           # names the no-permission path ("ask a maintainer to relabel").
           read -r -d '' guidance <<'GUIDANCE_EOF' || true
           <!-- gos-triage-gate -->

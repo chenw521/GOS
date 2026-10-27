@@ -33,7 +33,7 @@ repo_root=$(git rev-parse --show-toplevel 2>/dev/null || printf '%s' "$(dirname 
 seeded_cfg="$repo_root/commitlint.config.yaml"
 master_cfg="$gos_root/templates/git/commitlint.config.yaml"
 
-# Run commitlint and classify the outcome (D-94; review M2: stdout and
+# Run commitlint and classify the outcome ( ; review M2: stdout and
 # stderr are captured SEPARATELY — commitlint echoes the commit message on
 # stdout ("input: <subject>"), so a FAILING message containing a network
 # token (ENOTFOUND, ETIMEDOUT, ETARGET, E404, "npm ERR! network") could

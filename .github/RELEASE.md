@@ -41,8 +41,8 @@ the commit SHA, so a stage cannot silently run against a moving ref.
 ## npm publish
 
 - Publishes to **registry.npmjs.org** as the scoped package
-  `@chenw521/gos` (name ruling D-50; the registry itself moved from the
-  GitHub Packages private beta to npmjs per D-78 — `publishConfig`
+ `@chenw521/gos` (name ruling ; the registry itself moved from the
+ GitHub Packages private beta to npmjs per — `publishConfig`
   points at npmjs and `.npmrc` is deliberately not tracked).
 - Credentials come from the `NPM_TOKEN` secret; validate runs a real
   credential check (`npm whoami` class) before anything irreversible.
@@ -57,7 +57,7 @@ The external task-suite benchmark is currently retired and being
 rebuilt (see README "Benchmark in progress"). **No live pinning
 obligation exists today.** When the benchmark returns, each release
 must re-sync the benchmark's pinned GOS version+SHA, and a history
-rewrite (as in D-69/D-74) additionally requires grepping the benchmark
+rewrite (as in ) additionally requires grepping the benchmark
 repo for cross-repository SHA references before force-pushing. The rule
 is recorded here so the obligation revives with the benchmark.
 
