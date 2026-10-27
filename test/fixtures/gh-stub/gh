@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# gh stub for `gos feedback push` section tests (T70) — network-dependency
+# gh stub for `gos feedback push` section tests — network-dependency
 # truth rule: everything CI-runnable must be local; real gh only under
 # GOS_E2E_NETWORK=1 (one-shot, never in the suite).
 #

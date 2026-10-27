@@ -42,3 +42,10 @@
 {"batch":"batch-2","ts":"2026-10-27T02:11:16Z","path":"bin/lib/ops/setup.cjs","ids":["D-63","D-63","D-63","D-63","D-94","R-05"]}
 {"batch":"batch-2","ts":"2026-10-27T02:11:16Z","path":"bin/lib/ops/track.cjs","ids":[" "," "," "," ","D-14","D-15","RT2-F10","RT2-F10","RT2-F5","RT2-F5","RT3-F12","RT3-F7","RT3-F7","RT3-F7","RT3-F7"]}
 {"batch":"batch-2","ts":"2026-10-27T02:11:16Z","path":"bin/lib/render/views.cjs","ids":[" "," "," "," "," "," "," "," "," ","(","(","(","(","/","B-1","B-10","B-15","B-19","B-20","B-7","D-01","D-02","D-03","D-03","D-03","D-03","D-03","D-03","D-03","D-05","D-05","D-08","D-08","D-08","D-08","D-08","D-08","D-08","D-08","D-15","D-29","D-30","D-32","D-32","D-34","D-41","R-29","R1-F4","R1-F4","R2-F10","R3-F1","R3-F1","R3-F1","R3-F1","R3-F1","R4-F1","R4-F14","R4-F6"]}
+{"batch":"batch-3","ts":"2026-10-27T02:34:13Z","path":"test/checks/gitprobe-monopoly.sh","ids":[" "," ","D-14","D-15","D-17","RT3-F11"]}
+{"batch":"batch-3","ts":"2026-10-27T02:34:13Z","path":"test/checks/stale-verbs.sh","ids":["R-01"]}
+{"batch":"batch-3","ts":"2026-10-27T02:34:13Z","path":"test/fixtures/gh-stub/gh","ids":["("]}
+{"batch":"batch-3","ts":"2026-10-27T02:34:13Z","path":"test/gos-cli-tests.sh","ids":["D-01","D-02","D-03","D-11","F-1","F-2","F-5","R-01","R-01"]}
+{"batch":"batch-3","ts":"2026-10-27T02:34:13Z","path":"test/pack-check.sh","ids":["R-09"]}
+{"batch":"batch-3","ts":"2026-10-27T02:34:13Z","path":"test/run-sections.sh","ids":[" "," "," "," ","(","(","D-29","D-63","F-1","R4-F3","R4-F4","U3-U6","[Phase D T10]"]}
+{"batch":"batch-3","ts":"2026-10-27T02:34:13Z","path":"test/workflow-lint.sh","ids":["R4-F8"]}

@@ -1311,12 +1311,6 @@
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
-    "path": "test/checks/gitprobe-monopoly.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 4,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/checks/stale-verbs.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -1330,12 +1324,6 @@
         "sha256": "e2042baa34d2f9cc8071676837d38962bbcd5c9bb8e0af9040b4af0279f0be2d"
       }
     ]
-  },
-  {
-    "path": "test/checks/stale-verbs.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 3,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/fixtures/ai-trace/anchors.json",
@@ -1356,12 +1344,6 @@
     "reason": "Permanent red fixture for the ai-trace lint section; the anchors are the fixture content itself."
   },
   {
-    "path": "test/fixtures/gh-stub/gh",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/golden/pre-split/contract.txt",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -1373,24 +1355,6 @@
     ]
   },
   {
-    "path": "test/golden/pre-split/contract.txt",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/gos-cli-tests.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 9,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/pack-check.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/run-sections.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -1400,12 +1364,6 @@
         "sha256": "ce56c664db6abf69430a9850e8078d1151ed3a2e885a99846882000f2a9a2b07"
       }
     ]
-  },
-  {
-    "path": "test/run-sections.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 16,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T1-schema.test.sh",
@@ -2049,11 +2007,5 @@
         "sha256": "b1301662f66d319b88f8b6aaca585b358d78a20da682d5a7d6993579f70e8a26"
       }
     ]
-  },
-  {
-    "path": "test/workflow-lint.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 5,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   }
 ]

@@ -86,7 +86,6 @@ assert_contains "shows 'no active task'" "o active task" "$OUT"
 assert_contains "hints gos init" "gos init" "$OUT"
 teardown
 
-# --- T-02: init creates state + R-01 ---
 echo "--- T-02: gos init Lv2 ---"
 setup
 OUT=$(node "$GOS" init 2 "add dark mode" 2>&1)
@@ -153,7 +152,6 @@ assert_contains "committed" "Committed" "$OUT"
 assert_contains "stage advanced" "advanced" "$OUT"
 teardown
 
-# --- T-08: Lv0 R-01 auto-extract ---
 echo "--- T-08: Lv0 R-01 implicit ---"
 setup
 node "$GOS" init 0 "fix typo" >/dev/null 2>&1
@@ -314,7 +312,7 @@ for f in PROJECT.md ROADMAP.md DECISIONS.md REQUIREMENTS.md; do
 done
 teardown
 
-# --- T-14: gos context plan (D-01, pre-computed JSON) ---
+# --- T-14: gos context plan ( , pre-computed JSON)
 echo "--- T-14: gos context plan ---"
 setup
 node "$GOS" init 3 "auth" >/dev/null 2>&1
@@ -328,7 +326,7 @@ assert_contains "returns JSON stage" '"stage": "PLAN"' "$OUT"
 assert_contains "lists uncovered D-01" '"D-01"' "$OUT"
 teardown
 
-# --- T-15: filesystem fallback blocks commit think without spec (D-03) ---
+# --- T-15: filesystem fallback blocks commit think without spec
 echo "--- T-15: filesystem fallback ---"
 setup
 node "$GOS" init 3 "auth" >/dev/null 2>&1
@@ -337,7 +335,7 @@ assert_exit "commit think blocked without spec" 1 "$RC"
 assert_contains "explains fallback" "filesystem fallback" "$OUT"
 teardown
 
-# --- T-16: checkpoint save + resume shows it (D-02) ---
+# --- T-16: checkpoint save + resume shows it
 echo "--- T-16: checkpoint ---"
 setup
 node "$GOS" init 3 "auth" >/dev/null 2>&1
@@ -346,7 +344,6 @@ OUT=$(node "$GOS" resume 2>&1)
 assert_contains "resume shows checkpoint" "wave2" "$OUT"
 teardown
 
-# --- T-17: archive clears checkpoints (F-5) ---
 echo "--- T-17: archive clears checkpoints ---"
 setup
 node "$GOS" init 3 "auth" >/dev/null 2>&1
@@ -361,7 +358,7 @@ CKPTS=$(python3 -c "import json; print(len(json.load(open('.gos/state.json')).ge
 assert_eq "checkpoints cleared" "0" "$CKPTS"
 teardown
 
-# --- T-18: F-1 lessons enforcement blocks archive ---
+# --- T-18: lessons enforcement blocks archive
 echo "--- T-18: lessons enforcement ---"
 setup
 HOME_SAVED="$HOME"; export HOME="$TEST_DIR"   # fake-HOME isolation: global lessons file must not leak in (dual-file F-1)
@@ -380,7 +377,6 @@ assert_file "archive succeeds after lesson" .gos/archive
 export HOME="$HOME_SAVED"
 teardown
 
-# --- T-19: resolve-model staffing (D-11) ---
 echo "--- T-19: resolve-model ---"
 setup
 node "$GOS" init 3 "auth" >/dev/null 2>&1
@@ -391,7 +387,6 @@ OUT=$(node "$GOS" resolve-model implementer 2>&1)
 assert_contains "solo → inherit" '"model":"inherit"' "$OUT"
 teardown
 
-# --- T-20: model name whitelist (F-2) ---
 echo "--- T-20: model name whitelist ---"
 setup
 node "$GOS" init 3 "auth" >/dev/null 2>&1

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# stale-verb guard — command docs x nav registry (R-01 doc-drift failure mode).
+# stale-verb guard — command docs x nav registry ( doc-drift failure mode).
 #
 # Every backticked `gos <verb> ...` reference in .opencode/commands/gos/*.md
 # must name a verb that still exists. KNOWN_CASES is obtained via require()

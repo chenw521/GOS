@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# gitprobe-monopoly — D-14/D-15/D-17 primitive monopoly check (§3.7, RT3-F11).
+# gitprobe-monopoly — primitive monopoly check ( , ).
 #
 # bin/lib/core/gitprobe.cjs is the single fail-closed git-probing primitive.
 # No other module under bin/lib may shell out to the probe-family git options
@@ -14,8 +14,8 @@
 #   - bin/lib or the primitive home missing    -> exit 1
 #   - scan infrastructure error (grep rc > 1)  -> exit 1
 #
-# The T14-era temporary allowlist (concerns.cjs legacy ls-files probe) was
-# removed with T6: concerns.cjs now uses core.isTracked (gitprobe), so full
+# The -era temporary allowlist (concerns.cjs legacy ls-files probe) was
+# removed with : concerns.cjs now uses core.isTracked (gitprobe), so full
 # monopoly is enforced unconditionally.
 #
 # Usage:
