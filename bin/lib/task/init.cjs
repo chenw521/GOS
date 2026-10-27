@@ -79,12 +79,12 @@ function cmdInit(args) {
     console.log('  Use --force to overwrite, or continue the current task.');
     return nav.printStatus(existing);
   }
- // : --force must not silently destroy unarchived spec/plan (v0.8 loss incident).
+ // --force must not silently destroy unarchived spec/plan (v0.8 loss incident).
   // A spec/plan on disk whose content has NO identical git-committed copy is
   // unarchived work — refuse. Archived tasks have spec/plan moved away, so the
   // normal post-archive `init --force` flow is unaffected.
   if (existing && args.includes('--force')) {
- // : task/<id>/ dirs are in-flight work — --force is the EXPLICIT discard path
+ // task/<id>/ dirs are in-flight work — --force is the EXPLICIT discard path
     // (spec: "archive first, or discard via an explicit --force"), so wipe with a warning, never silently orphan.
     const taskZone = path.join(core.GOS_DIR, 'task');
     if (fs.existsSync(taskZone)) {
@@ -130,7 +130,7 @@ function cmdInit(args) {
 
   const headless = core.isHeadlessEnv();
   const state = core.defaultState(level, intentText);
- // : intent confirmation is a USER act (interactive two-step) or an audited env
+ // intent confirmation is a USER act (interactive two-step) or an audited env
   // fact (headless one-shot). Audit lands in state — bypass visible, never silent.
   if (headless) {
     state.intent.confirmed = true;
@@ -146,7 +146,7 @@ function cmdInit(args) {
   // repo identity = repo_id (stamped by defaultState), repo root is
   // runtime-derived via currentRootRealpath() wherever a root is needed.
   const root = core.currentRootRealpath() || fs.realpathSync('.');
- // : pin spec/plan to task/<id>/ at birth — single resolution from here on.
+ // pin spec/plan to task/<id>/ at birth — single resolution from here on.
   // (project tasks get phase_name later at claim; core.currentTaskId falls to task_head[0:8].)
  // Stored repo-relative : tracked state must not carry machine paths.
   if (!state.spec_path) core.pinTaskPaths(state);
@@ -188,10 +188,10 @@ function cmdInit(args) {
       const p = path.join(core.PROJECT_DIR, name);
       if (!fs.existsSync(p)) fs.writeFileSync(p, content);
     }
- // : project.json truth source skeleton (only creation point alongside phase add)
+ // project.json truth source skeleton (only creation point alongside phase add)
     const pj = path.join(core.PROJECT_DIR, 'project.json');
     if (!fs.existsSync(pj)) core.saveProject(core.emptyProject());
- // : brownfield detection — handwritten 4-file content → suggest import, never silently overwrite
+ // brownfield detection — handwritten 4-file content → suggest import, never silently overwrite
     const brown = knowledge.detectBrownfield();
     if (brown) {
       console.log(`⚠ existing handwritten content detected in: ${brown.join(', ')}`);

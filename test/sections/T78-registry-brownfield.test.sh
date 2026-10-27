@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd brownfield,_contract,help
-# : registry + contract wiring for `gos brownfield` (class: global).
+# registry + contract wiring for `gos brownfield` (class: global).
 # Lock-free registration — the dispatcher's guardCwd takes the .gos/.lock for
 # write/exec classes only; brownfield mutates repo files like `setup
 # --commitlint` but must stay lock-free . Freezes the _contract

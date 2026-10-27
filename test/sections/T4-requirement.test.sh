@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd requirement
-# : requirement command family (add/list/drop/claim) + dual-store
+# requirement command family (add/list/drop/claim) + dual-store
 # Covers: (plan )
 T4_DIR=""
 

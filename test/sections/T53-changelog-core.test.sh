@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/changelog-core.cjs#fn:parseChangelog bin/lib/ops/changelog-core.cjs#fn:validateEntry bin/lib/ops/changelog-core.cjs#fn:validateStructure bin/lib/ops/changelog-core.cjs#fn:promoteUnreleased
-# : changelog single-source validator core ( , ).
+# changelog single-source validator core.
 # Pure-module section: drives bin/lib/ops/changelog-core.cjs directly, no CLI and
 # no task state. The add-generator and lint shell assert same-source
 # consumption of this module in their own sections.

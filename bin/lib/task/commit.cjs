@@ -72,7 +72,7 @@ function runCommitSemanticChecks(state, stage) {
       console.log(`⚠ task_head lazy-anchored to ${anchorSha.slice(0, 10)} (pre-Phase-B task, F1)`);
     }
   }
- // : spec_sha256 consistency (freeze exists → must match current spec.md)
+ // spec_sha256 consistency (freeze exists → must match current spec.md)
   if (state.spec_sha256) {
     const sp = core.specPathOf(state);
     if (fs.existsSync(sp)) {
@@ -130,7 +130,7 @@ function cmdCommit(argv) {
   }
   const state = core.readState();
   if (!state) core.die(core.CONTRACTS.state_semantics.noActiveTask);
- // : flag-aware stage parsing (`gos commit plan --force` — monotonic override)
+ // flag-aware stage parsing (`gos commit plan --force` — monotonic override)
   const forceFlag = args.includes('--force');
   const stageArg = args.find((a) => !a.startsWith('--'));
   const stage = (stageArg || state.current_stage || '').toUpperCase();
@@ -315,7 +315,7 @@ function cmdCommit(argv) {
         // by tracked-but-uncommitted edges.json (E8 lesson regression: silence ≠ checked)
         map.printSemanticClosure(core.mapRootDir(), changed);   // [R2-C1 fix] root was .gos dir — freeze/embed were no-ops
       } catch { /* non-git or unborn — skip */ }
- // [Phase D ] consume exemptions at commit (auto-expiry, )
+ // [Phase D ] consume exemptions at commit (auto-expiry)
       try { ops.consumeExemptions(core.mapRootDir()); } catch { /* non-git — skip */ }   // [R2-C1 fix]
  // [Phase D ] freeze edges.json integrity anchor into the SAME commit (tracked lock)
       try { if (map.freezeEdgesLock(core.mapRootDir())) console.log('✓ edges.lock frozen into this commit'); } catch { /* no edges.json — skip */ }   // [R2-C1 fix]

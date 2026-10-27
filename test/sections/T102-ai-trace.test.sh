@@ -3,7 +3,7 @@
 # gos-map:file test/fixtures/ai-trace/anchors.json
 # gos-map:file test/fixtures/ai-trace/anchors.sh
 # gos-map:file test/fixtures/ai-trace/anchors.md
-# : ai-trace lint boundary — planted fixtures lint red in a scratch repo,
+# ai-trace lint boundary — planted fixtures lint red in a scratch repo,
 # the tracked tree stays green, whitelist equality binds in both directions,
 # ghost and regen guards fire, gate all blocks on a planted anchor, templates
 # stay clean and the coding hint renders in both locales.

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/task/commit.cjs#fn:cmdCommit
 # gos-map:cmd commit
-# : commit generator guard bundle + ADD_PATHS expansion
+# commit generator guard bundle + ADD_PATHS expansion
 # Cases: A=empty-commit guard (duplicate run) B=CJK subject guard
 #        C=--subject english escape hatch D=git-failure state rollback
 #        E=ADD_PATHS static assertions F=no --allow-empty

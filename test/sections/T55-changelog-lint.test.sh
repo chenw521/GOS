@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/task/changelog.cjs#fn:cmdChangelogLint
 # gos-map:cmd changelog
-# : gos changelog lint — post-hoc enforcement over CHANGELOG.md.
+# gos changelog lint — post-hoc enforcement over CHANGELOG.md.
 # Covers: structural three-checks (single title / newest-first dates /
 # today's obligation) exit 1 individually; missing-file semantics = advisory +
 # exit 0 (obligations start once the file exists; `gos changelog add` bootstraps

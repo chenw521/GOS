@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd gate
-# : static assertion — bin/gos.cjs must not gain unregistered .gos/ path literals (anti-regression)
+# static assertion — bin/gos.cjs must not gain unregistered .gos/ path literals (anti-regression)
 # legal = root-level reserved items + directory-level registered prefixes + contract glob strings + legacy markers; illegal = unknown .gos/ subpaths
 T44_DIR=""
 

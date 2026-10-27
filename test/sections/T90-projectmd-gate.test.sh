@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/knowledge/phase.cjs#fn:projectMdSectionReport bin/lib/knowledge/phase.cjs#fn:projectMdFilled bin/lib/task/archive.cjs#fn:cmdArchive bin/lib/task/context.cjs#fn:cmdContext
 # gos-map:cmd archive,context
-# : PROJECT.md gate ( ) — approve-archive pre-flight refuses a TODO-only
+# PROJECT.md gate — approve-archive pre-flight refuses a TODO-only
 #      skeleton / three junk lines / a section-less file before any mutation; a filled
 #      PROJECT.md passes, joins `gos context think` read_files, and init seeds TODO
 #      guidance that brownfield detection ignores.

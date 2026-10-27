@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/task/context.cjs#fn:cmdContext
 # gos-map:cmd context
-# : context template fields must carry GOS_SELF_ROOT-joined absolute paths
+# context template fields must carry GOS_SELF_ROOT-joined absolute paths
 # (real files on disk) + a readonly hint — cwd-relative "templates/..." strings
 # are dead links in product installs where GOS lives in node_modules/gos.
 T64_DIR=""

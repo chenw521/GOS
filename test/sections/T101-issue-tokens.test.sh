@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/changelog-core.cjs#fn:neutralizeIssueTriggers
-# : #N tokens — changelog validator accepts issue references in bullets,
+# #N tokens — changelog validator accepts issue references in bullets,
 # and close/fix keywords adjacent to #N are neutralized at the commit choke
 # points (commit.cjs message build + push.cjs aggregate) so a gos commit can
 # never close a GitHub issue by accident .

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd gate,lessons
-# : inversion exemption (json audit) + gate lessons five invariants + dual-side expiry
+# inversion exemption (json audit) + gate lessons five invariants + dual-side expiry
 # Env: GOS, TESTBASE, assert helpers. Global-path assertions use fake-HOME [R3-F7]
 T18_DIR=""
 T18_HOME=""

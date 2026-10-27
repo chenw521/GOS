@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/task/archive.cjs#fn:cmdArchive bin/lib/ops/doctor.cjs#fn:detectOrphans
 # gos-map:cmd archive
-# : ship two-phase transaction — normal archive / rollback / idempotent re-entry / mtime exemption / owned-orphan re-homing
+# ship two-phase transaction — normal archive / rollback / idempotent re-entry / mtime exemption / owned-orphan re-homing
 T45_DIR=""
 
 t45_setup() {

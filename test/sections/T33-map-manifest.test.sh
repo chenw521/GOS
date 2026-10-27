@@ -95,7 +95,7 @@ if grep -q "run-manifest.json" "$GOS_ROOT/test/run-sections.sh" && grep -q "sha2
 else echo "  ✗ runner manifest wiring missing"; FAIL=$((FAIL+1)); fi
 
 # --- .6 doc-only downgrade: stale manifest + purely allowlisted dirty files (.changes.md) -> advisory, not FAIL
-# preconditions: .4 restored bin/gos.cjs; .changes.md seeded TRACKED ( : the
+# preconditions: .4 restored bin/gos.cjs; .changes.md seeded TRACKED (the
 # exemption ledger is no longer git-staged, so the scenario dirties the tree honestly);
 # head_tree taken from the current HEAD tree (legal ancestor), patch_sha forged -> hits
 # the stale branch; .changes.md is on the allowlist -> downgrade to advisory.

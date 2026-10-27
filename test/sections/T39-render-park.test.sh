@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none   # sandbox builds its own project container; no live-repo truth source
-# : render views single source of truth (state-only default + --all audit) + claim gate prev-done/parked
+# render views single source of truth (state-only default + --all audit) + claim gate prev-done/parked
 #      + park lifecycle + milestone debt visibility + ghost teaching line + residual byte-stability
 PASS=0; FAIL=0
 command -v assert_exit >/dev/null || assert_exit() {

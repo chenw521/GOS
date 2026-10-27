@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/gate.cjs#fn:cmdGate bin/lib/map/index.cjs#fn:cmdMap
 # gos-map:cmd gate,map
-# : gate codemap enhancements — fn coverage report + edge-count baseline drop detection
+# gate codemap enhancements — fn coverage report + edge-count baseline drop detection
 T35_DIR=""
 
 t35_setup() {
@@ -48,7 +48,7 @@ if printf '%s\n' "$G" | grep -qF "unmapped fn(s) without test annotation" && pri
   echo "  ✓ T35.1a coverage summary + full-list pointer present"; PASS=$((PASS+1))
 else echo "  ✗ T35.1a coverage summary missing"; printf '%s\n' "$G" | head -5; FAIL=$((FAIL+1)); fi
 # unmapped count = unique fn count - testof_fn covered count (computed from deps for cross-check);
-# file lines = 1 provenance header (generated-at @ HEAD, ) + one line per unmapped fn
+# file lines = 1 provenance header (generated-at @ HEAD) + one line per unmapped fn
 UT=$(node -e "
 const d=require('./.gos/cache/deps.json');const s=d.semantic||{};
 const all=new Set();(s.callgraph||[]).forEach(e=>{all.add(e.file+'#fn:'+e.from);all.add(e.file+'#fn:'+e.to)});

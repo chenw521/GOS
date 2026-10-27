@@ -341,7 +341,7 @@ if (WL_ARG !== '-') {
   let raw;
   try { raw = fs.readFileSync(WL_ARG, 'utf8'); }
   catch (e) { die('whitelist unreadable: ' + WL_ARG + ' (' + e.code + ')'); }
-  if (!/^[\x20-\x7e\s]*$/.test(raw)) die('whitelist contains non-printable-ASCII characters — entries and reasons must be pure ASCII English');
+  if (!/^[\x20-\x7e\n\r\t]*$/.test(raw)) die('whitelist contains non-printable-ASCII characters — entries and reasons must be pure ASCII English');
   let parsed;
   try { parsed = JSON.parse(raw); }
   catch (e) { die('whitelist is not valid JSON: ' + e.message); }

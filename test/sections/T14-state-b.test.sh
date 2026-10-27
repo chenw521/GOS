@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd commit,status
-# : state schema evolution — evidence three-element object + task_head/_history/_pending
+# state schema evolution — evidence three-element object + task_head/_history/_pending
 #     + plan_snapshot freeze/monotonic/lazy-freeze + spec_sha256 freeze + parsePlanMd hardening
 # Env: GOS (CLI path), TESTBASE (isolated base), assert helpers sourced by runner
 T14_DIR=""

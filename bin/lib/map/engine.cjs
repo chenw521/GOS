@@ -750,7 +750,7 @@ function printSemanticClosure(root, changedFiles) {   // human block (closure --
     }
   }
   if (r.unannotated > 0) console.log(`⚠ ${SC.semClosureUnannotated.replace('<N>', String(r.unannotated))}`);
- // : one-line human summary — machine lists above stay layered
+ // one-line human summary — machine lists above stay layered
   // empty edge-net says so explicitly (E8: silence was misread as "checked, all fine").
   if (any) console.log(`📎 ${core.t('map.closure.summaryHit', { files: r.mustCheck.size, sections: r.mustRun.size })}`);
   else console.log(`📎 ${core.t('map.closure.summaryNone')}`);

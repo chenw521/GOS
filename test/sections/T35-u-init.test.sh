@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd init
-# : Phase U init state machine — dual mode / confirm-only / alias blocking / audit / level normalization / activation_source / echo sanitization
+# Phase U init state machine — dual mode / confirm-only / alias blocking / audit / level normalization / activation_source / echo sanitization
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 # NOTE: interactive-path cases use `env -u GOS_HEADLESS script -qec` to fabricate a pty
 # ( pins GOS_HEADLESS=1 as runner anchor — `env -u` neutralizes it inside cases)

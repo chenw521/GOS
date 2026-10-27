@@ -233,7 +233,7 @@ function guardCwd(cls, cmdName, breakLock) {
   const ids = remoteRepoIds(root);
   const stamped = stateL.repo_id == null ? null : String(stateL.repo_id);
   if (!ids.length) {
- // : no usable remotes → identity unverifiable → advisory pass (no die).
+ // no usable remotes → identity unverifiable → advisory pass (no die).
     // repo_id null IS the recorded advisory (stamped at init) — silent pass; a
     // STAMPED binding that cannot be verified is the case worth one warning
     // (stderr only — stdout stays machine-clean).

@@ -6,7 +6,7 @@
 // deliberately NOT translated (byte-stability; they fall back to en).
 'use strict';
 
-// contract.* frozen strings are English by design ( : frozen surface, one
+// contract.* frozen strings are English by design (frozen surface, one
 // final migration then byte-stable) — zh entries REFERENCE the CONTRACTS
 // source (copies forbidden), so zh render equals en for these keys.
 const { CONTRACTS } = require('../state.cjs');
@@ -206,7 +206,7 @@ module.exports = {
   "map.allowlist.dirViolation": "require 方向违规：{from} → {to}（模块向 {fr}→{tr} 不在白名单{drift}）",
   "map.allowlist.moduleDrift": "；模块漂移——端点不在任何已登记 moduleRoot 下",
 
-  // 令牌与 JSON 字段名保持原样不翻译；命令一律用 {cmd:…} 占位符） ----
+  // 令牌与 JSON 字段名保持原样不翻译；命令一律用 {cmd:…} 占位符
   'brownfield.fatal.line': '✗ {msg}',
   'brownfield.title': 'brownfield 接管报告 — {root}',
   'brownfield.hooksClass.unset': 'core.hooksPath：未设置——种下的钩子处于休眠（git 读 .git/hooks/；GOS 绝不写 .git/hooks/ 或 git config）',

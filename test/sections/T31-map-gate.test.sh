@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd map
-# : edges.json integrity freeze — edges.lock (tracked) / adopt / transactional re-freeze /
+# edges.json integrity freeze — edges.lock (tracked) / adopt / transactional re-freeze /
 # tracked-missing die / no-lazy-freeze / worktree-clone cross-machine line
 T31_DIR=""
 

@@ -85,7 +85,7 @@ const GOS_PATHS = {
   concerns_anchors: { rel: 'cache/.concerns-anchors.json', producer: 'cli', readers: 'concerns anchor guard', purge: 'regen', tracked: false, granularity: 'file' },
   concerns_anchors_bak: { rel: 'cache/.concerns-anchors.bak', producer: 'cli', readers: 'recovery shadow', purge: 'regen', tracked: false, granularity: 'file' },
   lessons_anchors:  { rel: 'cache/.lessons-anchors.json', producer: 'cli', readers: 'lessons derived cache (live_ids; rebuildable via lessons anchor-rebuild)', purge: 'regen', tracked: false, granularity: 'file' },
- // --- logs/: runtime audit ledgers, machine-local by design ( : durable audit = archive/ + CHANGELOG + commits)
+ // --- logs/: runtime audit ledgers, machine-local by design (durable audit = archive/ + CHANGELOG + commits)
   truth_receipts:   { rel: 'logs/truth-receipts.md', producer: 'cli (truth verify)', readers: 'verify/audit', purge: 'runtime state, machine-local', tracked: false, granularity: 'file' },
   exemptions:       { rel: 'logs/exemptions.log', producer: 'cli (gate --exempt)', readers: 'exempt audit', purge: 'runtime state, machine-local', tracked: false, granularity: 'file' },
   edge_audit:       { rel: 'logs/edge-audit.log', producer: 'cli (commit gate)', readers: 'edge audit', purge: 'runtime state, machine-local', tracked: false, granularity: 'file' },

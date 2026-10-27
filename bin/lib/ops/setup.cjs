@@ -23,7 +23,7 @@ function detectPlatforms(home) {
   });
 }
 
-// : locale persistence — project config when a .gos/ exists here, else the
+// locale persistence — project config when a .gos/ exists here, else the
 // global config (nearest-wins resolution reads the same two).
 function persistLocale(locale) {
   const projCfg = path.join(core.GOS_DIR, 'config.json');
@@ -227,7 +227,7 @@ function teardownCommitlint(top, statePath) {
 // Seed the teaching-grade gate examples into the CURRENT project (.gos/):
 // gates.json (declarative rules) + gates/check.sh (scripted check), then
 // register the script's hash in the machine-local trust store — seeded means
-// reviewed-by-setup, hence trusted (spec ). Idempotent: never overwrites.
+// reviewed-by-setup, hence trusted. Idempotent: never overwrites.
 // Trust registration goes through the CLI as a subprocess (same-source rule —
 // setup must not require gate.cjs, that would close a require cycle via
 // doctor.cjs).

@@ -36,7 +36,7 @@
 #     review fixes — (11) symlink directory escape blocked + nothing written
 #     outside; (12) drifted GOS-lineage hook = kept_conflict with override,
 #     --overwrite adopts with .gos-bak; (13) blocked paths report_only
-# ( : kept_conflict <=> override, both ways); (14) hooksPath with a
+# (kept_conflict <=> override, both ways); (14) hooksPath with a
 #     space renders shell-quoted; (15) duplicate named --overwrite dies.
 # Env: GOS (CLI path), GOS_ROOT, TESTBASE (sandbox base), assert helpers sourced by runner
 T80_DIR=""

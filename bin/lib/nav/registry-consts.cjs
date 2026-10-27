@@ -26,7 +26,7 @@ const EXEC_CMDS = new Set(['gate', 'section']);
 // `brownfield` is GLOBAL (not write/exec): like `setup --commitlint` it mutates
 // repo files, but guardCwd's .gos/.lock is reserved for task-state commands —
 // a brownfield repo has no .gos yet, and the die-on-contention lock would
-// break lock-free semantics ( , ).
+// break lock-free semantics.
 const GLOBAL_CMDS = new Set(['setup', 'teardown', 'doctor', 'help', '--help', '-h', '--version', '-v', '_contract', 'brownfield']);
 
 module.exports = { SUBCLASS_OVERRIDES, KNOWN_CASES, WRITE_CMDS, READ_CMDS, EXEC_CMDS, GLOBAL_CMDS };

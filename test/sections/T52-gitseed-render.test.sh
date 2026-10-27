@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/gitseed.cjs#fn:render bin/lib/ops/gitseed.cjs#fn:renderLayer bin/lib/ops/gitseed.cjs#fn:validateCodeowner
 # gos-map:cmd init
-# : templates/git layered masters + render functions ( , )
+# templates/git layered masters + render functions
 # Cases: A=master inventory + zero-CJK  B=render byte-exact + variable budget
 #        C=renderLayer split + fail-closed  D=validateCodeowner (4 rejections + @org/team)
 #        E=destination path map + GOS_SELF_ROOT anchoring  F=master content spot checks

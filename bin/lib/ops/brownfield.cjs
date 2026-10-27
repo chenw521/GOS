@@ -1,8 +1,8 @@
 // ops/brownfield — `gos brownfield`: adopt GOS into an existing repo.
-// Lock-free global class (registry-consts GLOBAL_CMDS, ): mutates repo
+// Lock-free global class (registry-consts GLOBAL_CMDS): mutates repo
 // files like `setup --commitlint`, never takes the .gos/.lock; concurrency
 // safety = every write goes through the gitseed engine's temp+fsync+rename.
-// : entry guards (exit 4/4/5/1, ), preflight , the
+// entry guards (exit 4/4/5/1), preflight, the
 // three-way hooksPath rule with DORMANT seeding, commitlint detection
 // , the empty gates skeleton landed UNTRUSTED , the
 // .gos/.gitignore semantic lock check , the binary skip
@@ -15,7 +15,7 @@
 // handoff block ( map preview, platform probe), the
 // --print-agents-skeleton (stdout only) and the core.t() locale migration:
 // EVERY human-readable string flows through brownfield.* locale keys (en
-// canonical + zh same batch, ) via the single H render block — JSON
+// canonical + zh same batch) via the single H render block — JSON
 // field names and status/flag/exit tokens stay locale-invariant.
 // Review-fix wave (brownfield review): M1 symlink-escape preflight token
 // (probe-side guard), M3 drifted GOS-lineage hooks are conflict-kept and
@@ -139,7 +139,7 @@ function bfParseFlags(args) {
     bfFatal(jsonMode, BF_EXIT.fatal, H.errUnexpectedArg(a));
   }
   if (overwriteAsset !== null && overwriteAll) bfFatal(jsonMode, BF_EXIT.fatal, H.errDoubleOverwrite());
- // : the skeleton print is a standalone stdout offer — mixing it with
+ // the skeleton print is a standalone stdout offer — mixing it with
   // repo-mutating flags would blur the never-writes guarantee.
   if (printSkeleton && (overwriteAll || overwriteAsset !== null)) bfFatal(jsonMode, BF_EXIT.fatal, H.errSkeletonCombo());
   return { json: jsonMode, overwriteAll, overwriteAsset, printSkeleton };
@@ -326,7 +326,7 @@ function bfProbeAll(top) {
   return { masters, hooksClass, rawHooksPath, detected, assets };
 }
 
-// ---- tiered overwrite validation ( : exit 2 refused / exit 3 unknown)
+// ---- tiered overwrite validation (exit 2 refused / exit 3 unknown)
 
 function bfValidateOverwrite(plan, opts) {
   if (!opts.overwriteAsset) return;
@@ -400,7 +400,7 @@ async function bfAdopt(top, plan, forced) {
   // Review M4: preflight-blocked, write-failed and engine-structural-skip
   // rows are report_only (manual remediation) — kept_conflict is reserved
   // for genuine content conflicts and always carries an override entry
- // ( : kept_conflict ⟺ overridable, both directions).
+ // (kept_conflict ⟺ overridable, both directions).
   for (const rel of BF_HOOK_RELS) {
     const a = plan.assets[rel];
     if (a.disp === 'live_dir') { row(rel, BF_STATUS.reportOnly, { reason: H.whyLiveDirRow(), remediation: [...BF_RM_ACTIVATE] }); continue; }
@@ -576,7 +576,7 @@ async function bfRun(opts) {
 
 // Human report: numbered remediation steps (prose, never pipeable shell
 // lines), override commands in their own section with consequence notes,
-// every rendered path shell-quoted , closing handoff block ( )
+// every rendered path shell-quoted, closing handoff block
 // at the very end.
 function bfRenderHuman(report) {
   console.log(H.title(report.root));
@@ -616,7 +616,7 @@ function bfRenderHuman(report) {
 }
 
 // ---- H: render layer — every human-readable string flows through core.t()
-// (brownfield.* locale keys, en canonical + zh same batch, ); layout
+// (brownfield.* locale keys, en canonical + zh same batch); layout
 // indentation stays in code; status/flag/exit tokens and JSON field names
 // are locale-invariant by contract ----
 

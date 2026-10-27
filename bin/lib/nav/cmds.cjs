@@ -9,7 +9,7 @@ const concernsMod = require('../knowledge/concerns.cjs');    // nav→knowledge 
 const fs = require('fs');
 const path = require('path');
 
-// : lessons attribution block + tags-based progressive disclosure
+// lessons attribution block + tags-based progressive disclosure
 // stage-relevant subset shown, remainder referenced via `gos lessons list`
 // (never silently dropped).
 function lessonsAttributionBlock(stage) {
@@ -59,13 +59,13 @@ function cmdResume() {
   console.log(`Task: ${core.sanitizeEcho(state.intent.summary)} (Lv${state.level ?? '?'})`);
   console.log(`Completed: ${state.completed_stages.join(' → ') || '(none)'}`);
   console.log(`Current stage: ${state.current_stage}`);
- // Checkpoint takes precedence (finer recovery point than stage level, )
+ // Checkpoint takes precedence (finer recovery point than stage level)
   const cps = (state.checkpoints || []).filter(c => !c.consumed);
   if (cps.length) {
     const latest = cps[cps.length - 1];
     console.log(`Checkpoint (wave/area level): ${latest.stage}/${latest.unit} — done: ${latest.done}, remaining: ${latest.remaining}`);
   }
- // : stored paths are repo-relative; resolve for display/stat (the
+ // stored paths are repo-relative; resolve for display/stat (the
   // absolute form is machine-local and never persisted).
   const specAbs = core.specPathOf(state);
   const planAbs = core.planPathOf(state);

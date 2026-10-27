@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd push
-# : aggregate push — commits in origin/main..HEAD collapse into one semantic
+# aggregate push — commits in origin/main..HEAD collapse into one semantic
 # commit (tree = HEAD tree, parent = origin/main tip) pushed to refs/heads/main;
 # re-run is a no-op; missing message source refuses; permission-class push
 # failures print PR-path guidance; archive output ends with the ready-to-run

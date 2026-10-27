@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd gate,help
-# : contract freeze table (CONTRACTS) + the hidden `gos _contract` subcommand
+# contract freeze table (CONTRACTS) + the hidden `gos _contract` subcommand
 # + gate emitting from the table
 # Env: GOS (CLI path), TESTBASE (repo root for sandbox), assert helpers sourced by runner
 T9_DIR=""

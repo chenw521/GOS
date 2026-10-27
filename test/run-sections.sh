@@ -68,7 +68,7 @@ mkdir -p "$HOME"
 # fake HOME hides the real .gitconfig — pin git identity so sandbox commits work
 export GIT_AUTHOR_NAME="gos-test" GIT_AUTHOR_EMAIL="gos-test@test.invalid"
 export GIT_COMMITTER_NAME="gos-test" GIT_COMMITTER_EMAIL="gos-test@test.invalid"
-# Phase U ( , ): headless determinism anchor — suite stdout is never a TTY,
+# Phase U: headless determinism anchor — suite stdout is never a TTY,
 # so without this pin the init dual-mode flips with the developer's terminal state
 # (CI green / local red). Sections that need the interactive path MUST `env -u GOS_HEADLESS`
 # (see -u-init : `script -qec` pty cases).
@@ -204,7 +204,7 @@ for f in "$GOS_ROOT"/test/sections/T*.test.sh; do
   echo "$SEC_OUT"
   if [ "$SEC_RC" -ne 0 ]; then
     echo "  ✗ SECTION ABORTED (exit $SEC_RC) — assertions after the failure point may not have run"
- # Phase C ( , ): rc≠0 MUST count as a failure — the ABORTED line above is
+ # Phase C: rc≠0 MUST count as a failure — the ABORTED line above is
     # echoed to runner stdout (not into SEC_OUT), so the X-count below misses it.
     # A section that dies mid-script with zero ✗ lines must never report green.
     TOTAL_FAIL=$((TOTAL_FAIL + 1))

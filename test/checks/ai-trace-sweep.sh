@@ -162,7 +162,7 @@ const RESIDUAL = [
   /[A-Za-z]+\d+-[A-Za-z]+\d+/g,
   /(?:^|[^A-Za-z])((?:D|R|B|F)-\d+)/g,
   /\bWave\s+\d+\b/g,
-  /(^|[^A-Za-z])(W\d+|T\d+)\b/g,
+  /(?:^|[^A-Za-z])((?:W|T)\d+)\b/g,
 ];
 
 function tokens(text) {

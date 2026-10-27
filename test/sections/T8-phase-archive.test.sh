@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd phase
-# : phase command family (add/list/claim/unclaim) + archive integration
+# phase command family (add/list/claim/unclaim) + archive integration
 # (idempotency / dest conflict / merge / milestone / anchor rewrite)
 # Env: GOS (CLI path), TESTBASE (repo root for sandbox), + assert helpers sourced by runner
 T8_DIR=""

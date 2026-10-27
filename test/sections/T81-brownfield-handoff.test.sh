@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # gos-map:cmd brownfield
 # gos-map:fn bin/lib/ops/brownfield.cjs#fn:cmdBrownfield,bin/lib/ops/brownfield.cjs#fn:bfParseFlags,bin/lib/ops/brownfield.cjs#fn:bfRun,bin/lib/ops/brownfield.cjs#fn:bfRenderHuman
-# : brownfield handoff + skeleton + locales ( , ).
+# brownfield handoff + skeleton + locales.
 # Seven case groups:
 # (1) handoff block at report end — map preview line points at the single
-# trigger (`gos init <level>`, ), no map is ever run (.gos/codebase
+# trigger (`gos init <level>`), no map is ever run (.gos/codebase
 #     and .gos/cache/deps.json absent); per-platform link rows via
 #     detectPlatforms under fake HOMEs (linked -> ok, unlinked -> missing,
-# nothing detected -> none-detected row, ) + frozen --no-onboard
+# nothing detected -> none-detected row) + frozen --no-onboard
 #     remediation argv in the --json envelope;
 # (2) --print-agents-skeleton — exit 0, skeleton on stdout with
 #     intro/build/test/conventions placeholders ONLY; no routing block, no

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/core/state.cjs#fn:migrateState bin/lib/core/state.cjs#fn:deriveRepoId
 # gos-map:cmd init,status,checkpoint
-# : schema v4 ( , ) — migrateState v3→v4 + repo_id URL derivation.
+# schema v4 — migrateState v3→v4 + repo_id URL derivation.
 # Facts asserted:
 #   - STATE_SCHEMA_VERSION=4; fresh init writes schema_version 4 and drops the
 #     dead `version` key; repo_id derived from origin (advisory null w/o remotes)

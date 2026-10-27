@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/gate.cjs#fn:readExemptions bin/lib/ops/gate.cjs#fn:checkManifest bin/lib/ops/gate.cjs#fn:consumeExemptions
 # gos-map:cmd gate,_contract
-# : audit-ledger reconciliation ( ) — GOS_PATHS logs trio machine-local
+# audit-ledger reconciliation — GOS_PATHS logs trio machine-local
 # (tracked:false + purge "runtime state, machine-local"), zero residual git-add of
 # logs paths in gate/edges (grep = counter-evidence leg only), .gitignore carries
 # no !.gos/logs reversal while the dir rule keeps census coverage, and the

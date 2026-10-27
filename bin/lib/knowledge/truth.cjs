@@ -132,7 +132,7 @@ function cmdTruth(args) {
       truthL.evidence = ev;
       core.writeState(state);
       appendTruthReceipt(id, commandStr, truthL.description);
- // : the echo names the registry rel (stale .gos/truth-receipts.md path
+ // the echo names the registry rel (stale .gos/truth-receipts.md path
       // fixed — the ledger actually lives under logs/ per GOS_PATHS).
       console.log(`✓ truth ${id} replay-verified (evidence from actual stdout; receipt appended to .gos/${core.GOS_PATHS.truth_receipts.rel})`);
       return;

@@ -12,7 +12,7 @@
 // at the PROJECT ROOT (git toplevel → nearest .gos ancestor → cwd), reading
 // the PROJECT-layer config key `changelog_path` (global layer is never
 // consulted — a global value could not pass in-root validation for other
-// repos, ). Validation runs on BOTH the config-set write side and
+// repos). Validation runs on BOTH the config-set write side and
 // the resolver read side from one implementation below.
 //
 // Entry format contract (bullet inside [Unreleased] or a version section):
@@ -317,7 +317,7 @@ function compareTag(a, b) {
   return 0;
 }
 
-// Fold [Unreleased] entries into a new version section ( : no backfill;
+// Fold [Unreleased] entries into a new version section (no backfill;
 // accumulate then promote). Boundary order: skeleton integrity first
 // ('no-header'), then tag sanity ('version-rollback'), then content presence
 // ('nothing-to-release'). Entries keep their text but lose the UTC date
@@ -391,7 +391,7 @@ function changelogProjectRoot() {
 // the resolver (read side) — dual validation, one implementation.
 // Rejects: absolute paths, '..' segments (raw input AND normalized escape),
 // realpath escapes via symlink chains, anything under .git/, node_modules/,
-// or .gos/ entirely ( : agent artifacts never live at the .gos/ root
+// or .gos/ entirely (agent artifacts never live at the .gos/ root
 // orphan scan and ship adoption would sweep the file away), and any suffix
 // other than .md. Returns { ok, rel (posix), abs } or { ok: false, reason }.
 function validateChangelogRelPath(raw, root) {

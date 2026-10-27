@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd map
-# : map closure/show — bidirectional closure + read-only print0 + out-of-graph refusal +
+# map closure/show — bidirectional closure + read-only print0 + out-of-graph refusal +
 #      three staleness dimensions + root-anchored input normalization + deleted-node traversal
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 T21_DIR=""

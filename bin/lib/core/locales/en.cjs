@@ -212,7 +212,7 @@ module.exports = {
   "map.allowlist.dirViolation": "require direction violation: {from} → {to} (module direction {fr}→{tr} not in the allowlist{drift})",
   "map.allowlist.moduleDrift": "; module drift — endpoint not under any registered moduleRoot",
 
- // ---- brownfield adoption surfaces ( : ; status/
+ // ---- brownfield adoption surfaces (status/
   // state-flag/exit tokens and JSON field names stay locale-invariant) ----
   'brownfield.fatal.line': '✗ {msg}',
   'brownfield.title': 'brownfield adoption report — {root}',

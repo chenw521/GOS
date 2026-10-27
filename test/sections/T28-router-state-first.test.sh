@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd status,resume
-# : gos-router state-first routing — active state present → resume branch wins
+# gos-router state-first routing — active state present → resume branch wins
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 T28_DIR=""
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd gate,map
-# : gate in-memory recompute of impactClosure three states — N>0 two lines / impactClean / impactVacuous +
+# gate in-memory recompute of impactClosure three states — N>0 two lines / impactClean / impactVacuous +
 #      delete/rename dependents counted + deps.json cache independence + byte stability + lexicographic tie-break
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 T22_DIR=""

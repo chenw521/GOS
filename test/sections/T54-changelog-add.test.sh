@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd changelog
-# : gos changelog add — single-track CHANGELOG.md entry generator.
+# gos changelog add — single-track CHANGELOG.md entry generator.
 # Covers: fail-closed gates (no-state / no-summary / validator), user_summary
 # sources (--summary arg > state cache > TTY ask), template bootstrap,
 # UTC-stamped bullet format (same-source with changelog-core), concurrent-safe

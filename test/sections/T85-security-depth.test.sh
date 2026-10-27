@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:file skills/gos-ship/scripts/security.sh
-# : security.sh depth-aware DANGER classifier ( / ).
+# security.sh depth-aware DANGER classifier.
 # The spec truth table, copied verbatim as cases — FAIL rows must trip the
 # gate (exit 2 + "DANGEROUS pattern" marker), PASS rows must stay clean
 # (exit 0 + "security gate: clean"). Plus regression rows pinning the three

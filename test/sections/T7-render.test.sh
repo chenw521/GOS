@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:cmd render
-# : renderer (three GENERATED views + MANUAL preservation + backup lifecycle)
-# : backups under .gos/cache/render-backup, full history (no rotation), 14d expiry
+# renderer (three GENERATED views + MANUAL preservation + backup lifecycle)
+# backups under .gos/cache/render-backup, full history (no rotation), 14d expiry
 # sweep on render entry, one-shot migration from legacy .gos/archive/render-backup.
 # Env: GOS (CLI path), TESTBASE (repo root for sandbox), + assert helpers sourced by runner
 T7_DIR=""

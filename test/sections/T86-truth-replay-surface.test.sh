@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # gos-map:cmd truth
-# : truth replay execution surface — widened evidence features, tiered hit
-# selection, LHS-normalized synthetic-key veto ( ) + --timeout flag
-# with self-describing failures + explicit maxBuffer 64 MiB ( ).
+# truth replay execution surface — widened evidence features, tiered hit
+# selection, LHS-normalized synthetic-key veto + --timeout flag
+# with self-describing failures + explicit maxBuffer 64 MiB.
 # Env: GOS (CLI path), TESTBASE (isolated base), assert helpers sourced by runner
 T86_DIR=""
 
@@ -119,7 +119,7 @@ OUT=$(t86_g truth verify T1 --replay --command '["bash","-c","echo boom-stderr-t
 assert_exit "I1 nonzero exit fails replay" 1 "$RC"
 assert_contains "I1 diagnostics carry the stderr tail" "boom-stderr-tail" "$OUT"
 
-# --- J: --timeout flag ( : digits only, 1..600000, flag only, no env var)
+# --- J: --timeout flag (digits only, 1..600000, flag only, no env var)
 OUT=$(t86_g truth verify T1 --replay --command '["bash","-c","echo total 165"]' --artifact art.txt --timeout 600000 2>&1); RC=$?
 assert_exit "J1 --timeout 600000 (cap, inclusive) accepted" 0 "$RC"
 for BAD in '0' '1e5' '+5' '0.5' '600001'; do

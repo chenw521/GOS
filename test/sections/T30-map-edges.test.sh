@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd map
-# : map 2.0 anchor layer — parseAnchor / five validator classes / universe / last-# split / bans / case normalization
+# map 2.0 anchor layer — parseAnchor / five validator classes / universe / last-# split / bans / case normalization
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 T30_DIR=""
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/brownfield-probe.cjs#fn:classifyHooksPath,bin/lib/ops/brownfield-probe.cjs#fn:hookOwnership,bin/lib/ops/brownfield-probe.cjs#fn:detectCommitlintConfigs,bin/lib/ops/brownfield-probe.cjs#fn:preflight
-# : brownfield probe module ( , pure classification — ).
+# brownfield probe module ( , pure classification — ).
 # Four read-only classifiers driven through a node driver against sandboxes:
 # (1) classifyHooksPath — core.hooksPath unset/empty (= unset, empty is
 #     normalized BEFORE comparison), 'hooks' literal or absolute <top>/hooks

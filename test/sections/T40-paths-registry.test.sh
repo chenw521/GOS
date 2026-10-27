@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/map/contract.cjs#fn:cmdContract
 # gos-map:cmd _contract
-# : GOS_PATHS registry integrity — _contract additionally emits paths_registry
+# GOS_PATHS registry integrity — _contract additionally emits paths_registry
 T40_DIR=""
 
 t40_setup() {

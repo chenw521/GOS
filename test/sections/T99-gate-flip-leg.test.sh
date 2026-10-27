@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/gate.cjs#fn:flipReconcileLeg bin/lib/core/gitprobe.cjs#fn:trackedUnder
 # gos-map:cmd gate,track
-# : gate flip-reconcile leg — census/git/manifest agreement on
-# every tracked .gos file at gate time (file-granular, ).
+# gate flip-reconcile leg — census/git/manifest agreement on
+# every tracked .gos file at gate time (file-granular).
 # Facts asserted:
 #   - V1 census entry git:true (non-lifecycle) with nothing tracked under it
 #     → FAIL flip-census-phantom + gateCmd fix line

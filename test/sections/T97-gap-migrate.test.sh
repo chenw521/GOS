@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd gap,concerns
-# : gap migrate + gap history + anchor bootstrap predicate.
+# gap migrate + gap history + anchor bootstrap predicate.
 # Facts asserted:
 #   - `gos gap migrate` (concernsRootLock): legacy "(auto)" mirror lines in
 #     concerns.md are removed AND archived to the gap-history ledger

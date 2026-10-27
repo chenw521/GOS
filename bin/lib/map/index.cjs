@@ -409,7 +409,7 @@ function cmdMap(args) {
       console.log('Next:\n  gos map show — full dependency overview');
       return;
     }
- // show: anchor neighborhood ( ) OR legacy overview + externals + banner
+ // show: anchor neighborhood OR legacy overview + externals + banner
     if (sub === 'show' && paths.length === 1) {
       const spec = paths[0];
       const v = anchor.validateAnchor(spec, root);

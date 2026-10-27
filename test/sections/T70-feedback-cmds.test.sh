@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/feedback.cjs#fn:cmdFeedback
 # gos-map:cmd feedback
-# : gos feedback command family — drafts untracked (zero README footprint),
+# gos feedback command family — drafts untracked (zero README footprint),
 # push argv-array strict via gh stub, owner-mismatch guard, idempotent marker,
 # sending-intent crash window, published ledger render + readmeDrift green.
 # Spec T-08a (all local via test/fixtures/gh-stub/gh) + T-08b network-truth

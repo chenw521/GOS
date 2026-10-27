@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:cmd map
-# : mermaid renderer (escape/dict-order/parallel-aggregation/external-dashed) +
-# graph three forms + closure --json strict envelope ( )
+# mermaid renderer (escape/dict-order/parallel-aggregation/external-dashed)
+# graph three forms + closure --json strict envelope
 T32_DIR=""
 
 t32_setup() {

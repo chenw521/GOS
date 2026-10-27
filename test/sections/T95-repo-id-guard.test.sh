@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/core/lock.cjs#fn:guardCwd bin/lib/core/gitprobe.cjs#fn:isTracked
 # gos-map:cmd status,checkpoint,stage,init
-# : repo-id guard + worktree detection (T4a, , ) — Truths T-01/T-02/T-03.
+# repo-id guard + worktree detection (T4a) — Truths T-01/T-02/T-03.
 # Facts asserted:
 #   - static: lock.cjs carries no project_root re-anchor (identity is de-pathed)
 #   - protocol-variant self-consistency: guard passes when state.repo_id is the

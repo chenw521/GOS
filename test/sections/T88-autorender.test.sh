@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd render
-# : auto-render + diff-skip + last-render manifest reconciliation.
+# auto-render + diff-skip + last-render manifest reconciliation.
 # Mutations (decision add/amend/cover, requirement add/claim, phase add/amend/claim)
 # render views inline inside the held .gos lock; a no-change mutation writes
 # nothing (footer only advances on body change, no backup churn);

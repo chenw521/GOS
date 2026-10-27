@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd map,context
-# : gos map blast facade
+# gos map blast facade
 # Cases: report with header + reasons / zero-args usage die / unknown path human
 # refuse / unknown path print0 stderr+exit1 / zero-impact explicit line /
 # print0 NUL semantics / no anchor syntax in output / --json envelope /

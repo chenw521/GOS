@@ -14,3 +14,16 @@ docs/hooks/scripts/skills, remedial fragment pass).
   {'drift-ledger': 1, 'frozen-string': 80, 'lint-fixture': 3, 'meta-doc-quoting': 3}
 - full section suite: 3127 passed, 0 failed (final run on this tree)
 - shrink guard vs base: first-landing pass (zero baseline)
+
+## Review repair (2026-10-27)
+
+The ledger extractor recorded prefix characters instead of bare W/T tokens
+(capturing-group defect), leaving 795 single-character noise ids and losing
+the real tokens. The regex was fixed (non-capturing prefix, token group) and
+every record's ids were rebuilt from git history per batch window
+(endpoint diff per path, fixed token grammar): 222 records preserved with
+their {batch, ts, path} keys, 1611 ids total, zero noise, 786 real tokens
+recovered. Anchors swept then restored inside one window (plan-format
+fixtures pinned back at batch four and the fragment pass) are absent by
+design — the ledger records endpoint truth, matching the current tree.
+Full suite after the repair: 3127 passed, 0 failed.

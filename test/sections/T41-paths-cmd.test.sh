@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/paths.cjs#fn:cmdPaths bin/lib/core/state.cjs#fn:currentTaskId
 # gos-map:cmd paths
-# : gos paths command — JSON absolute-path output + --markdown README generation idempotent
+# gos paths command — JSON absolute-path output + --markdown README generation idempotent
 T41_DIR=""
 
 t41_setup() {

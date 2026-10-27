@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd phase
-# : structured archive directory naming — <date>-v<version>-<phase-N|task>-<ascii-topic>
+# structured archive directory naming — <date>-v<version>-<phase-N|task>-<ascii-topic>
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 T27_DIR=""
 

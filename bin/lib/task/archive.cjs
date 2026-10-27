@@ -140,7 +140,7 @@ function cmdArchive(opts = {}) {
   // design; CHANGELOG.md is deliberately not consulted for version truth.
   // GOS_SKIP_SHIP_CHECK=1 skips both (tests / non-release archives).
   if (!fromCommit && process.env.GOS_SKIP_SHIP_CHECK !== '1') {
- // ---- / ( ): PROJECT.md pre-flight — same slot as the SHIP ritual
+ // ---- /: PROJECT.md pre-flight — same slot as the SHIP ritual
     // Validate-then-mutate (lesson 8a11d879): the refusal lands BEFORE any
     // project.json mutation, task collection (staging), or auto-render, so a
     // skeleton PROJECT.md never strands a half-archived phase. Applies only
@@ -163,7 +163,7 @@ function cmdArchive(opts = {}) {
         }
       }
     }
- // : the obligation reads through the single root-anchored resolver
+ // the obligation reads through the single root-anchored resolver
     // a relocated changelog (gos config changelog-path) is honored here.
     let changelogText = null;
     try { changelogText = fs.readFileSync(clcore.resolveChangelogMd(), 'utf8'); } catch { /* absent */ }
@@ -329,14 +329,14 @@ function cmdArchive(opts = {}) {
   fs.mkdirSync(dest, { recursive: true });
   // spec/plan fallback to the canonical paths (pre-existing null spec_path state —
   // SHIP-dogfood fix: every other consumer falls back to '.gos/spec.md', moves didn't)
- // ---- Phase W ( / , ): two-phase ship transaction + orphan adoption
+ // ---- Phase W: two-phase ship transaction + orphan adoption
   // Phase A: stage everything into .gos/.ship-staging/ — tracked via `git mv` (rename
   // history preserved), untracked via fs.renameSync. Any failure rolls staging back to
   // the original paths; nothing half-moves. Phase B: git add + rename staging → dest +
   // commit. Idempotent re-entry: leftover staging from a crashed run is restored first.
   const staging = core.resolvePath('ship_staging');
   let moved = 0; // hoisted for the final archived summary line
- // / ( , ): gitprobe is the only fail-closed probing
+ // /: gitprobe is the only fail-closed probing
   // primitive. Its ignored-scan truth source lists exact files and collapses
   // covered directories to a single trailing-slash entry, so "rel is ignored"
   // = rel itself listed, or rel living under a listed directory — the same
@@ -481,7 +481,7 @@ function cmdArchive(opts = {}) {
       process.exit(1);
     }
     if (adopted.length) console.log(`✓ ship adoption: ${adopted.length} orphan(s) → ${dest.includes('archive') ? 'archive' : dest} (${skipped.length} quiet-period/lock exempt)`);
- // step6: README regen rides the ship transaction (machine-triggered, )
+ // step6: README regen rides the ship transaction (machine-triggered)
   } catch (e) {
     rollback(e);
   }

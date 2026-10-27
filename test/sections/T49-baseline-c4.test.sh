@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:cmd map,gate
 # gos-map:fn bin/lib/map/engine.cjs#fn:writeDeps bin/lib/ops/gate.cjs#fn:cmdGate
-# : C4 baseline alarm + admission protocol
+# C4 baseline alarm + admission protocol
 # A: fn removal -> full list + fingerprint; B: scan writes no history; C: reset without approve refused; D: approve -> single-consume reset + peak archived; E: large-repo dir aggregation
 T49_DIR=""
 

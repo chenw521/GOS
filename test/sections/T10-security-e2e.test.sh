@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd setup,doctor
-# : security test pack (hostile-string canaries / execSync-git static audit / version tripwire / repo identity rescue)
+# security test pack (hostile-string canaries / execSync-git static audit / version tripwire / repo identity rescue)
 #      + E2E full scenario (Lv3 full cycle → Lv4 dual storage/archive → init --force unarchived guard → P2 claim / same-day -2 dir)
 # Env: GOS (CLI path), TESTBASE (scratch root), assert helpers exported by runner.
 # This section only echoes ✓/✗ lines — the runner counts pass/fail from the output.
@@ -77,7 +77,7 @@ PAT2='execSync\(\`git|execSync\('"'"'git|execSync\("git'
 C2=$(grep -cE "$PAT2" "$GOS" || true)
 assert_eq "static: no literal execSync-git forms (backtick/quote)" "0" "$C2"
 
-# --- P1.6: repo identity rescue ( ) — foreign repo_id blocks writes, `gos anchor fix` re-derives
+# --- P1.6: repo identity rescue — foreign repo_id blocks writes, `gos anchor fix` re-derives
 # v4 identity is de-pathed: the state binds via repo_id (remote-URL hash). A
 # cloned/copied state carries a foreign id → write-class dies naming the
 # mismatch; `gos anchor fix` re-derives from THIS repo's remotes and unblocks.

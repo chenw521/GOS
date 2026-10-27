@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd truth,gate,commit
-# : three-layer mounting — gate all chaining + BUILD/VERIFY commit embedding + sandbox escape hatch + spec_sha256 + status
+# three-layer mounting — gate all chaining + BUILD/VERIFY commit embedding + sandbox escape hatch + spec_sha256 + status
 # Env: GOS, TESTBASE, assert helpers
 T19_DIR=""
 

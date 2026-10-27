@@ -36,7 +36,7 @@ const path = require('path');
 
 // ---------- helpers ----------
 
-// ---------- : atomic write + schema validation + migration ( )
+// ---------- : atomic write + schema validation + migration
 
 // ops.registeredPaths(): whitelist structure for gate orphan-detection
 // { files: [abs exact-match], dirs: [abs prefix-match] }.
@@ -48,16 +48,16 @@ const path = require('path');
 // task.archiveSlugParts(state): {date, slug} for archive dir naming ( extracted from
 // cmdArchive so context SHIP can PREVIEW the same destination — single source).
 
-// ---------- Phase W : gos paths — registry query (JSON, abs paths) +
+// ---------- Phase W: gos paths — registry query (JSON, abs paths) +
 // README auto-generation (--markdown, deterministic: no timestamps — regen diff
 // must be empty, gate check consumes this).
 
-// ---------- Phase C ( , ): COMMANDS registry — single source of truth for
+// ---------- Phase C: COMMANDS registry — single source of truth for
 // command discovery (gos help renders from here; self-check + assert against
 // it). Entry types: normal (full fields) / sentinel '(no command)' (aliasOf delegate,
 // aliases:[''] — name is display-only, contributes aliases ONLY to switchUniverse) /
 // flagOnly (flag-shaped case host, no usage/subs/next). class mirrors the :3303
-// ternary classification result. desc is ENGLISH-only ( / ); CJK belongs to
+// ternary classification result. desc is ENGLISH-only; CJK belongs to
 // render layer. next is NON-CONTRACTUAL static navigation — makes no
 // same-source claim against runtime Next: chains. flags: {name, scope, effect, risk}
 // where risk is 'destructive'|'mutating'|'safe' . core:true = user-adjudicated
@@ -76,9 +76,9 @@ const COMMANDS = core.COMMANDS;   // registry truth lives in core/state (EXTRACT
 // Phase C : nav.KNOWN_CASES hoisted to module level (was local to main)
 // verifyCommandRegistry needs it, and -2 source self-parse greps it from
 // anywhere. Dispatch self-check below is unchanged.
-// Phase C ( , ): registry self-check — six structural assertions, single
+// Phase C: registry self-check — six structural assertions, single
 // die exit (state_semantics.commandRegistrySelfCheck). Placement iron rule
-// : pure in-memory constant comparison, called BEFORE guardCwd
+// pure in-memory constant comparison, called BEFORE guardCwd
 // integrity checks precede ALL filesystem side effects (mkdir .gos / lock /
 // lazy re-anchor state writes).
 
@@ -89,17 +89,17 @@ const COMMANDS = core.COMMANDS;   // registry truth lives in core/state (EXTRACT
 // re-implement this logic. Catches hand-edited state: legacy string form, fake excerpt
 // (feature-regex miss), oversized fields, missing/traversing artifact_path.
 
-// ---------- : renderer — project.json → three GENERATED views ( )
+// ---------- : renderer — project.json → three GENERATED views
 
 // `--replay` = argv JSON actually executed via execFileSync, excerpt taken from REAL
 // stdout (feature ②count/③path only — synthetic exit-code ① never counts [R2-6]),
-// receipt appended to .gos/truth-receipts.md (single O_APPEND appendFileSync, ).
+// receipt appended to .gos/truth-receipts.md (single O_APPEND appendFileSync).
 // All truth subcommands are write-class: lock held from guardCwd through writeState.
 
 // ---------- Phase 6 (defect-6): dependency map — scanner core + deps.json cache ----------
 // deps.json is a MACHINE cache: self-anchored (self_sha256), atomically written,
 // untracked ( gitignore), NEVER read by gate ( amended: gate recomputes
-// in memory, ). `map` is READ-class for guardCwd on purpose: it never touches
+// in memory). `map` is READ-class for guardCwd on purpose: it never touches
 // state.json/project.json; deps.json concurrency is atomic-rename last-writer-wins
 // (the .gos/.lock protects state serialization, not this cache) [R4-F2].
 
@@ -119,7 +119,7 @@ const COMMANDS = core.COMMANDS;   // registry truth lives in core/state (EXTRACT
 // resolves WRITE first, so runtime behavior was already write-class. Removed from
 // nav.READ_CMDS only (classification sets now partition exactly — self-check #2 asserts).
 
-// ---------- : concurrency lock + cwd guard ( )
+// ---------- : concurrency lock + cwd guard
 
 process.on('exit', core.releaseLock);
 
@@ -142,7 +142,7 @@ function main() {
   // only — dispatch deliberately does NOT consume them; zero behavior change.)
   core.readState._mode = (cls === 'write' || cls === 'exec') ? 'write' : 'read';
   core.guardCwd(cls, cname, breakLock); // D-06/17: lock + anchor + banner (order matters: lock before state ops)
- // : write-class loads project.json too — fail-closed validation applies to both stores
+ // write-class loads project.json too — fail-closed validation applies to both stores
   if ((cls === 'write' || cls === 'exec') && fs.existsSync(path.join(core.PROJECT_DIR, 'project.json'))) {
     core.loadProject();
   }

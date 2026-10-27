@@ -72,7 +72,7 @@ function loadConfig() {
 // One-time lessons_migrated strip for a layer ( R2-6iii). Surgical: the
 // layer file is re-read fresh and only the sentinel key is removed, so a
 // concurrent `config models set` update to the other layer is never lost
-// ( : the strip lives ONLY inside this single locked write path;
+// (the strip lives ONLY inside this single locked write path;
 // loadConfig never writes).
 function stripSentinelFromLayer(p, layerObj, layer) {
   if (!layerObj || layerObj[SENTINEL_KEY] === undefined) return false;

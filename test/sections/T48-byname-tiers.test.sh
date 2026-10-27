@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:cmd map,gate
 # gos-map:fn bin/lib/map/engine.cjs#fn:runExtractors bin/lib/ops/gate.cjs#fn:cmdGate
-# : byName three-tier resolution
+# byName three-tier resolution
 # A: multi-host loser fully-qualified resolves; bare x ambiguous -> refuses + points at qualified form; B: scan dup_names list; C: self-repo gate assertion + injection turns red
 T48_DIR=""
 

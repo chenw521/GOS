@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd commit,status   # state.json schema is exercised via commit/status
-# : schema layer + writeAtomicJson + state fail-closed validation + legacy migration
+# schema layer + writeAtomicJson + state fail-closed validation + legacy migration
 # Env: GOS (CLI path), TESTBASE (repo root for sandbox), + assert helpers sourced by runner
 T1_DIR=""
 
@@ -60,7 +60,7 @@ json.dump(state, open('.gos/state.json','w'), indent=2)
 PYEOF
 OUT=$(node "$GOS" status 2>&1) || true
 assert_contains "legacy state migrated (no crash)" "Decisions" "$OUT"
-# read-class does NOT persist migration ( : only write-class migrates on disk)
+# read-class does NOT persist migration (only write-class migrates on disk)
 DISK=$(python3 -c "import json; print(json.load(open('.gos/state.json')).get('schema_version'))")
 assert_eq "read-class leaves disk untouched (no rogue write)" "None" "$DISK"
 # write-class persists migration (checkpoint save = unconditional write, no fallback gate)

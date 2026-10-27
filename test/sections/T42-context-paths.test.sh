@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/task/context.cjs#fn:cmdContext bin/lib/task/context.cjs#fn:archiveSlugParts bin/lib/core/state.cjs#fn:ensureTaskDir
 # gos-map:cmd context
-# : context artifact_paths supply + phase-id rules (conflict detection / ts-fallback / 'n' collapse removed)
+# context artifact_paths supply + phase-id rules (conflict detection / ts-fallback / 'n' collapse removed)
 T42_DIR=""
 
 t42_setup() {

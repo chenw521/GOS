@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd gate
-# : cwd guard + concurrent lock + git argv-ization + dispatch table
+# cwd guard + concurrent lock + git argv-ization + dispatch table
 T5_DIR=""
 
 t5_setup() {
@@ -113,7 +113,7 @@ SHELLGIT=$(grep -cE "execSync\(.+git .+-m|execSync\(\`git" "$GOS" || true)
 assert_eq "no shell-assembled git execSync" "0" "$SHELLGIT"
 
 # --- .10 : 'stage' write-lock parity — removed from READ_CMDS only;
-# ternary (:3303 WRITE first) means behavior was already write-class. Static:
+# ternary (3303 WRITE first) means behavior was already write-class. Static:
 # WRITE_CMDS keeps 'stage', READ_CMDS line no longer lists it. Dynamic: a LIVE
 # foreign lock blocks gos stage (write semantics engage the lock path).
 W=$(grep -c "const WRITE_CMDS = new Set(\['init', 'commit', 'archive', 'approve', 'checkpoint', 'config', 'auto', 'stage'," "$GOS_ROOT/bin/lib/nav/registry-consts.cjs" || true)

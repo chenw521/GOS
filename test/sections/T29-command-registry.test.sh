@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd help,_contract
-# : command registry — COMMANDS ↔ switch ↔ docs three-layer consistency + fail-closed demo
+# command registry — COMMANDS ↔ switch ↔ docs three-layer consistency + fail-closed demo
 # Env: GOS (CLI path), TESTBASE (mktemp sandbox), assert helpers exported by runner
 # Discipline: sandbox base is mktemp-derived (never repo root); runner counts rc≠0 as FAIL.
 T29_DIR=""
@@ -78,7 +78,7 @@ node "$GOS" help phase add >/dev/null 2>&1; assert_exit "extra args die (usage)"
 OUT=$(node "$GOS" help '' 2>&1); assert_contains "help '' renders status detail" "full status" "$OUT"
 OUT=$(node "$GOS" help '(no command)' 2>&1); assert_contains "sentinel by name renders status detail" "full status" "$OUT"
 OUT=$(node "$GOS" help PHASE 2>&1); assert_contains "case-insensitive lookup" "Lv4 phase lifecycle" "$OUT"
-# REVIEW-F3: alias routing (spec / ) — alias labels resolve to HOST entries
+# REVIEW-F3: alias routing — alias labels resolve to HOST entries
 OUT=$(node "$GOS" help -h 2>&1); assert_contains "alias -h renders help host detail" "rendered from COMMANDS registry" "$OUT"
 OUT=$(node "$GOS" help --help 2>&1); assert_contains "alias --help renders help host detail" "rendered from COMMANDS registry" "$OUT"
 OUT=$(node "$GOS" help -v 2>&1); assert_contains "alias -v renders flagOnly page" "flag — run" "$OUT"

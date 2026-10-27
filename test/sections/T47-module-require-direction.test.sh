@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:cmd gate,map
 # gos-map:fn bin/lib/ops/gate.cjs#fn:cmdGate
-# : require-direction assertion — allowlist CODE-ized defense line
+# require-direction assertion — allowlist CODE-ized defense line
 # Single source of truth consumed: .gos/codebase/require-allowlist.json (shared by / /gate)
 # fixture pattern follows : sandbox git init -> real scan -> inject edge -> self_sha256 re-sign
 T47_DIR=""

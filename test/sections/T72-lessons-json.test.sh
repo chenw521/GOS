@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd lessons
-# : lessons-json formal suite
+# lessons-json formal suite
 # Cases: five invariants / preserved-id mutation / shape injection / promotion
 # lineage / salt collision / prefix ambiguity / concurrent mutation lock / regen
 # survival / display-load degrade / fresh-clone anchor-rebuild / downgrade

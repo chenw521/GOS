@@ -31,7 +31,7 @@ function cmdContext(args) {
     completed_stages: state.completed_stages,
     read_files: [], produce: '', gates: [],
   };
- // Phase W ( , ): artifact_paths supply — agents consume, never invent.
+ // Phase W: artifact_paths supply — agents consume, never invent.
   // core.ensureTaskDir owns id resolution + conflict guard + mkdir(fail-fast).
   {
     const { tid, dir } = core.ensureTaskDir(state);
@@ -75,7 +75,7 @@ function cmdContext(args) {
       out.untrusted_note = core.CONTRACTS.semantic_checks.untrustedNote; // B-16 frozen header line (REVIEW #9: from table)
       out.untrusted_files = [globalLessons];
     }
- // : attribution note (counts + source paths + expiry) rides read_files
+ // attribution note (counts + source paths + expiry) rides read_files
     // display-load only, a bad store degrades to a note, never an error
     {
       const attr = knowledge.lessonsAttribution();
@@ -137,7 +137,7 @@ function cmdContext(args) {
     out.gates = ['all tasks done + tests pass'];
   } else if (stage === 'REVIEW') {
     out.read_files = [];
- // + : REVIEW also consumes the curated concerns (read/prune routing
+ // + REVIEW also consumes the curated concerns (read/prune routing
     // lives in skills/gos-review; here: non-empty file joins read set).
     const concernsFileR = path.join(core.GOS_DIR, 'concerns.md');
     if (fs.existsSync(concernsFileR) && knowledge.concernsEntryLines(fs.readFileSync(concernsFileR, 'utf8')).length > 0) {

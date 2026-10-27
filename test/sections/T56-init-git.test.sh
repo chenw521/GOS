@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:cmd init
 # gos-map:fn bin/lib/task/init.cjs#fn:cmdInitGit bin/lib/ops/gitseed.cjs#fn:seed bin/lib/ops/gitseed.cjs#fn:renderSelf bin/lib/ops/gitseed.cjs#fn:askConflict
-# : gos init git seeding command ( ) — verb-first dispatch before
+# gos init git seeding command — verb-first dispatch before
 # level/intent parsing, layered seeding (universal always, node iff package.json),
 # conflict safety (keep by default, .gos-bak on overwrite, symlink refusal,
 # unreadable kept), task-state immunity, --render-self self-render idempotency.

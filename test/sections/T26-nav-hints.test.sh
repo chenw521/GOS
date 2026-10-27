@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd status,next
-# : next/status archived-state navigation + pending phase hints + snapshot coverage
+# next/status archived-state navigation + pending phase hints + snapshot coverage
 #      computation + commit handoff block + phase mark-done
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 T26_DIR=""

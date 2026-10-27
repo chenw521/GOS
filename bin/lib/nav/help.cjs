@@ -20,7 +20,7 @@ function helpEnvelope() {
   return {
     gos_version: ver,
     schema_version: 1,
- // Phase U ( , ): headless dual-mode documented ONLY in machine mode
+ // Phase U: headless dual-mode documented ONLY in machine mode
     // the default human help page never teaches the auto-confirm path.
     headless_mode: {
       signal: 'non-TTY (stdin+stdout) OR env GOS_HEADLESS in {1,true,yes,on}',
@@ -68,7 +68,7 @@ function cmdHelp(args) {
     }
     console.log(`  usage:   ${t.usage}`);
     if (tName === 'init') {
- // : headless dual-mode detail lives HERE (explicit lookup) — never in the default index
+ // headless dual-mode detail lives HERE (explicit lookup) — never in the default index
       console.log('  headless: non-TTY or GOS_HEADLESS∈{1,true,yes,on} → init one-shots confirmed=true (audited in state.intent.confirmation)');
       console.log('  two-step: interactive init creates confirmed=false → user verbal yes → bare `gos init --confirm`');
       // git sub-mode documented at the nav layer (the COMMANDS entry is
@@ -94,7 +94,7 @@ function cmdHelp(args) {
     console.log('');
     console.log(`— ${cls} (${label}) —`);
     const shown = rows.map(([n, e]) => {
- // REVIEW-F2 (spec / ): destructive flags surface INLINE in the index
+ // REVIEW-F2: destructive flags surface INLINE in the index
       const descs = (e.flags || []).filter(f => f.risk === 'destructive');
       let d = e.desc;
       if (descs.length) d += ` ⚠ ${descs.map(f => f.name).join(',')} ${descs[0].scope}: ${descs[0].effect}`;

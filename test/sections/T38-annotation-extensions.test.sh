@@ -2,7 +2,7 @@
 # gos-map:fn bin/lib/ops/gate.cjs#fn:cmdGate bin/lib/map/index.cjs#fn:cmdMap
 # gos-map:cmd gate,map
 # gos-map:contract bidirectional
-# : annotation and edge-family extensions — fully-qualified validation + both sugar + sec_contracts
+# annotation and edge-family extensions — fully-qualified validation + both sugar + sec_contracts
 T38_DIR=""
 
 t38_setup() {

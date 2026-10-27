@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd gate
-# : gate-evidence meta-tests
+# gate-evidence meta-tests
 # Cases: meta grep zero raw string pushes / renderer unit (string injection
 # crashes post-switch) / 3-part block render / adversarial-filename fix lines
 # single-command-safe / --json object-only / spec-gate floor (good card pass,

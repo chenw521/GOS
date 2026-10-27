@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/gate.cjs#fn:cmdGate
 # gos-map:cmd gate
-# : semantic engine + gate semantic minimal command
+# semantic engine + gate semantic minimal command
 # Covers: plan — bidirectional coverage / diff-hit (task_head baseline, CJK NUL)
 #     / allowlist strength+exemptions / closureFn interface slot / degradation banners
 # Env: GOS (CLI path), TESTBASE (isolated base), assert helpers sourced by runner

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd gap,concerns,lessons,decision
-# : language boundary at all three GOS text stores + gap rewrite.
+# language boundary at all three GOS text stores + gap rewrite.
 # Facts asserted:
 #   - boundary trigger = gitprobe.isTracked(<store file>) at EACH store's write
 #     path: tracked state.json + zh decision → exit 1; tracked concerns.md +

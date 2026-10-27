@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd help,changelog
-# : CLI wiring for changelog + init git — registry/help/status surfaces wired
+# CLI wiring for changelog + init git — registry/help/status surfaces wired
 # WITHOUT entering the core set (the core set stays ≤ 10).
 # Facts asserted:
 #   - registry sets: changelog = read-class whole-command; init = write-class

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:file bin/lib/core/gitprobe.cjs
-# : gitprobe fail-closed probe module ( primitive for ).
+# gitprobe fail-closed probe module ( primitive for ).
 # Facts asserted:
 #   - isTracked = ls-files --cached UNION cat-file -e HEAD:<rel>; TOCTOU: a file
 #     `git rm --cached`'d (index gone, HEAD blob alive) stays tracked via the

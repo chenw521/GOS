@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd phase
-# : project.json read/write layer + init anchors
+# project.json read/write layer + init anchors
 T2_DIR=""
 
 t2_setup() {

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/setup.cjs#fn:cmdSetupCommitlint
 # gos-map:cmd setup
-# : gos setup --commitlint hook
+# gos setup --commitlint hook
 # Cases: A=install basics + non-git guard  B=enforcement (bad/good msg via real npx)
 #        C=npx-missing skip  D=teardown/restore/idempotency
 #        E=gos-root layout uses master config via --config

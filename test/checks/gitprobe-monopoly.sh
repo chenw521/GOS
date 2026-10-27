@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# gitprobe-monopoly — primitive monopoly check ( , ).
+# gitprobe-monopoly — primitive monopoly check.
 #
 # bin/lib/core/gitprobe.cjs is the single fail-closed git-probing primitive.
 # No other module under bin/lib may shell out to the probe-family git options

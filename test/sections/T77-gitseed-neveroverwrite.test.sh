@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/gitseed.cjs#fn:seed
 # gos-map:cmd init
-# : gitseed seed() engine upgrade ( neverOverwrite, atomic
+# gitseed seed() engine upgrade ( neverOverwrite, atomic
 # writes, brownfield prerequisite) — three changes with `init git`
 # output bytes pinned unchanged: (1) neverOverwrite array opt, a listed
 # conflicting dest is ALWAYS kept and doOverwrite is never consulted for it;

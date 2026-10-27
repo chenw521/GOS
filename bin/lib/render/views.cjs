@@ -65,9 +65,9 @@ const RENDERED_HEADER = core.CONTRACTS.command_contracts.generatedHeader;
 // escape hatch: only GOS_TEST_SANDBOX=<abs path> whose realpath strictly equals the
 // project root activates GOS_SKIP_SEMANTIC=1. Bare skip in production → hard refusal.
 
-// : does an archive dir exist for today's base slug (exact, or -2/-3 collision suffix)?
+// does an archive dir exist for today's base slug (exact, or -2/-3 collision suffix)?
 
-// Phase C ( , ): help — three modes, ALL rendered from COMMANDS registry
+// Phase C: help — three modes, ALL rendered from COMMANDS registry
 // (hand-written lists forbidden; -4/5 assert derivation).
 //   gos help            human-readable, grouped by class (row grammar below)
 //   gos help <cmd>      per-command detail page (alias resolution → host entry)
@@ -85,7 +85,7 @@ const RENDERED_HEADER = core.CONTRACTS.command_contracts.generatedHeader;
 // → archive (merges back into project.json, marks done) → repeat → milestone reset.
 
 // ---------- Phase B : lessons command family — dual-file + sidecar anchors + audit chain
-// + . [model]→~/.config/gos/lessons.md (os.homedir() joined,
+// [model]→~/.config/gos/lessons.md (os.homedir() joined,
 // never literal ~), [project]→.gos/lessons.md. Anchors: per-file sidecar json
 // {hashes[16hex], chain_head, audit[]} — NOT in state.json ( symmetric, cross-repo global).
 
@@ -95,7 +95,7 @@ const RENDERED_HEADER = core.CONTRACTS.command_contracts.generatedHeader;
 // validator (validateEvidenceObject, single consumption point) + manual:true;
 
 const MANUAL_MARKER = core.CONTRACTS.command_contracts.manualMarker;
-// : backups are machine-local cache under .gos/cache/render-backup
+// backups are machine-local cache under .gos/cache/render-backup
 // full history (no rotation), 14d rolling expiry swept on render entry.
 const RENDER_BACKUP_DIR = core.resolvePath('render_backup');
 const LEGACY_RENDER_BACKUP_DIR = path.join(core.ARCHIVE_DIR, 'render-backup');
@@ -264,7 +264,7 @@ function syncManifestManualFlags(prevStripped) {
   if (drifted) core.writeAtomicJson(MANIFEST_PATH, mf);
 }
 
-// : a killed render leaves .tmp<pid> temps behind; dead-pid ones are
+// a killed render leaves .tmp<pid> temps behind; dead-pid ones are
 // swept at the render entry, live-pid ones are somebody's in-flight write and stay.
 function sweepOrphanTemps() {
   const zones = [
@@ -376,7 +376,7 @@ function backupRenderedViews(names) {
   const dest = path.join(RENDER_BACKUP_DIR, ts);
   fs.mkdirSync(dest, { recursive: true });
   for (const n of names) fs.copyFileSync(path.join(core.PROJECT_DIR, n), path.join(dest, n));
- // : full history — no rotation here; the 14d sweep rides the render entry.
+ // full history — no rotation here; the 14d sweep rides the render entry.
 }
 
 function renderProjectViews(project, opts = {}) {
@@ -385,7 +385,7 @@ function renderProjectViews(project, opts = {}) {
   const force = !!opts.force;
   const auto = !!opts.auto; // mutation-driven: diff-skip + refusal carries the auto prefix
   fs.mkdirSync(core.PROJECT_DIR, { recursive: true });
- // : migration + expiry sweep ride the render entry (not a separate command).
+ // migration + expiry sweep ride the render entry (not a separate command).
   migrateLegacyRenderBackup();
   sweepRenderBackups();
   sweepOrphanTemps();
@@ -398,7 +398,7 @@ function renderProjectViews(project, opts = {}) {
   }
   const names = VIEW_NAMES;
   // Phase V [R1-F8]: self-describing footer — generated views carry write-time snapshot
- // semantics (residual rows keep their last-written status forever, ); point readers
+ // semantics (residual rows keep their last-written status forever); point readers
   // at the live merged views so a frozen 'active' row never misleads again.
   const snapshotFooter = `\n<!-- generated at ${new Date().toISOString()} after phase ${p.last_archived_phase || '(milestone reset)'} — row status is a write-time snapshot, not a live lifecycle; live merged view: gos decision list --all / gos requirement list --all -->`;
   const bodies = {
@@ -413,7 +413,7 @@ function renderProjectViews(project, opts = {}) {
     prev[n] = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : null;
     prevStripped[n] = prev[n] === null ? null : stripViewBody(prev[n]);
   }
- // : diff on footer-free stripped bodies — a no-change mutation
+ // diff on footer-free stripped bodies — a no-change mutation
   // writes nothing at all (footer timestamp only advances when body content
   // changed; no backup churn). Explicit `gos render` (and archive renders)
   // stay write-through renders.
@@ -421,7 +421,7 @@ function renderProjectViews(project, opts = {}) {
     syncManifestManualFlags(prevStripped);
     return { rendered: [], skipped: true };
   }
- // : backup AFTER the diff decision — a no-change render never
+ // backup AFTER the diff decision — a no-change render never
   // churns the backup history. Partial view sets back up what EXISTS: an
   // all-or-nothing gate would leave a handwritten sibling view unbacked and
   // silently destroyed by the first render (review #5).

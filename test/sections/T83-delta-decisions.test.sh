@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/task/archive.cjs#fn:specDecisionTitles
 # gos-map:cmd archive
-# : delta.md decision rendering — decision-less states (Lv1/2) extract
+# delta.md decision rendering — decision-less states (Lv1/2) extract
 # decision titles from the archived spec.md instead of printing the false
 # vacancy "Decisions: none"; states that DO carry decisions render unchanged.
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd map
-# : map scan E2E — four-language fixture golden set + symlink/binary/huge skips + probe +
+# map scan E2E — four-language fixture golden set + symlink/binary/huge skips + probe +
 #     triple fail-closed + CRLF normalization + unborn/null texts + help/Next + concurrency smoke
 # Covers: full green requires the (map closure) consumer in place
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner

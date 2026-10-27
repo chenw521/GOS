@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd lessons
-# : lessons JSON truth store + command family (P15 wave 1 rewrite)
+# lessons JSON truth store + command family (P15 wave 1 rewrite)
 # Covers: five invariants, migrate state machine, add/rm/amend/list/prune/
 #         skip/anchor-rebuild/migrate, canary injection, promotion lineage
 # Env: GOS (CLI path), TESTBASE (isolated base), assert helpers sourced by runner

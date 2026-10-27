@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd truth
-# : truth command family — add continuous numbering + manual verify + --replay execution + receipts + manualWarning
+# truth command family — add continuous numbering + manual verify + --replay execution + receipts + manualWarning
 # Covers: input constraint table, synthetic exit-code lines not counted as hits, canary injection
 # Env: GOS (CLI path), TESTBASE (isolated base), assert helpers sourced by runner
 T16_DIR=""

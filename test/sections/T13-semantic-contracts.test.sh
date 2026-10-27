@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/gate.cjs#fn:cmdGate bin/lib/map/contract.cjs#fn:cmdContract
 # gos-map:cmd gate,_contract
-# : CONTRACTS.semantic_checks contract layer + input constraint helpers + table-driven downgrade banner (existing subcommands)
+# CONTRACTS.semantic_checks contract layer + input constraint helpers + table-driven downgrade banner (existing subcommands)
 # Env: GOS (CLI path), TESTBASE (isolated base), assert helpers sourced by runner
 T13_DIR=""
 

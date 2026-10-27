@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd setup,status,gate,lessons
-# : i18n zh lint + goldens + locale invariants
+# i18n zh lint + goldens + locale invariants
 # Cases: zh command-token lint against CLI registry / goldens per surface family
 # (gate FAIL, status Next, setup prompt) run under en + zh-CN / locale-invariant
 # fields byte-equal across locales / normalization edges / unknown-locale

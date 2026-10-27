@@ -108,7 +108,7 @@ function cmdDoctor() {
   // only checked when a lock file actually exists in this repo (avoids noise in fresh clones)
   const repoRoot = (() => { try { return execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8', stdio: ['ignore','pipe','ignore'] }).trim(); } catch { return null; } })();
   if (repoRoot && fs.existsSync(path.join(repoRoot, '.gos', '.lock'))) {
- // ( , ): the ignore verdict goes through gitprobe's
+ // the ignore verdict goes through gitprobe's
     // ignoredSet() (its truth source collapses covered directories to a
     // single trailing-slash entry, so a wholesale `.gos/` rule counts too —
     // the same recursive verdict the retired one-shot probe gave). Any git
@@ -123,7 +123,7 @@ function cmdDoctor() {
   }
  // [0b] : lessons sidecar must be in git index once it exists (tracked → deletable/recoverable)
   if (repoRoot && fs.existsSync(path.join(repoRoot, '.gos', core.GOS_PATHS.lessons_anchors.rel))) {
- // ( , ): trackedness goes through gitprobe's isTracked
+ // trackedness goes through gitprobe's isTracked
     // (index UNION HEAD blob). Fail-closed: any git failure reports tracked —
     // strictly more conservative than the old one-shot probe's catch → false.
     const inIndex = core.isTracked('.gos/cache/.lessons-anchors.json');
@@ -219,7 +219,7 @@ function cmdDoctor() {
     console.log('   built-in cleanup/security still run at ship stage)');
   }
 
- // Summary ( : explicit machine-readable verdict)
+ // Summary (explicit machine-readable verdict)
   console.log('');
   if (guardFailed) {
     console.error('✗ internal error: a fix directive failed the safety whitelist and was suppressed.');

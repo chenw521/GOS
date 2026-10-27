@@ -1,4 +1,4 @@
-# Triage gate ( / ): every issue must carry a `bug` or
+# Triage gate: every issue must carry a `bug` or
 # `enhancement` type label (the .github/ISSUE_TEMPLATE forms attach one
 # automatically and the blank form is disabled, so the web channel is
 # already constrained). This workflow is the fail-closed backstop for the

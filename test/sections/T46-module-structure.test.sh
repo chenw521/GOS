@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:cmd gate,map
 # gos-map:fn bin/gos.cjs#fn:main bin/lib/ops/gate.cjs#fn:cmdGate bin/lib/map/index.cjs#fn:cmdMap bin/lib/core/fsio.cjs#fn:die bin/lib/knowledge/lessons.cjs#fn:cmdLessons
-# : module structure guard — twelve contracts on the split module layout
+# module structure guard — twelve contracts on the split module layout
 # Data source: independent acorn/grep scan, deps.json must not be consumed;
 # acorn require pins to the repo root.
 # Expected values are in-section literals (spec + aspect-rosters.json) — keep

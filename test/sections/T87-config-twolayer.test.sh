@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/config.cjs#fn:loadConfig bin/lib/ops/config.cjs#fn:saveConfig bin/lib/knowledge/lessons-json.cjs#fn:migrateLegacy
 # gos-map:cmd config,resolve-model,lessons
-# : config two-layer system + sentinel deletion + genesis guards (P1 , )
+# config two-layer system + sentinel deletion + genesis guards (P1 )
 # Covers: global-base/project-overlay merge precedence, models deep-merge,
 #         corrupt-layer quarantine+die, missing-global empty base, saveConfig-only
 #         one-time lessons_migrated strip (loadConfig never writes), layer-separating

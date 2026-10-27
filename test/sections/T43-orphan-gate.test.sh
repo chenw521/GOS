@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/ops/gate.cjs#fn:cmdGate bin/lib/ops/doctor.cjs#fn:detectOrphans
 # gos-map:cmd gate
-# : gate orphan detection (advisory frozen text / --strict escalation / exempt set) + README regen hard check
+# gate orphan detection (advisory frozen text / --strict escalation / exempt set) + README regen hard check
 T43_DIR=""
 
 t43_setup() {

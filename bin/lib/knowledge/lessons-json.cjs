@@ -1,6 +1,6 @@
 // knowledge/lessons-json.cjs — lessons JSON truth store.
 // Canonical serialization + entry id engine (pure — spec normative).
-// Truth store + derived sidecar + five invariants (spec ).
+// Truth store + derived sidecar + five invariants.
 'use strict';
 
 const fs = require('node:fs');
@@ -71,7 +71,7 @@ function sha16Of(entry) {
 }
 
 // Mint a v2-canonical id, asserting global uniqueness via the caller-supplied
-// membership test. Collision → ordinal salt field + rehash ( : salt joins the
+// membership test. Collision → ordinal salt field + rehash (salt joins the
 // canonical string, so salted ids recompute stably; same-text-different-id is
 // intended semantics). Returns { id, salt } — salt null when unsalted.
 // [T5/D-17] mint is the sole new-payload chokepoint shared by add + amend

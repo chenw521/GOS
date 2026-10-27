@@ -1,5 +1,5 @@
 // ops/brownfield-probe — pure classification probes for `gos brownfield`
-// ( , ). Read-only by contract: every function classifies and
+// Read-only by contract: every function classifies and
 // returns; none writes, prompts, stages, or repairs. Consumed by
 // ops/brownfield.cjs to build the adopt report; side-effect freedom is
 // what lets --json run against a dirty tree without touching it.
@@ -114,7 +114,7 @@ function hookOwnership(file, masterPath) {
 }
 
 // Detect commitlint config at <top> over commitlint's REAL resolution set
-// : the rc family and the commitlint.config family, each stat'ed
+// the rc family and the commitlint.config family, each stat'ed
 // following filesystem case behavior (candidates come from the setup.cjs
 // COMMITLINT_* consts so the strings live in one place), plus package.json
 // through its 'commitlint' key (parsed presence; a corrupt or absent

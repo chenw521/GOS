@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd map,gate
-# : fn-level drill-down — acorn lazy require + schema v3 + callgraph/testof_fn extractors
+# fn-level drill-down — acorn lazy require + schema v3 + callgraph/testof_fn extractors
 # Env: GOS (CLI path), TESTBASE (repo root for sandbox), + assert helpers sourced by runner
 T36_DIR=""
 T36_REPO=""   # live repo root (subject of the lazy/mv experiments)
@@ -187,7 +187,7 @@ T36_CLONE="$TESTBASE/clone6-$RANDOM-t36"
 git clone -q "$T36_REPO" "$T36_CLONE" 2>/dev/null
 ln -s "$T36_REPO/node_modules" "$T36_CLONE/node_modules"
 (cd "$T36_CLONE" && node "$GOS" map scan >/dev/null 2>&1 && git add -A >/dev/null 2>&1 && git -c user.email=t@t -c user.name=t commit -qm annot)
-# gate requires an active task — seed one headlessly ( : GOS_HEADLESS auto-confirms)
+# gate requires an active task — seed one headlessly (GOS_HEADLESS auto-confirms)
 (cd "$T36_CLONE" && node "$GOS" init 1 "codemap-gate-test" >/dev/null 2>&1)
 node -e "
 const fs=require('fs');

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd map,_contract
-# : map contract texts — 17 frozen texts match `gos _contract` output key by key
+# map contract texts — 17 frozen texts match `gos _contract` output key by key
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 T24_DIR=""
 

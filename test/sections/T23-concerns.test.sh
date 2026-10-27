@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd concerns,map
-# : concerns command family — add/list/prune + anchor validation fail-closed + injection rejection +
+# concerns command family — add/list/prune + anchor validation fail-closed + injection rejection +
 #      tracked-missing chain + bootstrap banner + stage back write-back + CRLF normalization + help
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 T23_DIR=""

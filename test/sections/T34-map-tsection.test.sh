@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd map
-# : test-of extractor (⑤) — section header annotations → semantic.testof edges;
+# test-of extractor (⑤) — section header annotations → semantic.testof edges;
 # unannotatedCount soft hint; migration completeness; pure metadata (never eval)
 T34_DIR=""
 

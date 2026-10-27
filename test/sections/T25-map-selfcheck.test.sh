@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd map
-# : golden-set sanity (GOS self-repo) + main-suite regression + static discipline grep
+# golden-set sanity (GOS self-repo) + main-suite regression + static discipline grep
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 T25_DIR=""
 

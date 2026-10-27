@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/task/commit.cjs#fn:cmdCommit bin/lib/nav/status.cjs#fn:cmdStatus
 # gos-map:cmd commit,status
-# : wiring completeness + SHIP ritual gate (legacy instruction strings zeroed / help family / context routing /
+# wiring completeness + SHIP ritual gate (legacy instruction strings zeroed / help family / context routing /
 #      contract round-trip / CHANGELOG.md same-day duty gate: fail-closed + skippable + version-discipline warn)
 # Env: GOS (CLI path), TESTBASE (repo root for sandbox), + assert helpers sourced by runner
 T12_DIR=""

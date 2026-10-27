@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:cmd decision
-# : decision command family (add/amend/cover/list/import)
+# decision command family (add/amend/cover/list/import)
 # Env: GOS (CLI path), TESTBASE (repo root for sandbox), + assert helpers sourced by runner
 T3_DIR=""
 

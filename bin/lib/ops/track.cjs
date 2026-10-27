@@ -1,8 +1,8 @@
 // ops/track — `gos track`: validated atomic ignored→tracked flip. T7a core
-// steps 1-5 of spec ( ) + T7b transaction layer: flip manifest
-// (.gos/track-manifest.json, per-line {ts,path,head} records, ),
+// steps 1-5 of spec + T7b transaction layer: flip manifest
+// (.gos/track-manifest.json, per-line {ts,path,head} records),
 // rename-style backups under .gos/cache/track-backup/ with rollback on ANY
-// mid-transaction failure (ENOSPC-safe: rollback = rename back, ),
+// mid-transaction failure (ENOSPC-safe: rollback = rename back),
 // adopt/no-op bookkeeping for already-tracked targets and the
 // --knowledge preset (guide trio flip + idempotent born-at stamp).
 // Transaction shape: die-before-touch validation (canonical path, no-symlink
@@ -36,7 +36,7 @@ const TRACK_NEVER_ZONES = ['.gos/archive/', '.gos/logs/', '.gos/cache/', '.gos/.
 // manifest-record requirement, which is how the ledger tracks itself.
 const TRACK_NEVER_FILES = ['.gos/.lock', '.gos/track-manifest.json'];
 
-// Flip manifest (spec step 6, ) — tracked NDJSON ledger, one
+// Flip manifest (spec step 6) — tracked NDJSON ledger, one
 // {ts, path, head} record per line (adopt records add "adopted": true).
 // Consumed by the gate flip-reconcile leg and the adopt/no-op resolver.
 const TRACK_MANIFEST_REL = '.gos/track-manifest.json';
@@ -46,12 +46,12 @@ const TRACK_MANIFEST_REL = '.gos/track-manifest.json';
 // on failure) — never a durable artifact.
 const TRACK_BACKUP_REL = '.gos/cache/track-backup';
 
-// Language-boundary trigger stores (spec ): tracked members are
+// Language-boundary trigger stores: tracked members are
 // English-only; the flip pre-scan reports every one of them before any
 // mutation so a repo carrying zh content can never grow its tracked set.
 const TRACK_STORES = ['.gos/state.json', '.gos/concerns.md', '.gos/lessons.json'];
 
-// --knowledge preset trio (spec ): guide files that travel with clones.
+// --knowledge preset trio: guide files that travel with clones.
 const KNOWLEDGE_TRIO = ['.gos/codebase/structure.md', '.gos/codebase/conventions.md', '.gos/codebase/concerns.md'];
 
 // TEST-ONLY fault injection (mirrors GOS_TEST_BREAK_SHIP in task/archive.cjs):
@@ -118,7 +118,7 @@ function validateTrackTarget(raw, opts) {
   // NOT-tracked precondition (index ∪ HEAD, fail-closed via gitprobe): T7b
   // diverts tracked targets to adopt/no-op bookkeeping — a manifest record
   // present ∧ census consistent → verified no-op; legacy-tracked without a
- // record → adopt; census contradiction → die (spec step 1, ).
+ // record → adopt; census contradiction → die (spec step 1).
   const alreadyTracked = core.isTracked(abs);
   if (alreadyTracked && !(opts && opts.allowTracked)) core.die(core.t('track.err.tracked', { path: real }));
   // case-insensitive collision guard: a differently-cased twin on disk would
@@ -370,7 +370,7 @@ function runAdoptOrNoop(ctx) {
   }
 }
 
-// Born-at stamp (spec --knowledge, ): first line `born-at: <HEAD8>`,
+// Born-at stamp (spec --knowledge): first line `born-at: <HEAD8>`,
 // idempotent replace — an identical existing line writes nothing (no-op
 // purity), a differing born-at line is replaced, anything else is prepended.
 // Returns true when bytes changed.
@@ -507,7 +507,7 @@ function performFlip(ctx, opts) {
   return result;
 }
 
-// --knowledge preset (spec ): flip the guide trio under .gos/codebase/ +
+// --knowledge preset: flip the guide trio under .gos/codebase/ +
 // stamp `born-at: <HEAD[0:8]>` first-line (idempotent replace). Requires all
 // three files (die-before-touch); tracked members run adopt/no-op bookkeeping
 // with an idempotent re-stamp.

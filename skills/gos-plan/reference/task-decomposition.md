@@ -37,19 +37,20 @@ Best when: technical approach is unproven.
 
 <Good>
 ```
- : Create User model + password hashing ( , )
+ Tn: Create User model + password hashing
   Files: src/models/User.ts, src/models/User.test.ts
   Read first: src/models/Base.ts
   Done when: grep "bcrypt" src/models/User.ts AND 4 tests pass
   Wave: 1
 
- : Create DB migration for users table
+ Tn: Create DB migration for users table
   Files: migrations/001_users.sql
   Read first: existing migrations in migrations/
   Done when: migration runs clean on empty DB
 
+ Tn: Token service — issue and verify signed tokens
   Files: src/services/AuthService.ts, src/services/AuthService.test.ts
- Read first: src/models/User.ts (from )
+  Read first: src/models/User.ts (from Tn)
   Done when: generateToken + verifyToken work, 5 tests pass
 ```
 Each task: focused, specific files, clear done-when, dependencies mapped.

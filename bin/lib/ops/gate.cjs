@@ -546,7 +546,7 @@ function semanticChecks(opts = {}) {
   }
 
   // ③ artifact existence (semantic view): verified truths' evidence.artifact_path
- // must exist on disk at gate time — gate truths keeps its own branch ( / ).
+ // must exist on disk at gate time — gate truths keeps its own branch.
   const missing = [];
   let artCount = 0;
   for (const t of (state.observable_truths || [])) {
@@ -870,7 +870,7 @@ function cmdGate(args) {
       if (untestedCmdFns.length) console.log(`⚠ codemap: ${untestedCmdFns.length} cmd-entry fn(s) without any gos-map:fn annotation — cmd-level drill-down relies on annotations: [${untestedCmdFns.slice(0, 8).join(', ')}${untestedCmdFns.length > 8 ? ', …' : ''}]`);
       else console.log('✓ codemap: all cmd-entry fns annotated');
  // ---- DI-5: fn test-coverage report (advisory; full list on disk)
- // : byproduct renamed unmapped-fns.txt — the list is "callgraph fns the
+ // byproduct renamed unmapped-fns.txt — the list is "callgraph fns the
       // test-annotation map does not cover", i.e. unmapped, not "untested".
       const cgFns = new Set();
       for (const e of (sem.callgraph || [])) { cgFns.add(`${e.file}#fn:${e.from}`); cgFns.add(`${e.file}#fn:${e.to}`); }
@@ -1046,7 +1046,7 @@ function cmdGate(args) {
     }
   }
 
- // ---- Phase W ( , ): orphan detection + README regen guard
+ // ---- Phase W: orphan detection + README regen guard
   // advisory by default (BUILD-in-progress transient files never fail the gate);
   // --strict escalates orphans to FAIL (CI / one-shot audit semantics).
   const strictMode = args.includes('--strict');
