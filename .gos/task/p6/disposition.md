@@ -1462,22 +1462,22 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 65 | B | D-01 | A | strip anchor, keep the WHAT |
 | 90 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 100 | A | [B-2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
-| 105 | B | Wave 1 | B | delete lineage-only line, ids ride the ledger |
-| 107 | B | T1 | B | delete lineage-only line, ids ride the ledger |
+| 105 | B | Wave 1 | D | plan-format fixture data: pin, never sweep |
+| 107 | B | T1 | D | plan-format heredoc fixture data: pin, never sweep |
 | 134 | A | [B-1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
-| 143 | B | Wave 1 | B | delete lineage-only line, ids ride the ledger |
-| 145 | B | T1 | B | delete lineage-only line, ids ride the ledger |
-| 158 | B | Wave 1 | B | delete lineage-only line, ids ride the ledger |
-| 160 | B | T1 | B | delete lineage-only line, ids ride the ledger |
+| 143 | B | Wave 1 | D | plan-format fixture data: pin, never sweep |
+| 145 | B | T1 | D | plan-format heredoc fixture data: pin, never sweep |
+| 158 | B | Wave 1 | D | plan-format fixture data: pin, never sweep |
+| 160 | B | T1 | D | plan-format heredoc fixture data: pin, never sweep |
 | 182 | A | [B-2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
-| 188 | B | Wave 1 | B | delete lineage-only line, ids ride the ledger |
-| 190 | B | T1 | B | delete lineage-only line, ids ride the ledger |
-| 194 | B | T1 | B | delete lineage-only line, ids ride the ledger |
-| 222 | B | Wave 1 | B | delete lineage-only line, ids ride the ledger |
+| 188 | B | Wave 1 | D | plan-format fixture data: pin, never sweep |
+| 190 | B | T1 | D | plan-format heredoc fixture data: pin, never sweep |
+| 194 | B | T1 | D | plan-format heredoc fixture data: pin, never sweep |
+| 222 | B | Wave 1 | D | plan-format fixture data: pin, never sweep |
 | 240 | A | [D-3 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 285 | A | [F1 | D | string-context audit: rewrite anchor-free or pin frozen-string |
-| 299 | B | Wave 1 | B | delete lineage-only line, ids ride the ledger |
-| 301 | B | T1 | B | delete lineage-only line, ids ride the ledger |
+| 299 | B | Wave 1 | D | plan-format fixture data: pin, never sweep |
+| 301 | B | T1 | D | plan-format heredoc fixture data: pin, never sweep |
 | 338 | A | [R4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 
 ### test/sections/T15-lessons.test.sh (29 hit(s))
@@ -1549,19 +1549,19 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 10 | A | [Phase W T5 | A | strip anchor, keep the WHAT |
 | 10 | B | T5 | A | strip anchor, keep the WHAT |
 | 21 | B | D-01 | A | strip anchor, keep the WHAT |
-| 29 | B | D-01 | B | delete lineage-only line, ids ride the ledger |
-| 42 | B | Wave 1 | B | delete lineage-only line, ids ride the ledger |
-| 44 | B | T1 | B | delete lineage-only line, ids ride the ledger |
+| 29 | B | D-01 | D | plan-format heredoc fixture data: pin, never sweep |
+| 42 | B | Wave 1 | D | plan-format fixture data: pin, never sweep |
+| 44 | B | T1 | D | plan-format heredoc fixture data: pin, never sweep |
 | 55 | A | [B-2 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 57 | B | D-99 | A | strip anchor, keep the WHAT |
 | 64 | B | D-02 | A | strip anchor, keep the WHAT |
 | 73 | B | R-99 | A | strip anchor, keep the WHAT |
 | 112 | A | [B-4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 139 | B | T2 | A | strip anchor, keep the WHAT |
-| 149 | B | Wave 1 | B | delete lineage-only line, ids ride the ledger |
-| 151 | B | T1 | B | delete lineage-only line, ids ride the ledger |
-| 178 | B | Wave 1 | B | delete lineage-only line, ids ride the ledger |
-| 180 | B | T1 | B | delete lineage-only line, ids ride the ledger |
+| 149 | B | Wave 1 | D | plan-format fixture data: pin, never sweep |
+| 151 | B | T1 | D | plan-format heredoc fixture data: pin, never sweep |
+| 178 | B | Wave 1 | D | plan-format fixture data: pin, never sweep |
+| 180 | B | T1 | D | plan-format heredoc fixture data: pin, never sweep |
 | 189 | A | [B-5 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 221 | B | T2 | A | strip anchor, keep the WHAT |
 | 233 | A | [B-4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
@@ -1589,8 +1589,8 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 146 | B | T18 | A | strip anchor, keep the WHAT |
 | 156 | A | [R4 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 156 | B | T18 | A | strip anchor, keep the WHAT |
-| 163 | B | Wave 1 | B | delete lineage-only line, ids ride the ledger |
-| 164 | B | T1 | B | delete lineage-only line, ids ride the ledger |
+| 163 | B | Wave 1 | D | plan-format fixture data: pin, never sweep |
+| 164 | B | T1 | D | plan-format heredoc fixture data: pin, never sweep |
 
 ### test/sections/T19-mounting.test.sh (31 hit(s))
 
@@ -1686,9 +1686,9 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 8 | A | [Phase W T5 | A | strip anchor, keep the WHAT |
 | 8 | B | T5 | A | strip anchor, keep the WHAT |
 | 19 | B | T1 | A | strip anchor, keep the WHAT |
-| 26 | B | D-01 | B | delete lineage-only line, ids ride the ledger |
-| 39 | B | Wave 1 | B | delete lineage-only line, ids ride the ledger |
-| 41 | B | T1 | B | delete lineage-only line, ids ride the ledger |
+| 26 | B | D-01 | D | plan-format heredoc fixture data: pin, never sweep |
+| 39 | B | Wave 1 | D | plan-format fixture data: pin, never sweep |
+| 41 | B | T1 | D | plan-format heredoc fixture data: pin, never sweep |
 | 62 | B | T22 | A | strip anchor, keep the WHAT |
 | 73 | B | T22 | A | strip anchor, keep the WHAT |
 | 86 | B | T22 | A | strip anchor, keep the WHAT |
@@ -1861,7 +1861,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 97 | B | T31 | A | strip anchor, keep the WHAT |
 | 105 | B | T31 | A | strip anchor, keep the WHAT |
 | 119 | B | T22 | B | delete lineage-only line, ids ride the ledger |
-| 125 | B | D-01 | B | delete lineage-only line, ids ride the ledger |
+| 125 | B | D-01 | D | plan-format heredoc fixture data: pin, never sweep |
 
 ### test/sections/T32-map-render.test.sh (11 hit(s))
 
@@ -1888,7 +1888,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 6 | A | [Phase W T5 | A | strip anchor, keep the WHAT |
 | 6 | B | T5 | A | strip anchor, keep the WHAT |
 | 25 | B | T22 | B | delete lineage-only line, ids ride the ledger |
-| 31 | B | D-01 | B | delete lineage-only line, ids ride the ledger |
+| 31 | B | D-01 | D | plan-format heredoc fixture data: pin, never sweep |
 | 45 | A | §3 | A | strip anchor, keep the WHAT |
 | 60 | B | T33 | A | strip anchor, keep the WHAT |
 | 67 | B | T33 | A | strip anchor, keep the WHAT |
@@ -2018,8 +2018,8 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 161 | B | T6 | A | strip anchor, keep the WHAT |
 | 168 | B | T7 | A | strip anchor, keep the WHAT |
 | 182 | B | T10 | A | strip anchor, keep the WHAT |
-| 188 | B | Wave 1 | B | delete lineage-only line, ids ride the ledger |
-| 190 | B | T1 | B | delete lineage-only line, ids ride the ledger |
+| 188 | B | Wave 1 | D | plan-format fixture data: pin, never sweep |
+| 190 | B | T1 | D | plan-format heredoc fixture data: pin, never sweep |
 | 201 | B | T7 | A | strip anchor, keep the WHAT |
 | 206 | B | T9 | A | strip anchor, keep the WHAT |
 | 223 | B | T11 | A | strip anchor, keep the WHAT |
@@ -2394,7 +2394,7 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 69 | B | T73 | A | strip anchor, keep the WHAT |
 | 91 | B | T73 | A | strip anchor, keep the WHAT |
 | 97 | B | T73 | A | strip anchor, keep the WHAT |
-| 104 | B | D-01 | B | delete lineage-only line, ids ride the ledger |
+| 104 | B | D-01 | D | plan-format heredoc fixture data: pin, never sweep |
 
 ### test/sections/T74-i18n.test.sh (13 hit(s))
 
@@ -2430,8 +2430,8 @@ count allowed at sweep time) · 5 product docs, hooks, scripts and skills.
 | 107 | A | t75-p0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 110 | A | t75-p0 | D | string-context audit: rewrite anchor-free or pin frozen-string |
 | 120 | B | T75 | A | strip anchor, keep the WHAT |
-| 125 | B | Wave 1 | B | delete lineage-only line, ids ride the ledger |
-| 126 | B | T1 | B | delete lineage-only line, ids ride the ledger |
+| 125 | B | Wave 1 | D | plan-format fixture data: pin, never sweep |
+| 126 | B | T1 | D | plan-format heredoc fixture data: pin, never sweep |
 | 141 | B | T75 | A | strip anchor, keep the WHAT |
 | 145 | B | T75 | A | strip anchor, keep the WHAT |
 

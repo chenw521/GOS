@@ -1482,23 +1482,43 @@
         "sha256": "3958a51c8be79c315875db26867accfa8afa4a63e775fe29ff287cdacb937b5e"
       },
       {
-        "line": 133,
+        "line": 134,
         "sha256": "93fc81e9f10c55748c94d9dbab13da58a6b5393c7061a2eca09b637e44705f5a"
       },
       {
-        "line": 179,
+        "line": 160,
+        "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
+      },
+      {
+        "line": 182,
         "sha256": "87c9e469bcc566c5374296bb4ab6ca6cca220187f95e07f1b021fee93ec5ce6b"
       },
       {
-        "line": 235,
+        "line": 190,
+        "sha256": "651f122a1b984500eee72f31511166a8ac303335a52fcf6b6c2a024c94374995"
+      },
+      {
+        "line": 194,
+        "sha256": "cdf567cfa8d89112f184e2ddaa0165ebbd4787cdb86247a162bc62d86c3beb36"
+      },
+      {
+        "line": 240,
         "sha256": "9210bf2e54b81d68141d403315e877e6a615e1d441dad852861f6183cab50623"
       },
       {
-        "line": 280,
+        "line": 285,
         "sha256": "4a24d7d9f6a2c857b4a1153847f05cff5dc7fac98dca274fe43f33c9f64f8a40"
       },
       {
-        "line": 332,
+        "line": 299,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 301,
+        "sha256": "75e400981ec3a19b30b4117faf55c91bc1ffe7d757af122866261694d114f6b0"
+      },
+      {
+        "line": 338,
         "sha256": "c3279c86a04c48b98deef6ab60f51abc6706263f71ea3c828f9c574d837f160c"
       }
     ]
@@ -1589,23 +1609,35 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 53,
+        "line": 29,
+        "sha256": "afbccda2005c7a6c297e7bd36565f14fcda065ba56d21f4361952b36021c776a"
+      },
+      {
+        "line": 55,
         "sha256": "1ff9a18610a4701e813ee2068d5b82a6b00e5ca05d4785788e364e7037764ff8"
       },
       {
-        "line": 110,
+        "line": 112,
         "sha256": "d61bb81cdf0d4b5198987fd719e58ec3c419fbe4be1ca61a678bed85673edf82"
       },
       {
-        "line": 185,
+        "line": 178,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 180,
+        "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
+      },
+      {
+        "line": 189,
         "sha256": "fd1afa9b4d5881726aaacac914c83aa001d62fbd7b03d01eb2bcea12ae8df503"
       },
       {
-        "line": 229,
+        "line": 233,
         "sha256": "4031955c8d283e0ff3f2551e360ab8a87b3199fb787c0fe4cbf123d00bc0f910"
       },
       {
-        "line": 247,
+        "line": 251,
         "sha256": "d2638c91e6862c54b75745b678fc46a034fa20f2d3ce42a557a810881d402cb7"
       }
     ]
@@ -1648,6 +1680,14 @@
       {
         "line": 155,
         "sha256": "d3ab741c37c3a966457a206cf8b60fd4de4a5b54f52c11d1f881a204de399b3c"
+      },
+      {
+        "line": 162,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 163,
+        "sha256": "ed33828780fc294a4159a3df0cc59474c59bf91eb92553b96200643076447514"
       }
     ]
   },
@@ -1734,6 +1774,25 @@
     "category": "in-flight-sweep",
     "maxHits": 16,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T22-map-gate-impact.test.sh",
+    "category": "frozen-string",
+    "reason": "Plan-format fixture data, contract strings and regex classes quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 26,
+        "sha256": "afbccda2005c7a6c297e7bd36565f14fcda065ba56d21f4361952b36021c776a"
+      },
+      {
+        "line": 39,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 41,
+        "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
+      }
+    ]
   },
   {
     "path": "test/sections/T22-map-gate-impact.test.sh",
@@ -1835,6 +1894,17 @@
   },
   {
     "path": "test/sections/T31-map-gate.test.sh",
+    "category": "frozen-string",
+    "reason": "Plan-format fixture data, contract strings and regex classes quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 123,
+        "sha256": "afbccda2005c7a6c297e7bd36565f14fcda065ba56d21f4361952b36021c776a"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T31-map-gate.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 18,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -1853,6 +1923,10 @@
       {
         "line": 3,
         "sha256": "a73c24297f24fe762b56e3dbbf4c4aec2262e55bd49088cafa1705f919eec112"
+      },
+      {
+        "line": 30,
+        "sha256": "afbccda2005c7a6c297e7bd36565f14fcda065ba56d21f4361952b36021c776a"
       }
     ]
   },
@@ -1926,6 +2000,21 @@
     "category": "in-flight-sweep",
     "maxHits": 10,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T39-render-park.test.sh",
+    "category": "frozen-string",
+    "reason": "Plan-format fixture data, contract strings and regex classes quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 186,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 188,
+        "sha256": "972c2e565b38141a6853f07e5155fc042175df26714cedeb15552a68e1ebf2b5"
+      }
+    ]
   },
   {
     "path": "test/sections/T39-render-park.test.sh",
@@ -2247,6 +2336,17 @@
   },
   {
     "path": "test/sections/T73-gate-evidence.test.sh",
+    "category": "frozen-string",
+    "reason": "Plan-format fixture data, contract strings and regex classes quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 104,
+        "sha256": "2afd042dababe4a9a05cf7845d2975b7302b3069d6404dbb053c26002c1819c7"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T73-gate-evidence.test.sh",
     "category": "in-flight-sweep",
     "maxHits": 8,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -2284,6 +2384,14 @@
       {
         "line": 109,
         "sha256": "b536eac12f0a9e5b5a1064dffe4ca73479ef982a48da5f1de4c995604377fdf5"
+      },
+      {
+        "line": 124,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 125,
+        "sha256": "75e400981ec3a19b30b4117faf55c91bc1ffe7d757af122866261694d114f6b0"
       }
     ]
   },
