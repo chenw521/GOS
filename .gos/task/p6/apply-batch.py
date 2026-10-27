@@ -20,17 +20,18 @@ MARKERS = re.compile(r'^\s*(#|//|/\*|\*|<!--|\*/)?\s*$')
 # The lint records only the first match per tier per line, so a comment
 # line can hold several anchors; the strip runs the lint's own grammar
 # to exhaustion so nothing anchor-shaped survives on a swept line.
+A = re.ASCII
 TIER_A = [
-    re.compile(r'\[[A-Za-z]+(?:[ -][A-Za-z]+)*[ -]?[0-9/]'),
-    re.compile(r'\b[A-Za-z]+\d+-[A-Za-z]+\d+\b'),
-    re.compile(r'§\s*\d'),
+    re.compile(r'\[[A-Za-z]+(?:[ -][A-Za-z]+)*[ -]?[0-9/]', A),
+    re.compile(r'\b[A-Za-z]+\d+-[A-Za-z]+\d+\b', A),
+    re.compile(r'§\s*\d', A),
 ]
 TIER_B = [
-    re.compile(r'\bWave\s+\d+\b'),
-    re.compile(r'\bW\d+\b'),
-    re.compile(r'\bT\d+\b'),
-    re.compile(r'\b(?:D|R|B|F)-\d+\b'),
-    re.compile(r'\bthis\s+(?:phase|wave|task)\s+(?:adds|ships|introduces)\b', re.I),
+    re.compile(r'\bWave\s+\d+\b', A),
+    re.compile(r'\bW\d+\b', A),
+    re.compile(r'\bT\d+\b', A),
+    re.compile(r'\b(?:D|R|B|F)-\d+\b', A),
+    re.compile(r'\bthis\s+(?:phase|wave|task)\s+(?:adds|ships|introduces)\b', re.I | A),
 ]
 
 
@@ -158,7 +159,7 @@ def main():
                 stats['B'] += 1
                 continue
             text = lines[ln - 1]
-            is_comment = bool(re.match(r'^\s*(#|//|/\*|\*|<!--)', text))
+            is_comment = bool(re.match(r'^\s*(#|//|/\*|\*|<!--)', text)) or p.endswith(('.md', '.markdown'))
             if is_comment:
                 text = strip_all_anchors(text)
             elif ' // ' in text:
