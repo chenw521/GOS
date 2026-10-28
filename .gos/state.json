@@ -1,16 +1,27 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "INTENT",
-  "completed_stages": [],
+  "current_stage": "DONE",
+  "completed_stages": [
+    "INTENT",
+    "THINK",
+    "PLAN",
+    "BUILD",
+    "REVIEW",
+    "VERIFY"
+  ],
   "intent": {
     "summary": "Mandatory deep-dig rounds before decision cards, standing deepen option in every card, value-essence column, table rendering contract (message body vs tool picks), thin-gate extension. Re-homes concern cab1a0f8 from P2",
     "confirmed": true
   },
-  "approvals": {},
-  "spec_path": null,
-  "plan_path": null,
+  "approvals": {
+    "THINK": "2026-10-28T06:23:10.758Z",
+    "PLAN": "2026-10-28T06:42:56.560Z",
+    "ARCHIVE": "2026-10-28T12:09:58.055Z"
+  },
+  "spec_path": ".gos/archive/2026-10-28-v1.0.0-dev-phase-p5-mandatory-deep-dig-rounds-befo/task/p5/spec.md",
+  "plan_path": ".gos/archive/2026-10-28-v1.0.0-dev-phase-p5-mandatory-deep-dig-rounds-befo/task/p5/plan.md",
   "project": true,
   "requirements": [
     {
@@ -18,10 +29,166 @@
       "text": "Mandatory deep-dig rounds before decision cards, standing deepen option in every card, value-essence column, table re...",
       "phase": null,
       "level": 3
+    },
+    {
+      "id": "R-45",
+      "text": "Dialogue contract upgrade: 5-column card with Activates, exemplars-as-contract dig, standing deepen line, message-body rendering, plain narration",
+      "phase": "P5: dialogue governance",
+      "status": "active"
+    },
+    {
+      "id": "R-46",
+      "text": "Exemplar file examples/deep-dig-cases.md: 3 curated real cases + read-before-first-card pointer",
+      "phase": "P5: dialogue governance",
+      "status": "active"
+    },
+    {
+      "id": "R-47",
+      "text": "Thin-gate v3: spec_gate_version 3, Activates header floor, locale keys, T73 fixtures incl. v2 grandfather",
+      "phase": "P5: dialogue governance",
+      "status": "active"
+    },
+    {
+      "id": "R-48",
+      "text": "Seeded surfaces: spec-template card scaffold, gos-think SKILL rows, router level-card, anti-rationalization line",
+      "phase": "P5: dialogue governance",
+      "status": "active"
+    },
+    {
+      "id": "R-49",
+      "text": "instructions think and navigator hint point at dig exemplars and blast/closure entry",
+      "phase": "P5: dialogue governance",
+      "status": "active"
     }
   ],
-  "decisions": [],
-  "observable_truths": [],
+  "decisions": [
+    {
+      "id": "D-32",
+      "title": "Deep-dig = teach + shape: battery in protocol, value-essence column carries the dig, gate checks header only",
+      "rationale": "User ruling: activate proactive digging, not gatekeeping. Shape beats process; exemplars beat rules. Five weak-cell controls; recurrence escalates gate.",
+      "birth_phase": "P5: dialogue governance",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-33",
+      "title": "Dig content contract = exemplars-as-contract: 3 real case records + one instruction line; perspectives emerge per domain",
+      "rationale": "User rejected format logistics and labeled checklists; cases demonstrate good digging; two starter questions are a floor, never a stopping point.",
+      "birth_phase": "P5: dialogue governance",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-34",
+      "title": "Standing deepen = card-tail line; rounds exempt from follow-up caps, must surface new facts",
+      "rationale": "Visibility = usage; D-13 relapse was the missing standing port. Response: exemplar-form dig, card re-presented; user-driven, uncapped.",
+      "birth_phase": "P5: dialogue governance",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-35",
+      "title": "Value-essence column header = 'Activates'; symmetric fill, names a consumer, distinct from Pros",
+      "rationale": "Verb header prompts the cell form directly; noun headers invite abstract value talk. Parenthetical anchor keeps traceability. Gate checks header presence only.",
+      "birth_phase": "P5: dialogue governance",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-36",
+      "title": "Cards render in message body, responses free-text; tools only for card-free logistics",
+      "rationale": "Dual consumers re-read history; tool payloads render unreliably; free text carries composite replies (deepen + steer) that menus cannot.",
+      "birth_phase": "P5: dialogue governance",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-37",
+      "title": "Card template merges Cons+Risks into one Cons column; modality carried by wording, 5-column card",
+      "rationale": "No mechanical consumer reads them separately; boundary proved unstable in practice; width pressure after Activates. Exemplars carry modality phrasing; re-split only on real need.",
+      "birth_phase": "P5: dialogue governance",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-38",
+      "title": "Plain language = the reply itself, not an added translation layer; narration contract grounds all jargon",
+      "rationale": "Replies plain by default, no translation artifacts. Bans unexplained proper nouns, uncommon-noun overuse, opaque abbreviations. Caliber: Chinese at middle-school level, English at CET-4.",
+      "birth_phase": "P5: dialogue governance",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-39",
+      "title": "Gate activation: spec_gate_version 2->3; v3 = v2 floor + Activates header; v2 specs keep old floor",
+      "rationale": "Reuses the proven grandfather pattern; single monotonic integer, zero new fields. P5's own spec freezes under v3 — dogfood day one.",
+      "birth_phase": "P5: dialogue governance",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    }
+  ],
+  "observable_truths": [
+    {
+      "id": "T1",
+      "description": "A fresh post-P5 THINK dialogue presents 5-column cards whose Activates cells name concrete consumers",
+      "verified": true,
+      "evidence": {
+        "command": "[\"cat\",\".gos/task/p5/evidence/t1-transcript.md\"]",
+        "output_excerpt": "## Round 1 — card after the disposition dig",
+        "artifact_path": ".gos/archive/2026-10-28-v1.0.0-dev-phase-p5-mandatory-deep-dig-rounds-befo/task/p5/evidence/t1-transcript.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T2",
+      "description": "T73 fixtures prove: v3 spec without Activates header fails gate (spec-gate-card-column), with it passes, v2-stamped spec stays green",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T73\"]",
+        "output_excerpt": "✓ renderer unit: 3-part block + string injection crashes (post-switch) (exit 0)",
+        "artifact_path": "test/sections/T73-gate-evidence.test.sh",
+        "replay": true
+      }
+    },
+    {
+      "id": "T3",
+      "description": "dialogue-protocol.md ships dig contract, deepen line, rendering contract, plain-narration contract; examples/deep-dig-cases.md holds 3 curated real cases",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"-c\",\"grep -c Activates skills/gos-think/reference/dialogue-protocol.md skills/gos-think/examples/deep-dig-cases.md\"]",
+        "output_excerpt": "skills/gos-think/reference/dialogue-protocol.md:4",
+        "artifact_path": "skills/gos-think/examples/deep-dig-cases.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T4",
+      "description": "gos instructions think output shows the exemplar read-before-first-card pointer",
+      "verified": true,
+      "evidence": {
+        "command": "[\"node\",\"bin/gos.cjs\",\"instructions\",\"think\"]",
+        "output_excerpt": "→ One decision per message (Iron Law #2). Max 3 follow-ups per area.",
+        "artifact_path": "bin/lib/nav/status.cjs",
+        "replay": true
+      }
+    }
+  ],
   "gaps": [],
   "phase_name": "P5: dialogue governance",
   "task_head": "8e367dbd2e514974ae402be332f3becfe29b586a",
@@ -31,5 +198,163 @@
       "at": "2026-10-27T10:37:54.359Z",
       "what": "claim"
     }
-  ]
+  ],
+  "spec_sha256": "167a155008fbc8636ba189aee8a86e9afc7695ba1202b61ae847851ccc469605",
+  "spec_gate_version": 2,
+  "plan_snapshot": {
+    "tasks": [
+      {
+        "id": "T1",
+        "covers": [
+          "D-35",
+          "D-39",
+          "R-47"
+        ],
+        "files": [
+          "bin/lib/ops/gate.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs",
+          "test/sections/T73-gate-evidence.test.sh"
+        ]
+      },
+      {
+        "id": "T2",
+        "covers": [
+          "D-39",
+          "R-47"
+        ],
+        "files": [
+          "bin/lib/core/state.cjs",
+          "test/sections/T94-schemav4.test.sh",
+          "test/sections/T1-schema.test.sh"
+        ]
+      },
+      {
+        "id": "T3",
+        "covers": [
+          "D-32",
+          "D-33",
+          "D-34",
+          "D-36",
+          "D-37",
+          "D-38",
+          "R-45"
+        ],
+        "files": [
+          "skills/gos-think/reference/dialogue-protocol.md"
+        ]
+      },
+      {
+        "id": "T4",
+        "covers": [
+          "D-33",
+          "R-46"
+        ],
+        "files": [
+          "skills/gos-think/examples/deep-dig-cases.md",
+          "test/sections/T103-deepdig-exemplars.test.sh"
+        ]
+      },
+      {
+        "id": "T5",
+        "covers": [
+          "D-39",
+          "R-47"
+        ],
+        "files": [
+          "bin/lib/task/commit.cjs",
+          "bin/lib/ops/gate.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ]
+      },
+      {
+        "id": "T7",
+        "covers": [
+          "D-32",
+          "D-35",
+          "D-37",
+          "D-38",
+          "R-48"
+        ],
+        "files": [
+          "skills/gos-think/SKILL.md",
+          "skills/gos-router/SKILL.md",
+          "skills/gos-think/examples/spec-with-redteam.md",
+          "templates/spec-template.md"
+        ]
+      },
+      {
+        "id": "T8",
+        "covers": [
+          "R-49"
+        ],
+        "files": [
+          "bin/lib/nav/status.cjs",
+          "bin/lib/task/context.cjs"
+        ]
+      },
+      {
+        "id": "T9",
+        "covers": [
+          "D-39",
+          "R-47"
+        ],
+        "files": [
+          "test/sections/T17-semantic-engine.test.sh",
+          "test/sections/T22-map-gate-impact.test.sh",
+          "test/sections/T31-map-gate.test.sh",
+          "test/sections/T33-map-manifest.test.sh"
+        ]
+      },
+      {
+        "id": "T10",
+        "covers": [
+          "R-45"
+        ],
+        "files": [
+          "CHANGELOG.md"
+        ]
+      }
+    ],
+    "audit": []
+  },
+  "changelog_user_summary": "Add dialogue governance upgrade: decision cards become 5-column with an Activates column naming the consumer each option turns on, deep-dig exemplars land at skills/gos-think/examples/deep-dig-cases.md with a read-before-first-card pointer in gos instructions think, every card carries a standing deepen line under the new-facts contract, replies follow the plain-narration contract, spec thin-gate v3 adds the spec-gate-card-column and spec-gate-version-unknown failure codes with content-era stamping so in-flight v2 tasks stay unaffected as old specs keep their floor, gos commit think --refreeze recomputes the spec sha without advancing the stage behind a stage-regression-blocked guard, the GOS_SPEC_GATE_FLOOR_OVERRIDE=1 escape stays user-approved only, and the state schema bump to v5 makes older CLIs exit loudly on newer states so a one-time CLI upgrade is required",
+  "semantic": {
+    "allowlist": [
+      "bin/lib/core/lock.cjs",
+      "test/sections/T2-project.test.sh",
+      "test/sections/T46-module-structure.test.sh",
+      "test/sections/T95-repo-id-guard.test.sh"
+    ]
+  },
+  "checkpoints": [],
+  "review_findings": {
+    "phase1_spec_compliance": "PASS - 8/8 decisions evidenced, 5/5 requirements shipped, zero deferred-item creep; lock.cjs guard relaxation judged a legitimate schema-bump consequence",
+    "phase2_code_quality": "13 findings (8 Major, 5 Minor) - all fixed in-review except two accepted deviations",
+    "minors_deferred": [
+      {
+        "issue": "COMMANDS registry lists no flags for commit (--refreeze absent, house precedent also omits --force/--subject); discoverability delivered via 4 other surfaces",
+        "fixed": true
+      },
+      {
+        "issue": "router SKILL inherits plain-narration contract by reference to dialogue-protocol instead of restating it",
+        "fixed": true
+      }
+    ],
+    "fixes_landed": [
+      "fenced example tables excluded from the v3 card scan (false fail/pass)",
+      "card-table detection tightened to any Option-headed 3+ column table with bold/code markup normalization; degenerate logistics-shaped tables can no longer stand in for the card",
+      "commit-side unknown-stamp escape honors GOS_SPEC_GATE_FLOOR_OVERRIDE (dead-end fix text closed)",
+      "commit-side B-22 fix text names commit think --refreeze",
+      "v2/v3 floors share one core (ref scan + card checks parameterized by ownership); cumulativity invariant fixture added",
+      "behavioral fixtures: --refreeze pure-state op, stage-regression-blocked, first-freeze blockOnNone, pre-floor grandfather advisory, fenced/detection cases (T73 57/0)",
+      "T22 stamp assertion now reads state.json spec_gate_version (was string-vacuous)",
+      "above-floor count iterates registry keys and reports failure units honestly",
+      "unknown-domain failure constructed once (gate factory) and rendered via shared renderer",
+      "dead locale fix subfield dropped (en+zh parity intact)",
+      "stale grandfather/--force comments refreshed; exemplar cards carry deepen tail lines; protocol heading rule states prefix anchoring"
+    ]
+  },
+  "completed_at": "2026-10-28T12:09:58.252Z"
 }

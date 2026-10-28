@@ -25,7 +25,7 @@ gos instructions think    # step-by-step guidance for current task
 | Lv2 light confirm | Restate requirement → define 1-3 truths → WAIT for "yes" | — |
 | Lv3+ exploring codebase | Search patterns, conventions, existing utilities | `reference/gray-areas.md` |
 | Identifying gray areas | Generate domain-specific (not generic) → multiSelect to user → WAIT | `reference/gray-areas.md` |
-| Per gray area | One question per message → **decision card contract** (options × premise/pros/cons/risks + why-not: + conditional recommendation) → record D-NN → checkpoint | `reference/dialogue-protocol.md` §Decision Card (mandatory, gate-enforced) |
+| Per gray area | One question per message → **decision card contract** (five columns: Option, Premise, Pros, Cons, Activates — every option fills all five; dig per domain before every card, at minimum *who consumes this decision's output* and *what real data says* — starting point, never stopping point; read `skills/gos-think/examples/deep-dig-cases.md` before the first card of a session; close with `why-not:` + conditional recommendation + the standing deepen line `deepen: any option — ask for another dig round`) → record D-NN → checkpoint | `reference/dialogue-protocol.md` §Decision Card (mandatory, gate-enforced) |
 | **User mentions a trap/scar ("this has a pitfall / stepped on this before")** | **Capture IMMEDIATELY via `gos lessons add --type project --text "…"` (or `--type model` for model-behavior corrections → global file, auto-expires +90d) — don't wait for SHIP. `gos lessons list` merges both files; incident tasks may take `gos lessons skip --reason "…"` instead of a lesson ( two-of-one, audit-recorded)** | — |
 | Defining truths | "What can user observe when done?" → 1 truth per feature | — |
 | Scope creep | Redirect to Deferred Ideas, don't reject | — |
@@ -43,10 +43,11 @@ gos instructions think    # step-by-step guidance for current task
 User approves spec (Lv3+) or verbally confirms (Lv2). HARD GATE.
 Then `gos approve think` (records the sign-off) → `gos commit think`.
 
-## Anti-Rationalization (top 3)
+## Anti-Rationalization (top 4)
 
 | Excuse | Reality |
 |:---|:---|
 | "Simple enough to skip spec" | Simple features still have edge cases |
 | "I'll batch all decisions for efficiency" | Batch = rubber-stamp. One per message. |
 | "Red Team found nothing on a quick glance" | A glance is not an attack. Run the perspective questions in reference/red-team.md honestly. |
+| "This card reads fine, no dig needed" | Cells with no consumer name after stripping adjectives = no dig — dig again (who consumes the output, what real data says). |

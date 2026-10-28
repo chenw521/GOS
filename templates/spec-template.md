@@ -31,12 +31,21 @@
 <!-- Record each D-NN via: gos decision add D-NN "<conclusion>" --rationale "<why>" -->
 
 ### D-nn: [Decision title]
-- **Decision**: [What]
-- **Rationale**: [Why]
+
+| Option | Premise | Pros | Cons | Activates |
+|:--|:--|:--|:--|:--|
+| <A> | premise… | pros… | cons… | activates… |
+| <B> | premise… | pros… | cons… | activates… |
+| <C> | premise… | pros… | cons… | activates… |
+| example: SQLite file | state is local and single-writer | zero setup, easy backup | new dependency; SQL dialect lock-in | the resume command and gate reads that open the state file |
+
+why-not: <B> — <reason>; <C> — <reason>
+recommendation: <A> — conditional: if <premise X> then A; if <premise Y> then B
+deepen: any option — ask for another dig round
 
 ### D-nn: [Decision title]
-- **Decision**: ...
-- **Rationale**: ...
+
+<repeat the card scaffold above — every decision gets its own card>
 
 ## Scope
 
