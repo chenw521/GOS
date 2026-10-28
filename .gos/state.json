@@ -2,13 +2,14 @@
   "schema_version": 5,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "VERIFY",
+  "current_stage": "DONE",
   "completed_stages": [
     "INTENT",
     "THINK",
     "PLAN",
     "BUILD",
-    "REVIEW"
+    "REVIEW",
+    "VERIFY"
   ],
   "intent": {
     "summary": "Mandatory deep-dig rounds before decision cards, standing deepen option in every card, value-essence column, table rendering contract (message body vs tool picks), thin-gate extension. Re-homes concern cab1a0f8 from P2",
@@ -16,10 +17,11 @@
   },
   "approvals": {
     "THINK": "2026-10-28T06:23:10.758Z",
-    "PLAN": "2026-10-28T06:42:56.560Z"
+    "PLAN": "2026-10-28T06:42:56.560Z",
+    "ARCHIVE": "2026-10-28T12:09:58.055Z"
   },
-  "spec_path": ".gos/task/p5/spec.md",
-  "plan_path": ".gos/task/p5/plan.md",
+  "spec_path": ".gos/archive/2026-10-28-v1.0.0-dev-phase-p5-mandatory-deep-dig-rounds-befo/task/p5/spec.md",
+  "plan_path": ".gos/archive/2026-10-28-v1.0.0-dev-phase-p5-mandatory-deep-dig-rounds-befo/task/p5/plan.md",
   "project": true,
   "requirements": [
     {
@@ -149,7 +151,7 @@
       "evidence": {
         "command": "[\"cat\",\".gos/task/p5/evidence/t1-transcript.md\"]",
         "output_excerpt": "## Round 1 — card after the disposition dig",
-        "artifact_path": ".gos/task/p5/evidence/t1-transcript.md",
+        "artifact_path": ".gos/archive/2026-10-28-v1.0.0-dev-phase-p5-mandatory-deep-dig-rounds-befo/task/p5/evidence/t1-transcript.md",
         "replay": true
       }
     },
@@ -326,15 +328,7 @@
       "test/sections/T95-repo-id-guard.test.sh"
     ]
   },
-  "checkpoints": [
-    {
-      "stage": "BUILD",
-      "unit": "all-waves (auto at commit)",
-      "done": "T1,T2,T3,T4,T5,T7,T8,T9,T10",
-      "remaining": "",
-      "at": "2026-10-28T10:43:54.670Z"
-    }
-  ],
+  "checkpoints": [],
   "review_findings": {
     "phase1_spec_compliance": "PASS - 8/8 decisions evidenced, 5/5 requirements shipped, zero deferred-item creep; lock.cjs guard relaxation judged a legitimate schema-bump consequence",
     "phase2_code_quality": "13 findings (8 Major, 5 Minor) - all fixed in-review except two accepted deviations",
@@ -361,5 +355,6 @@
       "dead locale fix subfield dropped (en+zh parity intact)",
       "stale grandfather/--force comments refreshed; exemplar cards carry deepen tail lines; protocol heading rule states prefix anchoring"
     ]
-  }
+  },
+  "completed_at": "2026-10-28T12:09:58.252Z"
 }
