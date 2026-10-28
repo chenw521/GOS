@@ -2,13 +2,17 @@
   "schema_version": 4,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "INTENT",
-  "completed_stages": [],
+  "current_stage": "THINK",
+  "completed_stages": [
+    "INTENT"
+  ],
   "intent": {
     "summary": "Mandatory deep-dig rounds before decision cards, standing deepen option in every card, value-essence column, table rendering contract (message body vs tool picks), thin-gate extension. Re-homes concern cab1a0f8 from P2",
     "confirmed": true
   },
-  "approvals": {},
+  "approvals": {
+    "THINK": "2026-10-28T06:23:10.758Z"
+  },
   "spec_path": null,
   "plan_path": null,
   "project": true,
@@ -18,10 +22,146 @@
       "text": "Mandatory deep-dig rounds before decision cards, standing deepen option in every card, value-essence column, table re...",
       "phase": null,
       "level": 3
+    },
+    {
+      "id": "R-45",
+      "text": "Dialogue contract upgrade: 5-column card with Activates, exemplars-as-contract dig, standing deepen line, message-body rendering, plain narration",
+      "phase": "P5: dialogue governance",
+      "status": "active"
+    },
+    {
+      "id": "R-46",
+      "text": "Exemplar file examples/deep-dig-cases.md: 3 curated real cases + read-before-first-card pointer",
+      "phase": "P5: dialogue governance",
+      "status": "active"
+    },
+    {
+      "id": "R-47",
+      "text": "Thin-gate v3: spec_gate_version 3, Activates header floor, locale keys, T73 fixtures incl. v2 grandfather",
+      "phase": "P5: dialogue governance",
+      "status": "active"
+    },
+    {
+      "id": "R-48",
+      "text": "Seeded surfaces: spec-template card scaffold, gos-think SKILL rows, router level-card, anti-rationalization line",
+      "phase": "P5: dialogue governance",
+      "status": "active"
+    },
+    {
+      "id": "R-49",
+      "text": "instructions think and navigator hint point at dig exemplars and blast/closure entry",
+      "phase": "P5: dialogue governance",
+      "status": "active"
     }
   ],
-  "decisions": [],
-  "observable_truths": [],
+  "decisions": [
+    {
+      "id": "D-32",
+      "title": "Deep-dig = teach + shape: battery in protocol, value-essence column carries the dig, gate checks header only",
+      "rationale": "User ruling: activate proactive digging, not gatekeeping. Shape beats process; exemplars beat rules. Five weak-cell controls; recurrence escalates gate.",
+      "birth_phase": "P5: dialogue governance",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-33",
+      "title": "Dig content contract = exemplars-as-contract: 3 real case records + one instruction line; perspectives emerge per domain",
+      "rationale": "User rejected format logistics and labeled checklists; cases demonstrate good digging; two starter questions are a floor, never a stopping point.",
+      "birth_phase": "P5: dialogue governance",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-34",
+      "title": "Standing deepen = card-tail line; rounds exempt from follow-up caps, must surface new facts",
+      "rationale": "Visibility = usage; D-13 relapse was the missing standing port. Response: exemplar-form dig, card re-presented; user-driven, uncapped.",
+      "birth_phase": "P5: dialogue governance",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-35",
+      "title": "Value-essence column header = 'Activates'; symmetric fill, names a consumer, distinct from Pros",
+      "rationale": "Verb header prompts the cell form directly; noun headers invite abstract value talk. Parenthetical anchor keeps traceability. Gate checks header presence only.",
+      "birth_phase": "P5: dialogue governance",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-36",
+      "title": "Cards render in message body, responses free-text; tools only for card-free logistics",
+      "rationale": "Dual consumers re-read history; tool payloads render unreliably; free text carries composite replies (deepen + steer) that menus cannot.",
+      "birth_phase": "P5: dialogue governance",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-37",
+      "title": "Card template merges Cons+Risks into one Cons column; modality carried by wording, 5-column card",
+      "rationale": "No mechanical consumer reads them separately; boundary proved unstable in practice; width pressure after Activates. Exemplars carry modality phrasing; re-split only on real need.",
+      "birth_phase": "P5: dialogue governance",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-38",
+      "title": "Plain language = the reply itself, not an added translation layer; narration contract grounds all jargon",
+      "rationale": "Replies plain by default, no translation artifacts. Bans unexplained proper nouns, uncommon-noun overuse, opaque abbreviations. Caliber: Chinese at middle-school level, English at CET-4.",
+      "birth_phase": "P5: dialogue governance",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-39",
+      "title": "Gate activation: spec_gate_version 2->3; v3 = v2 floor + Activates header; v2 specs keep old floor",
+      "rationale": "Reuses the proven grandfather pattern; single monotonic integer, zero new fields. P5's own spec freezes under v3 — dogfood day one.",
+      "birth_phase": "P5: dialogue governance",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    }
+  ],
+  "observable_truths": [
+    {
+      "id": "T1",
+      "description": "A fresh post-P5 THINK dialogue presents 5-column cards whose Activates cells name concrete consumers",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T2",
+      "description": "T73 fixtures prove: v3 spec without Activates header fails gate (spec-gate-card-column), with it passes, v2-stamped spec stays green",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T3",
+      "description": "dialogue-protocol.md ships dig contract, deepen line, rendering contract, plain-narration contract; examples/deep-dig-cases.md holds 3 curated real cases",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T4",
+      "description": "gos instructions think output shows the exemplar read-before-first-card pointer",
+      "verified": false,
+      "evidence": null
+    }
+  ],
   "gaps": [],
   "phase_name": "P5: dialogue governance",
   "task_head": "8e367dbd2e514974ae402be332f3becfe29b586a",
