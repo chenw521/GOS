@@ -578,18 +578,18 @@ function semanticChecks(opts = {}) {
     }
   }
 
- // thin spec gate: structural card floor. Grandfathered unless the THINK
-  // commit ran under a post-P15 CLI (spec_gate_version stamp) — the live p15
-  // spec predates the switch and is validated by fixtures only (F2).
-  if (state.spec_gate_version === 2) {
-    const sp = core.specPathOf(state);
-    if (fs.existsSync(sp)) {
-      const cardFails = specCardFloorFailures(fs.readFileSync(sp, 'utf8'), state.decisions, projectDecisionIds());
-      if (cardFails.length) failures.push(...cardFails);
-      else {
-        console.log(`✓ spec cards: ${state.decisions.length} decision card(s) with options table + why-not line`);
-        passes++;
-      }
+  // thin spec gate: structural card floor, dispatched on the spec gate stamp.
+  // A valid stamp runs its registry floor; a stamp outside the known domain
+  // fails closed (one env escape, user-approved); no stamp at all lazily
+  // probes the registry and enforces the highest passing floor for this
+  // run, then names the flag that persists the probe result. The floors,
+  // registry and dispatch helper live by the exports.
+  {
+    const stamped = specCardStampCheck(state);
+    if (stamped.failures.length) {
+      failures.push(...stamped.failures);
+    } else if (stamped.pass) {
+      passes++;
     }
   }
 
@@ -1383,4 +1383,253 @@ function renderGateFailures(failures, opts = {}) {
   return out.join('\n');
 }
 
-module.exports = { getSemanticPlanTasks, checkBidirectional, loadSemanticAllowlist, semanticAllowlisted, semanticBaselineShas, diffHitCheck, semanticDiffPhase, readExemptions, consumeExemptions, checkManifest, impactClosurePhase, semanticChecks, loadTrustStore, cmdGateTrust, cmdGate, cmdLogs, specCardFloorFailures, projectDecisionIds, stripSpecForScan, flipReconcileLeg, renderGateFailures };
+// ---------------------------------------------------------------------------
+// spec card floor registry: the vocabulary of floors this CLI can enforce.
+// Keys are the legal spec_gate_version stamps; v2 is the options-table +
+// why-not floor above, v3 adds the Activates column contract with canonical
+// table parsing and prefix-anchored section ownership.
+// ---------------------------------------------------------------------------
+
+function specSections(specText) {
+  const sections = [];
+  let cur = null;
+  for (const line of String(specText || '').split('\n')) {
+    const h = line.match(/^#{1,6}\s+(.*)$/);
+    if (h) { cur = { heading: h[1], lines: [] }; sections.push(cur); }
+    else if (cur) cur.lines.push(line);
+  }
+  return sections;
+}
+
+// Section ownership for the v3 floor: the heading must START with the
+// decision id at a word boundary, so a superseding heading that merely
+// mentions another id mid-text cannot credit that id with the card.
+function sectionOwnsDecisionId(heading, id) {
+  const esc = String(id).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^${esc}\\b`).test(String(heading || '').trim());
+}
+
+// Canonical pipe-row parse: split on unescaped pipes, unescape `\|` inside
+// cells, trim each cell. Border pipes of the row produce no empty edge cells.
+function pipeRowCells(line) {
+  const s = String(line).trim();
+  const cells = [];
+  let cur = '';
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (ch === '\\' && s[i + 1] === '|') { cur += '|'; i++; continue; }
+    if (ch === '|') { cells.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  cells.push(cur);
+  const out = cells.map((c) => c.trim());
+  if (out.length > 1 && out[0] === '' && s.startsWith('|')) out.shift();
+  if (out.length > 1 && out[out.length - 1] === '' && s.endsWith('|') && !s.endsWith('\\|')) out.pop();
+  return out;
+}
+
+function isSeparatorCells(cells) {
+  return cells.length >= 1 && cells.every((c) => /^:?-+:?$/.test(c));
+}
+
+// Card tables of a section body: consecutive pipe-row blocks whose header row
+// starts with an Option column and carries a Premise column. Two-column
+// Option|Note logistics tables are not card tables.
+function cardTablesIn(body) {
+  const blocks = [];
+  let block = null;
+  for (const line of String(body || '').split('\n')) {
+    if (/^\s*\|/.test(line)) { block = block || []; block.push(line); }
+    else if (block) { blocks.push(block); block = null; }
+  }
+  if (block) blocks.push(block);
+  const tables = [];
+  for (const rows of blocks) {
+    const header = pipeRowCells(rows[0]);
+    if (!/^option/i.test(header[0] || '')) continue;
+    if (!header.some((c) => c.toLowerCase().includes('premise'))) continue;
+    const dataRows = [];
+    for (const row of rows.slice(1)) {
+      const cells = pipeRowCells(row);
+      if (isSeparatorCells(cells)) continue;
+      dataRows.push({ line: row, cells });
+    }
+    tables.push({ header, dataRows });
+  }
+  return tables;
+}
+
+// Activates column contract: every card table carries the column header, and
+// every option row fills it with a non-empty cell that is not a copy of the
+// same row's Pros cell. Malformed rows (cell count ≠ their own header count)
+// fail with no parse escape hatch.
+function cardColumnFailures(decisionId, body) {
+  const failures = [];
+  for (const table of cardTablesIn(body)) {
+    const aIdx = table.header.findIndex((c) => /^activates/i.test(c));
+    if (aIdx === -1) {
+      failures.push(core.gateFail('spec-gate-card-column', {
+        verdict: `decision ${decisionId} card table lacks the Activates column (header: ${table.header.join(' | ')})`,
+        evidence: [decisionId, table.header.join(' | ')],
+        fix: 'add the Activates column to the card header and fill every option row (5-column card in skills/gos-think/reference/dialogue-protocol.md)',
+      }));
+      continue;
+    }
+    const pIdx = table.header.findIndex((c) => /^pros/i.test(c));
+    for (const row of table.dataRows) {
+      const cells = row.cells;
+      if (cells.length !== table.header.length) {
+        failures.push(core.gateFail('spec-gate-card-column', {
+          verdict: `decision ${decisionId} card row has ${cells.length} cell(s) but its table header has ${table.header.length} column(s)`,
+          evidence: [decisionId, cells[0] || row.line.trim().slice(0, 60)],
+          fix: 'make every option row match its own table header column count (escape literal pipes in cells as \\|)',
+        }));
+        continue;
+      }
+      const activates = cells[aIdx];
+      if (!activates) {
+        failures.push(core.gateFail('spec-gate-card-column', {
+          verdict: `decision ${decisionId} option "${cells[0]}" has an empty Activates cell`,
+          evidence: [decisionId, cells[0]],
+          fix: 'name the consumer surface the option activates — an empty value-essence cell is decoration, not a decision',
+        }));
+        continue;
+      }
+      if (pIdx !== -1 && activates === cells[pIdx]) {
+        failures.push(core.gateFail('spec-gate-card-column', {
+          verdict: `decision ${decisionId} option "${cells[0]}" copies the Pros cell into the Activates column`,
+          evidence: [decisionId, cells[0]],
+          fix: 'the Activates cell must name a consumer surface, not repeat the Pros text',
+        }));
+      }
+    }
+  }
+  return failures;
+}
+
+// v3 floor: the v2 checks under prefix-anchored section ownership, plus the
+// Activates column contract on every card table of each owned section.
+function specCardFloorV3(specText, decisions, projectIds) {
+  const failures = [];
+  const known = new Set([...(decisions || []).map((d) => d && d.id).filter(Boolean), ...(projectIds || [])]);
+  const scanned = stripSpecForScan(specText);
+  for (const m of scanned.matchAll(/\bD-\d{2,3}\b/g)) {
+    if (!known.has(m[0])) {
+      failures.push(core.gateFail('spec-gate-unknown-decision', {
+        verdict: `spec references ${m[0]} but it resolves to neither state.decisions nor the project DECISIONS index`,
+        evidence: [m[0]],
+        fix: 'register the decision (`gos decision add`) or fix the typo — unregistered ids are how decisions silently vanish',
+      }));
+    }
+  }
+  const sections = specSections(specText);
+  for (const d of decisions || []) {
+    if (!d || !d.id) continue;
+    const own = sections.filter((s) => sectionOwnsDecisionId(s.heading, d.id));
+    if (!own.length) {
+      failures.push(core.gateFail('spec-gate-card-missing', {
+        verdict: `decision ${d.id} has no spec section — every decision must show its options card (a model preference without alternatives is not a decision)`,
+        evidence: [d.id],
+        fix: 'add a section whose heading contains the id, with an options table and a why-not line (skills/gos-think/reference/dialogue-protocol.md)',
+      }));
+      continue;
+    }
+    const body = own.map((s) => s.lines.join('\n')).join('\n');
+    const tokens = new Set();
+    for (const row of body.split('\n')) {
+      if (!/^\s*\|/.test(row)) continue;
+      const first = row.trim().replace(/^\|/, '').split('|')[0].trim();
+      if (!first || /^[-:\s]*$/.test(first) || /^option/i.test(first)) continue;
+      tokens.add(first);
+    }
+    if (tokens.size < 2) {
+      failures.push(core.gateFail('spec-gate-card-table', {
+        verdict: `decision ${d.id} card lacks an options table with ≥2 distinct option rows`,
+        evidence: [d.id],
+        fix: 'add the option comparison table (first column = option token, ≥2 rows) — see dialogue-protocol.md card template',
+      }));
+    }
+    const whyNot = body.split('\n').find((l) => /^\s*why-not\s*:/i.test(l));
+    const tokenHit = whyNot && [...tokens].some((t) => {
+      const esc = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return new RegExp(esc, 'i').test(whyNot);
+    });
+    if (!tokenHit) {
+      failures.push(core.gateFail('spec-gate-card-why-not', {
+        verdict: `decision ${d.id} card lacks a why-not: line naming the rejected option(s)`,
+        evidence: [d.id],
+        fix: 'add `why-not: <option token> — <reason>` under the table; markers are English-canonical (why-not:)',
+      }));
+    }
+    failures.push(...cardColumnFailures(d.id, body));
+  }
+  return failures;
+}
+
+const SPEC_CARD_FLOORS = { 2: specCardFloorFailures, 3: specCardFloorV3 };
+const CLI_MAX = Math.max(...Object.keys(SPEC_CARD_FLOORS).map(Number));
+
+// Spec gate dispatch for semanticChecks: (1) a stamp outside {2..CLI_MAX}
+// fails closed unless GOS_SPEC_GATE_FLOOR_OVERRIDE downgrades it to a loud
+// advisory that skips the floor; (2) a valid stamp runs its registry floor;
+// (3) an absent stamp is probed through the same registry, the highest
+// passing floor is enforced for this run, and an advisory names the flag
+// that persists the probe. Every outcome line names the floor in force.
+function specCardStampCheck(state) {
+  const result = { failures: [], pass: false };
+  const sp = core.specPathOf(state);
+  if (!fs.existsSync(sp)) return result;
+  const specText = fs.readFileSync(sp, 'utf8');
+  const decisions = state.decisions || [];
+  const projectIds = projectDecisionIds();
+  const stamp = state.spec_gate_version;
+  const stampPresent = stamp !== null && stamp !== undefined;
+  const override = /^(1|true)$/i.test(String(process.env.GOS_SPEC_GATE_FLOOR_OVERRIDE || ''));
+  const passLine = (v) => {
+    console.log(`✓ spec cards (floor v${v}): ${decisions.length} decision card(s) with options table + why-not line${v >= 3 ? ' + Activates column' : ''}`);
+    result.pass = true;
+  };
+  const failLine = (v, n) => console.log(`✗ spec cards (floor v${v}): ${n} card failure(s)`);
+  if (stampPresent && !(Number.isInteger(stamp) && stamp >= 2 && stamp <= CLI_MAX)) {
+    if (override) {
+      console.log(`⚠ spec gate floor override: spec_gate_version=${JSON.stringify(stamp)} is outside the known domain (2..${CLI_MAX}) — card floor SKIPPED under GOS_SPEC_GATE_FLOOR_OVERRIDE (user-approved only)`);
+      result.pass = true;
+      return result;
+    }
+    result.failures.push(core.gateFail('spec-gate-version-unknown', {
+      verdict: `spec_gate_version=${JSON.stringify(stamp)} is outside the floor domain this CLI knows (2..${CLI_MAX})`,
+      evidence: [`.gos/state.json: spec_gate_version=${JSON.stringify(stamp)}`],
+      fix: 'upgrade the CLI (or return to the branch that froze this spec) until the stamp is known — escape, user-approved only: rerun with GOS_SPEC_GATE_FLOOR_OVERRIDE=1',
+    }));
+    console.log(`✗ spec cards: stamp ${JSON.stringify(stamp)} outside known floor domain (2..${CLI_MAX})`);
+    return result;
+  }
+  if (stampPresent) {
+    const cardFails = SPEC_CARD_FLOORS[stamp](specText, decisions, projectIds);
+    if (cardFails.length) {
+      result.failures.push(...cardFails);
+      failLine(stamp, cardFails.length);
+    } else passLine(stamp);
+    return result;
+  }
+  const versions = Object.keys(SPEC_CARD_FLOORS).map(Number).sort((a, b) => b - a);
+  const lowest = versions[versions.length - 1];
+  let enforced = null;
+  let lowestFails = null;
+  for (const v of versions) {
+    const f = SPEC_CARD_FLOORS[v](specText, decisions, projectIds);
+    if (!f.length) { enforced = v; break; }
+    lowestFails = f;
+  }
+  if (enforced !== null) {
+    passLine(enforced);
+  } else {
+    result.failures.push(...lowestFails);
+    failLine(lowest, lowestFails.length);
+    enforced = lowest;
+  }
+  console.log(`⚠ spec gate: no stamp — probed floor v${enforced} enforced for this run; persist via gos commit think --refreeze`);
+  return result;
+}
+
+module.exports = { getSemanticPlanTasks, checkBidirectional, loadSemanticAllowlist, semanticAllowlisted, semanticBaselineShas, diffHitCheck, semanticDiffPhase, readExemptions, consumeExemptions, checkManifest, impactClosurePhase, semanticChecks, loadTrustStore, cmdGateTrust, cmdGate, cmdLogs, specCardFloorFailures, projectDecisionIds, stripSpecForScan, flipReconcileLeg, renderGateFailures, SPEC_CARD_FLOORS, CLI_MAX };

@@ -2,10 +2,11 @@
   "schema_version": 4,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "PLAN",
+  "current_stage": "BUILD",
   "completed_stages": [
     "INTENT",
-    "THINK"
+    "THINK",
+    "PLAN"
   ],
   "intent": {
     "summary": "Mandatory deep-dig rounds before decision cards, standing deepen option in every card, value-essence column, table rendering contract (message body vs tool picks), thin-gate extension. Re-homes concern cab1a0f8 from P2",
@@ -175,5 +176,123 @@
     }
   ],
   "spec_sha256": "167a155008fbc8636ba189aee8a86e9afc7695ba1202b61ae847851ccc469605",
-  "spec_gate_version": 2
+  "spec_gate_version": 2,
+  "plan_snapshot": {
+    "tasks": [
+      {
+        "id": "T1",
+        "covers": [
+          "D-35",
+          "D-39",
+          "R-47"
+        ],
+        "files": [
+          "bin/lib/ops/gate.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs",
+          "test/sections/T73-gate-evidence.test.sh"
+        ]
+      },
+      {
+        "id": "T2",
+        "covers": [
+          "D-39",
+          "R-47"
+        ],
+        "files": [
+          "bin/lib/core/state.cjs",
+          "test/sections/T94-schemav4.test.sh",
+          "test/sections/T1-schema.test.sh"
+        ]
+      },
+      {
+        "id": "T3",
+        "covers": [
+          "D-32",
+          "D-33",
+          "D-34",
+          "D-36",
+          "D-37",
+          "D-38",
+          "R-45"
+        ],
+        "files": [
+          "skills/gos-think/reference/dialogue-protocol.md"
+        ]
+      },
+      {
+        "id": "T4",
+        "covers": [
+          "D-33",
+          "R-46"
+        ],
+        "files": [
+          "skills/gos-think/examples/deep-dig-cases.md",
+          "test/sections/T103-deepdig-exemplars.test.sh"
+        ]
+      },
+      {
+        "id": "T5",
+        "covers": [
+          "D-39",
+          "R-47"
+        ],
+        "files": [
+          "bin/lib/task/commit.cjs",
+          "bin/lib/ops/gate.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ]
+      },
+      {
+        "id": "T7",
+        "covers": [
+          "D-32",
+          "D-35",
+          "D-37",
+          "D-38",
+          "R-48"
+        ],
+        "files": [
+          "skills/gos-think/SKILL.md",
+          "skills/gos-router/SKILL.md",
+          "skills/gos-think/examples/spec-with-redteam.md",
+          "templates/spec-template.md"
+        ]
+      },
+      {
+        "id": "T8",
+        "covers": [
+          "R-49"
+        ],
+        "files": [
+          "bin/lib/nav/status.cjs",
+          "bin/lib/task/context.cjs"
+        ]
+      },
+      {
+        "id": "T9",
+        "covers": [
+          "D-39",
+          "R-47"
+        ],
+        "files": [
+          "test/sections/T17-semantic-engine.test.sh",
+          "test/sections/T22-map-gate-impact.test.sh",
+          "test/sections/T31-map-gate.test.sh",
+          "test/sections/T33-map-manifest.test.sh"
+        ]
+      },
+      {
+        "id": "T10",
+        "covers": [
+          "R-45"
+        ],
+        "files": [
+          "CHANGELOG.md"
+        ]
+      }
+    ],
+    "audit": []
+  }
 }

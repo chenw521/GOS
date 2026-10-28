@@ -264,4 +264,15 @@ module.exports = {
   'brownfield.handoff.noPlatform': '未检测到任何 AI 平台——运行 {cmd:setup} --no-onboard 链接 GOS 技能',
   'brownfield.skeleton.body': '# AGENTS.md —— 起始骨架\n# （逐节填写内容后删除这些注释行）\n\n项目介绍：这个仓库是什么、给谁用（一小段话）。\n\n## 构建\n\n如何构建/编译本项目——命令，以及成功构建是什么样子。\n\n## 测试\n\n如何运行测试套件——命令，以及如何判读结果。\n\n## 约定\n\n贡献者必须遵守的约定（代码风格、提交信息、评审流程）。\n',
   'brownfield.skeleton.note': '仅打印到 stdout——GOS 绝不写 AGENTS.md/CLAUDE.md/GEMINI.md；需要文件请自行重定向保存',
+
+  // ---- spec gate 底线（卡列契约、版本域） ----
+  'gate.spec-gate-card-column': {
+    what: '决策卡表格违反列契约',
+    why: 'Activates 列缺失、单元格为空、或与 Pros 列雷同——不指名消费者的价值内核单元格只是装饰，不是决策',
+  },
+  'gate.spec-gate-version-unknown': {
+    what: 'spec gate 戳记超出本 CLI 认识的底线版本域',
+    why: '未知戳记必须关门失败，新状态不能在旧 CLI 下空转放行',
+    fix: '升级 CLI（或回到冻结此 spec 的分支），直到戳记被认识——逃生通道（仅限用户批准）：以 GOS_SPEC_GATE_FLOOR_OVERRIDE=1 重跑',
+  },
 };

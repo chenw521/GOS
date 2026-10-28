@@ -12,7 +12,7 @@ const path = require('node:path');
 const fsio = require('./fsio.cjs');
 const gitprobe = require('./gitprobe.cjs');
 
-const STATE_SCHEMA_VERSION = 4;
+const STATE_SCHEMA_VERSION = 5;
 
 const PROJECT_SCHEMA_VERSION = 1;
 
@@ -236,7 +236,7 @@ function migrateState(s) {
     delete s.project_root;
     if (s.repo_id == null) s.repo_id = repoIdFromRemotes();
   }
-  if (wasLegacy) console.error('⚠ state migrated to schema v4 (task/<id>/ paths pinned; identity de-pathed — repo_id derived, version/project_root dropped)');
+  if (wasLegacy) console.error(`⚠ state migrated to schema v${STATE_SCHEMA_VERSION} (task/<id>/ paths pinned; identity de-pathed — repo_id derived, version/project_root dropped)`);
   if (!Array.isArray(s.decisions)) s.decisions = [];
   s.decisions = s.decisions.map((d) => {
     const m = { ...d };
@@ -261,6 +261,11 @@ function validateState(s, mode) {
   else s.decisions.forEach((d, i) => errs.push(...validateDecision(d, `state.json:decisions[${i}]`)));
   if (!Array.isArray(s.requirements)) errs.push('state.json:requirements: expected array');
   else s.requirements.forEach((r, i) => errs.push(...validateRequirement(r, `state.json:requirements[${i}]`)));
+  // spec_gate_version is optional; when present it must be an integer.
+  // Range legality ({min..CLI_MAX}) is gate-side, not schema-side.
+  if (s.spec_gate_version !== undefined && !Number.isInteger(s.spec_gate_version)) {
+    errs.push(`state.json:spec_gate_version: integer required when present (got ${typeof s.spec_gate_version} ${String(s.spec_gate_version)})`);
+  }
   // T2 [D-30]: verified truths must carry a valid three-element evidence object.
   // Fail-closed on the legacy string form; read-class (warn) keeps going with a banner.
   if (Array.isArray(s.observable_truths)) {

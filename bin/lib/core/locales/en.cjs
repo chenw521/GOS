@@ -271,4 +271,15 @@ module.exports = {
   'brownfield.handoff.noPlatform': 'none detected — run {cmd:setup} --no-onboard to link GOS skills',
   'brownfield.skeleton.body': '# AGENTS.md — starter skeleton\n# (fill in each section, then delete these comment lines)\n\nIntroduction: what this repository is and who uses it (one short paragraph).\n\n## Build\n\nHow to build or compile this project — commands and what a successful build looks like.\n\n## Test\n\nHow to run the test suite — the command and how to read the results.\n\n## Conventions\n\nThe conventions contributors must follow (code style, commit messages, review flow).\n',
   'brownfield.skeleton.note': 'printed to stdout only — GOS never writes AGENTS.md/CLAUDE.md/GEMINI.md; save it yourself with a redirect if you want the file',
+
+  // ---- spec gate floors (card column contract, stamp domain) ----
+  'gate.spec-gate-card-column': {
+    what: 'a decision card table violates the column contract',
+    why: 'the Activates column is missing, a cell is empty, or a cell copies the Pros column — a value-essence cell that names no consumer is decoration, not a decision',
+  },
+  'gate.spec-gate-version-unknown': {
+    what: 'the spec gate stamp is outside the floor domain this CLI knows',
+    why: 'an unknown stamp fails closed so a newer state can never vacuous-pass under an older CLI',
+    fix: 'upgrade the CLI (or return to the branch that froze this spec) until the stamp is known — escape, user-approved only: rerun with GOS_SPEC_GATE_FLOOR_OVERRIDE=1',
+  },
 };
