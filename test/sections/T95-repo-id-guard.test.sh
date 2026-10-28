@@ -209,8 +209,8 @@ DS1=$(python3 -c "
 import json
 s = json.load(open('.gos/state.json'))
 print('%s|%s|%s' % (s.get('repo_id'), s.get('schema_version'), 'version' in s))")
-if [ "$IRC" -eq 0 ] && [ "$SRC" -eq 0 ] && [ "$DS1" = "$ID_HTTPS|4|False" ]; then
-  t95_ok "V8a null+remotes: guard stamps repo_id (origin-wins), v4 clean, no dead version key"; else t95_bad "V8a derive+store: init rc=$IRC stage rc=$SRC state=$DS1 want $ID_HTTPS|4|False"; fi
+if [ "$IRC" -eq 0 ] && [ "$SRC" -eq 0 ] && [ "$DS1" = "$ID_HTTPS|5|False" ]; then
+  t95_ok "V8a null+remotes: guard stamps repo_id (origin-wins), v5 clean, no dead version key"; else t95_bad "V8a derive+store: init rc=$IRC stage rc=$SRC state=$DS1 want $ID_HTTPS|5|False"; fi
 cd "$T95_DIR"
 mkdir -p ds-tracked && cd ds-tracked
 git init -q -b main . && git commit -q --allow-empty -m root

@@ -27,10 +27,10 @@ t17_plan() {
 spec v1 — fixture
 
 ## D-01 core
-| Option | Premise |
-|:--|:--|
-| impl a | fixture |
-| impl b | fixture |
+| Option | Premise | Pros | Cons | Activates |
+|:--|:--|:--|:--|:--|
+| impl a | fixture | covers gate checks | fixture only | gate semantic reports |
+| impl b | fixture | covers map checks | fixture only | map closure reports |
 why-not: impl b — fixture discard
 SPECEOF
   node "$GOS" decision add D-01 "core" --rationale "r" >/dev/null 2>&1

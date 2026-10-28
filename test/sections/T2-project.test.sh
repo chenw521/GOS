@@ -15,7 +15,7 @@ t2_teardown() { cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$T2_DIR"; }
 t2_setup
 echo "--- T2: project.json layer + anchor ---"
 
-# --- .1: init stamps de-pathed v4 identity (repo_id from remotes; NO project_root)
+# --- .1: init stamps de-pathed v5 identity (repo_id from remotes; NO project_root)
 git remote add origin https://github.com/acme/t2-auth.git
 node "$GOS" init 3 "auth" >/dev/null 2>&1
 READ=$(python3 -c "
@@ -24,8 +24,8 @@ s = json.load(open('.gos/state.json'))
 print('%s|%s|%s' % (s.get('schema_version'), 'project_root' in s, s.get('repo_id')))")
 WANT=$(python3 -c "
 import hashlib
-print('4|False|%s' % hashlib.sha256(b'github.com:443/acme/t2-auth').hexdigest()[:16])")
-assert_eq "init: v4 + de-pathed (no project_root) + repo_id from origin remote" "$WANT" "$READ"
+print('5|False|%s' % hashlib.sha256(b'github.com:443/acme/t2-auth').hexdigest()[:16])")
+assert_eq "init: v5 + de-pathed (no project_root) + repo_id from origin remote" "$WANT" "$READ"
 
 # --- .2: init --project sets project flag + creates project.json + four files
 t2_teardown; t2_setup
@@ -70,7 +70,7 @@ else
 import json
 s = json.load(open('.gos/state.json'))
 print('%s|%s|%s' % (s.get('schema_version'), 'project_root' in s, s.get('repo_id')))")
-  assert_eq "non-git init: v4, de-pathed, repo_id advisory null" "4|False|None" "$READ"
+  assert_eq "non-git init: v5, de-pathed, repo_id advisory null" "5|False|None" "$READ"
 fi
 unset GIT_CEILING_DIRECTORIES
 

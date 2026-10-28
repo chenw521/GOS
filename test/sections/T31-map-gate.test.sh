@@ -121,10 +121,10 @@ cat > "$(gos_spec)" <<'SPECEOF'
 spec v1 — fixture
 
 ## D-01 core
-| Option | Premise |
-|:--|:--|
-| impl a | fixture |
-| impl b | fixture |
+| Option | Premise | Pros | Cons | Activates |
+|:--|:--|:--|:--|:--|
+| impl a | fixture | covers gate checks | fixture only | gate semantic reports |
+| impl b | fixture | covers map checks | fixture only | map closure reports |
 why-not: impl b — fixture discard
 SPECEOF
 node "$GOS" decision add D-01 "core" --rationale "r" >/dev/null 2>&1
@@ -148,6 +148,7 @@ git checkout -q -- .gos/cache/edges.json
 sed -i 's|// placeholder|// placeholder\n// touch-inside-cmdMap|' bin/gos.cjs
 set +e; GOUT=$(node "$GOS" gate semantic 2>&1); GRC=$?; set +e
 assert_exit "T31.11b gate semantic advisory stays 0" 0 "$GRC"
+assert_contains "T31.11 real commit-think chain stamps floor v3" "spec cards (floor v3)" "$GOUT"
 assert_contains "T31.11c 语义段限定文案 (非穷尽声明)" "非穷尽\|not exhaustive\|may be incomplete" "$GOUT"
 assert_contains "T31.11d must-run sections listed (map cmd touched via fixture chain)" "T" "$GOUT"
 assert_contains "T31.11e semantic dependents include docs caller" "docs/usage.md" "$GOUT"

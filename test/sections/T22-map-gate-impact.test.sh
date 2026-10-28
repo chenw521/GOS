@@ -24,10 +24,10 @@ t22_plan() {
 spec v1 — fixture
 
 ## D-01 core
-| Option | Premise |
-|:--|:--|
-| impl a | fixture |
-| impl b | fixture |
+| Option | Premise | Pros | Cons | Activates |
+|:--|:--|:--|:--|:--|
+| impl a | fixture | covers gate checks | fixture only | gate semantic reports |
+| impl b | fixture | covers map checks | fixture only | map closure reports |
 why-not: impl b — fixture discard
 SPECEOF
   node "$GOS" decision add D-01 "core" --rationale "r" >/dev/null 2>&1
@@ -69,6 +69,7 @@ set +e; OUT=$(node "$GOS" gate semantic 2>&1); RC=$?; set -e
 assert_exit "N>0 advisory keeps exit 0" 0 "$RC"
 assert_contains "impactClosure line (N=2: a+b undeclared)" "impact closure: 2 diff dependents not covered by task Files (advisory, regex-based, may be incomplete)" "$OUT"
 assert_contains "impactHintRun line follows (top=util, 2 dependents)" "run: gos map closure src/util.js --print0" "$OUT"
+assert_contains "real commit-think chain stamps floor v3" "spec cards (floor v3)" "$OUT"
 
 # --- .2: impactClean state — all impacted files declared
 t22_teardown; t22_setup

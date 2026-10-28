@@ -28,10 +28,10 @@ cat > "$(gos_spec)" <<'SPECEOF'
 spec v1 — fixture
 
 ## D-01 core
-| Option | Premise |
-|:--|:--|
-| impl a | fixture |
-| impl b | fixture |
+| Option | Premise | Pros | Cons | Activates |
+|:--|:--|:--|:--|:--|
+| impl a | fixture | covers gate checks | fixture only | gate semantic reports |
+| impl b | fixture | covers map checks | fixture only | map closure reports |
 why-not: impl b — fixture discard
 SPECEOF
 node "$GOS" decision add D-01 "core" --rationale "r" >/dev/null 2>&1
@@ -70,6 +70,7 @@ set +e; G=$(node "$GOS" gate all 2>&1); GRC=$?; set +e
 if printf '%s\n' "$G" | grep -q "manifest stale"; then
   echo "  ✗ T33.2 fresh manifest wrongly flagged stale"; FAIL=$((FAIL+1))
 else echo "  ✓ T33.2 fresh manifest (content-tree match) passes manifest check"; PASS=$((PASS+1)); fi
+assert_contains "T33.2 real commit-think chain stamps floor v3" "spec cards (floor v3)" "$G"
 
 # --- .3 stale: code change advances the hash -> gate all fails with 'manifest stale'
 printf '// more\n' >> bin/gos.cjs

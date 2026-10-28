@@ -1,5 +1,5 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "repo_id": "85af56a090a78924",
   "level": 3,
   "current_stage": "BUILD",
@@ -16,8 +16,8 @@
     "THINK": "2026-10-28T06:23:10.758Z",
     "PLAN": "2026-10-28T06:42:56.560Z"
   },
-  "spec_path": null,
-  "plan_path": null,
+  "spec_path": ".gos/task/p5/spec.md",
+  "plan_path": ".gos/task/p5/plan.md",
   "project": true,
   "requirements": [
     {
@@ -131,7 +131,7 @@
     {
       "id": "D-39",
       "title": "Gate activation: spec_gate_version 2->3; v3 = v2 floor + Activates header; v2 specs keep old floor",
-      "rationale": "Reuses the proven grandfather pattern; single monotonic integer, zero new fields. P5's own spec freezes under v3 — dogfood day one.",
+      "rationale": "Reuses the proven grandfather pattern; single monotonic integer, zero new fields. P5's own spec freezes under v3 \u2014 dogfood day one.",
       "birth_phase": "P5: dialogue governance",
       "status": "open",
       "anchor": null,
@@ -294,5 +294,14 @@
       }
     ],
     "audit": []
+  },
+  "changelog_user_summary": "Add dialogue governance upgrade: decision cards become 5-column with an Activates column naming the consumer each option turns on, deep-dig exemplars land at skills/gos-think/examples/deep-dig-cases.md with a read-before-first-card pointer in gos instructions think, every card carries a standing deepen line under the new-facts contract, replies follow the plain-narration contract, spec thin-gate v3 adds the spec-gate-card-column and spec-gate-version-unknown failure codes with content-era stamping so in-flight v2 tasks stay unaffected as old specs keep their floor, gos commit think --refreeze recomputes the spec sha without advancing the stage behind a stage-regression-blocked guard, the GOS_SPEC_GATE_FLOOR_OVERRIDE=1 escape stays user-approved only, and the state schema bump to v5 makes older CLIs exit loudly on newer states so a one-time CLI upgrade is required",
+  "semantic": {
+    "allowlist": [
+      "bin/lib/core/lock.cjs",
+      "test/sections/T2-project.test.sh",
+      "test/sections/T46-module-structure.test.sh",
+      "test/sections/T95-repo-id-guard.test.sh"
+    ]
   }
 }

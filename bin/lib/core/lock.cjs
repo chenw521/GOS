@@ -241,10 +241,11 @@ function guardCwd(cls, cmdName, breakLock) {
       console.error(`⚠ repo identity advisory: no usable git remotes — state repo_id ${stamped} binding not verifiable (D-18)`);
     }
   } else if (stamped == null) {
-    // null + remotes → derive + store (sanctioned). Conservative: v4 states only —
-    // pre-v4 states get repo_id from their own write-class migration (never a
-    // hybrid v3+repo_id write), and the stamp is the ONLY field touched.
-    if (stateL.schema_version === state.STATE_SCHEMA_VERSION) {
+    // null + remotes → derive + store (sanctioned). Conservative: repo_id-aware
+    // schemas (v4+) only — pre-v4 states get repo_id from their own write-class
+    // migration (never a hybrid v3+repo_id write), and the stamp is the ONLY
+    // field touched.
+    if (stateL.schema_version >= 4) {
       const id = state.repoIdFromRemotes(root);
       if (id != null) {
         stateL.repo_id = id;
