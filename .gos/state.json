@@ -2,16 +2,18 @@
   "schema_version": 4,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "THINK",
+  "current_stage": "PLAN",
   "completed_stages": [
-    "INTENT"
+    "INTENT",
+    "THINK"
   ],
   "intent": {
     "summary": "Mandatory deep-dig rounds before decision cards, standing deepen option in every card, value-essence column, table rendering contract (message body vs tool picks), thin-gate extension. Re-homes concern cab1a0f8 from P2",
     "confirmed": true
   },
   "approvals": {
-    "THINK": "2026-10-28T06:23:10.758Z"
+    "THINK": "2026-10-28T06:23:10.758Z",
+    "PLAN": "2026-10-28T06:42:56.560Z"
   },
   "spec_path": null,
   "plan_path": null,
@@ -171,5 +173,7 @@
       "at": "2026-10-27T10:37:54.359Z",
       "what": "claim"
     }
-  ]
+  ],
+  "spec_sha256": "167a155008fbc8636ba189aee8a86e9afc7695ba1202b61ae847851ccc469605",
+  "spec_gate_version": 2
 }
