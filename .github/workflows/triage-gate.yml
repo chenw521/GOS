@@ -58,7 +58,7 @@ jobs:
 
           marker_tag='<!-- gos-triage-gate -->'
 
- # Decision core : a pure function of (live labels, live
+          # Decision core : a pure function of (live labels, live
           # state, marker bool). Inline and verbatim on purpose - local
           # fixture tests extract exactly this block (between the
           # GATE_DECIDE_EOF markers) and drive it without GitHub.
@@ -184,7 +184,7 @@ jobs:
             exit 0
           fi
 
- # Pinned guidance copy : English, carries the marker, and
+          # Pinned guidance copy : English, carries the marker, and
           # names the no-permission path ("ask a maintainer to relabel").
           read -r -d '' guidance <<'GUIDANCE_EOF' || true
           <!-- gos-triage-gate -->
