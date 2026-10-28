@@ -282,4 +282,11 @@ module.exports = {
     why: 'an unknown stamp fails closed so a newer state can never vacuous-pass under an older CLI',
     fix: 'upgrade the CLI (or return to the branch that froze this spec) until the stamp is known — escape, user-approved only: rerun with GOS_SPEC_GATE_FLOOR_OVERRIDE=1',
   },
+
+  // ---- commit-side guards (stage monotonicity) ----
+  'commit.stage-regression-blocked': {
+    what: 'requested stage {stage} is behind the current stage {current}',
+    why: 'an already-passed stage cannot re-advance — the commit would write an advance label history already moved past',
+    fix: 're-run the current stage commit if idempotent redelivery is intended; to re-freeze a frozen spec use gos commit think --refreeze (state-only, no stage advance)',
+  },
 };

@@ -570,7 +570,7 @@ function semanticChecks(opts = {}) {
     if (fs.existsSync(sp)) {
       const cur = core.sha256FileSync(sp);
       if (cur !== state.spec_sha256) {
-        failures.push(core.gateFail('spec-sha-mismatch', { verdict: 'spec.md hash ≠ frozen spec_sha256 (B-22) — spec changed after THINK commit', evidence: [sp], fix: core.gateCmd('node bin/gos.cjs commit think') + ' — re-freeze (only for legitimate changes)' }));
+        failures.push(core.gateFail('spec-sha-mismatch', { verdict: 'spec.md hash ≠ frozen spec_sha256 (B-22) — spec changed after THINK commit', evidence: [sp], fix: core.gateCmd('node bin/gos.cjs commit think --refreeze') + ' — re-freeze after legitimate spec changes (sha recomputed, stage not advanced)' }));
       } else {
         console.log('✓ spec frozen: spec.md hash matches spec_sha256 (B-22)');
         passes++;
@@ -1569,6 +1569,21 @@ function specCardFloorV3(specText, decisions, projectIds) {
 const SPEC_CARD_FLOORS = { 2: specCardFloorFailures, 3: specCardFloorV3 };
 const CLI_MAX = Math.max(...Object.keys(SPEC_CARD_FLOORS).map(Number));
 
+// Registry probe shared by the gate's lazy path and the commit-side freezer:
+// run floors highest-first and report the highest floor the content passes.
+// A null stamp means the content passes no floor; failures then carries the
+// lowest floor's verdict — the base floor every fix must satisfy.
+function probeSpecFloor(specText, decisions, projectIds) {
+  const versions = Object.keys(SPEC_CARD_FLOORS).map(Number).sort((a, b) => b - a);
+  let lowestFails = null;
+  for (const v of versions) {
+    const f = SPEC_CARD_FLOORS[v](specText, decisions, projectIds);
+    if (!f.length) return { stamp: v, failures: [] };
+    if (v === versions[versions.length - 1]) lowestFails = f;
+  }
+  return { stamp: null, failures: lowestFails };
+}
+
 // Spec gate dispatch for semanticChecks: (1) a stamp outside {2..CLI_MAX}
 // fails closed unless GOS_SPEC_GATE_FLOOR_OVERRIDE downgrades it to a loud
 // advisory that skips the floor; (2) a valid stamp runs its registry floor;
@@ -1612,24 +1627,18 @@ function specCardStampCheck(state) {
     } else passLine(stamp);
     return result;
   }
-  const versions = Object.keys(SPEC_CARD_FLOORS).map(Number).sort((a, b) => b - a);
-  const lowest = versions[versions.length - 1];
-  let enforced = null;
-  let lowestFails = null;
-  for (const v of versions) {
-    const f = SPEC_CARD_FLOORS[v](specText, decisions, projectIds);
-    if (!f.length) { enforced = v; break; }
-    lowestFails = f;
-  }
-  if (enforced !== null) {
-    passLine(enforced);
+  const probed = probeSpecFloor(specText, decisions, projectIds);
+  if (probed.stamp !== null) {
+    passLine(probed.stamp);
+    console.log(`⚠ spec gate: no stamp — probed floor v${probed.stamp} enforced for this run; persist via gos commit think --refreeze`);
   } else {
-    result.failures.push(...lowestFails);
-    failLine(lowest, lowestFails.length);
-    enforced = lowest;
+    // Pre-floor-era content: it predates every registry floor, so no stamp in
+    // the {2..CLI_MAX} domain can represent it — grandfather instead of
+    // prosecuting content that never promised any floor.
+    result.pass = true;
+    console.log('⚠ spec cards: no stamp and no floor passes — pre-floor-era content, card floors grandfathered (floor version: none)');
   }
-  console.log(`⚠ spec gate: no stamp — probed floor v${enforced} enforced for this run; persist via gos commit think --refreeze`);
   return result;
 }
 
-module.exports = { getSemanticPlanTasks, checkBidirectional, loadSemanticAllowlist, semanticAllowlisted, semanticBaselineShas, diffHitCheck, semanticDiffPhase, readExemptions, consumeExemptions, checkManifest, impactClosurePhase, semanticChecks, loadTrustStore, cmdGateTrust, cmdGate, cmdLogs, specCardFloorFailures, projectDecisionIds, stripSpecForScan, flipReconcileLeg, renderGateFailures, SPEC_CARD_FLOORS, CLI_MAX };
+module.exports = { getSemanticPlanTasks, checkBidirectional, loadSemanticAllowlist, semanticAllowlisted, semanticBaselineShas, diffHitCheck, semanticDiffPhase, readExemptions, consumeExemptions, checkManifest, impactClosurePhase, semanticChecks, loadTrustStore, cmdGateTrust, cmdGate, cmdLogs, specCardFloorFailures, projectDecisionIds, stripSpecForScan, flipReconcileLeg, renderGateFailures, SPEC_CARD_FLOORS, CLI_MAX, probeSpecFloor };

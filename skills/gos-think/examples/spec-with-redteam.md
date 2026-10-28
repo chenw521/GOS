@@ -21,18 +21,20 @@ semantic exit codes (0 healthy / 1 issues).
 
 ### D-nn': Fix suggestions come from a HARDCODED frozen table
 
-Decision card (P15 D-nn — every decision shows its options symmetrically):
+Decision card — every decision shows its options symmetrically, all five
+columns filled per option:
 
-| Option | Premise | Pros | Cons | Risks |
+| Option | Premise | Pros | Cons | Activates |
 |:--|:--|:--|:--|:--|
-| Frozen table | repair text is safety-relevant | drift-proof, testable | edits need code change | table goes stale |
-| Soft whitelist | text discipline | flexible | violates standing lesson | relay can mutate |
-| Freeform generation | best phrasing | adapts | unreviewable output | hallucinated commands |
+| Frozen table | repair text is safety-relevant | drift-proof, testable | edits need code change; table may go stale | the frozen-value test channel — every release run and every doctor print consumes the table |
+| Soft whitelist | text discipline | flexible | violates standing lesson; a weak-model relay can mutate the text | the relay model rendering Fix lines — a text rule nothing verifies |
+| Freeform generation | best phrasing | adapts | unreviewable output; hallucinated commands possible | the model's phrasing at runtime — no downstream check before print |
 
 why-not: Soft whitelist — text discipline = no discipline (round 1 finding);
 Freeform generation — a weak-model relay can mutate the output
 recommendation: Frozen table — unconditional here because the output is
 safety-relevant and the frozen-value test channel already exists
+deepen: any option — ask for another dig round
 
 - **Decision**: `DOCTOR_FIXES = Object.freeze({...})` is the only source
   of repair text. Paths never enter command strings; drift case outputs
@@ -42,7 +44,7 @@ safety-relevant and the frozen-value test channel already exists
   code per the standing lesson: user-facing command output constraints
   must be code-level.
 
-### D-01b: Fail-closed output guard
+### D-nn: Fail-closed output guard
 - **Decision**: every Fix line must match whitelist regex
   `^(gos (setup|teardown)…|reinstall GOS…|report issue…)$`; non-match →
   exit 2 and the line is NOT printed.
@@ -67,7 +69,7 @@ safety-relevant and the frozen-value test channel already exists
 - **Tn**: healthy env → all ✓, `RESULT: HEALTHY (0 warnings)`, exit 0 — verify: run doctor in clean fake-HOME
 - **Tn**: broken link → precise MISSING/BROKEN + fix + exit 1 — verify: unlink one skill, run doctor
 - **Tn**: discoverable — `gos help` lists doctor; no platforms → Fix: gos setup
-- **Tn**: security — output greps 0 for rm/unlink/sudo; all Fix lines match whitelist; RESULT line present — verify: TD-05 assertions in test suite
+- **Tn**: security — output greps 0 for rm/unlink/sudo; all Fix lines match whitelist; RESULT line present — verify: the output-security assertions in the test suite
 
 ## Deferred Ideas
 
@@ -91,7 +93,7 @@ safety-relevant and the frozen-value test channel already exists
 
 | Round | Perspective | Findings | Dispositions |
 |:---|:---|:---|:---|
-| 1 | Misuse/Safety | 2 (soft whitelist is text discipline; path interpolation risk) | ACCEPT×2 → D-nn', D-01b (changes landed in spec above) |
+| 1 | Misuse/Safety | 2 (soft whitelist is text discipline; path interpolation risk) | ACCEPT×2 → frozen-table hardening + output guard (changes landed in spec above) |
 | 2 | Edge/Exception | 1 (unknown fallback implicitly reinstall) | ACCEPT → D-nn |
 | 3 | Completeness | 0 — converged (attacked: constraint verifiability / unasked gray areas / lessons.md cross-check) | — |
 

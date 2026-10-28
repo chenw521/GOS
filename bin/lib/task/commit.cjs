@@ -4,6 +4,7 @@ const core = require('../core/index.cjs');
 const clcore = require('../ops/changelog-core.cjs'); // issue-close neutralization (R-01)
 const nav = require('../nav/status.cjs');   // direct aspect require (dependency DAG)
 const ops = require('../ops/gate.cjs');     // direct aspect require (dependency DAG)
+const { SPEC_CARD_FLOORS, probeSpecFloor } = ops; // spec floor registry + shared probe (single source in the gate module)
 const map = require('../map/index.cjs');
 const knowledge = require('../knowledge/index.cjs');
 const sibArchive = require('./archive.cjs');
@@ -116,6 +117,64 @@ function runCommitSemanticChecks(state, stage) {
 // ideographs, fullwidth forms.
 const CJK_SUBJECT_RE = /[\u1100-\u11ff\u3000-\u30ff\u3130-\u318f\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af\uf900-\ufaff\uff00-\uffef]/;
 
+// Spec floor stamping: the stamp records the content's era, not the CLI's era.
+// The registry, its floors and the probe live in the gate module (single
+// source); this side only decides WHEN to probe (first freeze, stamp-absent
+// state) and when to dispatch the stamped floor (re-freeze never upgrades).
+function renderSpecFloorBlock(failures) {
+  for (const f of failures) {
+    console.error(`✗ commit blocked: ${f.code}: ${f.verdict}`);
+    for (const e of f.evidence || []) console.error(`    evidence: ${e}`);
+    console.error(`    fix: ${f.fix}`);
+  }
+}
+
+// Probe-stamp the content era. blockOnNone=true (first freeze of new
+// content): passing no floor at all blocks the commit — a spec authored
+// under this CLI must clear the base floor. blockOnNone=false (re-freeze
+// and legacy stamp-backfill): pre-floor-era content keeps the stamp absent
+// and proceeds grandfathered.
+function stampSpecByProbe(state, specText, { blockOnNone = true } = {}) {
+  const decisions = state.decisions || [];
+  const projectIds = ops.projectDecisionIds();
+  const probed = probeSpecFloor(specText, decisions, projectIds);
+  if (probed.stamp === null) {
+    if (blockOnNone) {
+      renderSpecFloorBlock(probed.failures);
+      process.exit(1);
+    }
+    console.log('⚠ spec gate: no floor passes — pre-floor-era content, stamp left absent (card floors grandfathered)');
+    return;
+  }
+  state.spec_gate_version = probed.stamp;
+  const aboveFloor = SPEC_CARD_FLOORS[probed.stamp + 1];
+  if (aboveFloor) {
+    const above = aboveFloor(specText, decisions, projectIds).length;
+    console.log(`✓ spec gate: stamped floor v${probed.stamp} (${above} table(s) fail the v${probed.stamp + 1} Activates floor)`);
+  } else {
+    console.log(`✓ spec gate: stamped floor v${probed.stamp}`);
+  }
+}
+
+function enforceStampedSpecFloor(state, specText) {
+  const stamp = state.spec_gate_version;
+  const floor = SPEC_CARD_FLOORS[stamp];
+  if (!floor) {
+    renderSpecFloorBlock([core.gateFail('spec-gate-version-unknown', {
+      verdict: `spec_gate_version=${JSON.stringify(stamp)} is outside the floor domain this CLI knows`,
+      evidence: [`.gos/state.json: spec_gate_version=${JSON.stringify(stamp)}`],
+      fix: 'upgrade the CLI (or return to the branch that froze this spec) until the stamp is known — escape, user-approved only: rerun with GOS_SPEC_GATE_FLOOR_OVERRIDE=1',
+    })]);
+    process.exit(1);
+  }
+  const failures = floor(specText, state.decisions || [], ops.projectDecisionIds());
+  if (failures.length) {
+    renderSpecFloorBlock(failures);
+    process.exit(1);
+  }
+  console.log(`✓ spec gate: floor v${stamp} holds (stamp kept)`);
+}
+
 function cmdCommit(argv) {
   // --subject "<text>": explicit commit subject (English escape hatch when the
   // intent summary cannot serve as one). Consumed BEFORE <stage> parsing so
@@ -125,16 +184,32 @@ function cmdCommit(argv) {
   const subjIdx = args.indexOf('--subject');
   if (subjIdx !== -1) {
     explicitSubject = args[subjIdx + 1];
-    if (!explicitSubject || explicitSubject.startsWith('--')) core.die('Usage: gos commit <stage> --subject "<english subject>"');
+    if (!explicitSubject || explicitSubject.startsWith('--')) core.die('Usage: gos commit <stage> [--subject "<english subject>"] [--force] [--refreeze]');
     args.splice(subjIdx, 2);
   }
   const state = core.readState();
   if (!state) core.die(core.CONTRACTS.state_semantics.noActiveTask);
  // flag-aware stage parsing (`gos commit plan --force` — monotonic override)
   const forceFlag = args.includes('--force');
+  const refreezeFlag = args.includes('--refreeze');
   const stageArg = args.find((a) => !a.startsWith('--'));
   const stage = (stageArg || state.current_stage || '').toUpperCase();
-  if (!stage || nav.stageIndex(stage) === -1) core.die('Usage: gos commit <stage>  (e.g. gos commit think)');
+  if (!stage || nav.stageIndex(stage) === -1) core.die('Usage: gos commit <stage> [--force] [--refreeze]  (e.g. gos commit think --refreeze)');
+  if (refreezeFlag && stage !== 'THINK') core.die('gos commit --refreeze is only legal with the think stage — it re-freezes the spec without advancing the stage');
+
+  if (refreezeFlag) {
+    // Pure state operation: recompute the sha, keep the stamp (absent stamp
+    // probes like a first freeze), no stage advance, no git commit.
+    const sp = core.specPathOf(state);
+    if (!fs.existsSync(sp)) core.die(`spec file not found: ${sp} (nothing to re-freeze)`);
+    const specText = fs.readFileSync(sp, 'utf8');
+    if (state.spec_gate_version !== undefined) enforceStampedSpecFloor(state, specText);
+    else stampSpecByProbe(state, specText, { blockOnNone: false });
+    state.spec_sha256 = core.sha256FileSync(sp);
+    core.writeState(state);
+    console.log(`✓ spec re-frozen: spec_sha256 recomputed (stage ${state.current_stage} unchanged, no commit written)`);
+    return;
+  }
 
   // ---- commit generator guards: hard checks run BEFORE any state mutation
   // reaches disk (archive moves, freeze fields, writeState) so a rejected
@@ -187,6 +262,32 @@ function cmdCommit(argv) {
   // Transactional snapshot: byte-exact state.json to restore if the git
   // commit fails below, so a failed commit never advances the task state.
   const stateSnapshot = (hasGit && fs.existsSync(core.STATE_PATH)) ? fs.readFileSync(core.STATE_PATH) : null;
+
+  // Stage monotonicity: re-running the current stage (idempotent re-commit)
+  // and committing the next stage stay legal; a stage behind the current one
+  // in the task's level flow would write an advance-labeled commit for a
+  // point the work history already passed. Stages outside the level flow
+  // (the level-dependent stage sets) are not this task's stages — legacy
+  // semantics keep applying to them.
+  {
+    const flow = nav.levelFlow(state.level ?? 0);
+    const curIdx = flow.indexOf(String(state.current_stage || '').toUpperCase());
+    const reqIdx = flow.indexOf(stage);
+    if (curIdx !== -1 && reqIdx !== -1 && reqIdx < curIdx) {
+      const parts = core.t('commit.stage-regression-blocked', { stage, current: String(state.current_stage || '') });
+      const failure = core.gateFail('stage-regression-blocked', {
+        verdict: parts.what,
+        evidence: [`re-commit of stage ${stage} is only legal while current_stage=${stage} (now: current_stage=${state.current_stage})`],
+        fix: parts.fix,
+      });
+      console.error(`${core.CONTRACTS.state_semantics.commitBlocked} (stage monotonicity):`);
+      console.error(`✗ ${failure.code}: ${failure.verdict}`);
+      console.error(`    why: ${parts.why}`);
+      for (const e of failure.evidence) console.error(`    evidence: ${e}`);
+      console.error(`    fix: ${failure.fix}`);
+      process.exit(1);
+    }
+  }
 
  // ---- : filesystem fallback (artifact must EXIST — model's word is not evidence)
   const lv = state.level ?? 0;
@@ -249,19 +350,15 @@ function cmdCommit(argv) {
   if (stage === 'THINK' && lv >= 2) {
     const sp = core.specPathOf(state);
     if (fs.existsSync(sp)) {
- // spec card floor: born here (objects, F11) — a spec that freezes
+      // spec card floor: born here (objects, F11) — a spec that freezes
       // under this CLI must carry option cards for every decision it records.
-      const cardFails = ops.specCardFloorFailures(fs.readFileSync(sp, 'utf8'), state.decisions, ops.projectDecisionIds());
-      if (cardFails.length) {
-        for (const f of cardFails) {
-          console.error(`✗ commit blocked: ${f.code}: ${f.verdict}`);
-          for (const e of f.evidence || []) console.error(`    evidence: ${e}`);
-          console.error(`    fix: ${f.fix}`);
-        }
-        process.exit(1);
-      }
+      // First freeze probes the registry and stamps the highest floor the
+      // content passes; a re-freeze dispatches the stamped floor and never
+      // upgrades the stamp.
+      const specText = fs.readFileSync(sp, 'utf8');
+      if (state.spec_gate_version !== undefined) enforceStampedSpecFloor(state, specText);
+      else stampSpecByProbe(state, specText);
       state.spec_sha256 = core.sha256FileSync(sp); // B-22 freeze at THINK commit
-      state.spec_gate_version = 2;                 // D-62 grandfather stamp (activates the gate-side check)
     }
   }
   if (stage === 'PLAN' && lv >= 3) {
@@ -290,6 +387,15 @@ function cmdCommit(argv) {
   // ---- Phase B (T7) [D-33/B-10]: BUILD/VERIFY commit embeds the semantic layer ----
   if ((stage === 'BUILD' || stage === 'VERIFY')) {
     runCommitSemanticChecks(state, stage);
+  }
+
+  // Stamp-absent states that already carry a frozen sha (pre-stamp freezes
+  // and the lazy-freeze above): probe-stamp through the shared registry at
+  // the next commit of any kind. The frozen sha itself is untouched;
+  // pre-floor-era content stays stamp-absent and grandfathered.
+  if (state.spec_sha256 && state.spec_gate_version === undefined) {
+    const sp = core.specPathOf(state);
+    if (fs.existsSync(sp)) stampSpecByProbe(state, fs.readFileSync(sp, 'utf8'), { blockOnNone: false });
   }
 
   if (!hasGit) { console.log('(not a git repo — skipping commit, stage still advanced)'); }

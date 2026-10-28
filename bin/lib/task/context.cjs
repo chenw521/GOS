@@ -101,6 +101,7 @@ function cmdContext(args) {
       hint: 'codebase navigator tiers: guide trio (structure/conventions/concerns.md) is static per machine; map data (network.md, edge-baseline.json, require-allowlist.json) is git-tracked and travels with clones; full directory contract: skills/gos-think/reference/codebase-mapping.md',
       map_data: 'travels with clones (git-tracked): network.md, edge-baseline.json, require-allowlist.json',
       provenance: 'regenerable byproduct .gos/codebase/unmapped-fns.txt (rewritten by gate codemap) — first line: generated-at: <ISO> @ <HEAD[0:8]> (unborn repo: @ unborn)',
+      impact_awareness: 'design-time impact check before editing shared files: `gos map closure <file>` lists pre-change dependents; `gos map blast <file...>` prints a plain-language impact report',
     };
     out.produce = `${path.relative(process.cwd(), core.specPathOf(state))} (decisions D-NN + requirements R-NN + truths T-NN)`;
     out.template = `${path.join(core.GOS_SELF_ROOT, 'templates', 'spec-template.md')} (readonly skeleton — copy it to the produce path, never edit the in-package original; examples at ${path.join(core.GOS_SELF_ROOT, 'skills', 'gos-think', 'examples')}/)`;

@@ -275,4 +275,11 @@ module.exports = {
     why: '未知戳记必须关门失败，新状态不能在旧 CLI 下空转放行',
     fix: '升级 CLI（或回到冻结此 spec 的分支），直到戳记被认识——逃生通道（仅限用户批准）：以 GOS_SPEC_GATE_FLOOR_OVERRIDE=1 重跑',
   },
+
+  // ---- commit 侧守卫（阶段单调性） ----
+  'commit.stage-regression-blocked': {
+    what: '请求的阶段 {stage} 落后于当前阶段 {current}',
+    why: '已越过的阶段不能重复推进——该提交会给历史早已越过的节点再写一次推进标签',
+    fix: '如需幂等重交请重跑当前阶段提交；要重新冻结 spec 请用 gos commit think --refreeze（仅改状态，不推进阶段）',
+  },
 };

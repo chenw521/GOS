@@ -619,15 +619,15 @@
         "sha256": "6a67d97312325c52956f5739c068c7850229fe9a8e5c4eb5e94cc7a61f165832"
       },
       {
-        "line": 258,
+        "line": 259,
         "sha256": "1963d8ee6d207f0f3a3122d3a3b1a5993b89e058f507ccad54fa770f99b5e8cc"
       },
       {
-        "line": 262,
+        "line": 263,
         "sha256": "b071393ff1e2b7059460a79ad119db4c13b4ebed103ea0607c7a5f0e4e858f65"
       },
       {
-        "line": 297,
+        "line": 298,
         "sha256": "e2f32563838b9bb71dfc253355479799d0df5b0685738417890014693cfd1624"
       }
     ]
@@ -891,39 +891,39 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 26,
+        "line": 27,
         "sha256": "5d491c14ca7747f5773b35ff1c4bfee13f9d3dc25c3b01e22d45fc3102bd535f"
       },
       {
-        "line": 39,
+        "line": 40,
         "sha256": "c89ead33587de59b009e41bcfe91968b695ba56f791271c08592a75afb24d4b6"
       },
       {
-        "line": 87,
+        "line": 88,
         "sha256": "a064e8412ae3d281e5c96fe898775d078c92db514fc636ddcf350f155ba24c66"
       },
       {
-        "line": 224,
+        "line": 325,
         "sha256": "aa8fe970ed66b9709c6d5d86d529747fc96b06d4e6b4592fe42d0b8bcddc9cc6"
       },
       {
-        "line": 240,
+        "line": 341,
         "sha256": "a4f6de1c08fe635a6d35acbfffbda8d2cf7f66d25d9d6248d5e5649b0c697f4b"
       },
       {
-        "line": 290,
+        "line": 387,
         "sha256": "4db0d21811326a7b3d419cd2248bd3285ce39ba2ad16cec26fec864218a6ca86"
       },
       {
-        "line": 316,
+        "line": 422,
         "sha256": "2cb3e3cdb36470b0e240873a3a0d4e7cbd6f5cf983787c13db2a3ed932220b94"
       },
       {
-        "line": 319,
+        "line": 425,
         "sha256": "a6069318b2995096085266d5104175719d458edc088e727dd37307ec98c61f1b"
       },
       {
-        "line": 321,
+        "line": 427,
         "sha256": "de87e2674cddab5f2dd808fed2d807f9284d03fe53a0cdb8673986b190bf0397"
       }
     ]
@@ -1009,7 +1009,7 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 95,
+        "line": 98,
         "sha256": "d3b957aaea36c815e67149cb59e0eb066e442648095088b382fe99577511376b"
       }
     ]

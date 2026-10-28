@@ -65,24 +65,27 @@ requests (bugfix, specific feature) — they go straight to step 1.
 biggest single decision a user makes — present it as the same card contract as
 THINK gray areas (`skills/gos-think/reference/dialogue-protocol.md` §Decision
 Card): options = the candidate levels, each with **premise** (when this level
-is right) / pros / cons / risks symmetrically, a `why-not:` line naming the
-rejected levels, and a **conditional recommendation** ("if the change is <one
-file, obvious> → Lv1; if it touches shared surfaces → Lv3"). Never present
-only your favorite level — the card is the difference between a routed
-decision and a model preference.
+is right) / pros / cons / **activates** symmetrically — all five columns
+filled; cons carries hazards in its wording, never a separate risks column —
+a `why-not:` line naming the rejected levels, a **conditional recommendation**
+("if the change is <one file, obvious> → Lv1; if it touches shared surfaces →
+Lv3"), and the standing deepen tail line. Never present only your favorite
+level — the card is the difference between a routed decision and a model
+preference.
 
 Rendered example (Lv1 vs Lv2 vs Lv3 for a small feature):
 
-| Option | Premise | Pros | Cons | Risks |
+| Option | Premise | Pros | Cons | Activates |
 |:--|:--|:--|:--|:--|
-| Lv1 (INTENT→BUILD) | isolated fix, zero ambiguity | fast | no spec | wrong-fix cost on subtle bugs |
-| Lv2 (+THINK) | fix with 1-2 gray areas | decisions recorded | +1 stage | mild ceremony |
-| Lv3 (+PLAN/REVIEW) | new feature, shared surfaces | full traceability | heaviest | overkill on trivia |
+| Lv1 (INTENT→BUILD) | isolated fix, zero ambiguity | fast | no spec; wrong-fix cost on subtle bugs | the direct fix path — BUILD starts immediately, nothing recorded |
+| Lv2 (+THINK) | fix with 1-2 gray areas | decisions recorded | +1 stage; mild ceremony | recorded decisions + the THINK stage — each gray area gets a card and a D-NN entry |
+| Lv3 (+PLAN/REVIEW) | new feature, shared surfaces | full traceability | heaviest; overkill on trivia | full traceability + a review pass — PLAN docs and the REVIEW gate |
 
 why-not: Lv1 — the change touches shared gate behavior; Lv3 — no architecture
 moves here, the review cost buys nothing
 recommendation: Lv2 — conditional: if a second gray area appears during THINK,
 upgrade to Lv3 (route gap-closure)
+deepen: any option — ask for another dig round
 
 ## Level Routes
 
