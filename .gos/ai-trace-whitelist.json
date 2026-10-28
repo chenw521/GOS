@@ -28,7 +28,7 @@
     "reason": "Ban-definition quotes: the policy document names the banned forms by example, pinned to the rules section tail.",
     "pin": {
       "type": "region-sha256",
-      "minLine": 41,
+      "minLine": 46,
       "regionSha256": "ed5ec68230485118158149a0d063420d0db257dacbc39c5b2909fec0eac908c1"
     }
   },

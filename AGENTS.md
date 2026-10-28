@@ -16,6 +16,11 @@ this file only tells you where they are.
   clauses a stranger can parse as an action ("fix stale lock check in push",
   "add squash-suffix stripping to push lint"), never state summaries or
   premise fragments ("main is PR-only") — user ruling 2026-10-26.
+- Squash-merge subjects (and PR titles destined for squash): pass
+  `bash test/checks/push-lint-squash.sh --subject "<candidate>"` BEFORE
+  `gh pr merge --squash` — the platform builds the commit server-side where
+  no local hook can intercept, and the push-range lint only fires after
+  main has gone red — user ruling 2026-10-28.
 - File disposition (git/npm/local): the census ledger is the truth —
   census.json, reconciled by test/pack-check.sh; CJK boundary by
   test/checks/cjk-lint.sh. Run pack-check before touching layout.
