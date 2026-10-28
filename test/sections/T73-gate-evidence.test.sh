@@ -367,4 +367,162 @@ OUT=$(t73_g gate semantic 2>&1); RC=$?
 assert_exit "superseded id stays card-missing under stamp 3" "1" "$RC"
 assert_contains "mentioned id fails card-missing, not cross-credited" "spec-gate-card-missing" "$OUT"
 
+# fenced example tables are excluded from the card scan: a compliant real
+# card plus a fenced legacy-shape example must pass, and a fenced table can
+# never satisfy the contract on its own
+t73_floor_state v3
+printf '%s\n' \
+  '# Spec' \
+  '## D-01 storage card' \
+  '```' \
+  '| Option | Premise | Pros | Cons |' \
+  '|:--|:--|:--|:--|' \
+  '| legacy | shape | example | only |' \
+  '```' \
+  '| Option | Premise | Pros | Cons | Activates |' \
+  '|:--|:--|:--|:--|:--|' \
+  '| json | tracked | integrity chain | harder to merge | gate freeze check |' \
+  '| md | simple | readable | no integrity chain | docs walkthrough |' \
+  'why-not: md — no integrity chain' > "$SPEC"
+OUT=$(t73_g gate semantic 2>&1); RC=$?
+assert_exit "fenced example table never enforced as a real card" "0" "$RC"
+
+t73_floor_state v3
+printf '%s\n' \
+  '# Spec' \
+  '## D-01 storage card' \
+  '```' \
+  '| Option | Premise | Pros | Cons | Activates |' \
+  '|:--|:--|:--|:--|:--|' \
+  '| fenced | example | only | shape | demo |' \
+  '```' > "$SPEC"
+OUT=$(t73_g gate semantic 2>&1); RC=$?
+assert_exit "fenced table alone cannot satisfy the card floor" "1" "$RC"
+
+# detection: any Option-headed table with 3+ columns is a card table even
+# without a Premise column — the Activates contract must not be escapable by
+# dropping one column; bold header markup is normalized before matching
+t73_floor_state v3
+printf '%s\n' \
+  '# Spec' \
+  '## D-01 storage card' \
+  '| Option | Pros | Cons | Activates |' \
+  '|:--|:--|:--|:--|' \
+  '| json | integrity chain | harder to merge |  |' \
+  '| md | readable | no integrity chain | docs walkthrough |' \
+  'why-not: md — no integrity chain' > "$SPEC"
+OUT=$(t73_g gate semantic 2>&1); RC=$?
+assert_exit "no-Premise 4-column Option table is still a card table" "1" "$RC"
+assert_contains "empty Activates caught without Premise column" "spec-gate-card-column" "$OUT"
+
+t73_floor_state v3
+printf '%s\n' \
+  '# Spec' \
+  '## D-01 storage card' \
+  '| **Option** | Premise | Pros | Cons | **Activates** |' \
+  '|:--|:--|:--|:--|:--|' \
+  '| json | tracked | integrity chain | harder to merge |  |' \
+  '| md | simple | readable | no integrity chain | docs walkthrough |' \
+  'why-not: md — no integrity chain' > "$SPEC"
+OUT=$(t73_g gate semantic 2>&1); RC=$?
+assert_exit "bold-marked header cells are still recognized" "1" "$RC"
+assert_contains "bold header with empty Activates fails" "spec-gate-card-column" "$OUT"
+
+# commit-side first freeze of new content: a cardless spec must block even
+# without any stamp or sha (blockOnNone only grandfathers pre-frozen states)
+t73_floor_state none
+python3 - <<'PYEOF'
+import json
+p='.gos/state.json'
+s=json.load(open(p))
+s['current_stage']='THINK'
+s['approvals']={'THINK':'user'}
+if 'spec_sha256' in s: del s['spec_sha256']
+json.dump(s,open(p,'w'),indent=2)
+PYEOF
+printf '%s\n' '# Spec' '## D-01 storage card' 'narrative only, no table' > "$SPEC"
+OUT=$(t73_g commit think 2>&1); RC=$?
+assert_exit "first freeze of cardless new content blocks" "1" "$RC"
+assert_contains "block names the card floor failure" "spec-gate-card-table" "$OUT"
+
+# --refreeze is a pure state operation: sha recomputed, stamp kept, stage
+# untouched, no git commit written
+t73_floor_state v2
+python3 - <<'PYEOF'
+import hashlib, json
+p='.gos/state.json'
+s=json.load(open(p))
+s['current_stage']='THINK'
+s['approvals']={'THINK':'user'}
+sp='.gos/task/' + s['task_head'][:8] + '/spec.md'
+body='# Spec\n## D-01 storage card\n| Option | Premise |\n|:--|:--|\n| json | tracked |\n| md | simple |\nwhy-not: md - no chain\n'
+open(sp,'w').write(body)
+s['spec_sha256']=hashlib.sha256(body.encode()).hexdigest()
+s['spec_path']=sp
+json.dump(s,open(p,'w'),indent=2)
+PYEOF
+BEFORE_COMMITS=$(git rev-list --count HEAD)
+printf 'extra line after the card\n' >> "$SPEC"
+OUT=$(t73_g commit think --refreeze 2>&1); RC=$?
+AFTER_COMMITS=$(git rev-list --count HEAD)
+assert_exit "refreeze succeeds on a stamped, legitimately edited spec" "0" "$RC"
+assert_eq "refreeze writes no commit" "$BEFORE_COMMITS" "$AFTER_COMMITS"
+REFREEZE_STATE=$(python3 -c "
+import hashlib, json
+s=json.load(open('.gos/state.json'))
+sp='.gos/task/' + s['task_head'][:8] + '/spec.md'
+print('%s|%s|%s' % (s.get('current_stage'), s.get('spec_gate_version'), s.get('spec_sha256')==hashlib.sha256(open(sp,'rb').read()).hexdigest()))")
+assert_contains "refreeze keeps stage THINK, keeps stamp 2, recomputes sha" "THINK|2|True" "$REFREEZE_STATE"
+
+# stage regression: re-committing a stage the flow already passed is a named
+# failure, not an advance-labeled commit
+python3 - <<'PYEOF'
+import json
+p='.gos/state.json'
+s=json.load(open(p))
+s['current_stage']='BUILD'
+s['spec_gate_version']=3
+json.dump(s,open(p,'w'),indent=2)
+PYEOF
+t73_card5
+OUT=$(t73_g commit think 2>&1); RC=$?
+assert_exit "stage regression behind current stage blocks" "1" "$RC"
+assert_contains "named stage-regression failure" "stage-regression-blocked" "$OUT"
+
+# pre-floor-era content at gate time: sha frozen, no stamp, passes no floor
+# → grandfathered with an advisory, never blocked
+printf '%s\n' '# Spec' '## D-01 storage card' 'narrative only, no table' > "$SPEC"
+python3 - <<'PYEOF'
+import hashlib, json
+p='.gos/state.json'
+s=json.load(open(p))
+s['current_stage']='BUILD'
+if 'spec_gate_version' in s: del s['spec_gate_version']
+s['spec_sha256']=hashlib.sha256(open('.gos/task/' + s['task_head'][:8] + '/spec.md','rb').read()).hexdigest()
+json.dump(s,open(p,'w'),indent=2)
+PYEOF
+OUT=$(t73_g gate semantic 2>&1); RC=$?
+assert_exit "pre-floor-era content grandfathers at the gate" "0" "$RC"
+assert_contains "grandfather advisory names the era" "pre-floor-era" "$OUT"
+
+# registry cumulativity invariant: content passing the newest floor also
+# passes every older floor (the probe stamps the highest passing version)
+CUMUL=$(node -e '
+const gate = require(process.env.GOS_ROOT + "/bin/lib/ops/gate.cjs");
+const spec = ["# Spec", "## D-01 storage card",
+  "| Option | Premise | Pros | Cons | Activates |", "|:--|:--|:--|:--|:--|",
+  "| json | tracked | integrity chain | harder to merge | gate freeze check |",
+  "| md | simple | readable | no integrity chain | docs walkthrough |",
+  "why-not: md — no integrity chain"].join("\n");
+const d = [{ id: "D-01" }];
+const bad = [];
+for (const [v, fn] of Object.entries(gate.SPEC_CARD_FLOORS)) {
+  if (fn(spec, d, []).length) bad.push("floor v" + v + " rejects a compliant card");
+}
+if (bad.length) { console.error(bad.join("; ")); process.exit(1); }
+console.log("OK");
+' 2>&1); RC=$?
+assert_exit "compliant card passes every registered floor (cumulativity)" "0" "$RC"
+assert_contains "cumulativity OK marker" "OK" "$CUMUL"
+
 t73_teardown

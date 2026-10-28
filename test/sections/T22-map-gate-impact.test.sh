@@ -70,6 +70,8 @@ assert_exit "N>0 advisory keeps exit 0" 0 "$RC"
 assert_contains "impactClosure line (N=2: a+b undeclared)" "impact closure: 2 diff dependents not covered by task Files (advisory, regex-based, may be incomplete)" "$OUT"
 assert_contains "impactHintRun line follows (top=util, 2 dependents)" "run: gos map closure src/util.js --print0" "$OUT"
 assert_contains "real commit-think chain stamps floor v3" "spec cards (floor v3)" "$OUT"
+STAMPED=$(python3 -c "import json; print(json.load(open('.gos/state.json')).get('spec_gate_version'))")
+assert_eq "chain persisted spec_gate_version=3 in state.json" "3" "$STAMPED"
 
 # --- .2: impactClean state — all impacted files declared
 t22_teardown; t22_setup

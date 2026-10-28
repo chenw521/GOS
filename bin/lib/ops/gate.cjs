@@ -427,9 +427,10 @@ function checkDeferredFindings(state) {
 }
 
 // ---------------------------------------------------------------------------
-// thin spec gate (structural card floor) — pure, fixture-testable (F2:
-// NEVER validates the live pre-P15 spec; the grandfather stamp below is the
-// only activation switch, set by new-CLI THINK commits).
+// thin spec gate (structural card floor). Grandfathered by content era: a
+// state with no stamp is lazily probed at gate time (pre-floor-era content
+// passes with an advisory), stamps are written only at freeze time by the
+// commit side, and every branch names the floor in force.
 // ---------------------------------------------------------------------------
 
 function projectDecisionIds() {
@@ -448,9 +449,9 @@ function stripSpecForScan(text) {
   return t;
 }
 
-function specCardFloorFailures(specText, decisions, projectIds) {
+function specDecisionRefFailures(specText, decisions, projectIds) {
   const failures = [];
-  // (b) lower bound: every referenced D-NN resolves (cross-phase refs legal)
+  // lower bound: every referenced D-NN resolves (cross-phase refs legal)
   const known = new Set([...(decisions || []).map((d) => d && d.id).filter(Boolean), ...(projectIds || [])]);
   const scanned = stripSpecForScan(specText);
   for (const m of scanned.matchAll(/\bD-\d{2,3}\b/g)) {
@@ -462,23 +463,22 @@ function specCardFloorFailures(specText, decisions, projectIds) {
       }));
     }
   }
-  // (a) card floor: every state decision carries a D-NN section with an options
-  // pipe table (≥2 distinct first-column tokens) + a why-not: line hitting one
-  const sections = [];
-  let cur = null;
-  for (const line of String(specText || '').split('\n')) {
-    const h = line.match(/^#{1,6}\s+(.*)$/);
-    if (h) { cur = { heading: h[1], lines: [] }; sections.push(cur); }
-    else if (cur) cur.lines.push(line);
-  }
+  return failures;
+}
+
+// Per-decision card checks shared by every floor: an owning section with an
+// options pipe table (≥2 distinct first-column tokens) and a why-not line
+// naming a rejected token. extraChecks runs per owned body (floor add-ons).
+function specCardCoreFailures(decisions, sections, ownsFn, headingRule, extraChecks) {
+  const failures = [];
   for (const d of decisions || []) {
     if (!d || !d.id) continue;
-    const own = sections.filter((s) => s.heading.includes(d.id));
+    const own = sections.filter((s) => ownsFn(s.heading, d.id));
     if (!own.length) {
       failures.push(core.gateFail('spec-gate-card-missing', {
         verdict: `decision ${d.id} has no spec section — every decision must show its options card (a model preference without alternatives is not a decision)`,
         evidence: [d.id],
-        fix: 'add a section whose heading contains the id, with an options table and a why-not line (skills/gos-think/reference/dialogue-protocol.md)',
+        fix: `add a section whose heading ${headingRule}, with an options table and a why-not line (skills/gos-think/reference/dialogue-protocol.md)`,
       }));
       continue;
     }
@@ -509,8 +509,16 @@ function specCardFloorFailures(specText, decisions, projectIds) {
         fix: 'add `why-not: <option token> — <reason>` under the table; markers are English-canonical (why-not:)',
       }));
     }
+    if (extraChecks) failures.push(...extraChecks(d.id, body));
   }
   return failures;
+}
+
+function specCardFloorFailures(specText, decisions, projectIds) {
+  return [
+    ...specDecisionRefFailures(specText, decisions, projectIds),
+    ...specCardCoreFailures(decisions, specSections(specText), (heading, id) => String(heading).includes(id), 'contains the id', null),
+  ];
 }
 
 function semanticChecks(opts = {}) {
@@ -1401,6 +1409,19 @@ function specSections(specText) {
   return sections;
 }
 
+// Scannable spec text for the current-era floor: fenced code blocks and
+// exempt-marked lines are excluded from the card scan (illustrative examples
+// must never be enforced as real cards, nor satisfy the contract for a
+// decision that lacks one).
+function stripSpecFencesAndExempts(text) {
+  return String(text || '')
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/~~~[\s\S]*?~~~/g, '')
+    .split('\n')
+    .filter((l) => !l.includes('<!-- gos:spec-gate:exempt -->'))
+    .join('\n');
+}
+
 // Section ownership for the v3 floor: the heading must START with the
 // decision id at a word boundary, so a superseding heading that merely
 // mentions another id mid-text cannot credit that id with the card.
@@ -1432,10 +1453,12 @@ function isSeparatorCells(cells) {
   return cells.length >= 1 && cells.every((c) => /^:?-+:?$/.test(c));
 }
 
-// Card tables of a section body: consecutive pipe-row blocks whose header row
-// starts with an Option column and carries a Premise column. Two-column
-// Option|Note logistics tables are not card tables.
+// Card tables of a section body: consecutive pipe-row blocks whose normalized
+// header first cell is Option and whose header spans at least three columns
+// (two-column Option|Note logistics tables are not card tables). Bold and
+// code-span markup in header cells is normalized away before matching.
 function cardTablesIn(body) {
+  const norm = (c) => String(c || '').replace(/\*\*/g, '').replace(/`/g, '').trim();
   const blocks = [];
   let block = null;
   for (const line of String(body || '').split('\n')) {
@@ -1446,8 +1469,8 @@ function cardTablesIn(body) {
   const tables = [];
   for (const rows of blocks) {
     const header = pipeRowCells(rows[0]);
-    if (!/^option/i.test(header[0] || '')) continue;
-    if (!header.some((c) => c.toLowerCase().includes('premise'))) continue;
+    if (!/^option/i.test(norm(header[0]))) continue;
+    if (header.length < 3) continue;
     const dataRows = [];
     for (const row of rows.slice(1)) {
       const cells = pipeRowCells(row);
@@ -1465,7 +1488,22 @@ function cardTablesIn(body) {
 // fail with no parse escape hatch.
 function cardColumnFailures(decisionId, body) {
   const failures = [];
-  for (const table of cardTablesIn(body)) {
+  const tables = cardTablesIn(body);
+  if (!tables.length) {
+    // a degenerate Option-headed table (e.g. two-column Option|Premise) is
+    // logistics-shaped and exempt from the column contract — but it must not
+    // stand in for the decision's real card
+    const degenerate = String(body || '').split('\n').some((l) => /^\s*\|\s*\*{0,2}[Oo]ption\b/.test(l));
+    if (degenerate) {
+      failures.push(core.gateFail('spec-gate-card-column', {
+        verdict: `decision ${decisionId} has no card table — an Option-headed logistics-shaped table cannot stand in for the 5-column card`,
+        evidence: [decisionId],
+        fix: 'add the 5-column card (Option | Premise | Pros | Cons | Activates) — see dialogue-protocol.md card template',
+      }));
+    }
+    return failures;
+  }
+  for (const table of tables) {
     const aIdx = table.header.findIndex((c) => /^activates/i.test(c));
     if (aIdx === -1) {
       failures.push(core.gateFail('spec-gate-card-column', {
@@ -1507,63 +1545,26 @@ function cardColumnFailures(decisionId, body) {
   return failures;
 }
 
-// v3 floor: the v2 checks under prefix-anchored section ownership, plus the
-// Activates column contract on every card table of each owned section.
+// v3 floor: the shared card checks under prefix-anchored section ownership on
+// fence-stripped scannable text, plus the Activates column contract on every
+// card table of each owned section. Floors are cumulative: anything passing
+// v3 also passes v2 (v3 ownership is stricter, its checks are supersets).
 function specCardFloorV3(specText, decisions, projectIds) {
-  const failures = [];
-  const known = new Set([...(decisions || []).map((d) => d && d.id).filter(Boolean), ...(projectIds || [])]);
-  const scanned = stripSpecForScan(specText);
-  for (const m of scanned.matchAll(/\bD-\d{2,3}\b/g)) {
-    if (!known.has(m[0])) {
-      failures.push(core.gateFail('spec-gate-unknown-decision', {
-        verdict: `spec references ${m[0]} but it resolves to neither state.decisions nor the project DECISIONS index`,
-        evidence: [m[0]],
-        fix: 'register the decision (`gos decision add`) or fix the typo — unregistered ids are how decisions silently vanish',
-      }));
-    }
-  }
-  const sections = specSections(specText);
-  for (const d of decisions || []) {
-    if (!d || !d.id) continue;
-    const own = sections.filter((s) => sectionOwnsDecisionId(s.heading, d.id));
-    if (!own.length) {
-      failures.push(core.gateFail('spec-gate-card-missing', {
-        verdict: `decision ${d.id} has no spec section — every decision must show its options card (a model preference without alternatives is not a decision)`,
-        evidence: [d.id],
-        fix: 'add a section whose heading contains the id, with an options table and a why-not line (skills/gos-think/reference/dialogue-protocol.md)',
-      }));
-      continue;
-    }
-    const body = own.map((s) => s.lines.join('\n')).join('\n');
-    const tokens = new Set();
-    for (const row of body.split('\n')) {
-      if (!/^\s*\|/.test(row)) continue;
-      const first = row.trim().replace(/^\|/, '').split('|')[0].trim();
-      if (!first || /^[-:\s]*$/.test(first) || /^option/i.test(first)) continue;
-      tokens.add(first);
-    }
-    if (tokens.size < 2) {
-      failures.push(core.gateFail('spec-gate-card-table', {
-        verdict: `decision ${d.id} card lacks an options table with ≥2 distinct option rows`,
-        evidence: [d.id],
-        fix: 'add the option comparison table (first column = option token, ≥2 rows) — see dialogue-protocol.md card template',
-      }));
-    }
-    const whyNot = body.split('\n').find((l) => /^\s*why-not\s*:/i.test(l));
-    const tokenHit = whyNot && [...tokens].some((t) => {
-      const esc = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      return new RegExp(esc, 'i').test(whyNot);
-    });
-    if (!tokenHit) {
-      failures.push(core.gateFail('spec-gate-card-why-not', {
-        verdict: `decision ${d.id} card lacks a why-not: line naming the rejected option(s)`,
-        evidence: [d.id],
-        fix: 'add `why-not: <option token> — <reason>` under the table; markers are English-canonical (why-not:)',
-      }));
-    }
-    failures.push(...cardColumnFailures(d.id, body));
-  }
-  return failures;
+  const scannable = stripSpecFencesAndExempts(specText);
+  return [
+    ...specDecisionRefFailures(specText, decisions, projectIds),
+    ...specCardCoreFailures(decisions, specSections(scannable), sectionOwnsDecisionId, 'starts with the id', cardColumnFailures),
+  ];
+}
+
+// Single source for the unknown-stamp-domain failure: the gate dispatch and
+// the commit-side freezer render the same verdict, fix text and escape note.
+function specGateVersionUnknownFailure(stamp) {
+  return core.gateFail('spec-gate-version-unknown', {
+    verdict: `spec_gate_version=${JSON.stringify(stamp)} is outside the floor domain this CLI knows (2..${CLI_MAX})`,
+    evidence: [`.gos/state.json: spec_gate_version=${JSON.stringify(stamp)}`],
+    fix: 'upgrade the CLI (or return to the branch that froze this spec) until the stamp is known — escape, user-approved only: rerun with GOS_SPEC_GATE_FLOOR_OVERRIDE=1',
+  });
 }
 
 const SPEC_CARD_FLOORS = { 2: specCardFloorFailures, 3: specCardFloorV3 };
@@ -1611,11 +1612,7 @@ function specCardStampCheck(state) {
       result.pass = true;
       return result;
     }
-    result.failures.push(core.gateFail('spec-gate-version-unknown', {
-      verdict: `spec_gate_version=${JSON.stringify(stamp)} is outside the floor domain this CLI knows (2..${CLI_MAX})`,
-      evidence: [`.gos/state.json: spec_gate_version=${JSON.stringify(stamp)}`],
-      fix: 'upgrade the CLI (or return to the branch that froze this spec) until the stamp is known — escape, user-approved only: rerun with GOS_SPEC_GATE_FLOOR_OVERRIDE=1',
-    }));
+    result.failures.push(specGateVersionUnknownFailure(stamp));
     console.log(`✗ spec cards: stamp ${JSON.stringify(stamp)} outside known floor domain (2..${CLI_MAX})`);
     return result;
   }
@@ -1641,4 +1638,4 @@ function specCardStampCheck(state) {
   return result;
 }
 
-module.exports = { getSemanticPlanTasks, checkBidirectional, loadSemanticAllowlist, semanticAllowlisted, semanticBaselineShas, diffHitCheck, semanticDiffPhase, readExemptions, consumeExemptions, checkManifest, impactClosurePhase, semanticChecks, loadTrustStore, cmdGateTrust, cmdGate, cmdLogs, specCardFloorFailures, projectDecisionIds, stripSpecForScan, flipReconcileLeg, renderGateFailures, SPEC_CARD_FLOORS, CLI_MAX, probeSpecFloor };
+module.exports = { getSemanticPlanTasks, checkBidirectional, loadSemanticAllowlist, semanticAllowlisted, semanticBaselineShas, diffHitCheck, semanticDiffPhase, readExemptions, consumeExemptions, checkManifest, impactClosurePhase, semanticChecks, loadTrustStore, cmdGateTrust, cmdGate, cmdLogs, specCardFloorFailures, projectDecisionIds, stripSpecForScan, flipReconcileLeg, renderGateFailures, SPEC_CARD_FLOORS, CLI_MAX, probeSpecFloor, specGateVersionUnknownFailure };

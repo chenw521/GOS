@@ -4,7 +4,7 @@ const core = require('../core/index.cjs');
 const clcore = require('../ops/changelog-core.cjs'); // issue-close neutralization (R-01)
 const nav = require('../nav/status.cjs');   // direct aspect require (dependency DAG)
 const ops = require('../ops/gate.cjs');     // direct aspect require (dependency DAG)
-const { SPEC_CARD_FLOORS, probeSpecFloor } = ops; // spec floor registry + shared probe (single source in the gate module)
+const { SPEC_CARD_FLOORS, probeSpecFloor, specGateVersionUnknownFailure } = ops; // spec floor registry + shared probe + unknown-domain failure (single source in the gate module)
 const map = require('../map/index.cjs');
 const knowledge = require('../knowledge/index.cjs');
 const sibArchive = require('./archive.cjs');
@@ -80,7 +80,7 @@ function runCommitSemanticChecks(state, stage) {
       const cur = core.sha256FileSync(sp);
       if (cur !== state.spec_sha256) {
         console.error(`✗ spec.md hash ≠ frozen spec_sha256 (B-22) — spec changed after THINK commit.`);
-        console.error('  Legitimate change: update spec, re-run `gos commit think` (re-freezes), then retry.');
+        console.error('  Legitimate change: update spec, re-run `gos commit think --refreeze` (re-freezes without advancing the stage), then retry.');
         process.exit(1);
       }
     }
@@ -122,11 +122,7 @@ const CJK_SUBJECT_RE = /[\u1100-\u11ff\u3000-\u30ff\u3130-\u318f\u3400-\u4dbf\u4
 // source); this side only decides WHEN to probe (first freeze, stamp-absent
 // state) and when to dispatch the stamped floor (re-freeze never upgrades).
 function renderSpecFloorBlock(failures) {
-  for (const f of failures) {
-    console.error(`✗ commit blocked: ${f.code}: ${f.verdict}`);
-    for (const e of f.evidence || []) console.error(`    evidence: ${e}`);
-    console.error(`    fix: ${f.fix}`);
-  }
+  console.error(ops.renderGateFailures(failures));
 }
 
 // Probe-stamp the content era. blockOnNone=true (first freeze of new
@@ -147,10 +143,11 @@ function stampSpecByProbe(state, specText, { blockOnNone = true } = {}) {
     return;
   }
   state.spec_gate_version = probed.stamp;
-  const aboveFloor = SPEC_CARD_FLOORS[probed.stamp + 1];
-  if (aboveFloor) {
-    const above = aboveFloor(specText, decisions, projectIds).length;
-    console.log(`✓ spec gate: stamped floor v${probed.stamp} (${above} table(s) fail the v${probed.stamp + 1} Activates floor)`);
+  const aboveVersions = Object.keys(SPEC_CARD_FLOORS).map(Number).filter((v) => v > probed.stamp).sort((a, b) => a - b);
+  if (aboveVersions.length) {
+    const above = aboveVersions.reduce((n, v) => n + SPEC_CARD_FLOORS[v](specText, decisions, projectIds).length, 0);
+    if (above) console.log(`✓ spec gate: stamped floor v${probed.stamp} (${above} failure(s) against the newer floor${aboveVersions.length > 1 ? 's' : ''} ${aboveVersions.join(', ')})`);
+    else console.log(`✓ spec gate: stamped floor v${probed.stamp}`);
   } else {
     console.log(`✓ spec gate: stamped floor v${probed.stamp}`);
   }
@@ -160,11 +157,13 @@ function enforceStampedSpecFloor(state, specText) {
   const stamp = state.spec_gate_version;
   const floor = SPEC_CARD_FLOORS[stamp];
   if (!floor) {
-    renderSpecFloorBlock([core.gateFail('spec-gate-version-unknown', {
-      verdict: `spec_gate_version=${JSON.stringify(stamp)} is outside the floor domain this CLI knows`,
-      evidence: [`.gos/state.json: spec_gate_version=${JSON.stringify(stamp)}`],
-      fix: 'upgrade the CLI (or return to the branch that froze this spec) until the stamp is known — escape, user-approved only: rerun with GOS_SPEC_GATE_FLOOR_OVERRIDE=1',
-    })]);
+    // same escape semantics as the gate: user-approved override downgrades the
+    // unknown-domain stop to a loud warning; everything else fails closed
+    if (/^(1|true)$/i.test(String(process.env.GOS_SPEC_GATE_FLOOR_OVERRIDE || ''))) {
+      console.log(`⚠ spec gate floor override: spec_gate_version=${JSON.stringify(stamp)} is outside the known domain — stamped floor SKIPPED under GOS_SPEC_GATE_FLOOR_OVERRIDE (user-approved only)`);
+      return;
+    }
+    renderSpecFloorBlock([specGateVersionUnknownFailure(stamp)]);
     process.exit(1);
   }
   const failures = floor(specText, state.decisions || [], ops.projectDecisionIds());
@@ -189,7 +188,8 @@ function cmdCommit(argv) {
   }
   const state = core.readState();
   if (!state) core.die(core.CONTRACTS.state_semantics.noActiveTask);
- // flag-aware stage parsing (`gos commit plan --force` — monotonic override)
+ // flag-aware stage parsing; --force overrides plan-snapshot monotonicity only —
+ // the stage-monotonicity guard below never reads it
   const forceFlag = args.includes('--force');
   const refreezeFlag = args.includes('--refreeze');
   const stageArg = args.find((a) => !a.startsWith('--'));
@@ -357,7 +357,7 @@ function cmdCommit(argv) {
       // upgrades the stamp.
       const specText = fs.readFileSync(sp, 'utf8');
       if (state.spec_gate_version !== undefined) enforceStampedSpecFloor(state, specText);
-      else stampSpecByProbe(state, specText);
+      else stampSpecByProbe(state, specText, { blockOnNone: !state.spec_sha256 });
       state.spec_sha256 = core.sha256FileSync(sp); // B-22 freeze at THINK commit
     }
   }

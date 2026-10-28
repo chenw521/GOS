@@ -2,11 +2,12 @@
   "schema_version": 5,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "BUILD",
+  "current_stage": "REVIEW",
   "completed_stages": [
     "INTENT",
     "THINK",
-    "PLAN"
+    "PLAN",
+    "BUILD"
   ],
   "intent": {
     "summary": "Mandatory deep-dig rounds before decision cards, standing deepen option in every card, value-essence column, table rendering contract (message body vs tool picks), thin-gate extension. Re-homes concern cab1a0f8 from P2",
@@ -302,6 +303,42 @@
       "test/sections/T2-project.test.sh",
       "test/sections/T46-module-structure.test.sh",
       "test/sections/T95-repo-id-guard.test.sh"
+    ]
+  },
+  "checkpoints": [
+    {
+      "stage": "BUILD",
+      "unit": "all-waves (auto at commit)",
+      "done": "T1,T2,T3,T4,T5,T7,T8,T9,T10",
+      "remaining": "",
+      "at": "2026-10-28T10:43:54.670Z"
+    }
+  ],
+  "review_findings": {
+    "phase1_spec_compliance": "PASS - 8/8 decisions evidenced, 5/5 requirements shipped, zero deferred-item creep; lock.cjs guard relaxation judged a legitimate schema-bump consequence",
+    "phase2_code_quality": "13 findings (8 Major, 5 Minor) - all fixed in-review except two accepted deviations",
+    "minors_deferred": [
+      {
+        "issue": "COMMANDS registry lists no flags for commit (--refreeze absent, house precedent also omits --force/--subject); discoverability delivered via 4 other surfaces",
+        "fixed": true
+      },
+      {
+        "issue": "router SKILL inherits plain-narration contract by reference to dialogue-protocol instead of restating it",
+        "fixed": true
+      }
+    ],
+    "fixes_landed": [
+      "fenced example tables excluded from the v3 card scan (false fail/pass)",
+      "card-table detection tightened to any Option-headed 3+ column table with bold/code markup normalization; degenerate logistics-shaped tables can no longer stand in for the card",
+      "commit-side unknown-stamp escape honors GOS_SPEC_GATE_FLOOR_OVERRIDE (dead-end fix text closed)",
+      "commit-side B-22 fix text names commit think --refreeze",
+      "v2/v3 floors share one core (ref scan + card checks parameterized by ownership); cumulativity invariant fixture added",
+      "behavioral fixtures: --refreeze pure-state op, stage-regression-blocked, first-freeze blockOnNone, pre-floor grandfather advisory, fenced/detection cases (T73 57/0)",
+      "T22 stamp assertion now reads state.json spec_gate_version (was string-vacuous)",
+      "above-floor count iterates registry keys and reports failure units honestly",
+      "unknown-domain failure constructed once (gate factory) and rendered via shared renderer",
+      "dead locale fix subfield dropped (en+zh parity intact)",
+      "stale grandfather/--force comments refreshed; exemplar cards carry deepen tail lines; protocol heading rule states prefix anchoring"
     ]
   }
 }

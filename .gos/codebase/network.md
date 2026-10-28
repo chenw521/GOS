@@ -14,7 +14,7 @@ Nodes = path anchors (human and machine share the same key); edges = semantic de
 | switch (④case↔cmdXxx) | 37 |
 | testof (⑤ section annotations → cmd) | 147 |
 | hand (hand edges from edges.json) | 1 |
-| callgraph (⑥fn↔fn, acorn) | 482 |
+| callgraph (⑥fn↔fn, acorn) | 486 |
 | testof_fn (⑦ section annotations → fn) | 107 |
 
 ### Hand-edge detail (edges.json)

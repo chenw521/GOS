@@ -280,7 +280,6 @@ module.exports = {
   'gate.spec-gate-version-unknown': {
     what: 'the spec gate stamp is outside the floor domain this CLI knows',
     why: 'an unknown stamp fails closed so a newer state can never vacuous-pass under an older CLI',
-    fix: 'upgrade the CLI (or return to the branch that froze this spec) until the stamp is known — escape, user-approved only: rerun with GOS_SPEC_GATE_FLOOR_OVERRIDE=1',
   },
 
   // ---- commit-side guards (stage monotonicity) ----

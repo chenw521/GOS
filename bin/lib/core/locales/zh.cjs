@@ -273,7 +273,6 @@ module.exports = {
   'gate.spec-gate-version-unknown': {
     what: 'spec gate 戳记超出本 CLI 认识的底线版本域',
     why: '未知戳记必须关门失败，新状态不能在旧 CLI 下空转放行',
-    fix: '升级 CLI（或回到冻结此 spec 的分支），直到戳记被认识——逃生通道（仅限用户批准）：以 GOS_SPEC_GATE_FLOOR_OVERRIDE=1 重跑',
   },
 
   // ---- commit 侧守卫（阶段单调性） ----

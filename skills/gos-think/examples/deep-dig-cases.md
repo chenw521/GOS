@@ -46,6 +46,8 @@ recommendation: shared lock — conditional: the read/write split must
 match the counted call sites; re-count before rewriting, and any new
 nesting caller joins the readers first.
 
+deepen: any option — ask for another dig round.
+
 **The deepen round.**
 
 new facts: a search of the open issue list found one report of two
@@ -95,6 +97,8 @@ recommendation: warning plus missing-file check — conditional: revisit a
 harder mechanism only if files start arriving without passing the
 scanner.
 
+deepen: any option — ask for another dig round.
+
 **The deepen round.**
 
 new facts: reading the scanner source turned up a second warning path
@@ -134,6 +138,8 @@ is one pattern, not a design flaw.
 recommendation: extend the pattern — conditional: the dotted form
 resolves against the importing file's folder, and the count is re-run at
 review time as proof.
+
+deepen: any option — ask for another dig round.
 
 **The deepen round.**
 

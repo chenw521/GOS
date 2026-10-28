@@ -54,8 +54,9 @@ Rules:
   premise it stands on.
 - Every card closes with the **deepen tail line** — `deepen: any option —
   ask for another dig round` — right after the recommendation.
-- The card lives in the spec's own `## D-NN …` section (any heading whose
-  text contains the id). Fenced-code examples and
+- The card lives in the spec's own `## D-NN …` section (the heading must
+  START with the decision id — a superseding heading that merely mentions
+  another id mid-text does not credit it). Fenced-code examples and
   `<!-- gos:spec-gate:exempt -->` lines are excluded from the gate scan —
   use exempt only for illustrative examples, never for the real card.
 
