@@ -410,6 +410,35 @@ async function drive(ctx) {
   const runId = crypto.randomUUID();
   let seq = 0;
 
+  // Crash-safe delegation: a previous runner may have died between a
+  // delegated advance and its ratification, leaving a PENDING approval no
+  // in-memory leg will ever clear. The store stamps carry the pairing —
+  // recover the leg from the latest stamp of that stage and run the full
+  // delegation sequence now, before any new spawn extends the task.
+  {
+    const modRatify = require('./ratify.cjs');
+    const orphan = modRatify.advanceBlocker(taskState.approvals);
+    if (orphan && modRatify.isDelegatedStage(orphan.stage)) {
+      const stamps = store.isPlainObject(loaded.store.stamps) ? loaded.store.stamps : {};
+      let best = null;
+      for (const [sid, st] of Object.entries(stamps)) {
+        if (!store.isPlainObject(st)) continue;
+        if (String(st.stage || '').toUpperCase() !== String(orphan.stage).toUpperCase()) continue;
+        if (!best || String(st.stampedAtIso || '') > String(best.st.stampedAtIso || '')) best = { sid, st };
+      }
+      if (!best) {
+        return endWith({
+          ok: false, status: 'paused', paused: true, reason: 'orphan-pending-unrecoverable', stage: orphan.stage,
+          guidance: store.guidanceFor('auto.ratify.stampMissing', { spawnId: '(previous run)' }),
+        });
+      }
+      const orphanLeg = { stage: String(orphan.stage).toUpperCase(), spawnId: best.sid, streamSha256: best.st.streamSha256, advanced: true, orphan: true };
+      const legRes = await delegatedLegs({ leg: orphanLeg, opts, env, rootDir, spawnRunner, tp, now });
+      if (legRes.err) return report(legRes.err, { iterations, breaker: breakerView() });
+      iterations.push({ spawnId: orphanLeg.spawnId, stage: orphanLeg.stage, signal: 'orphan-legs', delegation: legRes.summary });
+    }
+  }
+
   // Heartbeat during spawn waits so a long-running spawn never makes the
   // runner's lock look stale.
   const withHeartbeat = async (fn) => {

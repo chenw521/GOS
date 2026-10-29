@@ -1141,5 +1141,43 @@ EOF
 C17_OUT="$(node run-c17.cjs 2>&1 | tail -n 1)"
 t104_eq "late-settling spawn advance rebases the baseline instead of pausing" "OK" "$C17_OUT"
 
+# Crash-safe delegation: a runner that died between a delegated advance and
+# its ratification leaves an orphaned PENDING. A fresh loop recovers the leg
+# from the store stamp, runs the red-team double-zero and ratifies before
+# any new spawn — without it, the next stage advance would block forever.
+t104_case c18
+mkdir -p .gos/task/p0 .gos/logs
+printf '# Spec\n\np0 auto spec\n' > .gos/task/p0/spec.md
+t104_state THINK 3 ',"spec_path":".gos/task/p0/spec.md","approvals":{"THINK":{"status":"PENDING","ts":"2026-01-01T00:00:00.000Z","mode":"auto","stage":"THINK"}}' > .gos/state.json
+cat > run-c18.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const GR = process.env.GOS_ROOT;
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const problems = [];
+const world = process.cwd();
+store.create({ mode: 'on', rootDir: world, limits: { N: 3, K: 9, B: 9 } });
+const sha = crypto.createHash('sha256').update('orphan stream').digest('hex');
+store.stampStream('legacy-run-1', 'THINK', sha, '2026-01-01T00:00:00.000Z', world);
+const spawnRunner = (spec) => {
+  if (spec.roWorkspace) return { status: 0, stdout: 'REDTEAM-FINDINGS: 0\n', stderr: '' };
+  problems.push('unexpected working spawn before orphan legs completed');
+  return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
+};
+(async () => {
+  const r = await loop.createLoop({ rootDir: world, host: 'gos-fixture-host', env: { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' }, maxIterations: 1, spawnRunner }).loop.run();
+  if (r.reason === 'orphan-pending-unrecoverable') problems.push('stamp present but orphan declared unrecoverable');
+  const st = JSON.parse(fs.readFileSync(path.join(world, '.gos', 'state.json'), 'utf8'));
+  const aT = (st.approvals || {}).THINK || {};
+  if (aT.status !== 'ratified') problems.push('orphan PENDING not ratified: ' + JSON.stringify(aT.status));
+  if (r.status === 'paused' && r.reason !== 'iteration-cap') problems.push('paused: ' + r.reason);
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+C18_OUT="$(node run-c18.cjs 2>&1 | tail -n 1)"
+t104_eq "orphaned PENDING is recovered from the store stamp and ratified at loop start" "OK" "$C18_OUT"
+
 echo "--- T104 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]
