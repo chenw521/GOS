@@ -2,8 +2,10 @@
   "schema_version": 5,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "INTENT",
-  "completed_stages": [],
+  "current_stage": "THINK",
+  "completed_stages": [
+    "THINK"
+  ],
   "intent": {
     "summary": "Ship gos auto on/off/status — toggle full-auto at any stage boundary; per-stage fresh-session auto-loop (spawn next stage session after each commit, never one long conversation); persists across sessions, resume auto-continues; hard gates + D-NN audit stay; guards: push sign-off, dangerous-cmd gates, retry cap after N exit-1, main-push CI closure check (every push terminal-green or dispositioned, 91848545 twice-lived); ends at SHIP",
     "confirmed": true
@@ -250,5 +252,7 @@
       "remaining": "user approval -> approve think -> commit think",
       "at": "2026-10-29T03:50:02.405Z"
     }
-  ]
+  ],
+  "spec_gate_version": 3,
+  "spec_sha256": "48b0aeda8ae484dfb515af5a43e6c8886abeb3b266e14e7dde98efdbda2d949f"
 }
