@@ -445,4 +445,66 @@ module.exports = {
     why: '推进以提交可达性计分，绝不用时间戳——没有 git 真相就无法判定结果',
     fix: '检查仓库健康（派生前 HEAD oid 与当前 HEAD 都必须可解析），然后恢复自动循环',
   },
+
+  // ---- auto 模式：循环执行器 ----
+  'auto.loop.markerActive': {
+    what: 'auto 家族拒绝在 runner 派生的会话内运行',
+    why: '派生的阶段会话绝不能持有循环控制权（标记即边界）',
+    fix: '在普通终端运行 {cmd:auto} 相关命令',
+  },
+  'auto.loop.modeOff': {
+    what: 'auto 模式处于关闭状态',
+    why: '恢复绝不自动派生；关闭的存储仅是配置',
+    fix: '用 {cmd:auto} on 重新启用后再运行',
+  },
+  'auto.loop.noTask': {
+    what: '没有活跃的 GOS 任务——auto 循环无任务可驱动',
+    why: '循环按阶段推进的是单个活跃任务',
+    fix: '先用 {cmd:init} 启动任务，再重新运行',
+  },
+  'auto.loop.taskAtEnd': {
+    what: '任务已处于 {stage} 阶段——auto 循环到此结束',
+    why: '归档与交付是人工关卡；无交付适配器也能干净终止',
+    fix: '手动完成该阶段（归档/推送），或开始下一个任务',
+  },
+  'auto.loop.hostNotSelectable': {
+    what: '主机 {host} 不可用于真实运行',
+    why: '只有 verified 状态的主机可派生会话，其余状态仅作展示',
+    fix: '用 {cmd:auto} status 查看主机矩阵并选择已验证的主机',
+  },
+  'auto.loop.detachedHead': {
+    what: '仓库处于 detached HEAD 状态',
+    why: '阶段提交将无法归属到任何分支',
+    fix: '检出任务工作分支后重新运行',
+  },
+  'auto.loop.workBranchFailed': {
+    what: '无法从主干分支 {branch} 切换到工作分支 {work}',
+    why: '循环绝不在主干上开发（仅 PR 裁决）',
+    fix: '解决检出阻碍（提交或暂存）后重新运行',
+  },
+  'auto.loop.externalMutation': {
+    what: '任务状态在 auto 循环之外被改动：{detail}',
+    why: '外部改动以暂停报告处理——绝不计入连续失败层',
+    fix: '审查该改动；若为有意为之，再显式恢复循环',
+  },
+  'auto.loop.stateCorrupt': {
+    what: '任务状态无法读取',
+    why: '状态不可读则循环无法复核任务身份',
+    fix: '修复 .gos/state.json 后恢复 auto 循环',
+  },
+  'auto.loop.spawnComposeFailed': {
+    what: '启动器能力档案组合失败：{detail}',
+    why: '没有组合好的能力档案就不派生任何会话',
+    fix: '检查档案模板与引擎探测结果后恢复',
+  },
+  'auto.loop.stampFailed': {
+    what: '流戳记写入被拒绝：{detail}',
+    why: '派生与流的配对必须在任何消费者读取前可验证',
+    fix: '检查存储；无法恢复时运行 {cmd:auto} off --purge 后 {cmd:auto} on',
+  },
+  'auto.loop.iterationCap': {
+    what: '已达迭代上限 {max}',
+    why: '显式安全上限先于熔断层止住了循环',
+    fix: '提高上限或重新发起一次运行',
+  },
 };

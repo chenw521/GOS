@@ -452,4 +452,66 @@ module.exports = {
     why: 'advance is scored by commit reachability, never timestamps — without git truth the outcome cannot be judged',
     fix: 'check repository health (the pre-spawn HEAD oid and current HEAD must both resolve), then resume the auto loop',
   },
+
+  // ---- auto mode: loop runner ----
+  'auto.loop.markerActive': {
+    what: 'the auto family refuses to run inside a runner-spawned session',
+    why: 'a spawned stage session must never own loop control (the marker is the boundary)',
+    fix: 'run `gos auto` commands from a regular terminal',
+  },
+  'auto.loop.modeOff': {
+    what: 'auto mode is off',
+    why: 'resume never auto-spawns; an off store is configuration only',
+    fix: 're-enable with `gos auto on`, then run',
+  },
+  'auto.loop.noTask': {
+    what: 'no active GOS task — the auto loop has nothing to drive',
+    why: 'the loop advances one active task stage by stage',
+    fix: 'start a task with `gos init` first, then re-run',
+  },
+  'auto.loop.taskAtEnd': {
+    what: 'task is at stage {stage} — the auto loop ends here',
+    why: 'archive and delivery are human gates; the loop terminates cleanly with no delivery adapter',
+    fix: 'finish the stage manually (archive/push), or start the next task',
+  },
+  'auto.loop.hostNotSelectable': {
+    what: "host '{host}' is not selectable for real runs",
+    why: 'only verified hosts may spawn sessions; other statuses are display-only',
+    fix: 'check the host matrix and pick a verified host (auto status)',
+  },
+  'auto.loop.detachedHead': {
+    what: 'repository is on a detached HEAD',
+    why: 'stage commits could not be attributed to a branch',
+    fix: 'check out the task work branch and re-run',
+  },
+  'auto.loop.workBranchFailed': {
+    what: "could not leave trunk branch '{branch}' for the work branch '{work}'",
+    why: 'the loop never develops on the trunk (PR-only ruling)',
+    fix: 'resolve the checkout blocker (commit or stash), then re-run',
+  },
+  'auto.loop.externalMutation': {
+    what: 'task state changed outside the auto loop: {detail}',
+    why: 'external mutations pause with a report — they never count into the consecutive-failure layer',
+    fix: 'review the change; if intended, resume the loop deliberately',
+  },
+  'auto.loop.stateCorrupt': {
+    what: 'task state could not be read',
+    why: 'the loop cannot revalidate task identity without a readable state',
+    fix: 'repair .gos/state.json, then resume the auto loop',
+  },
+  'auto.loop.spawnComposeFailed': {
+    what: 'launcher profile composition failed: {detail}',
+    why: 'no spawn leaves the runner without a composed capability profile',
+    fix: 'check the profile templates and engine probe, then resume',
+  },
+  'auto.loop.stampFailed': {
+    what: 'stream stamp write refused: {detail}',
+    why: 'the spawn-to-stream pairing must be verifiable before any consumer reads it',
+    fix: 'inspect the store; if unrecoverable run `gos auto off --purge` then `gos auto on`',
+  },
+  'auto.loop.iterationCap': {
+    what: 'iteration ceiling of {max} reached',
+    why: 'an explicit safety bound stopped the loop before the breaker layers fired',
+    fix: 'raise the ceiling or start a fresh run',
+  },
 };
