@@ -443,7 +443,13 @@ function compose(profileName, opts) {
   if (missing.length) {
     return { ok: false, code: 'auto.launcher.missing-mandatory-mask', profile: name, ...base, missing };
   }
-  const masks = load.profile.masks.map((m) => ({ ...m, dest: path.resolve(resolveTokenPath(m.path, env)) }));
+  const resolved = load.profile.masks.map((m) => ({ ...m, dest: path.resolve(resolveTokenPath(m.path, env)) }));
+  // A masked path that does not exist on the host is already invisible inside
+  // the sandbox (its parent is bind-mounted); bwrap cannot create the missing
+  // mountpoint on a read-only bind, so nonexistent destinations are skipped
+  // and recorded rather than fatal.
+  const masks = resolved.filter((m) => fs.existsSync(m.dest));
+  const masksSkipped = resolved.filter((m) => !masks.includes(m)).map((m) => m.path);
   const writableRoots = (Array.isArray(o.writableRoots) ? o.writableRoots : [])
     .filter((w) => typeof w === 'string' && w)
     .map((w) => path.resolve(w));
@@ -471,6 +477,7 @@ function compose(profileName, opts) {
     deny: injected.permission.bash.deny.slice(),
     meta: {
       masks,
+      masksSkipped,
       seeds,
       seedsSkipped,
       writableShadowed,

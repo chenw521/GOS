@@ -158,6 +158,12 @@ const env = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
 const problems = [];
 const storePrefix = path.join(process.env.XDG_DATA_HOME, 'gos');
 const home = process.env.HOME;
+// credential artifacts exist on the host side so the mask layer has real
+// files to hide (absent paths are the skip branch covered by the later case)
+fs.closeSync(fs.openSync(path.join(home, '.gitconfig'), 'w'));
+fs.closeSync(fs.openSync(path.join(home, '.netrc'), 'w'));
+fs.mkdirSync(path.join(home, '.ssh'), { recursive: true });
+fs.mkdirSync(path.join(home, '.config', 'gh'), { recursive: true });
 store.create({ mode: 'on', rootDir });
 const bwrapProbe = () => ({ engine: 'bwrap', version: '0.11.0' });
 const noEngineProbe = () => ({ engine: 'none', reason: 'not installed' });
@@ -471,14 +477,25 @@ t105_case d7
 t105_state THINK > .gos/state.json
 cat > run-d7.cjs <<'EOF'
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
+const { spawnSync } = require('child_process');
 const GR = process.env.GOS_ROOT;
 const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
 const launcher = require(path.join(GR, 'bin/lib/ops/auto/launcher.cjs'));
 const rootDir = process.cwd();
-const env = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
+const baseEnv = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
 const problems = [];
-const home = process.env.HOME;
 const bwrapProbe = () => ({ engine: 'bwrap', version: '0.11.0' });
+
+// fixture homes control which credential paths exist on the host side
+const richHome = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-rich-'));
+const bareHome = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-bare-'));
+const xdg = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-xdg-'));
+fs.mkdirSync(path.join(xdg, 'gos'), { recursive: true });
+fs.closeSync(fs.openSync(path.join(richHome, '.git-credentials'), 'w'));
+fs.mkdirSync(path.join(richHome, '.aws'), { recursive: true });
+fs.mkdirSync(path.join(richHome, '.gnupg'), { recursive: true });
 store.create({ mode: 'on', rootDir });
 const gitDir = path.join(rootDir, '.git');
 function ops(argv) {
@@ -491,34 +508,53 @@ function ops(argv) {
   }
   return out;
 }
-for (const profile of ['restricted', 'workspace', 'full']) {
-  const c = launcher.compose(profile, {
-    workspace: rootDir, env, store, engineProbe: bwrapProbe,
+function composeFor(profile, home) {
+  return launcher.compose(profile, {
+    workspace: rootDir, env: { ...baseEnv, HOME: home, XDG_DATA_HOME: xdg },
+    store, engineProbe: bwrapProbe,
     writableRoots: [path.join(rootDir, '.gos')],
     ...(profile === 'full' ? { allowFull: true } : {}),
   });
-  if (!c.ok) { problems.push(profile + ' compose failed: ' + c.code); continue; }
-  // mandatory credential masks present in EVERY profile including full
-  const dests = new Set(c.meta.masks.map((m) => m.dest));
-  for (const p of [path.join(home, '.git-credentials'), path.join(home, '.aws'), path.join(home, '.gnupg')]) {
-    if (!dests.has(p)) problems.push(profile + ' lacks mask for ' + p);
-  }
-  // argv mounts: .git-credentials empty-mounted, .aws/.gnupg tmpfs-mounted
-  const o = ops(c.argv);
-  if (!o.some((x) => x.op === '--ro-bind' && x.src === '/dev/null' && x.dest === path.join(home, '.git-credentials'))) problems.push(profile + ': .git-credentials not empty-masked');
-  for (const p of [path.join(home, '.aws'), path.join(home, '.gnupg')]) {
-    if (!o.some((x) => x.op === '--tmpfs' && x.dest === p)) problems.push(profile + ': ' + p + ' not tmpfs-masked');
+}
+const creds = ['.git-credentials', '.aws', '.gnupg'];
+for (const profile of ['restricted', 'workspace', 'full']) {
+  // existing credential paths are masked in EVERY profile including full
+  const rich = composeFor(profile, richHome);
+  if (!rich.ok) { problems.push(profile + ' rich compose failed: ' + rich.code); continue; }
+  const ro = ops(rich.argv);
+  if (!ro.some((x) => x.op === '--ro-bind' && x.src === '/dev/null' && x.dest === path.join(richHome, '.git-credentials'))) problems.push(profile + ': existing .git-credentials not empty-masked');
+  for (const p of ['.aws', '.gnupg']) {
+    if (!ro.some((x) => x.op === '--tmpfs' && x.dest === path.join(richHome, p))) problems.push(profile + ': existing ' + p + ' not tmpfs-masked');
   }
   // the repo .git dir is bound read-write beside the read-only workspace
-  if (!o.some((x) => x.op === '--bind' && x.dest === gitDir)) problems.push(profile + ': .git not rw-bound');
-  if (o.some((x) => x.op === '--ro-bind' && x.dest === gitDir)) problems.push(profile + ': .git bound read-only');
-  // ordering invariants hold with the new bind and masks
-  if (!launcher.maskOverBindHolds(c)) problems.push(profile + ': mask-over-bind ordering violated');
+  if (!ro.some((x) => x.op === '--bind' && x.dest === gitDir)) problems.push(profile + ': .git not rw-bound');
+  if (ro.some((x) => x.op === '--ro-bind' && x.dest === gitDir)) problems.push(profile + ': .git bound read-only');
+  if (!launcher.maskOverBindHolds(rich)) problems.push(profile + ': mask-over-bind ordering violated');
+  // nonexistent credential paths are skipped and recorded, never mounted
+  const bare = composeFor(profile, bareHome);
+  if (!bare.ok) { problems.push(profile + ' bare compose failed: ' + bare.code); continue; }
+  const bo = ops(bare.argv);
+  for (const p of creds) {
+    const dest = path.join(bareHome, p);
+    if (bo.some((x) => x.dest === dest)) problems.push(profile + ': nonexistent ' + p + ' mounted anyway');
+    if (!(bare.meta.masksSkipped || []).includes('$HOME/' + p)) problems.push(profile + ': nonexistent ' + p + ' not recorded as skipped');
+  }
+  if (!launcher.maskOverBindHolds(bare)) problems.push(profile + ': bare ordering violated');
 }
+// real-engine regression: a home lacking every masked credential path must
+// still enter the sandbox (mounting a missing path on a read-only bind was
+// a hard spawn failure before the skip rule)
+const real = launcher.probeEngine({ env: { ...baseEnv, HOME: bareHome } });
+if (real.tier === 'bubblewrap') {
+  const c = composeFor('restricted', bareHome);
+  const r = spawnSync('bwrap', [...c.argv, '--', '/bin/sh', '-c', 'exit 0'], { timeout: 20000 });
+  if (r.status !== 0) problems.push('bwrap execution failed on credential-free home: rc=' + r.status + ' ' + String(r.stderr).slice(0, 120));
+}
+for (const d of [richHome, bareHome, xdg]) { try { fs.rmSync(d, { recursive: true, force: true }); } catch {} }
 console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
 EOF
 D7_OUT="$(node run-d7.cjs 2>&1 | tail -n 1)"
-t105_eq "credential masks: .git-credentials/.aws/.gnupg masked in every profile; repo .git rw-bound at kernel tier; ordering intact" "OK" "$D7_OUT"
+t105_eq "credential masks: existing paths masked in every profile, absent paths skipped+recorded; repo .git rw-bound at kernel tier; ordering intact; credential-free home enters the sandbox" "OK" "$D7_OUT"
 
 # ---------------------------------------------------------------- D8 --
 t105_case d8
