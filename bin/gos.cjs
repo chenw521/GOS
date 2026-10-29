@@ -158,7 +158,7 @@ function main() {
     case 'instructions': nav.cmdInstructions(args); break;
     case 'status': nav.cmdStatus(); break;
     case 'init': task.cmdInit(args); break;
-    case 'resume': nav.cmdResume(); break;
+    case 'resume': nav.cmdResume(); ops.autoResumeLine(); break;
     case 'stage': task.cmdStage(args); break;
     case 'context': task.cmdContext(args); break;
     case 'checkpoint': task.cmdCheckpoint(args); break;
@@ -190,7 +190,7 @@ function main() {
     case 'push': ops.cmdPush(args); break;
     case 'track': ops.cmdTrack(args); break;
     case 'render': render.cmdRender(args); break; // T8/D-03: --force bypasses the manifest refusal
-    case 'auto': nav.cmdAuto(args); break;
+    case 'auto': ops.cmdAuto(args); break;
     case 'approve': nav.cmdApprove(args); break;
     case 'help': case '--help': case '-h': nav.cmdHelp(args); break;
     case '--version': case '-v': { let v = 'unknown'; try { v = core.PKG.version || 'unknown'; } catch { /* REVIEW-F11 */ } console.log(v); break; }

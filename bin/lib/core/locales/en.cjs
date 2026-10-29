@@ -288,4 +288,411 @@ module.exports = {
     why: 'an already-passed stage cannot re-advance — the commit would write an advance label history already moved past',
     fix: 're-run the current stage commit if idempotent redelivery is intended; to re-freeze a frozen spec use gos commit think --refreeze (state-only, no stage advance)',
   },
+
+  // ---- auto mode: runner trust store (machine-local) ----
+  'auto.store.missing': {
+    what: 'auto runtime store not found at {path}',
+    why: 'a missing store is treated like a corrupt one — never a silent fresh start',
+    fix: 'run `gos auto on` to create it (tracked counters warn over implied prior history)',
+  },
+  'auto.store.corrupt': {
+    what: 'auto runtime store at {path} is corrupt or failed schema validation',
+    why: 'runner trust state (counters, breaker, lock, approvals) cannot be verified from a damaged store',
+    fix: 'inspect the file; if unrecoverable run `gos auto off --purge` then `gos auto on` — cost history survives via tracked mirror counters',
+  },
+  'auto.store.versionMismatch': {
+    what: 'store schema v{found} is not known to this CLI (knows v{known})',
+    why: 'a future-shaped store may contain records this version would misread',
+    fix: 'upgrade GOS to the version that wrote the store; never hand-edit store_schema_version',
+  },
+  'auto.store.unwritable': {
+    what: 'auto runtime store directory {path} is not writable',
+    why: 'the auto loop cannot persist counters, breaker state, or the run lock without it',
+    fix: 'check ownership/permissions (and the XDG_DATA_HOME override), then re-run `gos auto on`',
+  },
+  'auto.store.lockHeld': {
+    what: 'an auto run is already active (pid {pid}, since {since})',
+    why: 'the run lock is exclusive per machine and repository',
+    fix: 'wait for it to finish; if it is genuinely stuck, wait for heartbeat staleness or remove it deliberately only after verifying no gos process runs',
+  },
+  'auto.store.lockHeartbeatStale': {
+    what: 'auto run lock held by pid {pid} but its heartbeat is stale',
+    why: 'pid reuse can fake liveness; the stale heartbeat is the second signal',
+    fix: 're-run with --break-lock once the holder is confirmed dead',
+  },
+  'auto.store.lockCrossHost': {
+    what: 'auto run lock held by another machine ({hostname}, clone {clone})',
+    why: 'this machine-local store cannot judge a remote pid — cross-host staleness is unverifiable from here',
+    fix: 'confirm no runner is live on that host, then re-run with --break-lock (recorded as a takeover event)',
+  },
+  'auto.store.lockBreakRefused': {
+    what: '--break-lock refused: pid {pid} is alive on {hostname}',
+    why: 'a live pid with a fresh heartbeat owns the lock; breaking it would corrupt a running loop (attempt recorded as a takeover event)',
+    fix: 'wait for the run to finish; only break after the holder process is dead',
+  },
+  'auto.store.recreatedOverHistory': {
+    what: 'creating a fresh store while tracked counters imply prior history (spawns {spawnCount}, trips {tripCount})',
+    why: 'cost history must not silently reset when the store is lost',
+    fix: 'confirm this is intended — counters carry over from the tracked mirrors',
+  },
+
+  // ---- auto mode: host adapters / capability negotiation ----
+  'auto.host.unknown': {
+    what: 'host has no registry.json matrix row',
+    why: 'fail-closed on unknown hosts',
+    fix: 'install a supported host or add a registry.json row',
+  },
+  'auto.host.probeVersion': {
+    what: 'binary version missing/unparsable',
+    why: 'spawn-time capability check failed',
+    fix: 'update the host binary; matrix entries named in message',
+  },
+  'auto.host.probeNoMatch': {
+    what: 'installed version satisfies no matrix entry',
+    why: 'version skew',
+    fix: 'update the host or add a registry.json row',
+  },
+  'auto.host.probeHelpFlags': {
+    what: 'help output lacks required flags',
+    why: 'CLI contract changed',
+    fix: 'update the host or the row\u0027s required_flags',
+  },
+  'auto.host.probeConfig': {
+    what: 'host config root unresolvable',
+    why: 'adapter needs a config root',
+    fix: 'create the host config dir or set OPENCODE_CONFIG_DIR',
+  },
+  'auto.host.invalidRow': {
+    what: 'matrix row has invalid version_range',
+    why: 'identity pins are forbidden policy',
+    fix: 'use semantic predicates (>=, <) in registry.json',
+  },
+  'auto.host.registryUnreadable': {
+    what: 'registry.json missing/corrupt',
+    why: 'negotiation data unavailable',
+    fix: 'reinstall GOS or repair registry.json',
+  },
+  'auto.host.statusNotSelectable': {
+    what: 'matrix status is not verified',
+    why: 'fixture-tested/probe-pending are display-only',
+    fix: 'host becomes selectable after dogfood verification flips the row',
+  },
+  'auto.host.streamMalformed': {
+    what: 'event stream contained malformed JSON',
+    why: 'stream contract broken',
+    fix: 'classified failure — counts into the breaker, never crashes',
+  },
+  'auto.host.streamNoTerminal': {
+    what: 'stream ended without a terminal event',
+    why: 'no verifiable outcome',
+    fix: 'counts as failure; re-probe the host version',
+  },
+  'auto.host.displayOnly': {
+    what: 'spawn attempted on a display-only host',
+    why: 'adapter has no live path',
+    fix: 'use a verified host',
+  },
+  'auto.host.spawnError': {
+    what: 'host process failed to spawn/timeout',
+    why: 'environment failure',
+    fix: 'counts as env-class failure into the breaker',
+  },
+
+  // ---- auto mode: capability launcher (profiles + sandbox engine) ----
+  'auto.launcher.unknown-profile': {
+    what: "auto profile '{name}' is not one of: {known}",
+    why: 'an unknown profile must never fall back silently — the mask and deny posture would be a guess',
+    fix: 'pass one of {known} (default: restricted); full additionally requires an explicit allowFull flag',
+  },
+  'auto.launcher.full-flag-required': {
+    what: 'the full capability profile was requested without an explicit upgrade flag',
+    why: 'full lowers the deny baseline, so it must be a deliberate choice rather than a default drift',
+    fix: 're-run with the explicit allowFull option, or keep restricted/workspace',
+  },
+  'auto.launcher.missing-mandatory-mask': {
+    what: "profile '{profile}' is missing mandatory masks: {missing}",
+    why: 'the trust store, delivery credentials, and host state dirs must stay masked in every profile — dropping one reopens a bypass',
+    fix: 'restore the mask entries in the profile file or update the CLI so profiles stay complete',
+  },
+  'auto.launcher.profile-corrupt': {
+    what: "auto profile '{name}' failed validation: {detail}",
+    why: 'a malformed capability profile cannot be composed safely',
+    fix: 'fix the JSON in {file} or reinstall the templates',
+  },
+  'auto.launcher.profile-unreadable': {
+    what: "auto profile '{name}' could not be read ({detail})",
+    why: 'the launcher refuses to spawn without a verified profile',
+    fix: 'restore {file} or reinstall the CLI package',
+  },
+  'auto.launcher.escape-detected': {
+    what: "spawned stream matched deny pattern '{pattern}': {line}",
+    why: 'the lexical layer is depth, not redundancy — a deny hit in the captured stream means the injected config was bypassed or ignored',
+    fix: 'review the spawn record in the store; the breaker counts this as a failure',
+  },
+  'auto.launcher.tier-lexical': 'hardening tier: lexical — no sandbox engine (bwrap) on PATH; deny is enforced by the injected config and the escape detector only (network stays open; model-provider auth readable by design)',
+
+  // ---- auto mode: breaker (three-layer pause guard) ----
+  'auto.breaker.invalidLimits': {
+    what: 'breaker limits rejected: {detail}',
+    why: 'N/K/B are floors-guaranteed guards — clamping or filling in values silently would run the loop with weaker protection than configured',
+    fix: 'pass integers >= 1 for all of N (consecutive failures), K (stage visits), B (spawn budget)',
+  },
+  'auto.breaker.tripped': {
+    what: 'auto loop paused: breaker layer {layer} tripped — {reason}',
+    why: 'a tripped breaker never auto-resumes; the paused configuration is kept so explicit re-enable restores it',
+    fix: 'inspect `gos auto status` for the trip record, address the failure class, then re-enable with `gos auto on`',
+  },
+  'auto.breaker.invalidTimeout': {
+    what: 'invalid value for {name}: {value}',
+    why: 'per-spawn timeouts are safety bounds — a malformed override must not silently fall back to the default',
+    fix: 'set it to a whole number of seconds >= 1 or unset it to use the defaults (wall 3600s, idle 600s)',
+  },
+  'auto.breaker.advanceCheckFailed': {
+    what: 'stage-advance attribution failed: git reachability could not be established',
+    why: 'advance is scored by commit reachability, never timestamps — without git truth the outcome cannot be judged',
+    fix: 'check repository health (the pre-spawn HEAD oid and current HEAD must both resolve), then resume the auto loop',
+  },
+
+  // ---- auto mode: loop runner ----
+  'auto.loop.markerActive': {
+    what: 'the auto family refuses to run inside a runner-spawned session',
+    why: 'a spawned stage session must never own loop control (the marker is the boundary)',
+    fix: 'run `gos auto` commands from a regular terminal',
+  },
+  'auto.loop.modeOff': {
+    what: 'auto mode is off',
+    why: 'resume never auto-spawns; an off store is configuration only',
+    fix: 're-enable with `gos auto on`, then run',
+  },
+  'auto.loop.noTask': {
+    what: 'no active GOS task — the auto loop has nothing to drive',
+    why: 'the loop advances one active task stage by stage',
+    fix: 'start a task with `gos init` first, then re-run',
+  },
+  'auto.loop.taskAtEnd': {
+    what: 'task is at stage {stage} — the auto loop ends here',
+    why: 'archive and delivery are human gates; the loop terminates cleanly with no delivery adapter',
+    fix: 'finish the stage manually (archive/push), or start the next task',
+  },
+  'auto.loop.hostNotSelectable': {
+    what: "host '{host}' is not selectable for real runs",
+    why: 'only verified hosts may spawn sessions; other statuses are display-only',
+    fix: 'check the host matrix and pick a verified host (auto status)',
+  },
+  'auto.loop.detachedHead': {
+    what: 'repository is on a detached HEAD',
+    why: 'stage commits could not be attributed to a branch',
+    fix: 'check out the task work branch and re-run',
+  },
+  'auto.loop.workBranchFailed': {
+    what: "could not leave trunk branch '{branch}' for the work branch '{work}'",
+    why: 'the loop never develops on the trunk (PR-only ruling)',
+    fix: 'resolve the checkout blocker (commit or stash), then re-run',
+  },
+  'auto.loop.externalMutation': {
+    what: 'task state changed outside the auto loop: {detail}',
+    why: 'external mutations pause with a report — they never count into the consecutive-failure layer',
+    fix: 'review the change; if intended, resume the loop deliberately',
+  },
+  'auto.loop.stateCorrupt': {
+    what: 'task state could not be read',
+    why: 'the loop cannot revalidate task identity without a readable state',
+    fix: 'repair .gos/state.json, then resume the auto loop',
+  },
+  'auto.loop.spawnComposeFailed': {
+    what: 'launcher profile composition failed: {detail}',
+    why: 'no spawn leaves the runner without a composed capability profile',
+    fix: 'check the profile templates and engine probe, then resume',
+  },
+  'auto.loop.stampFailed': {
+    what: 'stream stamp write refused: {detail}',
+    why: 'the spawn-to-stream pairing must be verifiable before any consumer reads it',
+    fix: 'inspect the store; if unrecoverable run `gos auto off --purge` then `gos auto on`',
+  },
+  'auto.loop.iterationCap': {
+    what: 'iteration ceiling of {max} reached',
+    why: 'an explicit safety bound stopped the loop before the breaker layers fired',
+    fix: 'raise the ceiling or start a fresh run',
+  },
+  'auto.loop.delegationHeld': {
+    what: 'delegated stage {stage} held for human review: {detail}',
+    why: 'red-team findings and failed review rounds never auto-clear — in auto mode dispositions are never written for the working stage',
+    fix: 'review the red-team evidence, then either fix the stage work and start a fresh auto run or approve the stage yourself as the human gate',
+  },
+
+  // ---- auto mode: ratification boundary (delegated approvals) ----
+  'auto.ratify.pendingRecorded': 'stage {stage} approval recorded as PENDING (auto): structural checks only — the runner ratifies it from the captured-stream stamp after this session exits',
+  'auto.ratify.pendingBlocks': {
+    what: 'stage {stage} has an unratified PENDING auto-approval',
+    why: 'a delegated commit advanced a stage without its runner ratification landing — evidence was never verified against the external store',
+    fix: 'resume the auto loop so the runner ratifies from the store stamp (`gos auto run`), or inspect the stamp records via `gos auto status`; never hand-edit the approval record',
+  },
+  'auto.ratify.stampMissing': {
+    what: 'no stream stamp for spawn {spawnId} in the runner store',
+    why: 'ratification pairs a spawn with its captured-stream hash — without the stamp the pairing cannot be verified',
+    fix: 'the runner stamps every spawn at exit; a missing stamp means the spawn never completed or the store was reset — re-run the stage',
+  },
+  'auto.ratify.stageMismatch': {
+    what: 'stream stamp for spawn {spawnId} belongs to a different stage than {stage}',
+    why: 'ratification is scoped per stage — a stamp from another stage must not satisfy this boundary',
+    fix: 'ratify with the stage the spawn actually worked, or re-run the stage spawn',
+  },
+  'auto.ratify.hashMismatch': {
+    what: 'captured-stream hash for spawn {spawnId} does not match the store stamp',
+    why: 'the stream observed by the runner differs from the stamped one — the pairing may have been tampered with',
+    fix: 'treat the stage output as unverified; inspect the store record and re-run the stage spawn',
+  },
+  'auto.ratify.noTask': {
+    what: 'no readable task state for ratification',
+    why: 'the ratified approval is written into the task state file',
+    fix: 'run from the repository root with an active task, then re-run the auto loop',
+  },
+
+  // ---- auto mode: red-team orchestration ----
+  'auto.redteam.promptDrift': {
+    what: 'the stored red-team prompt template hash does not match the runner template',
+    why: 'red-team evidence pairs only against the runner-held prompt — a drifted hash breaks the pairing',
+    fix: 'if the drift is expected, run `gos auto off --purge` then `gos auto on` to re-seed the store',
+  },
+  'auto.redteam.composeFailed': {
+    what: 'composing the red-team review spawn failed ({detail})',
+    why: 'the review spawn must be composed under a capability profile with the workspace read-only',
+    fix: 'check profile data and engine availability, then retry the round',
+  },
+  'auto.redteam.stampFailed': {
+    what: 'stamping the red-team round into the store was refused: {detail}',
+    why: 'the round-to-stream pairing must be verifiable before any consumer reads it',
+    fix: 'inspect the store; if unrecoverable run `gos auto off --purge` then `gos auto on`',
+  },
+  'auto.redteam.findingsUnparsable': {
+    what: 'a red-team round ended without a recognizable findings verdict',
+    why: 'garbage output is classified as a failed round — it never counts as a zero finding',
+    fix: 're-run the round; persistent failures hold the delegation gate for human review',
+  },
+  'auto.redteam.roundFailed': {
+    what: 'a red-team round spawn failed before producing a verdict',
+    why: 'a failed spawn is no scrutiny evidence and never counts as a zero',
+    fix: 're-run the round after checking the spawn failure detail in the local store',
+  },
+  'auto.redteam.hostUnavailable': {
+    what: 'no spawn adapter is available for host {host}',
+    why: 'a red-team round needs a real host command line composed by the host adapter',
+    fix: 'select a host with an adapter (opencode) or register one, then retry the round',
+  },
+  'auto.redteam.lexicalTier': 'read-only workspace enforced at the lexical tier only (no sandbox engine): the reviewer is denied writes by the injected config and the escape detector, not by the kernel',
+
+  // ---- auto mode: delivery probe + privileged git ----
+  'auto.delivery.probeAdvisory': {
+    what: 'delivery probe: GitHub auth works but no CI workflows are visible',
+    why: 'the repository may genuinely have none, or a fine-grained PAT without the workflows read scope cannot see them (false negative)',
+    fix: 'if CI exists, re-auth with a PAT that includes the Actions/workflows read scope, or confirm workflows are present under .github/workflows',
+  },
+  'auto.delivery.probeAbsent': {
+    what: 'delivery probe: delivery is not active ({reason})',
+    why: 'publish guards bind only to actions that exist — the loop ends at SHIP with zero delivery burden',
+    fix: 'to enable PR delivery add an origin remote and authenticate the gh CLI; otherwise no action is needed',
+  },
+  'auto.delivery.driftDetected': {
+    what: 'repo git metadata drifted from the pinned delivery baseline ({detail})',
+    why: 'the delivery adapter treats repo git metadata as untrusted — a changed remote URL or a planted hook must never ride a privileged git call',
+    fix: 'inspect the drift, then re-run `gos auto on` to re-pin the baseline once the repository is trusted again',
+  },
+  'auto.delivery.baselineFailed': {
+    what: 'capturing the delivery baseline failed: {detail}',
+    why: 'privileged git refuses to run without a pinned remote/hooks snapshot to verify against',
+    fix: 'check that the repository has an origin remote and a readable .git directory, then re-run',
+  },
+
+  // ---- auto mode: publish leg (PR delivery + CI closure) ----
+  'auto.publish.branchRequired': {
+    what: 'publish needs the work branch to push (taskId or branch)',
+    why: 'the adapter pushes exactly the per-task work branch — the PR-only ruling forbids trunk pushes',
+    fix: 'pass the task id or an explicit branch name',
+  },
+  'auto.publish.subjectRequired': {
+    what: 'publish needs a squash-subject candidate',
+    why: 'the pre-merge subject lint and the merge commit title both consume it',
+    fix: 'provide an imperative verb-object subject, e.g. "add probe-gated delivery publish leg"',
+  },
+  'auto.publish.branchPushFailed': {
+    what: 'pushing the work branch {branch} failed',
+    why: 'the branch push is a privileged git call against the pinned remote; drift or git errors abort it',
+    fix: 'inspect the step detail; on drift re-run `gos auto on` to re-pin the baseline once the repository is trusted',
+  },
+  'auto.publish.prCreateFailed': {
+    what: 'opening the pull request failed: {detail}',
+    why: 'without a PR number the squash merge and CI watch cannot proceed',
+    fix: 'check gh auth and the head/base branches, then re-run publish',
+  },
+  'auto.publish.subjectLintHeld': {
+    what: 'squash subject held by the pre-merge lint: {subject}',
+    why: 'the platform builds the squash commit server-side where no local hook can intercept — a bad subject lands on main unchecked',
+    fix: 'rewrite the subject as an imperative verb-object clause and re-run publish',
+  },
+  'auto.publish.mergeFailed': {
+    what: 'squash-merging pull request #{prNumber} failed',
+    why: 'the merge is the point of no return for CI on main',
+    fix: 'check the PR mergeability (conflicts, reviews), then re-run publish',
+  },
+  'auto.publish.watchFailed': {
+    what: 'watching CI on the base branch failed: {detail}',
+    why: 'CI closure requires a readable status source',
+    fix: 'check gh auth and Actions visibility, then re-run publish',
+  },
+  'auto.publish.redRun': {
+    what: 'CI run {runId} on main is red — the loop is held for a human disposition',
+    why: 'a red run is never auto-dismissed; dispositions are human-written by design',
+    fix: 'inspect the run, then record `gos auto disposition {runId} --reason "<why this is acceptable>"`',
+  },
+  'auto.publish.ciUnknown': {
+    what: 'CI did not reach a verdict within {minutes} minutes — run state unknown',
+    why: 'a queued green at minute {minutes}+1 is not bad work, so this never counts into the breaker',
+    fix: 'check the run state, then record `gos auto disposition <runId> --reason "<state>"` once known',
+  },
+  'auto.publish.dispositionRecorded': 'disposition for run {runId} recorded in the local store; the repo ledger mirrors its hash only',
+  'auto.publish.purged': 'auto runtime store removed ({path}) — cost history survives only in tracked mirror counters',
+  // ---- auto mode: CLI surface ----
+  'auto.cli.usage': 'Usage: {cmd:auto} <on|off|status|run|disposition> [args] — full-auto runner (machine-local store; ends at SHIP)',
+  'auto.cli.subs': 'on [--profile restricted|workspace|full] [--allow-full] [--max-retries N] [--max-visits K] [--max-sessions B] [--timeout-wall sec] [--timeout-idle sec] | off [--purge] | status | run [--detach] [--break-lock] | disposition <runId> --reason "<text>" [--by <name>]',
+  'auto.cli.on.usage': 'Usage: {cmd:auto} on [--profile restricted|workspace|full] [--allow-full] [--max-retries N] [--max-visits K] [--max-sessions B] [--timeout-wall sec] [--timeout-idle sec]',
+  'auto.cli.on.nfsAdvisory': 'store path sits on a network filesystem ({fstype}, mount {mount}): a shared home lets same-path clones on different machines collide (cross-host lock staleness is hostname-guarded, but that guard cannot see a second machine running against this store) — prefer a machine-local store (point XDG_DATA_HOME at local disk)',
+  'auto.cli.on.allowFullWithoutFull': {
+    what: '--allow-full only applies to the full profile (requested {profile})',
+    why: 'the capability-upgrade gate exists so raising the sandbox ceiling is always a deliberate act',
+    fix: 'pass --profile full together with --allow-full, or drop the flag',
+  },
+  'auto.cli.run.lockBroken': 'stale run lock broken ({broke}) — recorded as a takeover event',
+  'auto.cli.on.created': 'auto store created at {path}',
+  'auto.cli.on.reconfigured': 'existing auto store reconfigured at {path}',
+  'auto.cli.on.done': 'auto mode ON — profile {profile}, limits N={n}/K={k}/B={b}',
+  'auto.cli.probe.header': 'advisories (none of these block `auto on`; only an unusable store does):',
+  'auto.cli.probe.store': 'store',
+  'auto.cli.probe.host': 'host',
+  'auto.cli.probe.delivery': 'delivery',
+  'auto.cli.probe.engine': 'sandbox engine',
+  'auto.cli.probe.hint': 'run `{cmd:auto} status` for the full host matrix and the failing step',
+  'auto.cli.timeoutPolicy': 'spawn timeouts: wall {wall}s · idle {idle}s (env override: GOS_AUTO_TIMEOUT_WALL_SEC / GOS_AUTO_TIMEOUT_IDLE_SEC)',
+  'auto.cli.off.already': 'auto mode is already off (no store exists for this repository)',
+  'auto.cli.off.done': 'auto mode OFF — store kept at {path} (configuration and history preserved)',
+  'auto.cli.off.purgeHint': 'to also remove the store and its history: `{cmd:auto} off --purge`',
+  'auto.cli.status.head': 'auto: mode {mode} · profile {profile}{full} · limits N={n}/K={k}/B={b}',
+  'auto.cli.status.allowFullTag': ' · allow-full (explicit upgrade)',
+  'auto.cli.status.absent': 'auto: no store at {path} — auto was never enabled for this repository (`{cmd:auto} on` creates it)',
+  'auto.cli.status.paused': 'auto: store paused ({reason}) — the loop refuses to run until it is inspected',
+  'auto.cli.status.hostMatrix': 'host matrix ({n} rows; fixture rows appear only under the test env gate):',
+  'auto.cli.status.counters': 'counters: spawns {spawns} · trips {trips}',
+  'auto.cli.status.countersAbsent': 'counters: — (no store)',
+  'auto.cli.status.breakerClean': 'breaker: clean ({n} non-trip record(s))',
+  'auto.cli.status.breakerTripped': 'breaker: TRIPPED layer {layer} ({cls}) at {ts}{detail} — paused; explicit re-enable via `{cmd:auto} on`',
+  'auto.cli.status.lock': 'run lock: held by pid {pid} on {host}',
+  'auto.cli.run.detached': 'auto runner detached (pid {pid}) — follow progress with `{cmd:auto} status`',
+  'auto.cli.run.report': 'auto run: {status} ({reason})',
+  'auto.cli.run.iterations': 'iterations: {n}',
+  'auto.cli.disposition.usage': 'Usage: {cmd:auto} disposition <runId> --reason "<text>" [--by <name>]',
+  'auto.cli.disposition.recorded': 'disposition recorded for run {runId} (by {by})',
+  'auto.cli.disposition.mirror': 'ledger mirror (hash only): {path}',
+  'auto.cli.unknownArg': 'auto {sub}: unknown argument \'{arg}\'',
+  'auto.cli.resume.auto': 'Auto: {mode} (profile {profile}) — breaker clean; resume never auto-spawns, `{cmd:auto} run` drives the loop',
+  'auto.cli.resume.tripped': 'Auto: {mode} (profile {profile}) — breaker TRIPPED {layer}/{cls} {ts}; paused, re-enable explicitly with `{cmd:auto} on`',
+  'auto.cli.resume.paused': 'Auto: store paused ({reason}) — see `{cmd:auto} status`',
 };

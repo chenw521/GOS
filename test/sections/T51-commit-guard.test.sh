@@ -112,5 +112,25 @@ assert_contains "G4 duplicate says no changes to commit" "no changes to commit" 
 assert_eq "G5 HEAD unchanged by duplicate" "$HEAD_G0" "$(git rev-parse HEAD)"
 t51_teardown; t51_setup
 
+# --- H: advance write ordering — one `commit think` carries its own advance;
+# a same-stage re-run is refused instead of sweeping residue into a duplicate ---
+t51_teardown; t51_setup
+git init -q . && git commit -q --allow-empty -m root
+node "$GOS" init 2 "t51 advance ordering" >/dev/null 2>&1
+HSP=$(python3 -c "import json;print(json.load(open('.gos/state.json'))['spec_path'])")
+mkdir -p "$(dirname "$HSP")"; printf '# Spec\n\nminimal ordering spec\n' > "$HSP"
+node "$GOS" approve think >/dev/null 2>&1
+HRC=0; node "$GOS" commit think >/dev/null 2>&1 || HRC=$?
+assert_exit "H1 commit think exits 0" 0 "$HRC"
+HS=$(git show HEAD:.gos/state.json | python3 -c "import json,sys;s=json.load(sys.stdin);print('%s|%s' % (s.get('current_stage'), ','.join(s.get('completed_stages',[]))))")
+assert_contains "H2 advance rides in its own commit (THINK completed in-HEAD)" "THINK|THINK" "$HS"
+HN=$(git status --porcelain -- .gos/state.json | wc -l | tr -d ' ')
+assert_eq "H3 no dirty state residue after the advance commit" "0" "$HN"
+H0=$(git rev-list --count HEAD)
+set +e; node "$GOS" commit think >/dev/null 2>&1; HRC2=$?; set -e
+assert_exit "H4 same-stage re-run (settled advance) → exit 1" 1 "$HRC2"
+assert_eq "H5 no duplicate advance commit" "$H0" "$(git rev-list --count HEAD)"
+t51_teardown
+
 echo "--- T51 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]

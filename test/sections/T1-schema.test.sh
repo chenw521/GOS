@@ -16,10 +16,10 @@ t1_teardown() { cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$T1_DIR"; }
 t1_setup
 echo "--- T1: schema + atomic + validation + migration ---"
 
-# --- .1: init writes state with schema_version=5 ( / : v4 drops version/project_root, adds repo_id)
+# --- .1: init writes state with schema_version=6 (v4 dropped version/project_root + added repo_id; v6 retired auto_mode)
 node "$GOS" init 3 "auth" >/dev/null 2>&1
 SV=$(python3 -c "import json; print(json.load(open('.gos/state.json')).get('schema_version'))")
-assert_eq "state.schema_version=5 written" "5" "$SV"
+assert_eq "state.schema_version=6 written" "6" "$SV"
 
 # --- .2: corrupted state → write-class exit 1 with file:field
 python3 -c "
@@ -69,7 +69,7 @@ MIG=$(python3 -c "
 import json; s=json.load(open('.gos/state.json'))
 d=s['decisions'][0]
 print('%s|%s|%s|%s' % (s.get('schema_version'), d.get('birth_phase'), d.get('status'), d.get('covered')))")
-assert_contains "write-class persists migration (birth_phase=legacy status=open)" "5|legacy|open|False" "$MIG"
+assert_contains "write-class persists migration (birth_phase=legacy status=open)" "6|legacy|open|False" "$MIG"
 MIG2=$(python3 -c "
 import json; s=json.load(open('.gos/state.json'))
 d=s['decisions'][1]; print('%s|%s' % (d.get('status'), d.get('covered')))")

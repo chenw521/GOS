@@ -24,8 +24,8 @@ s = json.load(open('.gos/state.json'))
 print('%s|%s|%s' % (s.get('schema_version'), 'project_root' in s, s.get('repo_id')))")
 WANT=$(python3 -c "
 import hashlib
-print('5|False|%s' % hashlib.sha256(b'github.com:443/acme/t2-auth').hexdigest()[:16])")
-assert_eq "init: v5 + de-pathed (no project_root) + repo_id from origin remote" "$WANT" "$READ"
+print('6|False|%s' % hashlib.sha256(b'github.com:443/acme/t2-auth').hexdigest()[:16])")
+assert_eq "init: v6 + de-pathed (no project_root) + repo_id from origin remote" "$WANT" "$READ"
 
 # --- .2: init --project sets project flag + creates project.json + four files
 t2_teardown; t2_setup
@@ -70,7 +70,7 @@ else
 import json
 s = json.load(open('.gos/state.json'))
 print('%s|%s|%s' % (s.get('schema_version'), 'project_root' in s, s.get('repo_id')))")
-  assert_eq "non-git init: v5, de-pathed, repo_id advisory null" "5|False|None" "$READ"
+  assert_eq "non-git init: v6, de-pathed, repo_id advisory null" "6|False|None" "$READ"
 fi
 unset GIT_CEILING_DIRECTORIES
 

@@ -27,6 +27,7 @@ Full capability: `gos help [--json]`
 <!-- gos:core-shortlist end -->
 
 - `gos brownfield` — adopting an existing repo (probe, safe-skip seed, dormant hooks; not part of the core shortlist set)
+- `gos auto on|off|status|run/disposition` — full-auto stage loop: fresh session per stage, machine-local store, breaker-guarded, ends at SHIP (not part of the core shortlist set)
 
 ```bash
 gos                # no args = status + what's next (zero-memorization)

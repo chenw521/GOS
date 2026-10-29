@@ -123,8 +123,17 @@ FILTER="${1:-}"
 [ "$MODE" = "affected" ] && FILTER=""
 TOTAL_PASS=0
 TOTAL_FAIL=0
+RESULTS_JSON=""
+FAILED_SECS=""
 RAN_NAMES=""
 SELECTOR="full"
+
+# Full-run log: every byte the runner prints is teed to a per-run file so a
+# failure can be diagnosed from the artifact instead of re-running the suite.
+LOGS_DIR="$GOS_ROOT/.gos/cache/section-runs"
+mkdir -p "$LOGS_DIR"
+RUN_LOG="$LOGS_DIR/$(date -u +%Y%m%dT%H%M%SZ)-${SELECTOR}$RANDOM.log"
+exec > >(tee "$RUN_LOG") 2>&1
 
 # ---- --affected: map-blast closure ∩ section anchors + the gos-map:none set.
 # Fail-safe by construction: un-anchored sections always run; blast's mustRun
@@ -136,7 +145,7 @@ if [ "$MODE" = "affected" ]; then
     INPUT_FILES="$*"
   else
     BASE="${BASE_REF:-$(node -e "const c=require('./bin/lib/core/index.cjs');const s=c.readState();process.stdout.write(s.task_head||'HEAD')" 2>/dev/null || echo HEAD)}"
-    INPUT_FILES="$(git -C "$GOS_ROOT" -c core.quotapath=off diff --name-only "$BASE" 2>/dev/null; git -C "$GOS_ROOT" -c core.quotapath=off ls-files --others --exclude-standard 2>/dev/null)"
+    INPUT_FILES="$(git -C "$GOS_ROOT" -c core.quotepath=off diff --name-only "$BASE" 2>/dev/null; git -C "$GOS_ROOT" -c core.quotepath=off ls-files --others --exclude-standard 2>/dev/null)"
   fi
   if [ -z "$INPUT_FILES" ]; then
     echo "── affected mode: empty input set (no diff vs base) — nothing to select"; exit 0
@@ -217,6 +226,10 @@ for f in "$GOS_ROOT"/test/sections/T*.test.sh; do
   echo "--- $name: $P passed, $X failed ---"
   TOTAL_PASS=$((TOTAL_PASS + P))
   TOTAL_FAIL=$((TOTAL_FAIL + X))
+  SEC_FAIL=$((X))
+  [ "$SEC_RC" -ne 0 ] && SEC_FAIL=$((SEC_FAIL + 1))
+  RESULTS_JSON="$RESULTS_JSON$(python3 -c "import json,sys;print(json.dumps({sys.argv[1]: {'pass': int(sys.argv[2]), 'fail': int(sys.argv[3])}})[1:-1])" "$name" "$P" "$SEC_FAIL"),"
+  if [ "$SEC_FAIL" -gt 0 ]; then FAILED_SECS="$FAILED_SECS $name($SEC_FAIL)"; fi
 done
 
 # sweep: sections clean up via their own teardown; remove sandboxes leaked by aborts
@@ -226,14 +239,18 @@ shopt -u nullglob
 
 echo ""
 echo "=== Sections total: $TOTAL_PASS passed, $TOTAL_FAIL failed ==="
+[ -n "$FAILED_SECS" ] && echo "failed sections:${FAILED_SECS}"
+echo "full log: $RUN_LOG"
 
 # run-manifest: overwrite-mode (never append — partial runs are snapshots,
 # R4 plan r2 ). Component form {head_tree, patch_sha} — commit-advance tolerant ( fix).
 RAN_SECS="$(printf '%s\n' "$RAN_NAMES" | python3 -c "import json,sys; print(json.dumps(sorted(l.strip() for l in sys.stdin if l.strip())))" 2>/dev/null || echo '[]')"
+RESULTS_FINAL="$(printf '%s' "${RESULTS_JSON%,}" | python3 -c "import json,sys; s=sys.stdin.read().strip(); print('{'+s+'}' if s else '{}')" 2>/dev/null || echo '{}')"
+FAILED_FINAL="$(printf '%s' "$FAILED_SECS" | python3 -c "import json,sys,re; s=sys.argv[1]; print(json.dumps(sorted(re.sub(r'\(\d+\)$','',x) for x in s.split())))" "$FAILED_SECS" 2>/dev/null || echo '[]')"
 WTH_H="$(git -C "$GOS_ROOT" rev-parse 'HEAD^{tree}' 2>/dev/null)"
 WTH_P="$(git -C "$GOS_ROOT" -c core.quotepath=off diff --no-color --no-ext-diff --no-textconv HEAD 2>/dev/null | sha256sum | cut -d' ' -f1)"
 mkdir -p "$GOS_ROOT/.gos/cache"
-printf '{"schema_version":2,"selector":"%s","sections_run":%s,"head_tree":"%s","patch_sha":"%s","finished_at":"%s"}\n' \
-  "$SELECTOR" "$RAN_SECS" "${WTH_H:-unknown}" "${WTH_P:-unknown}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$GOS_ROOT/.gos/cache/run-manifest.json"
+printf '{"schema_version":2,"selector":"%s","sections_run":%s,"failed_sections":%s,"results":%s,"log":"%s","head_tree":"%s","patch_sha":"%s","finished_at":"%s"}\n' \
+  "$SELECTOR" "$RAN_SECS" "$FAILED_FINAL" "$RESULTS_FINAL" "${RUN_LOG#"$GOS_ROOT"/}" "${WTH_H:-unknown}" "${WTH_P:-unknown}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$GOS_ROOT/.gos/cache/run-manifest.json"
 
 [ "$TOTAL_FAIL" -eq 0 ] && exit 0 || exit 1

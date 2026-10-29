@@ -83,6 +83,8 @@ function cmdResume() {
     for (const t of state.observable_truths) console.log(`  ${t.id}: ${t.verified ? '✓verified' : '✗pending'}`);
   }
   console.log(`\nNext:\n${sibStatus.nextHint(state)}`);
+  // Machine-local auto runtime line: appended by the entry dispatch via
+  // ops/auto/cli.cjs after this summary returns.
 }
 
 function cmdApprove(args) {
@@ -143,22 +145,9 @@ function cmdTrace(args) {
   }
 }
 
-function cmdAuto(args) {
-  const state = core.readState();
-  if (!state) core.die(core.CONTRACTS.state_semantics.noActiveTask);
-  const sub = (args[0] || '').toLowerCase();
-  if (sub === 'on' || sub === 'off') {
-    state.auto_mode = sub === 'on' ? 'tiered' : null;
-    core.writeState(state);
-    console.log(`✓ auto_mode = ${state.auto_mode || 'off'}`);
-    console.log(sub === 'on'
-      ? 'Tiered auto: routine confirmations auto-pass (spec written, plan coverage green);\n  DECISION gates still stop for you (gray-area choices, truth confirmation, archive).'
-      : 'All gates human-held again.');
-    return;
-  }
-  console.log(`auto_mode: ${state.auto_mode || 'off'}`);
-  console.log('Usage: gos auto [on|off] — tiered automation: routine gates auto, decision gates held');
-}
+// Resume tail: the machine-local auto line is appended by the entry
+// dispatch via ops/auto/cli.cjs (store API owns repo-key derivation);
+// nothing auto-related is rendered here.
 
 function cmdGap(args) {
   // gap resolve <G-id> --resolution "..." — closes a stage-back gap (fail-closed)
@@ -252,4 +241,4 @@ function cmdGap(args) {
   core.die('Usage: gos gap <list|resolve|rewrite|migrate|history>');
 }
 
-module.exports = { cmdInstructions, cmdResume, cmdApprove, cmdTrace, cmdAuto, cmdGap };
+module.exports = { cmdInstructions, cmdResume, cmdApprove, cmdTrace, cmdGap };

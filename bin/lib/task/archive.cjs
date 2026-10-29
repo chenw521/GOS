@@ -47,6 +47,39 @@ function archiveDirExists(date, slug) {
   return fs.readdirSync(core.ARCHIVE_DIR).some((d) => d === base || new RegExp(`^${base}-\\d+$`).test(d));
 }
 
+// SHIP ledger: counts-only provenance of how this task crossed its gates,
+// rendered at ship for human final review. Delegated approvals are approval
+// records carrying mode 'auto' (legacy string approvals are explicit human
+// acts, never delegated); VERIFY truth counts and red-team findings totals
+// follow. Evidence detail (hashes, session ids, output tails) stays
+// machine-local — only counts render here.
+function shipLedgerLines(state) {
+  const approvals = (state && state.approvals) || {};
+  const delegated = [];
+  let pendingCount = 0;
+  let humanCount = 0;
+  for (const name of Object.keys(approvals)) {
+    const v = approvals[name];
+    if (v != null && typeof v === 'object') {
+      if (v.mode === 'auto') {
+        delegated.push(v.status === 'PENDING' || v.pending === true ? `${name} (pending ratification)` : name);
+        if (v.status === 'PENDING' || v.pending === true) pendingCount++;
+      } else humanCount++;
+    } else if (typeof v === 'string' && v) humanCount++;
+  }
+  const truths = Array.isArray(state && state.observable_truths) ? state.observable_truths : [];
+  const verifiedCount = truths.filter((t) => t && t.verified === true).length;
+  const rtRounds = Array.isArray(state && state.redteam_rounds) ? state.redteam_rounds : [];
+  const rtFindings = rtRounds.reduce((n, r) => n + ((r && Number.isInteger(r.findings)) ? r.findings : 0), 0);
+  return [
+    'SHIP ledger — human final review:',
+    `  delegated approvals: ${delegated.length ? delegated.join(', ') : 'none (every gate crossed by explicit human approval)'}`,
+    `  human approvals: ${humanCount}${pendingCount ? ` (+${pendingCount} pending runner ratification)` : ''}`,
+    `  VERIFY truths: ${verifiedCount}/${truths.length} verified`,
+    `  red-team findings: ${rtFindings} across ${rtRounds.length} round(s)`,
+  ];
+}
+
 function cmdArchive(opts = {}) {
  const fromCommit = !!opts.fromCommit; // invoked from cmdCommit — gates degrade to warn+skip (never kill the commit mid-flow)
   // Registry-driven walker: one traversal for direct + nested fields (single-source consumption —
@@ -596,6 +629,9 @@ function cmdArchive(opts = {}) {
   core.writeState(state);
   console.log(`${core.CONTRACTS.state_semantics.archived} ${moved} file(s) + delta.md → ${path.relative('.', dest)}`);
   console.log('Next: state.json kept locally until you start a new task (gos init --force)');
+  // SHIP ledger: auto-mode gate provenance for the human final review —
+  // rendered BEFORE the push hint so the ready-to-run push line stays last.
+  for (const line of shipLedgerLines(state)) console.log(line);
   // Remote publication hint: printed, never invoked — pushing stays a
   // user-executed act (message derives from [Unreleased] at push time).
   console.log(sibPush.archivePushHint());
@@ -603,4 +639,4 @@ function cmdArchive(opts = {}) {
 
 const sibContext = require('./context.cjs');  // home of archiveSlugParts
 
-module.exports = { archiveDirExists, cmdArchive, specDecisionTitles };
+module.exports = { archiveDirExists, cmdArchive, specDecisionTitles, shipLedgerLines };

@@ -281,4 +281,411 @@ module.exports = {
     why: '已越过的阶段不能重复推进——该提交会给历史早已越过的节点再写一次推进标签',
     fix: '如需幂等重交请重跑当前阶段提交；要重新冻结 spec 请用 gos commit think --refreeze（仅改状态，不推进阶段）',
   },
+
+  // ---- auto 模式：runner 信任存储（机器本地） ----
+  'auto.store.missing': {
+    what: '未找到 auto 运行时存储：{path}',
+    why: '存储缺失与损坏同等对待——绝不静默重建新存储',
+    fix: '运行 {cmd:auto} on 创建（若追踪计数器暗示历史用量会先告警）',
+  },
+  'auto.store.corrupt': {
+    what: '{path} 的 auto 运行时存储损坏或未通过结构校验',
+    why: '损坏的存储无法核验 runner 信任状态（计数器、熔断、锁、审批）',
+    fix: '检查该文件；无法恢复时运行 {cmd:auto} off --purge 后 {cmd:auto} on——成本历史由追踪镜像计数保留',
+  },
+  'auto.store.versionMismatch': {
+    what: '存储 schema v{found} 高于本 CLI 已知版本（已知 v{known}）',
+    why: '未来形态的存储可能包含本版本会误读的记录',
+    fix: '升级写入该存储的 GOS 版本；切勿手改 store_schema_version',
+  },
+  'auto.store.unwritable': {
+    what: 'auto 运行时存储目录不可写：{path}',
+    why: '不可写则 auto 循环无法持久化计数器、熔断状态与运行锁',
+    fix: '检查属主/权限（及 XDG_DATA_HOME 覆盖值）后重新运行 {cmd:auto} on',
+  },
+  'auto.store.lockHeld': {
+    what: '已有 auto 运行在进行中（pid {pid}，始于 {since}）',
+    why: '运行锁按机器+仓库排他',
+    fix: '等待其结束；确认真正卡死时，待心跳过期或核实无 gos 进程后再谨慎移除',
+  },
+  'auto.store.lockHeartbeatStale': {
+    what: '运行锁由 pid {pid} 持有，但心跳已过期',
+    why: 'pid 复用可伪造存活；过期心跳是第二信号',
+    fix: '确认持有进程已死后，加 --break-lock 重试',
+  },
+  'auto.store.lockCrossHost': {
+    what: '运行锁由另一台机器持有（{hostname}，克隆 {clone}）',
+    why: '本机存储无法判断远端 pid——跨主机是否过期在本机不可验证',
+    fix: '确认那台机器上无 runner 存活后再加 --break-lock（会记录为接管事件）',
+  },
+  'auto.store.lockBreakRefused': {
+    what: '--break-lock 被拒绝：pid {pid} 在 {hostname} 上存活',
+    why: '存活 pid + 新鲜心跳即锁的合法持有者；强拆会破坏运行中的循环（本次尝试已记录为接管事件）',
+    fix: '等待运行结束；持有进程死亡后才可 break',
+  },
+  'auto.store.recreatedOverHistory': {
+    what: '追踪计数器暗示存在历史用量（spawn {spawnCount} 次、trip {tripCount} 次），却要新建空存储',
+    why: '成本历史不能因存储丢失而静默清零',
+    fix: '确认这是预期行为——计数器会从追踪镜像继承',
+  },
+
+  // ---- auto 模式：主机适配器 / 能力协商 ----
+  'auto.host.unknown': {
+    what: '主机在 registry.json 矩阵中无条目',
+    why: '未知主机一律 fail-closed',
+    fix: '安装受支持的主机或新增矩阵条目',
+  },
+  'auto.host.probeVersion': {
+    what: '二进制版本缺失或无法解析',
+    why: 'spawn 时能力探测失败',
+    fix: '更新主机二进制；消息中已列出矩阵条目',
+  },
+  'auto.host.probeNoMatch': {
+    what: '已安装版本不满足任何矩阵条目',
+    why: '版本偏斜',
+    fix: '更新主机或新增 registry.json 条目',
+  },
+  'auto.host.probeHelpFlags': {
+    what: '帮助输出缺少必需旗标',
+    why: 'CLI 契约已变化',
+    fix: '更新主机或修正条目的 required_flags',
+  },
+  'auto.host.probeConfig': {
+    what: '主机配置根目录无法解析',
+    why: '适配器需要配置根目录',
+    fix: '创建主机配置目录或设置 OPENCODE_CONFIG_DIR',
+  },
+  'auto.host.invalidRow': {
+    what: '矩阵条目 version_range 无效',
+    why: '策略禁止恒等锁定',
+    fix: '在 registry.json 使用语义谓词 (>=, <)',
+  },
+  'auto.host.registryUnreadable': {
+    what: 'registry.json 缺失或损坏',
+    why: '协商数据不可用',
+    fix: '重装 GOS 或修复 registry.json',
+  },
+  'auto.host.statusNotSelectable': {
+    what: '矩阵状态非 verified',
+    why: 'fixture-tested/probe-pending 仅作展示',
+    fix: '主机经 dogfood 验证翻转条目后方可选用',
+  },
+  'auto.host.streamMalformed': {
+    what: '事件流包含畸形 JSON',
+    why: '流契约被破坏',
+    fix: '归类为失败计入熔断器，绝不崩溃',
+  },
+  'auto.host.streamNoTerminal': {
+    what: '流结束时缺少终态事件',
+    why: '无可验证结果',
+    fix: '计为失败；建议重新探测主机版本',
+  },
+  'auto.host.displayOnly': {
+    what: '对仅展示主机尝试 spawn',
+    why: '该适配器无活动路径',
+    fix: '改用 verified 主机',
+  },
+  'auto.host.spawnError': {
+    what: '主机进程 spawn 失败或超时',
+    why: '环境类失败',
+    fix: '以 env 类失败计入熔断器',
+  },
+
+  // ---- auto 模式：能力启动器（档位 + 沙箱引擎） ----
+  'auto.launcher.unknown-profile': {
+    what: 'auto 档位 "{name}" 不在可选列表：{known}',
+    why: '未知档位绝不静默回退——掩码与 deny 姿态不能靠猜测',
+    fix: '传 {known} 之一（默认 restricted）；full 还需显式 allowFull 标志',
+  },
+  'auto.launcher.full-flag-required': {
+    what: '请求 full 能力档位但未携带显式升级标志',
+    why: 'full 放宽了 deny 基线，必须是明确选择而非默认漂移',
+    fix: '带上显式 allowFull 选项重跑，或继续使用 restricted/workspace',
+  },
+  'auto.launcher.missing-mandatory-mask': {
+    what: '档位 "{profile}" 缺少强制掩码：{missing}',
+    why: '信任存储、交付凭据与宿主状态目录在所有档位都必须被掩蔽——缺一项就重新打开旁路',
+    fix: '在 profile 文件中恢复对应 mask 条目，或升级 CLI 使档位保持完整',
+  },
+  'auto.launcher.profile-corrupt': {
+    what: 'auto 档位 "{name}" 校验失败：{detail}',
+    why: '残缺的能力档位无法安全组装',
+    fix: '修复 {file} 中的 JSON 或重装模板',
+  },
+  'auto.launcher.profile-unreadable': {
+    what: 'auto 档位 "{name}" 无法读取（{detail}）',
+    why: '启动器拒绝在未验证档位时派生会话',
+    fix: '恢复 {file} 或重装 CLI 包',
+  },
+  'auto.launcher.escape-detected': {
+    what: '派生会话流命中 deny 模式 "{pattern}"：{line}',
+    why: '词法层是纵深而非冗余——捕获流出现命中说明注入配置被绕过或忽略',
+    fix: '检查 store 中的派生记录；断路器将其计为一次失败',
+  },
+  'auto.launcher.tier-lexical': '加固档位：lexical——PATH 上无沙箱引擎（bwrap）；deny 仅由注入配置与逃逸探测器兜底（网络保持开放；模型提供方凭据按设计可读）',
+
+  // ---- auto 模式：熔断器（三层暂停护栏） ----
+  'auto.breaker.invalidLimits': {
+    what: '熔断器上限被拒绝：{detail}',
+    why: 'N/K/B 是带下限保证的护栏——静默钳制或补默认值会让循环以弱于配置的保护继续运行',
+    fix: '为 N（连续失败）、K（stage 进入次数）、B（派生预算）全部传入 >= 1 的整数',
+  },
+  'auto.breaker.tripped': {
+    what: '自动循环已暂停：熔断层 {layer} 触发——{reason}',
+    why: '熔断后绝不自动恢复；暂停时保留配置，显式重新启用即可原样恢复',
+    fix: '用 {cmd:auto} status 查看熔断记录，处理对应失败类别后用 {cmd:auto} on 重新启用',
+  },
+  'auto.breaker.invalidTimeout': {
+    what: '{name} 的值无效：{value}',
+    why: '单次派生超时是安全边界——格式错误的覆盖值绝不能静默回退默认值',
+    fix: '设置为 >= 1 的整数秒数，或清除该变量以使用默认值（墙钟 3600 秒、空闲 600 秒）',
+  },
+  'auto.breaker.advanceCheckFailed': {
+    what: 'stage 推进判定失败：无法建立 git 可达性真相',
+    why: '推进以提交可达性计分，绝不用时间戳——没有 git 真相就无法判定结果',
+    fix: '检查仓库健康（派生前 HEAD oid 与当前 HEAD 都必须可解析），然后恢复自动循环',
+  },
+
+  // ---- auto 模式：循环执行器 ----
+  'auto.loop.markerActive': {
+    what: 'auto 家族拒绝在 runner 派生的会话内运行',
+    why: '派生的阶段会话绝不能持有循环控制权（标记即边界）',
+    fix: '在普通终端运行 {cmd:auto} 相关命令',
+  },
+  'auto.loop.modeOff': {
+    what: 'auto 模式处于关闭状态',
+    why: '恢复绝不自动派生；关闭的存储仅是配置',
+    fix: '用 {cmd:auto} on 重新启用后再运行',
+  },
+  'auto.loop.noTask': {
+    what: '没有活跃的 GOS 任务——auto 循环无任务可驱动',
+    why: '循环按阶段推进的是单个活跃任务',
+    fix: '先用 {cmd:init} 启动任务，再重新运行',
+  },
+  'auto.loop.taskAtEnd': {
+    what: '任务已处于 {stage} 阶段——auto 循环到此结束',
+    why: '归档与交付是人工关卡；无交付适配器也能干净终止',
+    fix: '手动完成该阶段（归档/推送），或开始下一个任务',
+  },
+  'auto.loop.hostNotSelectable': {
+    what: '主机 {host} 不可用于真实运行',
+    why: '只有 verified 状态的主机可派生会话，其余状态仅作展示',
+    fix: '用 {cmd:auto} status 查看主机矩阵并选择已验证的主机',
+  },
+  'auto.loop.detachedHead': {
+    what: '仓库处于 detached HEAD 状态',
+    why: '阶段提交将无法归属到任何分支',
+    fix: '检出任务工作分支后重新运行',
+  },
+  'auto.loop.workBranchFailed': {
+    what: '无法从主干分支 {branch} 切换到工作分支 {work}',
+    why: '循环绝不在主干上开发（仅 PR 裁决）',
+    fix: '解决检出阻碍（提交或暂存）后重新运行',
+  },
+  'auto.loop.externalMutation': {
+    what: '任务状态在 auto 循环之外被改动：{detail}',
+    why: '外部改动以暂停报告处理——绝不计入连续失败层',
+    fix: '审查该改动；若为有意为之，再显式恢复循环',
+  },
+  'auto.loop.stateCorrupt': {
+    what: '任务状态无法读取',
+    why: '状态不可读则循环无法复核任务身份',
+    fix: '修复 .gos/state.json 后恢复 auto 循环',
+  },
+  'auto.loop.spawnComposeFailed': {
+    what: '启动器能力档案组合失败：{detail}',
+    why: '没有组合好的能力档案就不派生任何会话',
+    fix: '检查档案模板与引擎探测结果后恢复',
+  },
+  'auto.loop.stampFailed': {
+    what: '流戳记写入被拒绝：{detail}',
+    why: '派生与流的配对必须在任何消费者读取前可验证',
+    fix: '检查存储；无法恢复时运行 {cmd:auto} off --purge 后 {cmd:auto} on',
+  },
+  'auto.loop.iterationCap': {
+    what: '已达迭代上限 {max}',
+    why: '显式安全上限先于熔断层止住了循环',
+    fix: '提高上限或重新发起一次运行',
+  },
+  'auto.loop.delegationHeld': {
+    what: '委派阶段 {stage} 已挂起，等待人工审查：{detail}',
+    why: '红队发现与失败的评审轮次绝不自动清除——auto 模式下绝不代工作阶段写处置',
+    fix: '审查红队证据后：修复阶段工作并重新发起 auto run，或由人工亲自批准该阶段',
+  },
+
+  // ---- auto 模式：批准边界（委派审批） ----
+  'auto.ratify.pendingRecorded': '阶段 {stage} 的审批已记为 PENDING（auto）：仅做结构性检查——runner 会在会话退出后依据捕获流戳记完成批准',
+  'auto.ratify.pendingBlocks': {
+    what: '阶段 {stage} 存在未获 runner 批准的 PENDING 自动审批',
+    why: '一次委派阶段的推进在 runner 批准落地前发生——证据从未对照外部存储核验过',
+    fix: '恢复 auto 循环由 runner 依据存储戳记完成批准（{cmd:auto} run），或经 {cmd:auto} status 查看戳记记录；切勿手改审批记录',
+  },
+  'auto.ratify.stampMissing': {
+    what: 'runner 存储中没有派生 {spawnId} 的流戳记',
+    why: '批准以派生与其捕获流哈希配对——没有戳记就无法核验该配对',
+    fix: 'runner 会在每次派生退出时写入戳记；缺失说明派生未完成或存储被重置——重跑该阶段',
+  },
+  'auto.ratify.stageMismatch': {
+    what: '派生 {spawnId} 的流戳记属于其他阶段而非 {stage}',
+    why: '批准按阶段限定——其他阶段的戳记不能越过此边界',
+    fix: '以派生实际工作的阶段执行批准，或重跑该阶段派生',
+  },
+  'auto.ratify.hashMismatch': {
+    what: '派生 {spawnId} 的捕获流哈希与存储戳记不符',
+    why: 'runner 观察到的流与戳记的流不一致——配对可能已被篡改',
+    fix: '将该阶段产出视为未核验；检查存储记录并重跑该阶段派生',
+  },
+  'auto.ratify.noTask': {
+    what: '无可读取的任务状态用于批准',
+    why: '批准后的审批要写回任务状态文件',
+    fix: '在含活跃任务的仓库根目录运行，然后重新运行 auto 循环',
+  },
+
+  // ---- auto 模式：红队编排 ----
+  'auto.redteam.promptDrift': {
+    what: '存储中的红队提示模板哈希与 runner 模板不一致',
+    why: '红队证据只能与 runner 持有的提示配对——哈希漂移意味着配对失效',
+    fix: '若漂移符合预期，运行 {cmd:auto} off --purge 后再 {cmd:auto} on 重建存储',
+  },
+  'auto.redteam.composeFailed': {
+    what: '组合红队评审派生失败：{detail}',
+    why: '评审派生必须在能力档案下组合且工作区只读',
+    fix: '检查档案数据与引擎探测结果后重试该轮',
+  },
+  'auto.redteam.stampFailed': {
+    what: '红队轮次写入存储被拒绝：{detail}',
+    why: '轮次与流的配对必须在任何消费者读取前可验证',
+    fix: '检查存储；无法恢复时运行 {cmd:auto} off --purge 后 {cmd:auto} on',
+  },
+  'auto.redteam.findingsUnparsable': {
+    what: '一轮红队评审结束时没有可识别的发现数结论',
+    why: '垃圾输出归类为失败轮——绝不计为零发现',
+    fix: '重跑该轮；持续失败将由委托门保持并转人工审查',
+  },
+  'auto.redteam.roundFailed': {
+    what: '一轮红队评审派生在给出结论前失败',
+    why: '失败的派生不构成审查证据，绝不计为零发现',
+    fix: '排查派生失败详情（本地存储）后重跑该轮',
+  },
+  'auto.redteam.hostUnavailable': {
+    what: '主机 {host} 没有可用的 spawn 适配器',
+    why: '红队轮次需要由主机适配器组装的真实主机命令行',
+    fix: '选择带适配器的主机（opencode）或注册一个，然后重试该轮次',
+  },
+  'auto.redteam.lexicalTier': '只读工作区仅在 lexical 档位生效（无沙箱引擎）：评审者的写操作由注入配置与逃逸探测器拒绝，而非内核',
+
+  // ---- auto 模式：交付探测 + 特权 git ----
+  'auto.delivery.probeAdvisory': {
+    what: '交付探测：GitHub 认证可用但看不到任何 CI 工作流',
+    why: '仓库可能确实没有 CI；也可能是细粒度 PAT 缺少 workflows 读取范围导致的假阴性',
+    fix: '若 CI 确实存在，请改用包含 Actions/workflows 读取范围的 PAT 重新认证，或确认工作流位于 .github/workflows',
+  },
+  'auto.delivery.probeAbsent': {
+    what: '交付探测：交付适配器未激活（{reason}）',
+    why: '发布守卫只绑定真实存在的能力——循环在 SHIP 结束，交付侧零负担',
+    fix: '如需启用 PR 交付，添加 origin 远程并完成 gh CLI 认证；否则无需任何操作',
+  },
+  'auto.delivery.driftDetected': {
+    what: '仓库 git 元数据偏离了已固定的交付基线（{detail}）',
+    why: '交付适配器不信任仓库 git 元数据——远程 URL 变更或植入的钩子绝不能搭上特权 git 调用',
+    fix: '检查漂移项；确认仓库可信后运行 {cmd:auto} on 重新固定基线',
+  },
+  'auto.delivery.baselineFailed': {
+    what: '捕获交付基线失败：{detail}',
+    why: '没有固定的远程/钩子快照可供校验时，特权 git 拒绝运行',
+    fix: '确认仓库配置了 origin 远程且 .git 目录可读后重试',
+  },
+
+  // ---- auto 模式：发布腿（PR 交付 + CI 闭环） ----
+  'auto.publish.branchRequired': {
+    what: '发布需要可推送的工作分支（taskId 或 branch）',
+    why: '适配器只推送任务工作分支——主干直推被 PR-only 规则禁止',
+    fix: '传入任务 id 或显式分支名',
+  },
+  'auto.publish.subjectRequired': {
+    what: '发布需要 squash 主题候选',
+    why: '预合并主题校验与合并提交标题都使用它',
+    fix: '提供祈使动宾短句，如 "add probe-gated delivery publish leg"',
+  },
+  'auto.publish.branchPushFailed': {
+    what: '推送工作分支 {branch} 失败',
+    why: '分支推送是针对固定远程的特权 git 调用——漂移或 git 错误都会中止',
+    fix: '检查步骤详情；若为漂移，待仓库可信后运行 {cmd:auto} on 重新固定基线',
+  },
+  'auto.publish.prCreateFailed': {
+    what: '创建 PR 失败：{detail}',
+    why: '没有 PR 号，squash 合并与 CI 监视都无法继续',
+    fix: '检查 gh 认证与 head/base 分支后重试',
+  },
+  'auto.publish.subjectLintHeld': {
+    what: 'squash 主题被预合并校验拦下：{subject}',
+    why: '平台在服务端生成 squash 提交，本地钩子无法拦截——坏主题会未经检查落上 main',
+    fix: '改写为祈使动宾短句后重试',
+  },
+  'auto.publish.mergeFailed': {
+    what: 'squash 合并 PR #{prNumber} 失败',
+    why: '合并是 main 上 CI 的不归点',
+    fix: '检查 PR 可合并性（冲突/评审）后重试',
+  },
+  'auto.publish.watchFailed': {
+    what: '监视基分支 CI 失败：{detail}',
+    why: 'CI 闭环需要可读的状态源',
+    fix: '检查 gh 认证与 Actions 可见性后重试',
+  },
+  'auto.publish.redRun': {
+    what: 'CI 运行 {runId} 在 main 上为红——循环挂起等待人工处置',
+    why: '红的运行绝不自动消除；处置按设计必须人工书写',
+    fix: '检查该运行，然后运行 {cmd:auto} disposition {runId} --reason "<可接受原因>"',
+  },
+  'auto.publish.ciUnknown': {
+    what: 'CI 在 {minutes} 分钟内未出结论——运行状态未知',
+    why: '第 {minutes}+1 分钟才转绿的排队不算坏工作，因此绝不计入熔断',
+    fix: '查明状态后运行 {cmd:auto} disposition <runId> --reason "<状态>"',
+  },
+  'auto.publish.dispositionRecorded': '运行 {runId} 的处置已记录到本机存储；仓库账本仅镜像其哈希',
+  'auto.publish.purged': 'auto 运行时存储已移除（{path}）——成本历史仅保留在追踪镜像计数器中',
+  // ---- auto mode: CLI surface ----
+  'auto.cli.usage': '用法：{cmd:auto} <on|off|status|run|disposition> [参数] — 全自动运行器（机器本地存储；止于 SHIP）',
+  'auto.cli.subs': 'on [--profile restricted|workspace|full] [--allow-full] [--max-retries N] [--max-visits K] [--max-sessions B] [--timeout-wall 秒] [--timeout-idle 秒] | off [--purge] | status | run [--detach] [--break-lock] | disposition <runId> --reason "<说明>" [--by <署名>]',
+  'auto.cli.on.usage': '用法：{cmd:auto} on [--profile restricted|workspace|full] [--allow-full] [--max-retries N] [--max-visits K] [--max-sessions B] [--timeout-wall 秒] [--timeout-idle 秒]',
+  'auto.cli.on.nfsAdvisory': '存储路径位于网络文件系统上（{fstype}，挂载点 {mount}）：共享 home 目录会让不同机器上同路径的克隆发生冲突（跨主机锁过期有 hostname 防护，但该防护看不到另一台机器正在运行本存储）— 建议使用机器本地存储（将 XDG_DATA_HOME 指向本地磁盘）',
+  'auto.cli.on.allowFullWithoutFull': {
+    what: '--allow-full 仅适用于 full profile（当前请求 {profile}）',
+    why: '能力升级门的存在就是为了抬高沙箱上限必须始终是明确之举',
+    fix: '将 --profile full 与 --allow-full 一同传入，或去掉该旗标',
+  },
+  'auto.cli.run.lockBroken': '过期运行锁已解除（{broke}）— 已记录为接管事件',
+  'auto.cli.on.created': '已创建 auto 存储于 {path}',
+  'auto.cli.on.reconfigured': '已重新配置现有 auto 存储于 {path}',
+  'auto.cli.on.done': 'auto 模式已开启 — profile {profile}，限额 N={n}/K={k}/B={b}',
+  'auto.cli.probe.header': '探测建议（以下任何一项都不会阻断 on；只有存储不可用才会）：',
+  'auto.cli.probe.store': '存储',
+  'auto.cli.probe.host': '宿主',
+  'auto.cli.probe.delivery': '交付',
+  'auto.cli.probe.engine': '沙箱引擎',
+  'auto.cli.probe.hint': '运行 `{cmd:auto} status` 查看完整宿主矩阵与失败步骤',
+  'auto.cli.timeoutPolicy': 'spawn 超时：墙钟 {wall} 秒 · 空闲 {idle} 秒（环境变量覆盖：GOS_AUTO_TIMEOUT_WALL_SEC / GOS_AUTO_TIMEOUT_IDLE_SEC）',
+  'auto.cli.off.already': 'auto 模式已是关闭（本仓库尚无存储）',
+  'auto.cli.off.done': 'auto 模式已关闭 — 存储保留于 {path}（配置与历史不丢）',
+  'auto.cli.off.purgeHint': '如需连存储及历史一并移除：`{cmd:auto} off --purge`',
+  'auto.cli.status.head': 'auto：模式 {mode} · profile {profile}{full} · 限额 N={n}/K={k}/B={b}',
+  'auto.cli.status.allowFullTag': ' · allow-full（显式升级）',
+  'auto.cli.status.absent': 'auto：{path} 无存储 — 本仓库从未启用 auto（`{cmd:auto} on` 创建）',
+  'auto.cli.status.paused': 'auto：存储已暂停（{reason}）— 检查前循环拒绝运行',
+  'auto.cli.status.hostMatrix': '宿主矩阵（{n} 行；fixture 行仅在测试环境门下出现）：',
+  'auto.cli.status.counters': '计数：spawn {spawns} 次 · trip {trips} 次',
+  'auto.cli.status.countersAbsent': '计数：—（无存储）',
+  'auto.cli.status.breakerClean': '熔断器：正常（{n} 条非跳闸记录）',
+  'auto.cli.status.breakerTripped': '熔断器：已跳闸 层 {layer}（{cls}）于 {ts}{detail} — 已暂停；需显式 `{cmd:auto} on` 重新启用',
+  'auto.cli.status.lock': '运行锁：由 {host} 上 pid {pid} 持有',
+  'auto.cli.run.detached': 'auto 运行器已脱离运行（pid {pid}）— 用 `{cmd:auto} status` 查看进度',
+  'auto.cli.run.report': 'auto 运行：{status}（{reason}）',
+  'auto.cli.run.iterations': '迭代次数：{n}',
+  'auto.cli.disposition.usage': '用法：{cmd:auto} disposition <runId> --reason "<说明>" [--by <署名>]',
+  'auto.cli.disposition.recorded': '已为运行 {runId} 记录处置（由 {by}）',
+  'auto.cli.disposition.mirror': '账本镜像（仅哈希）：{path}',
+  'auto.cli.unknownArg': 'auto {sub}：未知参数 \'{arg}\'',
+  'auto.cli.resume.auto': 'Auto：模式 {mode}（profile {profile}）— 熔断器正常；resume 绝不自动拉起，由 `{cmd:auto} run` 驱动循环',
+  'auto.cli.resume.tripped': 'Auto：模式 {mode}（profile {profile}）— 熔断器已跳闸 {layer}/{cls} {ts}；已暂停，需显式 `{cmd:auto} on` 重新启用',
+  'auto.cli.resume.paused': 'Auto：存储已暂停（{reason}）— 详见 `{cmd:auto} status`',
 };

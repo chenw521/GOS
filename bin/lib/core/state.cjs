@@ -12,7 +12,7 @@ const path = require('node:path');
 const fsio = require('./fsio.cjs');
 const gitprobe = require('./gitprobe.cjs');
 
-const STATE_SCHEMA_VERSION = 5;
+const STATE_SCHEMA_VERSION = 6;
 
 const PROJECT_SCHEMA_VERSION = 1;
 
@@ -236,6 +236,12 @@ function migrateState(s) {
     delete s.project_root;
     if (s.repo_id == null) s.repo_id = repoIdFromRemotes();
   }
+  // v5→v6: the tiered-auto toggle field retires — auto runtime state (mode,
+  // profile, limits, counters, breaker) lives in the machine-local runner
+  // store, so a tracked auto_mode claim would misread on every clone.
+  if (fromV < 6) {
+    delete s.auto_mode;
+  }
   if (wasLegacy) console.error(`⚠ state migrated to schema v${STATE_SCHEMA_VERSION} (task/<id>/ paths pinned; identity de-pathed — repo_id derived, version/project_root dropped)`);
   if (!Array.isArray(s.decisions)) s.decisions = [];
   s.decisions = s.decisions.map((d) => {
@@ -265,6 +271,25 @@ function validateState(s, mode) {
   // Range legality ({min..CLI_MAX}) is gate-side, not schema-side.
   if (s.spec_gate_version !== undefined && !Number.isInteger(s.spec_gate_version)) {
     errs.push(`state.json:spec_gate_version: integer required when present (got ${typeof s.spec_gate_version} ${String(s.spec_gate_version)})`);
+  }
+  // Stage-gate approvals: values are either legacy bare ts strings (human
+  // `gos approve`), non-approval records like BASELINE_RESET {ts, reason},
+  // or auto-routed records {status, ts, mode, stage, evidence?}. Only the
+  // auto-routed shape (any value carrying a status field) is validated —
+  // legacy strings and status-less records pass untouched.
+  if (s.approvals !== undefined && s.approvals !== null) {
+    if (typeof s.approvals !== 'object' || Array.isArray(s.approvals)) {
+      errs.push('state.json:approvals: object required');
+    } else {
+      for (const [k, v] of Object.entries(s.approvals)) {
+        if (v == null || typeof v !== 'object' || Array.isArray(v) || v.status === undefined) continue;
+        if (v.status !== 'PENDING' && v.status !== 'ratified') {
+          errs.push(`state.json:approvals.${k}: status must be PENDING|ratified (got ${JSON.stringify(v.status)})`);
+        }
+        if (typeof v.ts !== 'string' || v.ts.length === 0) errs.push(`state.json:approvals.${k}: ts string required`);
+        if (v.mode !== undefined && v.mode !== 'auto') errs.push(`state.json:approvals.${k}: mode must be 'auto' when present`);
+      }
+    }
   }
   // T2 [D-30]: verified truths must carry a valid three-element evidence object.
   // Fail-closed on the legacy string form; read-class (warn) keeps going with a banner.
@@ -874,7 +899,7 @@ function defaultState(level, intentText) {
     current_stage: 'INTENT',
     completed_stages: [],
     intent: { summary: intentText || '', confirmed: false },
-    approvals: {},  // stage-gate approvals: {THINK:'...', PLAN:'...', ARCHIVE:'...'} — set ONLY via gos approve <stage> (explicit user act)
+    approvals: {},  // stage-gate approvals — value per stage: legacy = bare ts string (gos approve), auto-routed = {status:'PENDING'|'ratified', ts, mode:'auto', stage, evidence?}; BASELINE_RESET keeps {ts, reason}
     spec_path: null,   // T5: backfilled below via ensureTaskDir resolution
     plan_path: null,
     project: false,          // true when init --project (Lv4 truth-source mode)
@@ -1122,9 +1147,29 @@ const COMMANDS = {
     contractKeys: ['command_contracts.renderDone', 'command_contracts.renderSkip', 'command_contracts.generatedHeader', 'command_contracts.manualMarker'],
   },
   'auto': {
-    desc: 'auto-flow toggle (on | off)', class: 'write', aliases: [], core: false,
-    subs: ['on', 'off'], flags: [], usage: 'gos auto <sub>',
-    next: ['gos'],
+    desc: 'full-auto runner: on | off | status | run | disposition (machine-local store; breaker-guarded fresh-session loop ending at SHIP)',
+    class: 'write', aliases: [], core: false,
+    subs: [
+      'on [--profile restricted|workspace|full] [--max-retries N] [--max-visits K] [--max-sessions B] [--timeout-wall sec] [--timeout-idle sec]',
+      'off [--purge]',
+      'status',
+      'run [--detach]',
+      'disposition <runId> --reason "<text>" [--by <name>]',
+    ],
+    flags: [
+      { name: '--profile', scope: 'on', effect: 'capability profile for spawned sessions (default restricted; full additionally requires a later explicit upgrade)', risk: 'mutating' },
+      { name: '--max-retries', scope: 'on', effect: 'breaker consecutive-failure layer N (integer >= 1)', risk: 'mutating' },
+      { name: '--max-visits', scope: 'on', effect: 'breaker stage re-entry layer K (integer >= 1)', risk: 'mutating' },
+      { name: '--max-sessions', scope: 'on', effect: 'breaker spawn-budget layer B (integer >= 1)', risk: 'mutating' },
+      { name: '--timeout-wall', scope: 'on', effect: 'per-spawn wall-clock timeout in seconds (fail-closed validation; runtime channel GOS_AUTO_TIMEOUT_WALL_SEC)', risk: 'mutating' },
+      { name: '--timeout-idle', scope: 'on', effect: 'per-spawn idle timeout in seconds measured from the last stream event (fail-closed validation; runtime channel GOS_AUTO_TIMEOUT_IDLE_SEC)', risk: 'mutating' },
+      { name: '--purge', scope: 'off', effect: 'remove this repository machine-local auto store entirely (counters, breaker history, dispositions)', risk: 'destructive' },
+      { name: '--detach', scope: 'run', effect: 'spawn the runner as a detached child instead of running in-process', risk: 'mutating' },
+      { name: '--reason', scope: 'disposition', effect: 'human justification recorded with the disposition (required)', risk: 'safe' },
+      { name: '--by', scope: 'disposition', effect: 'disposition author label (defaults to user@host)', risk: 'safe' },
+    ],
+    usage: 'gos auto <on|off|status|run|disposition> [args]',
+    next: ['gos auto status', 'gos auto run'],
     contractKeys: [],
   },
   'approve': {

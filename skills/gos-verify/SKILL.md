@@ -32,6 +32,28 @@ gos gate all               # hard gate: must exit 0 before SHIP
 - `run-manifest stale` (gate all FAIL) — sections last ran against a different content tree. Re-run the suite; only use `gos gate --exempt <section> --reason "<why>"` (reason mandatory, ≥10 chars) when you can justify the exemption in your verify notes (one-shot, audited in .gos/logs/exemptions.log).
 - Machine consumers: `gos map closure <path> --json` (strict envelope, byte-0 JSON) is the sole structured mode; `--print0` stays paths-only.
 
+### Auto breaker and ledger lines (full-auto tasks)
+
+When the task ran under `gos auto`, VERIFY reads the machine-local auto state
+too — never reconstruct the loop's bookkeeping from memory:
+
+- `gos auto status` prints mode, profile, hardening tier (bubblewrap/lexical),
+  host matrix (verified / probe-pending / fixture-tested), delivery probe
+  state, spawn counters, and any breaker record. Read it FIRST when resuming
+  an auto task.
+- A tripped breaker (consecutive N / stage visits K / spawn budget B) shows
+  first-line in `gos resume`. Paused ≠ failed: pause reports and
+  external-mutation pauses carry no failure count — classify the underlying
+  cause, not the pause. Check the failure class tag (task / env / auth /
+  timeout) before drafting a gap: env/auth failures point at the host
+  environment, not the work.
+- Evidence privacy: tracked state carries hashes/counts only; session ids,
+  models, and output tails live in the machine-local store. The repo-local
+  `.gos/logs/auto-ledger.ndjson` is a debug mirror — treat it as a hint, and
+  never edit either record by hand.
+- A delivery disposition-unknown from the CI watch is not a failure — cite the
+  recorded `gos auto disposition` when verifying closure claims.
+
 
 Record evidence via the command family — never hand-edit state.json:
 

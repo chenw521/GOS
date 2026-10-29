@@ -1,10 +1,9 @@
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
   "current_stage": "DONE",
   "completed_stages": [
-    "INTENT",
     "THINK",
     "PLAN",
     "BUILD",
@@ -12,131 +11,171 @@
     "VERIFY"
   ],
   "intent": {
-    "summary": "Mandatory deep-dig rounds before decision cards, standing deepen option in every card, value-essence column, table rendering contract (message body vs tool picks), thin-gate extension. Re-homes concern cab1a0f8 from P2",
+    "summary": "Ship gos auto on/off/status — toggle full-auto at any stage boundary; per-stage fresh-session auto-loop (spawn next stage session after each commit, never one long conversation); persists across sessions, resume auto-continues; hard gates + D-NN audit stay; guards: push sign-off, dangerous-cmd gates, retry cap after N exit-1, main-push CI closure check (every push terminal-green or dispositioned, 91848545 twice-lived); ends at SHIP",
     "confirmed": true
   },
   "approvals": {
-    "THINK": "2026-10-28T06:23:10.758Z",
-    "PLAN": "2026-10-28T06:42:56.560Z",
-    "ARCHIVE": "2026-10-28T12:09:58.055Z"
+    "THINK": "2026-10-29T03:57:23.227Z",
+    "PLAN": "2026-10-29T04:31:45.005Z",
+    "ARCHIVE": "2026-10-29T12:31:07.263Z"
   },
-  "spec_path": ".gos/archive/2026-10-28-v1.0.0-dev-phase-p5-mandatory-deep-dig-rounds-befo/task/p5/spec.md",
-  "plan_path": ".gos/archive/2026-10-28-v1.0.0-dev-phase-p5-mandatory-deep-dig-rounds-befo/task/p5/plan.md",
+  "spec_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/spec.md",
+  "plan_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/plan.md",
   "project": true,
   "requirements": [
     {
       "id": "R-01",
-      "text": "Mandatory deep-dig rounds before decision cards, standing deepen option in every card, value-essence column, table re...",
-      "phase": null,
+      "text": "Ship gos auto on/off/status — toggle full-auto at any stage boundary; per-stage fresh-session auto-loop (spawn next s...",
+      "phase": "P0: full-auto mode",
       "level": 3
     },
     {
-      "id": "R-45",
-      "text": "Dialogue contract upgrade: 5-column card with Activates, exemplars-as-contract dig, standing deepen line, message-body rendering, plain narration",
-      "phase": "P5: dialogue governance",
+      "id": "R-50",
+      "text": "3-layer breaker: per-stage consecutive N=3, per-stage visits K=5, task budget B=30; trip = paused with record; resume reports only; rc=0-no-advance counts as failure",
+      "phase": "P0: full-auto mode",
       "status": "active"
     },
     {
-      "id": "R-46",
-      "text": "Exemplar file examples/deep-dig-cases.md: 3 curated real cases + read-before-first-card pointer",
-      "phase": "P5: dialogue governance",
+      "id": "R-51",
+      "text": "Machine-local auto runtime: .gos/auto.json + .gos/logs/auto-ledger.ndjson (untracked), gos auto run exclusive lock, resume never auto-spawns; state.json auto_mode stub migrates out",
+      "phase": "P0: full-auto mode",
       "status": "active"
     },
     {
-      "id": "R-47",
-      "text": "Thin-gate v3: spec_gate_version 3, Activates header floor, locale keys, T73 fixtures incl. v2 grandfather",
-      "phase": "P5: dialogue governance",
+      "id": "R-52",
+      "text": "Host capability negotiation: spawn-time probe (version + flags + config resolve), adapter version matrix as data, fail-closed with guidance, semantic predicates only",
+      "phase": "P0: full-auto mode",
       "status": "active"
     },
     {
-      "id": "R-48",
-      "text": "Seeded surfaces: spec-template card scaffold, gos-think SKILL rows, router level-card, anti-rationalization line",
-      "phase": "P5: dialogue governance",
+      "id": "R-53",
+      "text": "Evidence privacy boundary: tracked state carries hashes/counts only; session ids, models, output tails live in the untracked local ledger",
+      "phase": "P0: full-auto mode",
       "status": "active"
     },
     {
-      "id": "R-49",
-      "text": "instructions think and navigator hint point at dig exemplars and blast/closure entry",
-      "phase": "P5: dialogue governance",
+      "id": "R-54",
+      "text": "gos auto on/off/status surface: profile + N/K/B overrideable, hardening tier (kernel/lexical), host tri-state (verified/fixture/probe-pending), breaker first-line in resume",
+      "phase": "P0: full-auto mode",
       "status": "active"
+    },
+    {
+      "id": "R-55",
+      "text": "Fresh-session auto loop: gos auto run spawns new headless sessions per stage via spawn contract; adapters: opencode verified, codex fixture, rest fail-closed",
+      "phase": "P0: full-auto mode",
+      "status": "active"
+    },
+    {
+      "id": "R-56",
+      "text": "Approval routing: mechanical auto / delegated (think=redteam evidence w/ hash creds, plan=mechanical) / held (archive+push); records {ts,mode,evidence}",
+      "phase": "P0: full-auto mode",
+      "status": "active"
+    },
+    {
+      "id": "R-57",
+      "text": "Delivery adapter (probe-gated PR+squash v1): sign-offs held, publish mechanical: lint, CI watch 45min, closure ledger, red=human disposition",
+      "phase": "P0: full-auto mode",
+      "status": "active"
+    },
+    {
+      "id": "R-58",
+      "text": "Capability depth: auto-profiles + read-union-inject + bwrap launcher (probe-gated) + escape detector to breaker; loop never in-host",
+      "phase": "P0: full-auto mode",
+      "status": "active"
+    },
+    {
+      "id": "R-59",
+      "text": "Delivery adapter: ship probe-gated PR+squash variant",
+      "phase": "P9: never",
+      "status": "dropped"
     }
   ],
   "decisions": [
     {
-      "id": "D-32",
-      "title": "Deep-dig = teach + shape: battery in protocol, value-essence column carries the dig, gate checks header only",
-      "rationale": "User ruling: activate proactive digging, not gatekeeping. Shape beats process; exemplars beat rules. Five weak-cell controls; recurrence escalates gate.",
-      "birth_phase": "P5: dialogue governance",
+      "id": "D-40",
+      "title": "Full-auto = channel-agnostic spawn contract + host adapters; v1 opencode, codex fixture, rest fail-closed",
+      "rationale": "gos-owned restriction-first matrix; hosts translate spawn-with-profile/outcome-stream/probe-status; desktop = client not host; per-host verification status honest.",
+      "birth_phase": "P0: full-auto mode",
       "status": "open",
       "anchor": null,
       "covered": false,
       "covered_by": null
     },
     {
-      "id": "D-33",
-      "title": "Dig content contract = exemplars-as-contract: 3 real case records + one instruction line; perspectives emerge per domain",
-      "rationale": "User rejected format logistics and labeled checklists; cases demonstrate good digging; two starter questions are a floor, never a stopping point.",
-      "birth_phase": "P5: dialogue governance",
+      "id": "D-41",
+      "title": "Auto approvals: mechanical=auto; think/plan delegated with runner-spawned redteam evidence; archive+push always held",
+      "rationale": "disposition gate + redteam_rounds + resolve-model shipped; P0 adds provenance: runner writes rounds from captured stream with hash creds; protocol stops escalate to held; plan delegation mechanical",
+      "birth_phase": "P0: full-auto mode",
       "status": "open",
       "anchor": null,
       "covered": false,
       "covered_by": null
     },
     {
-      "id": "D-34",
-      "title": "Standing deepen = card-tail line; rounds exempt from follow-up caps, must surface new facts",
-      "rationale": "Visibility = usage; D-13 relapse was the missing standing port. Response: exemplar-form dig, card re-presented; user-driven, uncapped.",
-      "birth_phase": "P5: dialogue governance",
+      "id": "D-42",
+      "title": "Auto breaker = 3 layers: consecutive N=3, visits K=5, budget B=30; trip pauses (resume reports, explicit re-enable)",
+      "rationale": "empty-return class proven (ae2e474c); stage-back ping-pong blinds consecutive-only counters; unattended needs cost cap; defaults overrideable at auto on",
+      "birth_phase": "P0: full-auto mode",
       "status": "open",
       "anchor": null,
       "covered": false,
       "covered_by": null
     },
     {
-      "id": "D-35",
-      "title": "Value-essence column header = 'Activates'; symmetric fill, names a consumer, distinct from Pros",
-      "rationale": "Verb header prompts the cell form directly; noun headers invite abstract value talk. Parenthetical anchor keeps traceability. Gate checks header presence only.",
-      "birth_phase": "P5: dialogue governance",
+      "id": "D-43",
+      "title": "Auto evidence privacy: tracked records hash/count only; session ids, models, tails in untracked .gos/logs ledger",
+      "rationale": "state.json is git-tracked (38239056); session/model/tails are machine metadata; follows D-01 logs-local boundary; hash-only is leak-free and stronger than bare-ts",
+      "birth_phase": "P0: full-auto mode",
       "status": "open",
       "anchor": null,
       "covered": false,
       "covered_by": null
     },
     {
-      "id": "D-36",
-      "title": "Cards render in message body, responses free-text; tools only for card-free logistics",
-      "rationale": "Dual consumers re-read history; tool payloads render unreliably; free text carries composite replies (deepen + steer) that menus cannot.",
-      "birth_phase": "P5: dialogue governance",
+      "id": "D-44",
+      "title": "Delivery = probe-gated adapter (v1 PR+squash); push sign-off + CI closure bind to it; SHIP termination works without it",
+      "rationale": "users span local-only/plain-git/github; guards bind to existing actions; dogfood here closes 91848545; pre-merge lint, 45min watch=failure, red runs human-dispositioned",
+      "birth_phase": "P0: full-auto mode",
       "status": "open",
       "anchor": null,
       "covered": false,
       "covered_by": null
     },
     {
-      "id": "D-37",
-      "title": "Card template merges Cons+Risks into one Cons column; modality carried by wording, 5-column card",
-      "rationale": "No mechanical consumer reads them separately; boundary proved unstable in practice; width pressure after Activates. Exemplars carry modality phrasing; re-split only on real need.",
-      "birth_phase": "P5: dialogue governance",
+      "id": "D-45",
+      "title": "Auto runtime machine-local (.gos/auto.json + ledger); auto run exclusive lock; resume reports, never auto-spawns",
+      "rationale": "state.json is tracked — team clones must not inherit machine behavior; D-01/D-16 machine-local precedents; .lock family prevents double loops; stub auto_mode migrates out (zero consumers)",
+      "birth_phase": "P0: full-auto mode",
       "status": "open",
       "anchor": null,
       "covered": false,
       "covered_by": null
     },
     {
-      "id": "D-38",
-      "title": "Plain language = the reply itself, not an added translation layer; narration contract grounds all jargon",
-      "rationale": "Replies plain by default, no translation artifacts. Bans unexplained proper nouns, uncommon-noun overuse, opaque abbreviations. Caliber: Chinese at middle-school level, English at CET-4.",
-      "birth_phase": "P5: dialogue governance",
+      "id": "D-46",
+      "title": "Host version policy = capability negotiation: spawn-time probe + version matrix data + fail-closed + semantic predicates",
+      "rationale": "hosts churn (opencode v2 announced, codex renamed full-auto); adapters touch only 3 frozen capabilities; verified status only via real dogfood; breaker catches drift probes miss",
+      "birth_phase": "P0: full-auto mode",
       "status": "open",
       "anchor": null,
       "covered": false,
       "covered_by": null
     },
     {
-      "id": "D-39",
-      "title": "Gate activation: spec_gate_version 2->3; v3 = v2 floor + Activates header; v2 specs keep old floor",
-      "rationale": "Reuses the proven grandfather pattern; single monotonic integer, zero new fields. P5's own spec freezes under v3 — dogfood day one.",
-      "birth_phase": "P5: dialogue governance",
+      "id": "D-47",
+      "title": "Danger gates = profile deny + read-union-inject + bwrap launcher (probe-gated) + escape detector; loop never in-host",
+      "rationale": "bwrap/userns/env-passthrough/kernel-write-block probe-verified; plugin cannot sandbox parent — plugin=control face, desktop=observer; detach survives app close",
+      "birth_phase": "P0: full-auto mode",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-48",
+      "title": "Trust state outside sandbox: XDG store masked via tmpfs; breaker/lock/approval-creds verified against it, never .gos/",
+      "rationale": "redteam RT1-F1: .gos/ is worker-writable (session must commit) so in-repo counters/creds/approvals are forgeable; sandbox cannot write what it cannot see",
+      "birth_phase": "P0: full-auto mode",
       "status": "open",
       "anchor": null,
       "covered": false,
@@ -146,215 +185,443 @@
   "observable_truths": [
     {
       "id": "T1",
-      "description": "A fresh post-P5 THINK dialogue presents 5-column cards whose Activates cells name concrete consumers",
+      "description": "auto on + auto run advances a fixture task across at least one stage boundary with one fresh spawned session per stage; the external store records every spawn (count > 0)",
       "verified": true,
       "evidence": {
-        "command": "[\"cat\",\".gos/task/p5/evidence/t1-transcript.md\"]",
-        "output_excerpt": "## Round 1 — card after the disposition dig",
-        "artifact_path": ".gos/archive/2026-10-28-v1.0.0-dev-phase-p5-mandatory-deep-dig-rounds-befo/task/p5/evidence/t1-transcript.md",
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
+        "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t1-dogfood.md",
         "replay": true
       }
     },
     {
       "id": "T2",
-      "description": "T73 fixtures prove: v3 spec without Activates header fails gate (spec-gate-card-column), with it passes, v2-stamped spec stays green",
+      "description": "auto status prints mode, profile, hardening tier (kernel/lexical), host tri-state (verified/fixture/probe-pending) and counters",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\"test/run-sections.sh\",\"T73\"]",
-        "output_excerpt": "✓ renderer unit: 3-part block + string injection crashes (post-switch) (exit 0)",
-        "artifact_path": "test/sections/T73-gate-evidence.test.sh",
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
+        "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
         "replay": true
       }
     },
     {
       "id": "T3",
-      "description": "dialogue-protocol.md ships dig contract, deepen line, rendering contract, plain-narration contract; examples/deep-dig-cases.md holds 3 curated real cases",
+      "description": "ratification boundary: in-spawn commit on a delegated stage records PENDING; unratified PENDING blocks the next advance; runner ratifies from outside and the record carries mode + evidence hash",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\"-c\",\"grep -c Activates skills/gos-think/reference/dialogue-protocol.md skills/gos-think/examples/deep-dig-cases.md\"]",
-        "output_excerpt": "skills/gos-think/reference/dialogue-protocol.md:4",
-        "artifact_path": "skills/gos-think/examples/deep-dig-cases.md",
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
+        "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
         "replay": true
       }
     },
     {
       "id": "T4",
-      "description": "gos instructions think output shows the exemplar read-before-first-card pointer",
+      "description": "N consecutive failures trip the breaker: auto pauses, resume shows the breaker first line and spawns nothing",
       "verified": true,
       "evidence": {
-        "command": "[\"node\",\"bin/gos.cjs\",\"instructions\",\"think\"]",
-        "output_excerpt": "→ One decision per message (Iron Law #2). Max 3 follow-ups per area.",
-        "artifact_path": "bin/lib/nav/status.cjs",
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
+        "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T5",
+      "description": "delivery: adapter-absent loop ends cleanly at SHIP; fixture adapter runs subject lint pre-merge, red CI stops the loop until a recorded disposition, watch timeout lands in disposition-unknown (never N)",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
+        "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T6",
+      "description": "bwrap tier: spawned process cannot write outside declared writable paths, cannot see the trust store or delivery credentials; engine-less degrades to lexical honestly; host-state poisoning does not persist across spawns; deny baseline derives from the runner snapshot",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T105-auto-depth\"]",
+        "output_excerpt": "--- T105 summary: 9 passed, 0 failed ---",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t105-truths.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T7",
+      "description": "evidence privacy: tracked state contains zero session ids, model names or output tails; the external store carries them keyed by hash",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T105-auto-depth\"]",
+        "output_excerpt": "--- T105 summary: 9 passed, 0 failed ---",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t105-truths.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T8",
+      "description": "failing host probe refuses auto run start naming the matrix entry; fixture-tested (non-verified) hosts are display-only and refused for real runs",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
+        "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T9",
+      "description": "adversarial: tampering with repo-local counters/ledger/approval records never un-pauses, resets or satisfies a gate; verification reads the masked store and the tamper is surfaced",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T105-auto-depth\"]",
+        "output_excerpt": "--- T105 summary: 9 passed, 0 failed ---",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t105-truths.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T10",
+      "description": "adversarial: planted .git/hooks/pre-push, rewritten remote or ~/.gitconfig url.insteadOf makes the delivery adapter abort into the breaker instead of pushing",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T105-auto-depth\"]",
+        "output_excerpt": "--- T105 summary: 9 passed, 0 failed ---",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t105-truths.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T11",
+      "description": "adversarial: auto on/off/run/disposition inside a GOS_AUTO_SPAWNED session refuses with guidance",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
+        "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T12",
+      "description": "adversarial: single findings=0 does not delegate THINK (double-zero); findings>0 escalates to held; redteam prompt source hashes to the runner template; approve archive in auto mode is refused",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
+        "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T13",
+      "description": "edge: external mutation mid-loop pauses with a report and never counts into N; store deleted mid-run yields paused-with-guidance with tracked cumulative counters surviving",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
+        "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T14",
+      "description": "edge: unknown-higher store schema, truncated outcome stream and N=0 input each fail into explicit named errors, never silent acceptance or a crash",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
+        "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T15",
+      "description": "breaker layers verified independently: ping-pong trips only K, budget only B, env/auth failures carry their class, timeout expiry counts into N, rc=0 without a new stage commit records as failure",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
+        "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T16",
+      "description": "lock family: live lock (live pid + matching hostname) refuses break-lock and records the takeover attempt; stale cross-host lock recovery names the owning clone; second concurrent auto run is refused",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
+        "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
         "replay": true
       }
     }
   ],
-  "gaps": [],
-  "phase_name": "P5: dialogue governance",
-  "task_head": "8e367dbd2e514974ae402be332f3becfe29b586a",
+  "review_findings": {
+    "phase1": "FAIL 2026-10-29 — 4 blockers (runner ratify/redteam legs unwired; publish unreachable; NFS advisory missing; allowFull dead-end) + phase2 High (env credential passthrough; mask gaps .git-credentials/.aws/.gnupg; kernel-tier .git read-only; own-commit misread as external mutation; redteam spawn spec malformed) — all fixed in BUILD round 4d7e9f7, verified by full suite 3281/0",
+    "minors_deferred": [
+      {
+        "id": "P2-6/P2-7",
+        "issue": "idle timeout post-hoc only; heartbeat cannot fire during synchronous spawns (dynamic threshold mitigation landed)",
+        "concern": "auto-loop idle timeout is post-hoc classification only"
+      },
+      {
+        "id": "P2-9",
+        "issue": "store.mutate read-modify-write lacks cross-process serialization",
+        "concern": "auto store.mutate read-modify-write lacks cross-process serialization"
+      },
+      {
+        "id": "P2-15",
+        "issue": "auto status has write side effects and fires network probes every run",
+        "concern": "auto status side effects: probeWritable mkdirs the store dir"
+      },
+      {
+        "id": "P1-minor",
+        "issue": "odd-path fixtures (spaces/unicode/symlink) not landed; ordering rule landed",
+        "concern": "odd-path fixtures (spaces/unicode/symlink clone roots) still absent"
+      },
+      {
+        "id": "P2-10b",
+        "issue": "break-lock flag restored from raw argv; entry still resolves top-level .gos/.lock",
+        "concern": "auto run --break-lock is restored from raw process.argv"
+      },
+      {
+        "id": "P2-DRY",
+        "issue": "DEFAULT_LIMITS dup, SPAWN_MAX_BUFFER triple, near-duplicate spawn runners",
+        "concern": "auto-family DRY: DEFAULT_LIMITS duplicated"
+      }
+    ]
+  },
+  "gaps": [
+    {
+      "id": "G-1793268280760",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
+    },
+    {
+      "id": "G-1793270736213",
+      "type": "major",
+      "description": "Fluid back to BUILD: --reason phase-1 FAIL: ratify/redteam legs unwired in loop (D-41); publish() unreachable (D-44); NFS advisory missing (D-45); allowFull dead-end (D-47). phase-2 High: env credential passthrough into spawns; mask gaps (.git-credentials/.aws/.gnupg); kernel-tier .git ro blocks commit; own commits misread as external mutation; redteam spawn spec malformed; quotapath typo run-sections.sh:251",
+      "status": "open"
+    }
+  ],
+  "phase_name": "P0: full-auto mode",
+  "task_head": "503010ca3e6f80efe4a20f368a08ba1ebda57907",
   "task_head_history": [
     {
-      "sha": "8e367dbd2e514974ae402be332f3becfe29b586a",
-      "at": "2026-10-27T10:37:54.359Z",
+      "sha": "503010ca3e6f80efe4a20f368a08ba1ebda57907",
+      "at": "2026-10-29T01:18:00.839Z",
       "what": "claim"
     }
   ],
-  "spec_sha256": "167a155008fbc8636ba189aee8a86e9afc7695ba1202b61ae847851ccc469605",
-  "spec_gate_version": 2,
+  "checkpoints": [],
+  "spec_gate_version": 3,
+  "spec_sha256": "48b0aeda8ae484dfb515af5a43e6c8886abeb3b266e14e7dde98efdbda2d949f",
   "plan_snapshot": {
     "tasks": [
       {
         "id": "T1",
         "covers": [
-          "D-35",
-          "D-39",
-          "R-47"
+          "D-48",
+          "D-45",
+          "R-51"
         ],
         "files": [
-          "bin/lib/ops/gate.cjs",
-          "bin/lib/core/locales/en.cjs",
-          "bin/lib/core/locales/zh.cjs",
-          "test/sections/T73-gate-evidence.test.sh"
-        ]
-      },
-      {
-        "id": "T2",
-        "covers": [
-          "D-39",
-          "R-47"
-        ],
-        "files": [
-          "bin/lib/core/state.cjs",
-          "test/sections/T94-schemav4.test.sh",
-          "test/sections/T1-schema.test.sh"
-        ]
-      },
-      {
-        "id": "T3",
-        "covers": [
-          "D-32",
-          "D-33",
-          "D-34",
-          "D-36",
-          "D-37",
-          "D-38",
-          "R-45"
-        ],
-        "files": [
-          "skills/gos-think/reference/dialogue-protocol.md"
-        ]
-      },
-      {
-        "id": "T4",
-        "covers": [
-          "D-33",
-          "R-46"
-        ],
-        "files": [
-          "skills/gos-think/examples/deep-dig-cases.md",
-          "test/sections/T103-deepdig-exemplars.test.sh"
-        ]
-      },
-      {
-        "id": "T5",
-        "covers": [
-          "D-39",
-          "R-47"
-        ],
-        "files": [
-          "bin/lib/task/commit.cjs",
-          "bin/lib/ops/gate.cjs",
+          "bin/lib/ops/auto/store.cjs",
           "bin/lib/core/locales/en.cjs",
           "bin/lib/core/locales/zh.cjs"
         ]
       },
       {
-        "id": "T7",
+        "id": "T2",
         "covers": [
-          "D-32",
-          "D-35",
-          "D-37",
-          "D-38",
-          "R-48"
+          "D-40",
+          "D-46",
+          "R-52",
+          "R-55"
         ],
         "files": [
-          "skills/gos-think/SKILL.md",
-          "skills/gos-router/SKILL.md",
-          "skills/gos-think/examples/spec-with-redteam.md",
-          "templates/spec-template.md"
+          "bin/lib/ops/auto/adapters/registry.cjs",
+          "bin/lib/ops/auto/adapters/opencode.cjs",
+          "bin/lib/ops/auto/adapters/codex.cjs",
+          "bin/lib/ops/auto/adapters/registry.json",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ]
+      },
+      {
+        "id": "T3",
+        "covers": [
+          "D-47",
+          "D-48",
+          "R-58"
+        ],
+        "files": [
+          "bin/lib/ops/auto/launcher.cjs",
+          "templates/auto-profiles/restricted.json",
+          "templates/auto-profiles/workspace.json",
+          "templates/auto-profiles/full.json",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ]
+      },
+      {
+        "id": "T4",
+        "covers": [
+          "D-42",
+          "D-43",
+          "R-50"
+        ],
+        "files": [
+          "bin/lib/ops/auto/breaker.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ]
+      },
+      {
+        "id": "T5",
+        "covers": [
+          "D-40",
+          "D-42",
+          "D-45",
+          "R-55"
+        ],
+        "files": [
+          "bin/lib/ops/auto/loop.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ]
+      },
+      {
+        "id": "T6a",
+        "covers": [
+          "D-41",
+          "D-43",
+          "R-56",
+          "R-53"
+        ],
+        "files": [
+          "bin/lib/ops/auto/ratify.cjs",
+          "bin/lib/task/commit.cjs",
+          "bin/lib/core/state.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ]
+      },
+      {
+        "id": "T6b",
+        "covers": [
+          "D-41",
+          "R-56"
+        ],
+        "files": [
+          "bin/lib/ops/auto/redteam.cjs",
+          "bin/lib/task/archive.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ]
+      },
+      {
+        "id": "T7a",
+        "covers": [
+          "D-44",
+          "R-57"
+        ],
+        "files": [
+          "bin/lib/ops/auto/delivery.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ]
+      },
+      {
+        "id": "T7b",
+        "covers": [
+          "D-44",
+          "D-43",
+          "R-57",
+          "R-53"
+        ],
+        "files": [
+          "bin/lib/ops/auto/delivery-publish.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
         ]
       },
       {
         "id": "T8",
         "covers": [
-          "R-49"
+          "D-45",
+          "R-01",
+          "R-51",
+          "R-54"
         ],
         "files": [
-          "bin/lib/nav/status.cjs",
-          "bin/lib/task/context.cjs"
+          "bin/lib/nav/cmds.cjs",
+          "bin/gos.cjs",
+          "bin/lib/core/state.cjs",
+          "bin/lib/ops/auto/cli.cjs",
+          "bin/lib/ops/index.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs",
+          "test/sections/T1-schema.test.sh",
+          "test/sections/T2-project.test.sh",
+          "test/sections/T94-schemav4.test.sh",
+          "test/sections/T95-repo-id-guard.test.sh"
         ]
       },
       {
         "id": "T9",
         "covers": [
-          "D-39",
-          "R-47"
+          "D-40",
+          "D-44",
+          "D-45"
         ],
         "files": [
-          "test/sections/T17-semantic-engine.test.sh",
-          "test/sections/T22-map-gate-impact.test.sh",
-          "test/sections/T31-map-gate.test.sh",
-          "test/sections/T33-map-manifest.test.sh"
+          "README.md",
+          "README.zh-CN.md",
+          "CHANGELOG.md",
+          "skills/gos-router/SKILL.md",
+          "skills/gos-verify/SKILL.md"
         ]
       },
       {
         "id": "T10",
         "covers": [
-          "R-45"
+          "D-41",
+          "D-42",
+          "D-44",
+          "D-47",
+          "D-48"
         ],
         "files": [
-          "CHANGELOG.md"
+          "test/sections/T104-auto-core.test.sh",
+          "test/sections/T105-auto-depth.test.sh",
+          "test/sections/T25-map-selfcheck.test.sh",
+          "test/sections/T46-module-structure.test.sh",
+          ".github/workflows/ci.yml",
+          ".gos/task/p0/evidence/t1-dogfood.md"
+        ]
+      },
+      {
+        "id": "T11",
+        "covers": [
+          "D-48"
+        ],
+        "files": [
+          "test/sections/T51-commit-guard.test.sh",
+          "test/run-sections.sh",
+          "bin/lib/ops/section.cjs",
+          "test/sections/T68-section-run.test.sh",
+          "AGENTS.md"
         ]
       }
     ],
     "audit": []
   },
-  "changelog_user_summary": "Add dialogue governance upgrade: decision cards become 5-column with an Activates column naming the consumer each option turns on, deep-dig exemplars land at skills/gos-think/examples/deep-dig-cases.md with a read-before-first-card pointer in gos instructions think, every card carries a standing deepen line under the new-facts contract, replies follow the plain-narration contract, spec thin-gate v3 adds the spec-gate-card-column and spec-gate-version-unknown failure codes with content-era stamping so in-flight v2 tasks stay unaffected as old specs keep their floor, gos commit think --refreeze recomputes the spec sha without advancing the stage behind a stage-regression-blocked guard, the GOS_SPEC_GATE_FLOOR_OVERRIDE=1 escape stays user-approved only, and the state schema bump to v5 makes older CLIs exit loudly on newer states so a one-time CLI upgrade is required",
-  "semantic": {
-    "allowlist": [
-      "bin/lib/core/lock.cjs",
-      "test/sections/T2-project.test.sh",
-      "test/sections/T46-module-structure.test.sh",
-      "test/sections/T95-repo-id-guard.test.sh"
-    ]
-  },
-  "checkpoints": [],
-  "review_findings": {
-    "phase1_spec_compliance": "PASS - 8/8 decisions evidenced, 5/5 requirements shipped, zero deferred-item creep; lock.cjs guard relaxation judged a legitimate schema-bump consequence",
-    "phase2_code_quality": "13 findings (8 Major, 5 Minor) - all fixed in-review except two accepted deviations",
-    "minors_deferred": [
-      {
-        "issue": "COMMANDS registry lists no flags for commit (--refreeze absent, house precedent also omits --force/--subject); discoverability delivered via 4 other surfaces",
-        "fixed": true
-      },
-      {
-        "issue": "router SKILL inherits plain-narration contract by reference to dialogue-protocol instead of restating it",
-        "fixed": true
-      }
-    ],
-    "fixes_landed": [
-      "fenced example tables excluded from the v3 card scan (false fail/pass)",
-      "card-table detection tightened to any Option-headed 3+ column table with bold/code markup normalization; degenerate logistics-shaped tables can no longer stand in for the card",
-      "commit-side unknown-stamp escape honors GOS_SPEC_GATE_FLOOR_OVERRIDE (dead-end fix text closed)",
-      "commit-side B-22 fix text names commit think --refreeze",
-      "v2/v3 floors share one core (ref scan + card checks parameterized by ownership); cumulativity invariant fixture added",
-      "behavioral fixtures: --refreeze pure-state op, stage-regression-blocked, first-freeze blockOnNone, pre-floor grandfather advisory, fenced/detection cases (T73 57/0)",
-      "T22 stamp assertion now reads state.json spec_gate_version (was string-vacuous)",
-      "above-floor count iterates registry keys and reports failure units honestly",
-      "unknown-domain failure constructed once (gate factory) and rendered via shared renderer",
-      "dead locale fix subfield dropped (en+zh parity intact)",
-      "stale grandfather/--force comments refreshed; exemplar cards carry deepen tail lines; protocol heading rule states prefix anchoring"
-    ]
-  },
-  "completed_at": "2026-10-28T12:09:58.252Z"
+  "changelog_user_summary": "Harden full-auto mode after review: strip gh/git/ssh/aws credential variables from every spawned session while keeping model-provider keys, mask ~/.git-credentials, ~/.aws and ~/.gnupg in every capability profile, bind the repo .git read-write at the kernel tier so spawned sessions can commit, classify spawn-authored non-advancing commits as retryable failures instead of external mutations, and expose auto run --break-lock, auto on --allow-full and persisted timeout overrides",
+  "completed_at": "2026-10-29T12:31:09.574Z"
 }

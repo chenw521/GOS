@@ -1,0 +1,38 @@
+{
+  "profile_version": 1,
+  "name": "restricted",
+  "default": true,
+  "description": "Default capability profile. Strict deny baseline: privilege escalation, delivery, destructive-write, and self-run commands are denied; tmpfs/empty masks are layered over every credential and host-state path so they stay invisible to the sandbox. Writable roots are adapter-supplied at compose time and never pinned here.",
+  "deny": [
+    "sudo",
+    "su -",
+    "su root",
+    "git push",
+    "git reset --hard",
+    "gh pr merge",
+    "gh repo delete",
+    "gh run rerun",
+    "rm -rf /",
+    "dd if=* of=/dev/",
+    "curl *|*sh",
+    "wget *|*sh",
+    "gos auto",
+    "gos approve archive"
+  ],
+  "writable": [],
+  "writable_note": "Adapter-supplied at compose time (opts.writableRoots, e.g. the repo .gos directory and a scratch directory); this file never declares writable roots.",
+  "masks": [
+    { "path": "$GOS_STORE", "kind": "tmpfs", "why": "runner trust store (counters, breaker, lock, approval stamps) must be invisible to the sandbox" },
+    { "path": "$HOME/.config/gh", "kind": "tmpfs", "why": "delivery credentials (gh hosts/token)" },
+    { "path": "$HOME/.gitconfig", "kind": "empty", "why": "global git config (url.insteadOf, credential.helper, core.sshCommand levers)" },
+    { "path": "$HOME/.config/git", "kind": "tmpfs", "why": "XDG global git config" },
+    { "path": "$HOME/.ssh", "kind": "tmpfs", "why": "delivery credentials (ssh keys and config)" },
+    { "path": "$HOME/.netrc", "kind": "empty", "why": "delivery credentials (netrc)" },
+    { "path": "$HOME/.git-credentials", "kind": "empty", "why": "delivery credentials (credential.helper=store default file)" },
+    { "path": "$HOME/.aws", "kind": "tmpfs", "why": "delivery credentials (aws cli key/profile files)" },
+    { "path": "$HOME/.gnupg", "kind": "tmpfs", "why": "signing material (gpg keyrings for commit/tag signing)" },
+    { "path": "$HOME/.config/opencode", "kind": "seed", "seed": "host-config", "why": "host state: seeded read-only from the runner snapshot, never writable-bound" },
+    { "path": "$HOME/.local/share/opencode", "kind": "seed", "seed": "host-data", "why": "host state: model-provider auth readable by design, scratch state ephemeral" },
+    { "path": "$HOME/.cache/opencode", "kind": "tmpfs", "why": "host cache: ephemeral per spawn" }
+  ]
+}
