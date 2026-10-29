@@ -235,9 +235,10 @@ function cmdCommit(argv) {
       // Stage-advance exemption: the FIRST advance commit for the current
       // stage is legitimate even with an empty tree (all wave work already
       // committed; state.json is gitignored, so nothing recordable remains).
-      // Duplicate runs are still blocked: once the stage advanced, the stage
-      // gate rejects the re-run before this exemption can apply again.
-      const advancing = String(state.current_stage || '').toUpperCase() === stage;
+      // A stage already listed in completed_stages is a settled duplicate
+      // run — the exemption refuses it, so one advance never lands twice.
+      const advancing = String(state.current_stage || '').toUpperCase() === stage
+        && !state.completed_stages.includes(stage);
       if (!advancing) {
         console.error('✗ no changes to commit (duplicate run or files missed) — stage produced nothing recordable');
         process.exit(1);
@@ -423,6 +424,24 @@ function cmdCommit(argv) {
     if (fs.existsSync(sp)) stampSpecByProbe(state, fs.readFileSync(sp, 'utf8'), { blockOnNone: false });
   }
 
+  // auto-checkpoint on build commit (code-timed, not model-discipline)
+  if (stage === 'BUILD') {
+    const tasks = sibPlansnap.parsePlanMd();
+    if (tasks && tasks.length) {
+      state.checkpoints = state.checkpoints || [];
+      const totalWaves = Math.max(...tasks.map(t => t.wave || 1));
+      state.checkpoints.push({ stage: 'BUILD', unit: `all-waves (auto at commit)`, done: tasks.map(t => t.id).join(','), remaining: '', at: new Date().toISOString() });
+    }
+  }
+  // Advance the state BEFORE writing the commit so the advance lands inside
+  // its own labeled commit. A post-commit write leaves a dirty state file
+  // that the next same-stage re-run sweeps into a duplicate advance commit;
+  // the transactional snapshot above rolls the file back if git fails below.
+  if (!state.completed_stages.includes(stage)) state.completed_stages.push(stage);
+  const nxt = nav.nextStage(state);
+  state.current_stage = nxt;
+  core.writeState(state);
+
   if (!hasGit) { console.log('(not a git repo — skipping commit, stage still advanced)'); }
   else {
     const dList = state.decisions.map(d => d.id).join(', ') || 'none';
@@ -471,20 +490,6 @@ function cmdCommit(argv) {
       process.exit(1);
     }
   }
- // ---- : auto-checkpoint on build commit (code-timed, not model-discipline)
-  if (stage === 'BUILD') {
-    const tasks = sibPlansnap.parsePlanMd();
-    if (tasks && tasks.length) {
-      state.checkpoints = state.checkpoints || [];
-      const totalWaves = Math.max(...tasks.map(t => t.wave || 1));
-      state.checkpoints.push({ stage: 'BUILD', unit: `all-waves (auto at commit)`, done: tasks.map(t => t.id).join(','), remaining: '', at: new Date().toISOString() });
-    }
-  }
-  // advance stage
-  if (!state.completed_stages.includes(stage)) state.completed_stages.push(stage);
-  const nxt = nav.nextStage(state);
-  state.current_stage = nxt;
-  core.writeState(state);
   console.log(`${core.CONTRACTS.state_semantics.stageAdvanced}: ${stage} → ${nxt}`);
   console.log(`Next:\n${nav.nextHint(state)}`);
 }
