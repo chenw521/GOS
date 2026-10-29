@@ -9,6 +9,7 @@ const map = require('../map/index.cjs');
 const knowledge = require('../knowledge/index.cjs');
 const sibArchive = require('./archive.cjs');
 const sibPlansnap = require('./plansnap.cjs');
+const ratify = require('../ops/auto/ratify.cjs'); // delegated-stage approval boundary (two-phase ratification)
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
@@ -287,6 +288,30 @@ function cmdCommit(argv) {
       console.error(`    fix: ${failure.fix}`);
       process.exit(1);
     }
+  }
+
+  // ---- ratification boundary: two-phase approval for delegated stages ----
+  // An unratified PENDING approval (a delegated commit whose runner
+  // ratification never landed) blocks every further stage advance — fail
+  // closed at the boundary. Inside a runner-spawned session a delegated-
+  // stage commit has no human sign-off: record a PENDING auto-approval and
+  // let the structural checks below decide; the runner verifies the
+  // captured-stream hash against the external store and writes the ratified
+  // record from outside the sandbox.
+  const pendingBlock = ratify.advanceBlocker(state.approvals);
+  if (pendingBlock) {
+    const g = ratify.guidanceFor('auto.ratify.pendingBlocks', { stage: pendingBlock.stage });
+    console.error(`${core.CONTRACTS.state_semantics.commitBlocked} (ratification boundary):`);
+    console.error(`✗ ${g.what}`);
+    if (g.why) console.error(`    why: ${g.why}`);
+    if (g.fix) console.error(`    fix: ${g.fix}`);
+    process.exit(1);
+  }
+  if (ratify.spawnMarkerActive() && ratify.isDelegatedStage(stage) && !(state.approvals || {})[stage]) {
+    const rec = ratify.recordPending({ stage });
+    state.approvals = state.approvals || {};
+    state.approvals[stage] = rec.approval;
+    console.log(`⚠ ${ratify.guidanceFor('auto.ratify.pendingRecorded', { stage }).what}`);
   }
 
  // ---- : filesystem fallback (artifact must EXIST — model's word is not evidence)

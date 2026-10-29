@@ -514,4 +514,59 @@ module.exports = {
     why: 'an explicit safety bound stopped the loop before the breaker layers fired',
     fix: 'raise the ceiling or start a fresh run',
   },
+
+  // ---- auto mode: ratification boundary (delegated approvals) ----
+  'auto.ratify.pendingRecorded': 'stage {stage} approval recorded as PENDING (auto): structural checks only — the runner ratifies it from the captured-stream stamp after this session exits',
+  'auto.ratify.pendingBlocks': {
+    what: 'stage {stage} has an unratified PENDING auto-approval',
+    why: 'a delegated commit advanced a stage without its runner ratification landing — evidence was never verified against the external store',
+    fix: 'resume the auto loop so the runner ratifies from the store stamp (`gos auto run`), or inspect the stamp records via `gos auto status`; never hand-edit the approval record',
+  },
+  'auto.ratify.stampMissing': {
+    what: 'no stream stamp for spawn {spawnId} in the runner store',
+    why: 'ratification pairs a spawn with its captured-stream hash — without the stamp the pairing cannot be verified',
+    fix: 'the runner stamps every spawn at exit; a missing stamp means the spawn never completed or the store was reset — re-run the stage',
+  },
+  'auto.ratify.stageMismatch': {
+    what: 'stream stamp for spawn {spawnId} belongs to a different stage than {stage}',
+    why: 'ratification is scoped per stage — a stamp from another stage must not satisfy this boundary',
+    fix: 'ratify with the stage the spawn actually worked, or re-run the stage spawn',
+  },
+  'auto.ratify.hashMismatch': {
+    what: 'captured-stream hash for spawn {spawnId} does not match the store stamp',
+    why: 'the stream observed by the runner differs from the stamped one — the pairing may have been tampered with',
+    fix: 'treat the stage output as unverified; inspect the store record and re-run the stage spawn',
+  },
+  'auto.ratify.noTask': {
+    what: 'no readable task state for ratification',
+    why: 'the ratified approval is written into the task state file',
+    fix: 'run from the repository root with an active task, then re-run the auto loop',
+  },
+
+  // ---- auto mode: red-team orchestration ----
+  'auto.redteam.promptDrift': {
+    what: 'the stored red-team prompt template hash does not match the runner template',
+    why: 'red-team evidence pairs only against the runner-held prompt — a drifted hash breaks the pairing',
+    fix: 'if the drift is expected, run `gos auto off --purge` then `gos auto on` to re-seed the store',
+  },
+  'auto.redteam.composeFailed': {
+    what: 'composing the red-team review spawn failed ({detail})',
+    why: 'the review spawn must be composed under a capability profile with the workspace read-only',
+    fix: 'check profile data and engine availability, then retry the round',
+  },
+  'auto.redteam.stampFailed': {
+    what: 'stamping the red-team round into the store was refused: {detail}',
+    why: 'the round-to-stream pairing must be verifiable before any consumer reads it',
+    fix: 'inspect the store; if unrecoverable run `gos auto off --purge` then `gos auto on`',
+  },
+  'auto.redteam.findingsUnparsable': {
+    what: 'a red-team round ended without a recognizable findings verdict',
+    why: 'garbage output is classified as a failed round — it never counts as a zero finding',
+    fix: 're-run the round; persistent failures hold the delegation gate for human review',
+  },
+  'auto.redteam.roundFailed': {
+    what: 'a red-team round spawn failed before producing a verdict',
+    why: 'a failed spawn is no scrutiny evidence and never counts as a zero',
+    fix: 're-run the round after checking the spawn failure detail in the local store',
+  },
 };

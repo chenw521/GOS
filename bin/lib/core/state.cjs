@@ -266,6 +266,25 @@ function validateState(s, mode) {
   if (s.spec_gate_version !== undefined && !Number.isInteger(s.spec_gate_version)) {
     errs.push(`state.json:spec_gate_version: integer required when present (got ${typeof s.spec_gate_version} ${String(s.spec_gate_version)})`);
   }
+  // Stage-gate approvals: values are either legacy bare ts strings (human
+  // `gos approve`), non-approval records like BASELINE_RESET {ts, reason},
+  // or auto-routed records {status, ts, mode, stage, evidence?}. Only the
+  // auto-routed shape (any value carrying a status field) is validated —
+  // legacy strings and status-less records pass untouched.
+  if (s.approvals !== undefined && s.approvals !== null) {
+    if (typeof s.approvals !== 'object' || Array.isArray(s.approvals)) {
+      errs.push('state.json:approvals: object required');
+    } else {
+      for (const [k, v] of Object.entries(s.approvals)) {
+        if (v == null || typeof v !== 'object' || Array.isArray(v) || v.status === undefined) continue;
+        if (v.status !== 'PENDING' && v.status !== 'ratified') {
+          errs.push(`state.json:approvals.${k}: status must be PENDING|ratified (got ${JSON.stringify(v.status)})`);
+        }
+        if (typeof v.ts !== 'string' || v.ts.length === 0) errs.push(`state.json:approvals.${k}: ts string required`);
+        if (v.mode !== undefined && v.mode !== 'auto') errs.push(`state.json:approvals.${k}: mode must be 'auto' when present`);
+      }
+    }
+  }
   // T2 [D-30]: verified truths must carry a valid three-element evidence object.
   // Fail-closed on the legacy string form; read-class (warn) keeps going with a banner.
   if (Array.isArray(s.observable_truths)) {
@@ -874,7 +893,7 @@ function defaultState(level, intentText) {
     current_stage: 'INTENT',
     completed_stages: [],
     intent: { summary: intentText || '', confirmed: false },
-    approvals: {},  // stage-gate approvals: {THINK:'...', PLAN:'...', ARCHIVE:'...'} — set ONLY via gos approve <stage> (explicit user act)
+    approvals: {},  // stage-gate approvals — value per stage: legacy = bare ts string (gos approve), auto-routed = {status:'PENDING'|'ratified', ts, mode:'auto', stage, evidence?}; BASELINE_RESET keeps {ts, reason}
     spec_path: null,   // T5: backfilled below via ensureTaskDir resolution
     plan_path: null,
     project: false,          // true when init --project (Lv4 truth-source mode)

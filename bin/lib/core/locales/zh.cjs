@@ -507,4 +507,59 @@ module.exports = {
     why: '显式安全上限先于熔断层止住了循环',
     fix: '提高上限或重新发起一次运行',
   },
+
+  // ---- auto 模式：批准边界（委派审批） ----
+  'auto.ratify.pendingRecorded': '阶段 {stage} 的审批已记为 PENDING（auto）：仅做结构性检查——runner 会在会话退出后依据捕获流戳记完成批准',
+  'auto.ratify.pendingBlocks': {
+    what: '阶段 {stage} 存在未获 runner 批准的 PENDING 自动审批',
+    why: '一次委派阶段的推进在 runner 批准落地前发生——证据从未对照外部存储核验过',
+    fix: '恢复 auto 循环由 runner 依据存储戳记完成批准（{cmd:auto} run），或经 {cmd:auto} status 查看戳记记录；切勿手改审批记录',
+  },
+  'auto.ratify.stampMissing': {
+    what: 'runner 存储中没有派生 {spawnId} 的流戳记',
+    why: '批准以派生与其捕获流哈希配对——没有戳记就无法核验该配对',
+    fix: 'runner 会在每次派生退出时写入戳记；缺失说明派生未完成或存储被重置——重跑该阶段',
+  },
+  'auto.ratify.stageMismatch': {
+    what: '派生 {spawnId} 的流戳记属于其他阶段而非 {stage}',
+    why: '批准按阶段限定——其他阶段的戳记不能越过此边界',
+    fix: '以派生实际工作的阶段执行批准，或重跑该阶段派生',
+  },
+  'auto.ratify.hashMismatch': {
+    what: '派生 {spawnId} 的捕获流哈希与存储戳记不符',
+    why: 'runner 观察到的流与戳记的流不一致——配对可能已被篡改',
+    fix: '将该阶段产出视为未核验；检查存储记录并重跑该阶段派生',
+  },
+  'auto.ratify.noTask': {
+    what: '无可读取的任务状态用于批准',
+    why: '批准后的审批要写回任务状态文件',
+    fix: '在含活跃任务的仓库根目录运行，然后重新运行 auto 循环',
+  },
+
+  // ---- auto 模式：红队编排 ----
+  'auto.redteam.promptDrift': {
+    what: '存储中的红队提示模板哈希与 runner 模板不一致',
+    why: '红队证据只能与 runner 持有的提示配对——哈希漂移意味着配对失效',
+    fix: '若漂移符合预期，运行 {cmd:auto} off --purge 后再 {cmd:auto} on 重建存储',
+  },
+  'auto.redteam.composeFailed': {
+    what: '组合红队评审派生失败：{detail}',
+    why: '评审派生必须在能力档案下组合且工作区只读',
+    fix: '检查档案数据与引擎探测结果后重试该轮',
+  },
+  'auto.redteam.stampFailed': {
+    what: '红队轮次写入存储被拒绝：{detail}',
+    why: '轮次与流的配对必须在任何消费者读取前可验证',
+    fix: '检查存储；无法恢复时运行 {cmd:auto} off --purge 后 {cmd:auto} on',
+  },
+  'auto.redteam.findingsUnparsable': {
+    what: '一轮红队评审结束时没有可识别的发现数结论',
+    why: '垃圾输出归类为失败轮——绝不计为零发现',
+    fix: '重跑该轮；持续失败将由委托门保持并转人工审查',
+  },
+  'auto.redteam.roundFailed': {
+    what: '一轮红队评审派生在给出结论前失败',
+    why: '失败的派生不构成审查证据，绝不计为零发现',
+    fix: '排查派生失败详情（本地存储）后重跑该轮',
+  },
 };
