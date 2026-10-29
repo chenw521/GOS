@@ -354,11 +354,18 @@ function injectPermissionConfig(userConfig, profileDeny) {
   const base = userConfig && typeof userConfig === 'object' && !Array.isArray(userConfig) ? userConfig : {};
   const merged = { ...base };
   const perm = { ...((merged.permission && typeof merged.permission === 'object') ? merged.permission : {}) };
+  // Host permission rules are shaped as capability -> { command pattern ->
+  // action literal }, so each deny entry becomes a key mapped to "deny".
+  // A key already carrying an allow from the user config is overwritten:
+  // the deny union is one-way.
   const bash = { ...((perm.bash && typeof perm.bash === 'object') ? perm.bash : {}) };
-  bash.deny = unionDeny(bash.deny, profileDeny);
+  const legacyDeny = Array.isArray(bash.deny) ? bash.deny : [];
+  delete bash.deny;
+  const denyPatterns = unionDeny(legacyDeny, profileDeny);
+  for (const p of denyPatterns) bash[String(p)] = 'deny';
   perm.bash = bash;
   merged.permission = perm;
-  return merged;
+  return { config: merged, denyPatterns };
 }
 
 // ---- snapshots (store-facing helpers) --------------------------------------
@@ -522,7 +529,7 @@ function compose(profileName, opts) {
   const injected = injectPermissionConfig(readResolvedPermissionConfig(o), load.profile.deny);
   const envOut = {
     ...(o.envPassthrough && typeof o.envPassthrough === 'object' ? o.envPassthrough : {}),
-    OPENCODE_CONFIG_CONTENT: JSON.stringify(injected),
+    OPENCODE_CONFIG_CONTENT: JSON.stringify(injected.config),
   };
   const writableShadowed = writableRoots.filter((w) => masks.some((m) => isAncestorPath(m.dest, w)));
   return {
@@ -533,7 +540,7 @@ function compose(profileName, opts) {
     engineVersion: probe.version || null,
     argv,
     env: envOut,
-    deny: injected.permission.bash.deny.slice(),
+    deny: Array.isArray(injected.denyPatterns) ? injected.denyPatterns.slice() : [],
     meta: {
       masks,
       masksSkipped,

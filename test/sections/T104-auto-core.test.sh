@@ -655,7 +655,8 @@ store.releaseRunLock(rootDir);
 // stale cross-host lock: refusal names the owning clone; recovery via break
 const lp = path.join(store.storeRoot(rootDir), 'run.lock');
 const now = new Date().toISOString();
-fs.writeFileSync(lp, JSON.stringify({ hostname: 't104-other-box', pid: 4194304, boot_id: null, clone_path: '/t104/other-clone', started_at: now, heartbeat_at: now }));
+const deadPid=(()=>{try{const mx=parseInt(fs.readFileSync('/proc/sys/kernel/pid_max','utf8'),10)||4194304;for(let p=mx-1;p>1;p--){try{process.kill(p,0);}catch(e){if(e.code==='ESRCH')return p;}}}catch(e){}return 999999;})();
+fs.writeFileSync(lp, JSON.stringify({ hostname: 't104-other-box', pid: deadPid, boot_id: null, clone_path: '/t104/other-clone', started_at: now, heartbeat_at: now }));
 const xh = store.acquireRunLock({ rootDir });
 if (xh.ok || xh.reason !== 'cross-host') problems.push('cross-host lock acquired');
 if (!(xh.holder && xh.holder.clone_path === '/t104/other-clone')) problems.push('refusal lacks owning clone');
@@ -1020,7 +1021,8 @@ node -e "
 const fs=require('fs');const path=require('path');const os=require('os');
 const s=require(path.join(process.env.GOS_ROOT,'bin/lib/ops/auto/store.cjs'));
 const now=new Date().toISOString();
-fs.writeFileSync(path.join(s.storeRoot(process.cwd()),'run.lock'),JSON.stringify({hostname:os.hostname(),pid:4194304,boot_id:null,clone_path:process.cwd(),started_at:now,heartbeat_at:now}));
+const deadPid=(()=>{try{const mx=parseInt(fs.readFileSync('/proc/sys/kernel/pid_max','utf8'),10)||4194304;for(let p=mx-1;p>1;p--){try{process.kill(p,0);}catch(e){if(e.code==='ESRCH')return p;}}}catch(e){}return 999999;})();
+fs.writeFileSync(path.join(s.storeRoot(process.cwd()),'run.lock'),JSON.stringify({hostname:os.hostname(),pid:deadPid,boot_id:null,clone_path:process.cwd(),started_at:now,heartbeat_at:now}));
 console.log('planted');" > /dev/null
 node "$GOS" auto run --break-lock > t16b-run.txt 2>&1; C16B_RC=$?
 t104_exit "C16: --break-lock releases a stale lock (run then ends at SHIP)" 0 "$C16B_RC"
