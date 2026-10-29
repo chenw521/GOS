@@ -584,4 +584,53 @@ module.exports = {
     why: '没有固定的远程/钩子快照可供校验时，特权 git 拒绝运行',
     fix: '确认仓库配置了 origin 远程且 .git 目录可读后重试',
   },
+
+  // ---- auto 模式：发布腿（PR 交付 + CI 闭环） ----
+  'auto.publish.branchRequired': {
+    what: '发布需要可推送的工作分支（taskId 或 branch）',
+    why: '适配器只推送任务工作分支——主干直推被 PR-only 规则禁止',
+    fix: '传入任务 id 或显式分支名',
+  },
+  'auto.publish.subjectRequired': {
+    what: '发布需要 squash 主题候选',
+    why: '预合并主题校验与合并提交标题都使用它',
+    fix: '提供祈使动宾短句，如 "add probe-gated delivery publish leg"',
+  },
+  'auto.publish.branchPushFailed': {
+    what: '推送工作分支 {branch} 失败',
+    why: '分支推送是针对固定远程的特权 git 调用——漂移或 git 错误都会中止',
+    fix: '检查步骤详情；若为漂移，待仓库可信后运行 {cmd:auto} on 重新固定基线',
+  },
+  'auto.publish.prCreateFailed': {
+    what: '创建 PR 失败：{detail}',
+    why: '没有 PR 号，squash 合并与 CI 监视都无法继续',
+    fix: '检查 gh 认证与 head/base 分支后重试',
+  },
+  'auto.publish.subjectLintHeld': {
+    what: 'squash 主题被预合并校验拦下：{subject}',
+    why: '平台在服务端生成 squash 提交，本地钩子无法拦截——坏主题会未经检查落上 main',
+    fix: '改写为祈使动宾短句后重试',
+  },
+  'auto.publish.mergeFailed': {
+    what: 'squash 合并 PR #{prNumber} 失败',
+    why: '合并是 main 上 CI 的不归点',
+    fix: '检查 PR 可合并性（冲突/评审）后重试',
+  },
+  'auto.publish.watchFailed': {
+    what: '监视基分支 CI 失败：{detail}',
+    why: 'CI 闭环需要可读的状态源',
+    fix: '检查 gh 认证与 Actions 可见性后重试',
+  },
+  'auto.publish.redRun': {
+    what: 'CI 运行 {runId} 在 main 上为红——循环挂起等待人工处置',
+    why: '红的运行绝不自动消除；处置按设计必须人工书写',
+    fix: '检查该运行，然后运行 {cmd:auto} disposition {runId} --reason "<可接受原因>"',
+  },
+  'auto.publish.ciUnknown': {
+    what: 'CI 在 {minutes} 分钟内未出结论——运行状态未知',
+    why: '第 {minutes}+1 分钟才转绿的排队不算坏工作，因此绝不计入熔断',
+    fix: '查明状态后运行 {cmd:auto} disposition <runId> --reason "<状态>"',
+  },
+  'auto.publish.dispositionRecorded': '运行 {runId} 的处置已记录到本机存储；仓库账本仅镜像其哈希',
+  'auto.publish.purged': 'auto 运行时存储已移除（{path}）——成本历史仅保留在追踪镜像计数器中',
 };

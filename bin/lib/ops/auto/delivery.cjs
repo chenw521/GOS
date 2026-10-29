@@ -25,6 +25,10 @@ const core = require('../../core/index.cjs');
 const PROBE_HOST = 'delivery';
 const PROBE_STATES = Object.freeze(['green', 'advisory', 'absent']);
 
+// Terminal-outcome label for a CI watch that expired without a verdict;
+// consumed and re-exported by the publish leg.
+const DISPOSITION_UNKNOWN = 'disposition-unknown';
+
 // The pinned baseline file lives inside the machine-local store directory
 // (same trust root as the store itself), never inside the repository.
 const BASELINE_FILE = 'delivery-baseline.json';
@@ -471,6 +475,7 @@ function runPrivilegedGit(args, opts = {}) {
 module.exports = {
   PROBE_HOST,
   PROBE_STATES,
+  DISPOSITION_UNKNOWN,
   NO_CI_ADVISORY_KEY,
   classifyProbe,
   extractGithubSlug,

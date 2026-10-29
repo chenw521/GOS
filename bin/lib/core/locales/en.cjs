@@ -591,4 +591,53 @@ module.exports = {
     why: 'privileged git refuses to run without a pinned remote/hooks snapshot to verify against',
     fix: 'check that the repository has an origin remote and a readable .git directory, then re-run',
   },
+
+  // ---- auto mode: publish leg (PR delivery + CI closure) ----
+  'auto.publish.branchRequired': {
+    what: 'publish needs the work branch to push (taskId or branch)',
+    why: 'the adapter pushes exactly the per-task work branch — the PR-only ruling forbids trunk pushes',
+    fix: 'pass the task id or an explicit branch name',
+  },
+  'auto.publish.subjectRequired': {
+    what: 'publish needs a squash-subject candidate',
+    why: 'the pre-merge subject lint and the merge commit title both consume it',
+    fix: 'provide an imperative verb-object subject, e.g. "add probe-gated delivery publish leg"',
+  },
+  'auto.publish.branchPushFailed': {
+    what: 'pushing the work branch {branch} failed',
+    why: 'the branch push is a privileged git call against the pinned remote; drift or git errors abort it',
+    fix: 'inspect the step detail; on drift re-run `gos auto on` to re-pin the baseline once the repository is trusted',
+  },
+  'auto.publish.prCreateFailed': {
+    what: 'opening the pull request failed: {detail}',
+    why: 'without a PR number the squash merge and CI watch cannot proceed',
+    fix: 'check gh auth and the head/base branches, then re-run publish',
+  },
+  'auto.publish.subjectLintHeld': {
+    what: 'squash subject held by the pre-merge lint: {subject}',
+    why: 'the platform builds the squash commit server-side where no local hook can intercept — a bad subject lands on main unchecked',
+    fix: 'rewrite the subject as an imperative verb-object clause and re-run publish',
+  },
+  'auto.publish.mergeFailed': {
+    what: 'squash-merging pull request #{prNumber} failed',
+    why: 'the merge is the point of no return for CI on main',
+    fix: 'check the PR mergeability (conflicts, reviews), then re-run publish',
+  },
+  'auto.publish.watchFailed': {
+    what: 'watching CI on the base branch failed: {detail}',
+    why: 'CI closure requires a readable status source',
+    fix: 'check gh auth and Actions visibility, then re-run publish',
+  },
+  'auto.publish.redRun': {
+    what: 'CI run {runId} on main is red — the loop is held for a human disposition',
+    why: 'a red run is never auto-dismissed; dispositions are human-written by design',
+    fix: 'inspect the run, then record `gos auto disposition {runId} --reason "<why this is acceptable>"`',
+  },
+  'auto.publish.ciUnknown': {
+    what: 'CI did not reach a verdict within {minutes} minutes — run state unknown',
+    why: 'a queued green at minute {minutes}+1 is not bad work, so this never counts into the breaker',
+    fix: 'check the run state, then record `gos auto disposition <runId> --reason "<state>"` once known',
+  },
+  'auto.publish.dispositionRecorded': 'disposition for run {runId} recorded in the local store; the repo ledger mirrors its hash only',
+  'auto.publish.purged': 'auto runtime store removed ({path}) — cost history survives only in tracked mirror counters',
 };
