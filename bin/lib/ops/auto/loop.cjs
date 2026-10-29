@@ -549,7 +549,14 @@ async function drive(ctx) {
       store,
       roBinds: hostStatus.probe && hostStatus.probe.execRoot ? [hostStatus.probe.execRoot] : [],
       authFiles: adapter.authFilePath ? [adapter.authFilePath(env)] : [],
-      writableRoots: opts.writableRoots || [path.join(rootDir, '.gos'), path.join(rootDir, '.gos', 'logs')],
+      // Workspace-writing profiles grant the repo root (the profile data
+      // deliberately never declares writable roots — compose-time supply is
+      // the contract); restricted stays read-only outside .gos.
+      writableRoots: opts.writableRoots || (
+        opts.profile === 'workspace' || opts.profile === 'full'
+          ? [rootDir, path.join(rootDir, '.gos'), path.join(rootDir, '.gos', 'logs')]
+          : [path.join(rootDir, '.gos'), path.join(rootDir, '.gos', 'logs')]
+      ),
     });
     if (!composed.ok) {
       const res = b.recordOutcome(stage, 'spawn-error', `launcher ${composed.code}`);

@@ -746,9 +746,12 @@ const spawnRunner = (spec) => {
     if (aT.evidence && aT.evidence.spawnId !== thinkIter.spawnId) problems.push('evidence does not pair the stage spawn');
   }
   const s = store.load(rootDir);
-  const rt1 = s.ok && s.store.stamps[`${thinkIter.spawnId}-rt1`];
-  const rt2 = s.ok && s.store.stamps[`${thinkIter.spawnId}-rt2`];
-  if (!rt1 || !rt2 || rt1.stage !== 'redteam' || rt2.stage !== 'redteam') problems.push('red-team rounds not stamped under the redteam stage');
+  const stampKeys = s.ok && store.isPlainObject(s.store.stamps) ? Object.keys(s.store.stamps) : [];
+  const roundStage = (prefix) => {
+    const key = stampKeys.find((k) => k === prefix || k.startsWith(prefix + '-'));
+    return key ? s.store.stamps[key].stage : null;
+  };
+  if (roundStage(`${thinkIter.spawnId}-rt1`) !== 'redteam' || roundStage(`${thinkIter.spawnId}-rt2`) !== 'redteam') problems.push('red-team rounds not stamped under the redteam stage');
   const pend = Object.values(st.approvals || {}).filter((v) => v && v.status === 'PENDING');
   if (pend.length) problems.push('PENDING approvals remain: ' + pend.length);
   console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
@@ -1183,6 +1186,39 @@ const spawnRunner = (spec) => {
 EOF
 C18_OUT="$(node run-c18.cjs 2>&1 | tail -n 1)"
 t104_eq "orphaned PENDING is recovered from the store stamp and ratified at loop start" "OK" "$C18_OUT"
+
+# Profile-dependent writable grant: workspace-writing profiles bind the
+# repo root read-write so BUILD-shaped stages can edit code; restricted
+# never grants it.
+t104_case c19
+mkdir -p .gos/task/p0 .gos/logs
+t104_state BUILD > .gos/state.json
+cat > run-c19.cjs <<'EOF'
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const problems = [];
+const world = process.cwd();
+store.create({ mode: 'on', rootDir: world });
+const seen = [];
+const stateReader = () => JSON.parse(require('fs').readFileSync(path.join(world, '.gos', 'state.json'), 'utf8'));
+const spawnRunner = (spec) => { seen.push(spec); return { status: 0, stdout: '{"type":"result"}\n', stderr: '' }; };
+(async () => {
+  for (const profile of ['restricted', 'workspace']) {
+    seen.length = 0;
+    const r = await loop.createLoop({ rootDir: world, host: 'gos-fixture-host', env: { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' }, profile, maxIterations: 1, spawnRunner, stateReader, ...(profile === 'full' ? { allowFull: true } : {}) }).loop.run();
+    const spec = seen.find((s) => s && Array.isArray(s.argv));
+    if (!spec) { problems.push(profile + ': no spawn spec captured'); continue; }
+    const rw = spec.argv.some((_, i) => spec.argv[i] === '--bind' && spec.argv[i + 1] === world && spec.argv[i + 2] === world);
+    if (profile === 'workspace' && !rw) problems.push('workspace profile did not bind the repo root read-write');
+    if (profile === 'restricted' && rw) problems.push('restricted profile bound the repo root writable');
+  }
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+C19_OUT="$(node run-c19.cjs 2>&1 | tail -n 1)"
+t104_eq "workspace-writing profiles grant the repo root; restricted never does" "OK" "$C19_OUT"
 
 echo "--- T104 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]
