@@ -178,7 +178,7 @@ function sectionChildEnv(base) {
   });
 }
 
-function spawnOneSection(secPath, name, base, timeoutSec) {
+function spawnOneSection(secPath, name, base, timeoutSec, emit) {
   // cwd=base (absolute TESTBASE) is the structural cd-escape guard: a child
   // process cannot move the parent's cwd, so a section that cd's elsewhere
   // only harms itself. The bash-runner's post-run `pwd` check is replaced by
@@ -193,24 +193,24 @@ function spawnOneSection(secPath, name, base, timeoutSec) {
     maxBuffer: 16 * 1024 * 1024,
   });
   const out = `${res.stdout || ''}${res.stderr || ''}`;
-  if (res.stdout) process.stdout.write(res.stdout);
-  if (res.stderr) process.stdout.write(res.stderr);
+  emit(res.stdout || '');
+  emit(res.stderr || '');
   let extraFail = 0;
   if (res.error && res.error.code === 'ETIMEDOUT') {
-    console.log(`  ✗ ${SR.timeout.replace('<n>', String(timeoutSec))}`);
+    emit(`  ✗ ${SR.timeout.replace('<n>', String(timeoutSec))}\n`);
     extraFail++;
   } else if (res.status !== 0) {
-    console.log(`  ✗ ${SR.aborted.replace('<rc>', String(res.status))}`);
+    emit(`  ✗ ${SR.aborted.replace('<rc>', String(res.status))}\n`);
     extraFail++;
   }
   try { fs.lstatSync(path.join(base, TESTBASE_MARKER)); }
   catch {
-    console.log(`  ✗ ${SR.markerMissing}`);
+    emit(`  ✗ ${SR.markerMissing}\n`);
     extraFail++;
   }
   const passN = (out.match(/^  ✓/gm) || []).length;
   const failN = (out.match(/^  ✗/gm) || []).length;
-  console.log(`--- ${name}: ${passN} passed, ${failN} failed ---`);
+  emit(`--- ${name}: ${passN} passed, ${failN} failed ---\n`);
   return { pass: passN, fail: failN + extraFail, timedOut: !!(res.error && res.error.code === 'ETIMEDOUT') };
 }
 
@@ -276,8 +276,17 @@ async function cmdSectionRun(args) {
   const cacheDir = path.join(root, '.gos', 'cache');
   const base = makeTestbase(cacheDir);
   ownTestbase = base;
+  // Full-run log: every byte the runner prints is teed to a per-run file so a
+  // failure can be diagnosed from the artifact instead of re-running the suite.
+  const logsDir = path.join(cacheDir, 'section-runs');
+  fs.mkdirSync(logsDir, { recursive: true });
+  const logRel = path.join('.gos', 'cache', 'section-runs',
+    `${new Date().toISOString().replace(/[-:]/g, '').replace(/\..+$/, '')}-${(filter || 'all').replace(/[^A-Za-z0-9._-]+/g, '-')}.log`);
+  const logStream = fs.createWriteStream(path.join(root, logRel), { flags: 'a' });
+  const emit = (s) => { process.stdout.write(s); logStream.write(s); };
   const ranNames = [];
   const timedOut = [];
+  const results = {};
   let totalPass = 0;
   let totalFail = 0;
   try {
@@ -285,10 +294,11 @@ async function cmdSectionRun(args) {
       const name = fname.replace(/\.test\.sh$/, '');
       if (filter && !name.includes(filter)) continue;
       ranNames.push(name);
-      console.log(`=== ${name} ===`);
-      const r = spawnOneSection(path.join(root, 'test', 'sections', fname), name, base, timeoutSec);
+      emit(`=== ${name} ===\n`);
+      const r = spawnOneSection(path.join(root, 'test', 'sections', fname), name, base, timeoutSec, emit);
       totalPass += r.pass;
       totalFail += r.fail;
+      results[name] = { pass: r.pass, fail: r.fail };
       if (r.timedOut) timedOut.push(name);
     }
   } finally {
@@ -296,8 +306,12 @@ async function cmdSectionRun(args) {
   }
   sweepStaleTestbases(cacheDir);
 
-  console.log('');
-  console.log(`=== Sections total: ${totalPass} passed, ${totalFail} failed ===`);
+  const failedSections = Object.entries(results).filter(([, r]) => r.fail > 0).map(([n, r]) => `${n}(${r.fail})`).sort();
+  emit('\n');
+  emit(`=== Sections total: ${totalPass} passed, ${totalFail} failed ===\n`);
+  if (failedSections.length) emit(`failed sections: ${failedSections.join(', ')}\n`);
+  emit(`full log: ${path.join(root, logRel)}\n`);
+  logStream.end();
   const wth = core.worktreeContentHash(root);
   core.writeAtomicJson(path.join(root, '.gos', core.GOS_PATHS.run_manifest.rel), {
     schema_version: 2,
@@ -307,6 +321,9 @@ async function cmdSectionRun(args) {
     head_tree: wth ? wth.head_tree : 'unknown',
     patch_sha: wth ? wth.patch_sha : 'unknown',
     timed_out: timedOut.slice().sort(),
+    failed_sections: failedSections.map((s) => s.replace(/\(\d+\)$/, '')).sort(),
+    results,
+    log: logRel,
     finished_at: new Date().toISOString(),
   });
   process.exitCode = totalFail === 0 ? 0 : 1;

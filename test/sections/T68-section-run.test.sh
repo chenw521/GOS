@@ -226,6 +226,23 @@ assert_eq "(m2) manifest filter recorded" "mike-a" "$(t68_field filter)"
 assert_eq "(m3) only matching section recorded" "T1-mike-a" "$(t68_field sections_run | tr -d '[],')"
 assert_eq "(m4) fixture base cleaned" "0" "$(t68_secs_left)"
 
+# ===== (r) failing run persists a diagnosable log + per-section results =====
+t68_proj romeo
+printf '#!/usr/bin/env bash\necho "  ✓ r-ok"\n' > test/sections/T1-romeo-ok.test.sh
+printf '#!/usr/bin/env bash\necho "  ✓ r-passes"\necho "  ✗ r-fails (expected fixture failure)"\n' > test/sections/T2-romeo-bad.test.sh
+git add -A && git commit -q -m sections
+node "$GOS" section trust >/dev/null 2>&1
+set +e; OUT=$(node "$GOS" section run 2>&1); RC=$?; set -e
+assert_exit "(r1) failing section → rc 1" 1 "$RC"
+assert_contains "(r2) failed-sections summary names it" "failed sections: T2-romeo-bad(1)" "$OUT"
+assert_contains "(r3) full-log path printed" "full log:" "$OUT"
+assert_eq "(r4) manifest results record the failure" "1" "$(python3 -c "import json;print(json.load(open('.gos/cache/run-manifest.json'))['results']['T2-romeo-bad']['fail'])")"
+assert_eq "(r5) manifest failed_sections lists it" "T2-romeo-bad" "$(t68_field failed_sections | tr -d '[],')"
+LOG_REL="$(t68_field log)"
+if [ -n "$LOG_REL" ] && [ -s "$LOG_REL" ]; then echo "  ✓ r6 run log persisted non-empty ($LOG_REL)"; PASS=$((PASS+1))
+else echo "  ✗ r6 run log missing or empty (rel='$LOG_REL')"; FAIL=$((FAIL+1)); fi
+assert_contains "(r7) log carries the failing assertion" "r-fails" "$(cat "$LOG_REL" 2>/dev/null || true)"
+
 t68_teardown
 trap - EXIT
 echo "--- T68 summary: $PASS passed, $FAIL failed ---"

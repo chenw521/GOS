@@ -38,6 +38,14 @@ this file only tells you where they are.
   lands via feature branch → pull request → squash-merge; the pre-push
   guard rejects direct main pushes (emergency escape `GOS_ALLOW_MAIN_PUSH`
   requires explicit user approval — never self-serve it).
+- Section/full-suite runs are diagnosable artifacts, never ephemeral
+  output: both runners (`bash test/run-sections.sh`, `gos section run`)
+  tee every run to .gos/cache/section-runs/<ts>.log and write per-section
+  results + failed_sections + log into run-manifest.json. Diagnose
+  failures from the log and the manifest (grep the log, read
+  failed_sections) — re-running a suite just to see its output wastes a
+  full cycle; never pipe a suite through a truncating filter that drops
+  the persisted-log line.
 
 ## Code Style
 
