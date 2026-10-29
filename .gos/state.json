@@ -2,11 +2,12 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "REVIEW",
+  "current_stage": "VERIFY",
   "completed_stages": [
     "THINK",
     "PLAN",
-    "BUILD"
+    "BUILD",
+    "REVIEW"
   ],
   "intent": {
     "summary": "Ship gos auto on/off/status — toggle full-auto at any stage boundary; per-stage fresh-session auto-loop (spawn next stage session after each commit, never one long conversation); persists across sessions, resume auto-continues; hard gates + D-NN audit stay; guards: push sign-off, dangerous-cmd gates, retry cap after N exit-1, main-push CI closure check (every push terminal-green or dispositioned, 91848545 twice-lived); ends at SHIP",
@@ -180,6 +181,41 @@
     }
   ],
   "observable_truths": [],
+  "review_findings": {
+    "phase1": "FAIL 2026-10-29 — 4 blockers (runner ratify/redteam legs unwired; publish unreachable; NFS advisory missing; allowFull dead-end) + phase2 High (env credential passthrough; mask gaps .git-credentials/.aws/.gnupg; kernel-tier .git read-only; own-commit misread as external mutation; redteam spawn spec malformed) — all fixed in BUILD round 4d7e9f7, verified by full suite 3281/0",
+    "minors_deferred": [
+      {
+        "id": "P2-6/P2-7",
+        "issue": "idle timeout post-hoc only; heartbeat cannot fire during synchronous spawns (dynamic threshold mitigation landed)",
+        "concern": "auto-loop idle timeout is post-hoc classification only"
+      },
+      {
+        "id": "P2-9",
+        "issue": "store.mutate read-modify-write lacks cross-process serialization",
+        "concern": "auto store.mutate read-modify-write lacks cross-process serialization"
+      },
+      {
+        "id": "P2-15",
+        "issue": "auto status has write side effects and fires network probes every run",
+        "concern": "auto status side effects: probeWritable mkdirs the store dir"
+      },
+      {
+        "id": "P1-minor",
+        "issue": "odd-path fixtures (spaces/unicode/symlink) not landed; ordering rule landed",
+        "concern": "odd-path fixtures (spaces/unicode/symlink clone roots) still absent"
+      },
+      {
+        "id": "P2-10b",
+        "issue": "break-lock flag restored from raw argv; entry still resolves top-level .gos/.lock",
+        "concern": "auto run --break-lock is restored from raw process.argv"
+      },
+      {
+        "id": "P2-DRY",
+        "issue": "DEFAULT_LIMITS dup, SPAWN_MAX_BUFFER triple, near-duplicate spawn runners",
+        "concern": "auto-family DRY: DEFAULT_LIMITS duplicated"
+      }
+    ]
+  },
   "gaps": [
     {
       "id": "G-1793268280760",
