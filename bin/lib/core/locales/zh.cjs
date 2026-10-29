@@ -423,4 +423,26 @@ module.exports = {
     fix: '检查 store 中的派生记录；断路器将其计为一次失败',
   },
   'auto.launcher.tier-lexical': '加固档位：lexical——PATH 上无沙箱引擎（bwrap）；deny 仅由注入配置与逃逸探测器兜底（网络保持开放；模型提供方凭据按设计可读）',
+
+  // ---- auto 模式：熔断器（三层暂停护栏） ----
+  'auto.breaker.invalidLimits': {
+    what: '熔断器上限被拒绝：{detail}',
+    why: 'N/K/B 是带下限保证的护栏——静默钳制或补默认值会让循环以弱于配置的保护继续运行',
+    fix: '为 N（连续失败）、K（stage 进入次数）、B（派生预算）全部传入 >= 1 的整数',
+  },
+  'auto.breaker.tripped': {
+    what: '自动循环已暂停：熔断层 {layer} 触发——{reason}',
+    why: '熔断后绝不自动恢复；暂停时保留配置，显式重新启用即可原样恢复',
+    fix: '用 {cmd:auto} status 查看熔断记录，处理对应失败类别后用 {cmd:auto} on 重新启用',
+  },
+  'auto.breaker.invalidTimeout': {
+    what: '{name} 的值无效：{value}',
+    why: '单次派生超时是安全边界——格式错误的覆盖值绝不能静默回退默认值',
+    fix: '设置为 >= 1 的整数秒数，或清除该变量以使用默认值（墙钟 3600 秒、空闲 600 秒）',
+  },
+  'auto.breaker.advanceCheckFailed': {
+    what: 'stage 推进判定失败：无法建立 git 可达性真相',
+    why: '推进以提交可达性计分，绝不用时间戳——没有 git 真相就无法判定结果',
+    fix: '检查仓库健康（派生前 HEAD oid 与当前 HEAD 都必须可解析），然后恢复自动循环',
+  },
 };

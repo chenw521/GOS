@@ -430,4 +430,26 @@ module.exports = {
     fix: 'review the spawn record in the store; the breaker counts this as a failure',
   },
   'auto.launcher.tier-lexical': 'hardening tier: lexical — no sandbox engine (bwrap) on PATH; deny is enforced by the injected config and the escape detector only (network stays open; model-provider auth readable by design)',
+
+  // ---- auto mode: breaker (three-layer pause guard) ----
+  'auto.breaker.invalidLimits': {
+    what: 'breaker limits rejected: {detail}',
+    why: 'N/K/B are floors-guaranteed guards — clamping or filling in values silently would run the loop with weaker protection than configured',
+    fix: 'pass integers >= 1 for all of N (consecutive failures), K (stage visits), B (spawn budget)',
+  },
+  'auto.breaker.tripped': {
+    what: 'auto loop paused: breaker layer {layer} tripped — {reason}',
+    why: 'a tripped breaker never auto-resumes; the paused configuration is kept so explicit re-enable restores it',
+    fix: 'inspect `gos auto status` for the trip record, address the failure class, then re-enable with `gos auto on`',
+  },
+  'auto.breaker.invalidTimeout': {
+    what: 'invalid value for {name}: {value}',
+    why: 'per-spawn timeouts are safety bounds — a malformed override must not silently fall back to the default',
+    fix: 'set it to a whole number of seconds >= 1 or unset it to use the defaults (wall 3600s, idle 600s)',
+  },
+  'auto.breaker.advanceCheckFailed': {
+    what: 'stage-advance attribution failed: git reachability could not be established',
+    why: 'advance is scored by commit reachability, never timestamps — without git truth the outcome cannot be judged',
+    fix: 'check repository health (the pre-spawn HEAD oid and current HEAD must both resolve), then resume the auto loop',
+  },
 };
