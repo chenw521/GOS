@@ -166,7 +166,7 @@
 
 #### T8: CLI surface + state schema + resume (D-45, R-01, R-54)
 - **Covers**: D-45, R-01, R-51, R-54
-- **Files**: bin/lib/nav/cmds.cjs, bin/gos.cjs, bin/lib/core/state.cjs, bin/lib/core/locales/en.cjs, bin/lib/core/locales/zh.cjs
+- **Files**: bin/lib/nav/cmds.cjs, bin/gos.cjs, bin/lib/core/state.cjs, bin/lib/ops/auto/cli.cjs, bin/lib/ops/index.cjs, bin/lib/core/locales/en.cjs, bin/lib/core/locales/zh.cjs, test/sections/T1-schema.test.sh, test/sections/T2-project.test.sh, test/sections/T94-schemav4.test.sh, test/sections/T95-repo-id-guard.test.sh
 - **Read first**: bin/lib/nav/cmds.cjs:146-161 (stub), STATE_SCHEMA_VERSION consumer grep (0d2eedee)
 - **Approach**: auto on [--profile --max-retries --max-visits --max-sessions --timeout-wall --timeout-idle] / off [--purge] / status / run [--detach]; on validates floors, probes host/delivery/launcher/store-writability with three-state advisories; status prints mode/profile/tier/host-matrix/counters/breaker; resume shows auto + breaker first-line; auto_mode stub removed, schema bumped with same-commit consumer grep (STATE + STORE).
 - **Done when**: `node bin/gos.cjs auto status` prints tier + tri-state + counters AND `node bin/gos.cjs help --json` lists all auto subs AND `grep -rn "auto_mode" bin/lib/core/state.cjs | wc -l` = 0 AND locale parity green for every new key
@@ -184,11 +184,21 @@
 
 #### T10: Section fixtures T1..T16 + CI bwrap + dogfood evidence (all)
 - **Covers**: D-41, D-42, D-44, D-47, D-48 (adversarial halves)
-- **Files**: test/sections/T104-auto-core.test.sh, test/sections/T105-auto-depth.test.sh, .github/workflows/ci.yml, .gos/task/p0/evidence/t1-dogfood.md
+- **Files**: test/sections/T104-auto-core.test.sh, test/sections/T105-auto-depth.test.sh, test/sections/T25-map-selfcheck.test.sh, test/sections/T46-module-structure.test.sh, .github/workflows/ci.yml, .gos/task/p0/evidence/t1-dogfood.md
 - **Read first**: test/sections/ harness + run-sections contract, spec §4
 - **Approach**: single owner of both sections; map every truth T1..T16 to a fixture (mapping table in spec §4 of this plan); XDG_DATA_HOME pinned into TESTBASE; GOS_AUTO_TIMEOUT_*_SEC micro-overridden; trap-kill spawned processes; sequential runs; fake host carries determinism; real opencode dogfood transcript as tracked manual evidence; ci.yml sections job installs bubblewrap so T6-tier asserts stay live in CI (RT4-F6).
 - **Done when**: every truth id T1..T16 appears in an assertion comment across T104/T105 AND both sections pass rc=0 via run-sections AND `grep -c "bubblewrap" .github/workflows/ci.yml` >= 1 AND evidence/t1-dogfood.md exists
 - **Depends on**: T5, T6a, T6b, T7a, T7b, T8
+
+### Wave 9 (mid-task user-ordered product work)
+
+#### T11: User-ordered mid-task fixes — advance-commit ordering bug + suite-run log persistence
+- **Covers**: D-48 (advance integrity), suite diagnosability (repo mechanism)
+- **Files**: test/sections/T51-commit-guard.test.sh, test/run-sections.sh, bin/lib/ops/section.cjs, test/sections/T68-section-run.test.sh, AGENTS.md
+- **Read first**: bin/lib/task/commit.cjs advance path, test/run-sections.sh harness
+- **Approach**: (1) cmdCommit ran git commit before the stage-advance writeState, leaving a dirty state.json that a legal same-stage re-run of gos commit think swept into a duplicate identically-labeled advance commit (recurred 2026-10-09/27/29) — advance now precedes writeState with the snapshot rollback on git failure, the clean-tree exemption refuses settled stages, regression rides in T51 case H; (2) both suite runners (test/run-sections.sh, gos section run) tee every run to .gos/cache/section-runs/<ts>.log and write per-section results + failed_sections + log into run-manifest.json so failures are diagnosed from artifacts, never by re-running the suite — AGENTS.md rule + T68 case (r) mechanize the contract.
+- **Done when**: T51 case H green AND both runners persist non-empty logs with per-section results AND full suite green from the persisted manifest
+- **Depends on**: none (user-ordered during BUILD)
 
 ## Observable Truths
 

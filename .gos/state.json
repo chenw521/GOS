@@ -1,10 +1,11 @@
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "PLAN",
+  "current_stage": "BUILD",
   "completed_stages": [
-    "THINK"
+    "THINK",
+    "PLAN"
   ],
   "intent": {
     "summary": "Ship gos auto on/off/status — toggle full-auto at any stage boundary; per-stage fresh-session auto-loop (spawn next stage session after each commit, never one long conversation); persists across sessions, resume auto-continues; hard gates + D-NN audit stay; guards: push sign-off, dangerous-cmd gates, retry cap after N exit-1, main-push CI closure check (every push terminal-green or dispositioned, 91848545 twice-lived); ends at SHIP",
@@ -14,8 +15,8 @@
     "THINK": "2026-10-29T03:57:23.227Z",
     "PLAN": "2026-10-29T04:31:45.005Z"
   },
-  "spec_path": null,
-  "plan_path": null,
+  "spec_path": ".gos/task/p0/spec.md",
+  "plan_path": ".gos/task/p0/plan.md",
   "project": true,
   "requirements": [
     {
@@ -178,7 +179,14 @@
     }
   ],
   "observable_truths": [],
-  "gaps": [],
+  "gaps": [
+    {
+      "id": "G-1793268280760",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
+    }
+  ],
   "phase_name": "P0: full-auto mode",
   "task_head": "503010ca3e6f80efe4a20f368a08ba1ebda57907",
   "task_head_history": [
@@ -188,7 +196,6 @@
       "what": "claim"
     }
   ],
-  "auto_mode": null,
   "checkpoints": [
     {
       "stage": "THINK",
@@ -255,5 +262,206 @@
     }
   ],
   "spec_gate_version": 3,
-  "spec_sha256": "48b0aeda8ae484dfb515af5a43e6c8886abeb3b266e14e7dde98efdbda2d949f"
+  "spec_sha256": "48b0aeda8ae484dfb515af5a43e6c8886abeb3b266e14e7dde98efdbda2d949f",
+  "plan_snapshot": {
+    "tasks": [
+      {
+        "id": "T1",
+        "covers": [
+          "D-48",
+          "D-45",
+          "R-51"
+        ],
+        "files": [
+          "bin/lib/ops/auto/store.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ]
+      },
+      {
+        "id": "T2",
+        "covers": [
+          "D-40",
+          "D-46",
+          "R-52",
+          "R-55"
+        ],
+        "files": [
+          "bin/lib/ops/auto/adapters/registry.cjs",
+          "bin/lib/ops/auto/adapters/opencode.cjs",
+          "bin/lib/ops/auto/adapters/codex.cjs",
+          "bin/lib/ops/auto/adapters/registry.json",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ]
+      },
+      {
+        "id": "T3",
+        "covers": [
+          "D-47",
+          "D-48",
+          "R-58"
+        ],
+        "files": [
+          "bin/lib/ops/auto/launcher.cjs",
+          "templates/auto-profiles/restricted.json",
+          "templates/auto-profiles/workspace.json",
+          "templates/auto-profiles/full.json",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ]
+      },
+      {
+        "id": "T4",
+        "covers": [
+          "D-42",
+          "D-43",
+          "R-50"
+        ],
+        "files": [
+          "bin/lib/ops/auto/breaker.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ]
+      },
+      {
+        "id": "T5",
+        "covers": [
+          "D-40",
+          "D-42",
+          "D-45",
+          "R-55"
+        ],
+        "files": [
+          "bin/lib/ops/auto/loop.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ]
+      },
+      {
+        "id": "T6a",
+        "covers": [
+          "D-41",
+          "D-43",
+          "R-56",
+          "R-53"
+        ],
+        "files": [
+          "bin/lib/ops/auto/ratify.cjs",
+          "bin/lib/task/commit.cjs",
+          "bin/lib/core/state.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ]
+      },
+      {
+        "id": "T6b",
+        "covers": [
+          "D-41",
+          "R-56"
+        ],
+        "files": [
+          "bin/lib/ops/auto/redteam.cjs",
+          "bin/lib/task/archive.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ]
+      },
+      {
+        "id": "T7a",
+        "covers": [
+          "D-44",
+          "R-57"
+        ],
+        "files": [
+          "bin/lib/ops/auto/delivery.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ]
+      },
+      {
+        "id": "T7b",
+        "covers": [
+          "D-44",
+          "D-43",
+          "R-57",
+          "R-53"
+        ],
+        "files": [
+          "bin/lib/ops/auto/delivery-publish.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ]
+      },
+      {
+        "id": "T8",
+        "covers": [
+          "D-45",
+          "R-01",
+          "R-51",
+          "R-54"
+        ],
+        "files": [
+          "bin/lib/nav/cmds.cjs",
+          "bin/gos.cjs",
+          "bin/lib/core/state.cjs",
+          "bin/lib/ops/auto/cli.cjs",
+          "bin/lib/ops/index.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs",
+          "test/sections/T1-schema.test.sh",
+          "test/sections/T2-project.test.sh",
+          "test/sections/T94-schemav4.test.sh",
+          "test/sections/T95-repo-id-guard.test.sh"
+        ]
+      },
+      {
+        "id": "T9",
+        "covers": [
+          "D-40",
+          "D-44",
+          "D-45"
+        ],
+        "files": [
+          "README.md",
+          "README.zh-CN.md",
+          "CHANGELOG.md",
+          "skills/gos-router/SKILL.md",
+          "skills/gos-verify/SKILL.md"
+        ]
+      },
+      {
+        "id": "T10",
+        "covers": [
+          "D-41",
+          "D-42",
+          "D-44",
+          "D-47",
+          "D-48"
+        ],
+        "files": [
+          "test/sections/T104-auto-core.test.sh",
+          "test/sections/T105-auto-depth.test.sh",
+          "test/sections/T25-map-selfcheck.test.sh",
+          "test/sections/T46-module-structure.test.sh",
+          ".github/workflows/ci.yml",
+          ".gos/task/p0/evidence/t1-dogfood.md"
+        ]
+      },
+      {
+        "id": "T11",
+        "covers": [
+          "D-48"
+        ],
+        "files": [
+          "test/sections/T51-commit-guard.test.sh",
+          "test/run-sections.sh",
+          "bin/lib/ops/section.cjs",
+          "test/sections/T68-section-run.test.sh",
+          "AGENTS.md"
+        ]
+      }
+    ],
+    "audit": []
+  }
 }
