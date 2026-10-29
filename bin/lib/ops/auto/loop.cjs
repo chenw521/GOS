@@ -171,11 +171,22 @@ function loopSpawnRunner(spec, ctx) {
   }
 }
 
-// Real detach: spawns the CLI run command detached from this parent.
+// Real detach: spawns the CLI run command detached from this parent. The
+// child's output tees into a machine-local run log so a silent exit is
+// diagnosable from an artifact instead of a black hole.
 function defaultDetacher(command, args, opts) {
-  const child = spawnChild(command, args, { detached: true, stdio: 'ignore', env: opts.env });
+  const logDir = path.join(opts.rootDir || process.cwd(), '.gos', 'logs');
+  try { fs.mkdirSync(logDir, { recursive: true }); } catch { /* unwritable: fall back to ignore */ }
+  let stdio = 'ignore';
+  let logPath = null;
+  try {
+    logPath = path.join(logDir, `auto-run-${process.pid}-${Date.now()}.log`);
+    const fd = fs.openSync(logPath, 'a');
+    stdio = ['ignore', fd, fd];
+  } catch { logPath = null; }
+  const child = spawnChild(command, args, { detached: true, stdio, env: opts.env });
   child.unref();
-  return { pid: child.pid };
+  return { pid: child.pid, log: logPath };
 }
 
 function defaultCliEntry() {
@@ -254,8 +265,8 @@ async function runLoop(opts) {
     const detacher = typeof opts.detacher === 'function' ? opts.detacher : defaultDetacher;
     const command = defaultCliEntry();
     const args = [...defaultCliEntryArgs(), 'auto', 'run'];
-    const res = await detacher(command, args, { detached: true, env: { ...env } });
-    return report({ ok: true, status: 'detached', pid: res && res.pid, argv: [command, ...args] });
+    const res = await detacher(command, args, { detached: true, rootDir, env: { ...env } });
+    return report({ ok: true, status: 'detached', pid: res && res.pid, log: res && res.log, argv: [command, ...args] });
   }
 
   // Trust store: fail-closed load, then the mode gate (resume never

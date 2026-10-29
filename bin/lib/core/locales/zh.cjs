@@ -678,7 +678,7 @@ module.exports = {
   'auto.cli.status.breakerClean': '熔断器：正常（{n} 条非跳闸记录）',
   'auto.cli.status.breakerTripped': '熔断器：已跳闸 层 {layer}（{cls}）于 {ts}{detail} — 已暂停；需显式 `{cmd:auto} on` 重新启用',
   'auto.cli.status.lock': '运行锁：由 {host} 上 pid {pid} 持有',
-  'auto.cli.run.detached': 'auto 运行器已脱离运行（pid {pid}）— 用 `{cmd:auto} status` 查看进度',
+  'auto.cli.run.detached': 'auto 运行器已脱离运行（pid {pid}）— 用 `{cmd:auto} status` 查看进度；运行日志：{log}',
   'auto.cli.run.report': 'auto 运行：{status}（{reason}）',
   'auto.cli.run.iterations': '迭代次数：{n}',
   'auto.cli.disposition.usage': '用法：{cmd:auto} disposition <runId> --reason "<说明>" [--by <署名>]',

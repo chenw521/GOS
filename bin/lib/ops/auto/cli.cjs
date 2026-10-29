@@ -303,7 +303,7 @@ function autoRun(mods, rest, ui) {
   }
   created.loop.run().then((report) => {
     if (report.ok && report.status === 'detached') {
-      console.log(core.t('auto.cli.run.detached', { pid: report.pid }));
+      console.log(core.t('auto.cli.run.detached', { pid: report.pid, log: report.log || '.gos/logs/auto-run-*.log' }));
       return;
     }
     console.log(core.t('auto.cli.run.report', { status: report.status, reason: report.reason || '' }));

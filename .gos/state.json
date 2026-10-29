@@ -2,9 +2,10 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 2,
-  "current_stage": "THINK",
+  "current_stage": "BUILD",
   "completed_stages": [
-    "INTENT"
+    "INTENT",
+    "THINK"
   ],
   "intent": {
     "summary": "Cure between-tasks false reds: with a DONE-state task left in state.json, gos gate all downgrades coverage/diff-hit/manifest-stale checks to advisory lines with an init hint instead of hard-failing (twice-lived: P0 closeout manifest-stale 2026-10-29, dffa50f0 2026-09-23)",
@@ -14,7 +15,14 @@
       "ts": "2026-10-29T14:18:41.344Z"
     }
   },
-  "approvals": {},
+  "approvals": {
+    "THINK": {
+      "status": "PENDING",
+      "ts": "2026-10-29T16:23:49.653Z",
+      "mode": "auto",
+      "stage": "THINK"
+    }
+  },
   "spec_path": ".gos/task/4860b9f0/spec.md",
   "plan_path": ".gos/task/4860b9f0/plan.md",
   "project": false,
@@ -27,15 +35,32 @@
     }
   ],
   "decisions": [],
-  "observable_truths": [],
+  "observable_truths": [
+    {
+      "id": "T1",
+      "description": "With a DONE+completed_at (archived) task left in state.json, node bin/gos.cjs gate all exits 0 and prints one coverage idle advisory and one semantic idle advisory, each carrying the gos init hint; standalone gate coverage and gate semantic behave the same; --json reports verdict pass with the idle lines in advisories",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T2",
+      "description": "A live task with a stale run-manifest still fails gate all (exit 1, manifest-stale), and a bare-DONE state without completed_at keeps task-level checks live - the downgrade is exclusive to the archived window",
+      "verified": false,
+      "evidence": null
+    }
+  ],
   "gaps": [
     {
       "id": "G-1793288731499",
       "type": "major",
       "description": "Fluid back to INTENT: sandbox git-config mask broke the advance commit; re-running commit with GIT_CONFIG_GLOBAL override",
-      "status": "open"
+      "status": "fixed",
+      "resolution": "advance commit retried and landed as ea462f5 with GIT_CONFIG_GLOBAL override after the sandbox git-config mask and cold npx cache broke the first attempt; stage re-advanced cleanly",
+      "resolved_at": "2026-10-29T15:50:25.463Z"
     }
   ],
   "activation_source": "headless",
-  "task_head": "4860b9f07a5b41e0728ae6f999ad5b4825ff763c"
+  "task_head": "4860b9f07a5b41e0728ae6f999ad5b4825ff763c",
+  "spec_gate_version": 3,
+  "spec_sha256": "5ab61b44dc4ade9a8b68676b3b0b2b484901929fadacc5c96bcd66ffab40de27"
 }

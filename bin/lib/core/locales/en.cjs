@@ -685,7 +685,7 @@ module.exports = {
   'auto.cli.status.breakerClean': 'breaker: clean ({n} non-trip record(s))',
   'auto.cli.status.breakerTripped': 'breaker: TRIPPED layer {layer} ({cls}) at {ts}{detail} — paused; explicit re-enable via `{cmd:auto} on`',
   'auto.cli.status.lock': 'run lock: held by pid {pid} on {host}',
-  'auto.cli.run.detached': 'auto runner detached (pid {pid}) — follow progress with `{cmd:auto} status`',
+  'auto.cli.run.detached': 'auto runner detached (pid {pid}) — follow progress with `{cmd:auto} status`; run log: {log}',
   'auto.cli.run.report': 'auto run: {status} ({reason})',
   'auto.cli.run.iterations': 'iterations: {n}',
   'auto.cli.disposition.usage': 'Usage: {cmd:auto} disposition <runId> --reason "<text>" [--by <name>]',
