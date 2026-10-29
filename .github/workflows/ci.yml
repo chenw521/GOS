@@ -63,6 +63,11 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      # sandbox engine for the auto sections: the bwrap tier assertions
+      # (mask surface, mask-over-bind ordering) must run against the real
+      # binary in CI, not only against probe stubs
+      - name: Install sandbox engine (bubblewrap)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq bubblewrap
       - name: Trust tracked custom gate (fresh checkout has no machine-local consent)
         run: node bin/gos.cjs gate trust check.sh
       - name: Section regression suite

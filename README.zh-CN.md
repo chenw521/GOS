@@ -71,6 +71,82 @@ THINK 与 PLAN 的产物会被全新上下文的 Red Team 轮次攻击（有人�
 
 Phase 从路线图认领，内部跑完整 Lv3，归档时合并回 `project.json`（单一事实源）并渲染 markdown 视图。真实世界的摩擦被显式建模：乱序完成合法（prev-done 门），故意搁置的 phase 有第一阶级的 `parked` 状态、作为 milestone 欠账持续可见——没有任何东西会静默消失。
 
+## 全自动模式 — `gos auto`
+
+全自动消掉"请开下一个会话"的税：由 runner 驱动当前任务的各个阶段，每个阶段在**全新派生会话**（fresh spawned session）里执行（上下文永不腐烂），一路推进到 **SHIP**——人类在那里收回控制权。硬门、决策审计、Red Team 挑战全部保留；被自动化的只有阶段边界之间的交接。
+
+```bash
+gos auto on                     # 启用（仅写配置）：profile、熔断 N/K/B、超时
+gos auto status                 # 模式、profile、加固层级、host 矩阵、计数器、熔断
+gos auto run                    # 驱动当前任务（每阶段一个新会话）
+gos auto off                    # 停用（--purge 一并删除本机 store）
+gos auto disposition <runId> --reason "<文本>"   # 人类对红/未知 CI run 的裁决
+```
+
+`run` 要求存在一个进行中（非 SHIP）的任务（报错会指引到 `gos init`），且拒绝
+在 main 检出上运行——循环跑在 `auto/<task-id>` 工作分支上，落 main 依然必须走
+pull request。
+
+### 本机信任 store
+
+Auto 状态（模式、profile、熔断计数、批准戳、裁决、运行锁）存放在本机 store：
+`${XDG_DATA_HOME:-~/.local/share}/gos/<repo-id>/`——绝不入库，绝不遗传给队友。
+入库的仓库状态只携带**哈希与计数**（不含会话 id、模型名、输出尾巴）；仓库本地
+`.gos/logs/` 下的 ledger 只是调试镜像。store 缺失或损坏一律 fail-closed 进入
+paused 并给出指引——绝不静默重置。`gos resume` 会报告 auto 模式（熔断时第一行
+就是熔断记录），但绝不自动派生；auto 命令族在自己派生的会话里也会拒绝执行
+（`GOS_AUTO_SPAWNED` 标记），工作会话无法把循环重新打开。
+
+### 带证据的委托
+
+阶段批准分三路路由：**机械**门自动通过；**委托**的 THINK/PLAN 阶段在会话内只
+提交 PENDING 记录，runner 在会话外对照捕获流的戳完成追认（ratify）——未追认的
+PENDING 会阻塞下一阶段推进。委托 THINK 还要求一次来自**独立只读派生会话**的
+Red Team 通过——其提示词来自 runner 持有的模板（绝非仓库文件），且必须**连续
+两轮零 finding**；出现任何 finding 一律升级为 held。archive 与 push 永远留给人。
+
+### 熔断器——什么能叫停失控循环
+
+| 层 | 默认值 | 触发条件 |
+|:--|:--|:--|
+| N——连续失败 | 3 | 同一阶段连续失败 N 次 |
+| K——阶段访问 | 5 | 循环重入阶段达 K 次（乒乓） |
+| B——派生会话数 | 30 | 派生预算耗尽 |
+
+下限为 >=1（fail-closed 校验；`auto on` 时可用 `--max-retries`、
+`--max-visits`、`--max-sessions` 覆盖）。熔断即 **paused**——配置保留、绝不自动
+恢复；必须显式 `gos auto on` 重新启用。CI 监看超时路由到 disposition-unknown 而
+不计入 N 层（慢绿不是坏工作）；外部变更（人工 stage-back、循环中归档、另一终端
+的并行监督提交）产生带报告的暂停——绝不计为失败。失败带类别标签
+（task / env / auth / timeout），环境故障不会伪装成任务失败。
+
+### 沙箱层级——诚实面对边界
+
+派生会话跑在能力 profile 下——默认 `restricted`，`workspace` 与 `full` 为显式
+选择（`full` 还需之后一次显式升级；当前 profile 打印在 status 首行）。装了
+bubblewrap 时 launcher 构建内核级沙箱：以 tmpfs 掩盖信任 store、投递凭据
+（gh/git/ssh/netrc）、全局 git 配置与 host 状态目录，并采用 mask-over-bind
+排序——掩盖永远压过对同路径的后绑定。没有沙箱引擎时诚实地降级到**词法层**
+（lexical）——status 会如实说明：
+
+- **网络保持开放。** 没有出口沙箱；launcher 限制的是文件系统可达性，不是网络。
+- **模型提供商凭据按设计保持可读**——派生会话必须能调用模型。
+- **凭据掩盖只覆盖被掩盖的路径**（信任 store、gh/git/ssh/netrc、全局 git 配置、
+  host 状态目录）；清单之外的任何路径不会被隐藏。
+- **词法层是纵深而非冗余**：注入的 deny 配置加逃逸探测器构成第二层，不是内核
+  边界。
+
+### 投递——从 SHIP 到 main
+
+当 GitHub 投递适配器在 `auto on` 时探测为 green（origin + `gh` 认证 + CI 存在
+——三态结果展示在 `auto status`），循环越过 SHIP 继续：推送工作分支、开 PR
+（正文由 runner 渲染，worker 可控字符串只以带标签的引用块出现）、合并前跑
+squash-subject lint，随后监看 CI 45 分钟——超时落入 disposition-unknown 等人类
+`gos auto disposition`，红 run 则叫停循环等待裁决。仓库 git 元数据被视为不可信：
+remote 在探测时固定（pin），且在每次特权 git 调用前重新校验；任何漂移（remote
+被换、钩子被植入）都会中止进入熔断器而不是继续推送。没有适配器？循环在 SHIP
+干净终止，投递完全交还人工。
+
 ## 快速开始
 
 ### 绿地——三步从零开始
@@ -142,6 +218,7 @@ gos truth verify --replay # 证据来自真实 stdout，不是口头声称
 gos render                        # 重新渲染 DECISIONS/ROADMAP/REQUIREMENTS 视图
 gos setup --local                 # 开发模式：从 git 检出做符号链接
 gos teardown                      # 移除 skills 链接
+gos auto on|off|status|run/disposition  # 全自动阶段循环（见上方"全自动模式"一节）
 ```
 
 </details>

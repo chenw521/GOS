@@ -109,6 +109,102 @@ friction is handled explicitly: out-of-order completion is legal (prev-done gate
 deliberately deferred phases get a first-class `parked` state that stays visible
 as milestone debt — nothing silently disappears.
 
+## Full-auto mode — `gos auto`
+
+Full-auto removes the "next session, please" tax: a runner drives the active
+task through its stages, each stage executed in a **fresh spawned session**
+(context never rots), advancing until **SHIP** — where the human regains
+control. Hard gates, decision audit and red-team challenge all stay on; only
+the stage-boundary handoffs are automated.
+
+```bash
+gos auto on                     # enable (config-only): profile, breaker N/K/B, timeouts
+gos auto status                 # mode, profile, hardening tier, host matrix, counters, breaker
+gos auto run                    # drive the active task (fresh session per stage)
+gos auto off                    # disable (--purge also removes the machine-local store)
+gos auto disposition <runId> --reason "<text>"   # human verdict on a red/unknown CI run
+```
+
+`run` requires an active non-SHIP task (the error guides to `gos init`) and
+refuses a main checkout — the loop runs on an `auto/<task-id>` work branch,
+so landing on main still goes through a pull request.
+
+### Machine-local trust store
+
+Auto state (mode, profile, breaker counters, approval stamps, dispositions,
+run lock) lives in a machine-local store under
+`${XDG_DATA_HOME:-~/.local/share}/gos/<repo-id>/` — never committed, never
+inherited by teammates. Tracked repo state carries **hashes and counts only**
+(no session ids, model names or output tails); the repo-local ledger under
+`.gos/logs/` is a debug mirror. A missing or corrupt store fails closed into
+a paused state with guidance — never a silent fresh start. `gos resume`
+reports auto mode (breaker first-line when tripped) but never auto-spawns,
+and the auto family refuses to run inside its own spawned sessions
+(`GOS_AUTO_SPAWNED` marker), so a working session cannot switch the loop
+back on.
+
+### Delegation with evidence
+
+Stage approvals route three ways: **mechanical** gates pass automatically;
+**delegated** THINK/PLAN stages commit a PENDING record in-spawn and the
+runner ratifies it from outside against captured-stream stamps — an
+unratified PENDING blocks the next stage advance. THINK delegation requires
+a red-team pass from a **separate read-only spawn** whose prompt comes from
+a runner-held template (never repo files), passing **twice with zero
+findings**; any findings escalate to held. Archive and push stay human.
+
+### The breaker — what stops a runaway loop
+
+| Layer | Default | Trips when |
+|:--|:--|:--|
+| N — consecutive failures | 3 | one stage fails N times in a row |
+| K — stage visits | 5 | the loop re-enters stages K times (ping-pong) |
+| B — spawned sessions | 30 | the spawn budget is exhausted |
+
+Floors are >=1 (fail-closed validation; override with `--max-retries`,
+`--max-visits`, `--max-sessions` at `auto on`). A trip **pauses** auto —
+configuration is kept, never auto-resumed; explicit `gos auto on` re-enables.
+CI-watch timeouts route to disposition-unknown rather than the N layer (a
+slow green is not bad work), and external mutations (human stage-back,
+archive mid-loop, a concurrent supervised commit) pause with a report —
+never a failure count. Failures carry a class tag (task / env / auth /
+timeout) so environment breakage never masquerades as task failure.
+
+### Sandbox tiers — honest about limits
+
+Spawned sessions run under a capability profile — `restricted` (default),
+`workspace` or `full` as explicit opt-ins (`full` additionally requires a
+later explicit upgrade; the active profile prints first-line in status).
+With bubblewrap present the launcher builds a kernel sandbox: tmpfs masks
+are layered over the trust store, delivery credentials (gh/git/ssh/netrc),
+the global git config and host state dirs, with mask-over-bind ordering so
+a mask always wins over a later bind of the same path. Without a sandbox
+engine the tier degrades honestly to **lexical** — and status says so:
+
+- **Network stays open.** There is no egress sandbox; the launcher restricts
+  filesystem reach, not network access.
+- **Model-provider auth stays readable by design** — the spawned session has
+  to call the model.
+- **Credential masking covers the masked paths only** (trust store, gh /
+  git / ssh / netrc, global git config, host state dirs); anything outside
+  that list is not hidden.
+- **The lexical tier is depth, not redundancy**: an injected deny config
+  plus an escape detector add a second layer, not a kernel boundary.
+
+### Delivery — from SHIP to main
+
+When the GitHub delivery adapter probes green at `auto on` (origin + `gh`
+auth + CI presence — the three-state result shows in `auto status`), the
+loop continues past SHIP: push the work branch, open a PR with a
+runner-rendered body (worker-controlled strings appear only as quoted,
+labeled blocks), run the squash-subject lint before merge, then watch CI
+for 45 minutes — a timeout lands in disposition-unknown awaiting a human
+`gos auto disposition`, and a red run stops the loop for one. Repo git
+metadata is treated as untrusted: the remote is pinned at probe time and
+re-verified before every privileged git call, and any drift (remote swap,
+planted hook) aborts into the breaker instead of pushing. No adapter? The
+loop ends cleanly at SHIP and delivery stays fully manual.
+
 ## Quick start
 
 ### Greenfield — three steps from zero
@@ -196,6 +292,7 @@ gos gap rewrite <G-id> --text "..." # rewrite a gap (language-boundary checked)
 gos render                        # regenerate DECISIONS/ROADMAP/REQUIREMENTS views
 gos setup --local                 # dev mode: symlink from a git checkout
 gos teardown                      # remove skill links
+gos auto on|off|status|run/disposition  # full-auto stage loop (see "Full-auto mode" above)
 ```
 
 </details>

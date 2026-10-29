@@ -24,7 +24,7 @@ const SPAWN_MAX_BUFFER = 64 * 1024 * 1024;
 
 // Terminal event shapes: an event whose `type` is listed here, or one that
 // carries `terminal: true`, closes the stream successfully.
-const DEFAULT_TERMINAL_TYPES = ['result', 'end', 'finish', 'done'];
+const DEFAULT_TERMINAL_TYPES = ['result', 'end', 'finish', 'done', 'step_finish'];
 
 function isTerminalEvent(ev, terminalTypes) {
   if (!ev || typeof ev !== 'object') return false;
