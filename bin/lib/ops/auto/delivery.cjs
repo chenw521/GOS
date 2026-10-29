@@ -37,19 +37,8 @@ const BASELINE_FILE = 'delivery-baseline.json';
 // while a fine-grained PAT without the workflows read scope cannot see them.
 const NO_CI_ADVISORY_KEY = 'auto.delivery.probeAdvisory';
 
-function isPlainObject(v) {
-  return v != null && typeof v === 'object' && !Array.isArray(v);
-}
 
-function guidanceFor(key, params) {
-  const v = core.t(key, params);
-  if (typeof v === 'string') return { what: v };
-  return v;
-}
 
-function sha256Of(text) {
-  return crypto.createHash('sha256').update(text, 'utf8').digest('hex');
-}
 
 // ---------- defaults ----------
 
@@ -58,11 +47,11 @@ function sha256Of(text) {
 // followed). Ambient global/system git config is a poison lever exactly like
 // it is for the privileged invocation — pinning must observe the same git
 // the privileged call will see, never an insteadOf-rewritten remote.
-function defaultGitRunner(args, cwd) {
+function deliveryGitRunner(args, cwd) {
   return spawnSync('git', args, { encoding: 'utf8', cwd, env: privilegedGitEnv(process.env), stdio: ['ignore', 'pipe', 'pipe'] });
 }
 
-function defaultGhRunner(args) {
+function deliveryGhRunner(args) {
   return spawnSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 }
 
@@ -83,17 +72,17 @@ function classifyProbe(facts) {
   const ghAuthOk = facts && facts.ghAuthOk === true;
   const ciPresent = facts && facts.ciPresent === true;
   if (!hasOrigin) {
-    return { state: 'absent', reason: 'no-origin', guidance: guidanceFor('auto.delivery.probeAbsent', { reason: 'no origin remote' }) };
+    return { state: 'absent', reason: 'no-origin', guidance: store.guidanceFor('auto.delivery.probeAbsent', { reason: 'no origin remote' }) };
   }
   if (!ghAuthOk) {
-    return { state: 'absent', reason: 'gh-auth', guidance: guidanceFor('auto.delivery.probeAbsent', { reason: 'gh auth not available' }) };
+    return { state: 'absent', reason: 'gh-auth', guidance: store.guidanceFor('auto.delivery.probeAbsent', { reason: 'gh auth not available' }) };
   }
   if (ciPresent) return { state: 'green' };
   return {
     state: 'advisory',
     reason: 'gh-no-ci',
     advisory: NO_CI_ADVISORY_KEY,
-    advisoryText: guidanceFor(NO_CI_ADVISORY_KEY),
+    advisoryText: store.guidanceFor(NO_CI_ADVISORY_KEY),
   };
 }
 
@@ -122,8 +111,8 @@ function workflowsDirHasCi(rootDir) {
 // injectable, real defaults): rootDir, gitRunner, ghRunner, now.
 function probeDelivery(opts = {}) {
   const rootDir = opts.rootDir ? path.resolve(String(opts.rootDir)) : (core.currentRootRealpath() || process.cwd());
-  const gitRunner = typeof opts.gitRunner === 'function' ? opts.gitRunner : defaultGitRunner;
-  const ghRunner = typeof opts.ghRunner === 'function' ? opts.ghRunner : defaultGhRunner;
+  const gitRunner = typeof opts.gitRunner === 'function' ? opts.gitRunner : deliveryGitRunner;
+  const ghRunner = typeof opts.ghRunner === 'function' ? opts.ghRunner : deliveryGhRunner;
   const now = typeof opts.now === 'function' ? opts.now : Date.now;
 
   const urlRes = gitRunner(['remote', 'get-url', 'origin'], rootDir);
@@ -216,7 +205,7 @@ function hooksFingerprint(rootDir, hooksDir) {
   const entries = [];
   let names;
   try { names = fs.readdirSync(hooksDir); }
-  catch { return { hooksDir, hooksSha256: sha256Of(''), hooksList: [], display: [] }; }
+  catch { return { hooksDir, hooksSha256: store.sha256Of(''), hooksList: [], display: [] }; }
   for (const name of names.sort()) {
     if (name.endsWith('.sample')) continue;
     const abs = path.join(hooksDir, name);
@@ -227,11 +216,11 @@ function hooksFingerprint(rootDir, hooksDir) {
     let content = '';
     try { content = fs.readFileSync(abs, 'utf8'); }
     catch { content = '\0unreadable'; }
-    entries.push(`${name}:${sha256Of(content)}`);
+    entries.push(`${name}:${store.sha256Of(content)}`);
   }
   return {
     hooksDir,
-    hooksSha256: sha256Of(entries.join('\n')),
+    hooksSha256: store.sha256Of(entries.join('\n')),
     display: entries.map((e) => displayPath(rootDir, path.join(hooksDir, e.slice(0, e.indexOf(':'))))),
   };
 }
@@ -241,19 +230,19 @@ function hooksFingerprint(rootDir, hooksDir) {
 // content hash, and the resolved active hooks fingerprint.
 function captureBaseline(opts = {}) {
   const rootDir = opts.rootDir ? path.resolve(String(opts.rootDir)) : (core.currentRootRealpath() || process.cwd());
-  const gitRunner = typeof opts.gitRunner === 'function' ? opts.gitRunner : defaultGitRunner;
+  const gitRunner = typeof opts.gitRunner === 'function' ? opts.gitRunner : deliveryGitRunner;
 
   const urlRes = gitRunner(['remote', 'get-url', 'origin'], rootDir);
   const remoteUrl = urlRes && urlRes.status === 0 ? String(urlRes.stdout || '').trim() : '';
   if (!remoteUrl) {
-    return { ok: false, status: 'error', reason: 'no-origin', guidance: guidanceFor('auto.delivery.baselineFailed', { detail: 'no origin remote' }) };
+    return { ok: false, status: 'error', reason: 'no-origin', guidance: store.guidanceFor('auto.delivery.baselineFailed', { detail: 'no origin remote' }) };
   }
   const headRes = gitRunner(['ls-remote', remoteUrl, 'HEAD'], rootDir);
   if (!headRes || headRes.status !== 0) {
     return {
       ok: false, status: 'error', reason: 'remote-head-unreadable', remoteUrl,
       detail: String((headRes && headRes.stderr) || '').trim().slice(0, 240),
-      guidance: guidanceFor('auto.delivery.baselineFailed', { detail: 'git ls-remote of the origin URL failed' }),
+      guidance: store.guidanceFor('auto.delivery.baselineFailed', { detail: 'git ls-remote of the origin URL failed' }),
     };
   }
   const firstLine = String(headRes.stdout || '').split('\n').map((l) => l.trim()).filter(Boolean)[0] || '';
@@ -261,22 +250,22 @@ function captureBaseline(opts = {}) {
 
   const gitDir = resolveGitDir(gitRunner, rootDir);
   if (!gitDir) {
-    return { ok: false, status: 'error', reason: 'git-dir-unreadable', guidance: guidanceFor('auto.delivery.baselineFailed', { detail: 'git dir not resolvable' }) };
+    return { ok: false, status: 'error', reason: 'git-dir-unreadable', guidance: store.guidanceFor('auto.delivery.baselineFailed', { detail: 'git dir not resolvable' }) };
   }
   let configText;
   try { configText = fs.readFileSync(path.join(gitDir, 'config'), 'utf8'); }
   catch (e) {
-    return { ok: false, status: 'error', reason: 'config-unreadable', detail: e.message, guidance: guidanceFor('auto.delivery.baselineFailed', { detail: '.git/config unreadable' }) };
+    return { ok: false, status: 'error', reason: 'config-unreadable', detail: e.message, guidance: store.guidanceFor('auto.delivery.baselineFailed', { detail: '.git/config unreadable' }) };
   }
   const hooksDir = resolveHooksDir(gitRunner, rootDir, gitDir);
   if (!hooksDir) {
-    return { ok: false, status: 'error', reason: 'hooks-dir-unresolvable', guidance: guidanceFor('auto.delivery.baselineFailed', { detail: 'hooks directory not resolvable' }) };
+    return { ok: false, status: 'error', reason: 'hooks-dir-unresolvable', guidance: store.guidanceFor('auto.delivery.baselineFailed', { detail: 'hooks directory not resolvable' }) };
   }
   const fp = hooksFingerprint(rootDir, hooksDir);
   const baseline = {
     remoteUrl,
     remoteHead,
-    configSha256: sha256Of(configText),
+    configSha256: store.sha256Of(configText),
     hooksDir,
     hooksSha256: fp.hooksSha256,
     hooksList: fp.display,
@@ -295,20 +284,20 @@ function baselineFile(rootDir) {
 function pinBaseline(baseline, rootDir) {
   const file = baselineFile(rootDir);
   if (file == null) {
-    return { ok: false, status: 'error', reason: 'no-data-home', guidance: guidanceFor('auto.delivery.baselineFailed', { detail: 'no XDG data home resolvable' }) };
+    return { ok: false, status: 'error', reason: 'no-data-home', guidance: store.guidanceFor('auto.delivery.baselineFailed', { detail: 'no XDG data home resolvable' }) };
   }
   if (!validBaseline(baseline)) {
     return { ok: false, status: 'error', reason: 'invalid-baseline' };
   }
   try { core.writeAtomicJson(file, baseline); }
   catch (e) {
-    return { ok: false, status: 'error', reason: 'write-failed', path: file, detail: e.message, guidance: guidanceFor('auto.delivery.baselineFailed', { detail: 'baseline write failed' }) };
+    return { ok: false, status: 'error', reason: 'write-failed', path: file, detail: e.message, guidance: store.guidanceFor('auto.delivery.baselineFailed', { detail: 'baseline write failed' }) };
   }
   return { ok: true, path: file };
 }
 
 function validBaseline(b) {
-  return isPlainObject(b)
+  return store.isPlainObject(b)
     && typeof b.remoteUrl === 'string' && b.remoteUrl.length > 0
     && (b.remoteHead == null || typeof b.remoteHead === 'string')
     && hex64(b.configSha256)
@@ -322,12 +311,12 @@ function loadPinnedBaseline(rootDir) {
   if (file == null) return { ok: false, status: 'error', reason: 'no-data-home' };
   let raw;
   try { raw = fs.readFileSync(file, 'utf8'); }
-  catch { return { ok: false, status: 'error', reason: 'no-baseline', path: file, guidance: guidanceFor('auto.delivery.baselineFailed', { detail: 'no pinned baseline found' }) }; }
+  catch { return { ok: false, status: 'error', reason: 'no-baseline', path: file, guidance: store.guidanceFor('auto.delivery.baselineFailed', { detail: 'no pinned baseline found' }) }; }
   let parsed;
   try { parsed = JSON.parse(raw); }
-  catch { return { ok: false, status: 'error', reason: 'corrupt-baseline', path: file, guidance: guidanceFor('auto.delivery.baselineFailed', { detail: 'pinned baseline unreadable' }) }; }
+  catch { return { ok: false, status: 'error', reason: 'corrupt-baseline', path: file, guidance: store.guidanceFor('auto.delivery.baselineFailed', { detail: 'pinned baseline unreadable' }) }; }
   if (!validBaseline(parsed)) {
-    return { ok: false, status: 'error', reason: 'corrupt-baseline', path: file, guidance: guidanceFor('auto.delivery.baselineFailed', { detail: 'pinned baseline failed shape validation' }) };
+    return { ok: false, status: 'error', reason: 'corrupt-baseline', path: file, guidance: store.guidanceFor('auto.delivery.baselineFailed', { detail: 'pinned baseline failed shape validation' }) };
   }
   return { ok: true, path: file, baseline: parsed };
 }
@@ -405,9 +394,9 @@ function privilegedGitArgs(args) {
 // {ok:false, status:'aborted', reason:'drift', drift} / capture errors.
 function verifyBaseline(baseline, opts = {}) {
   const rootDir = opts.rootDir ? path.resolve(String(opts.rootDir)) : (core.currentRootRealpath() || process.cwd());
-  const gitRunner = typeof opts.gitRunner === 'function' ? opts.gitRunner : defaultGitRunner;
+  const gitRunner = typeof opts.gitRunner === 'function' ? opts.gitRunner : deliveryGitRunner;
   if (!validBaseline(baseline)) {
-    return { ok: false, status: 'error', reason: 'invalid-baseline', guidance: guidanceFor('auto.delivery.baselineFailed', { detail: 'baseline failed shape validation' }) };
+    return { ok: false, status: 'error', reason: 'invalid-baseline', guidance: store.guidanceFor('auto.delivery.baselineFailed', { detail: 'baseline failed shape validation' }) };
   }
   const cur = captureBaseline({ rootDir, gitRunner });
   if (!cur.ok) {
@@ -417,7 +406,7 @@ function verifyBaseline(baseline, opts = {}) {
   if (drift) {
     return {
       ok: false, status: 'aborted', reason: 'drift', drift,
-      guidance: guidanceFor('auto.delivery.driftDetected', { detail: drift.detail }),
+      guidance: store.guidanceFor('auto.delivery.driftDetected', { detail: drift.detail }),
     };
   }
   return { ok: true, drift: null };
@@ -431,7 +420,7 @@ function verifyBaseline(baseline, opts = {}) {
 // sanitized invocation itself), env.
 function runPrivilegedGit(args, opts = {}) {
   const rootDir = opts.rootDir ? path.resolve(String(opts.rootDir)) : (core.currentRootRealpath() || process.cwd());
-  const gitRunner = typeof opts.gitRunner === 'function' ? opts.gitRunner : defaultGitRunner;
+  const gitRunner = typeof opts.gitRunner === 'function' ? opts.gitRunner : deliveryGitRunner;
   const privilegedRunner = typeof opts.privilegedRunner === 'function' ? opts.privilegedRunner : defaultPrivilegedRunner;
   const argv = privilegedGitArgs(args);
 

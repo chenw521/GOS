@@ -129,7 +129,7 @@ const spawnRunner = (spec) => {
   return { status: 0, stdout: '{"type":"message","text":"stage work done"}\n{"type":"result"}\n', stderr: '' };
 };
 store.create({ mode: 'on', rootDir, limits: { N: 3, K: 5, B: 30 } });
-loop.create({ rootDir, host: 'gos-fixture-host', env, maxIterations: 5, spawnRunner }).loop.run().then((r) => {
+loop.createLoop({ rootDir, host: 'gos-fixture-host', env, maxIterations: 5, spawnRunner }).loop.run().then((r) => {
   const st = store.load(rootDir);
   const stamps = st.ok ? Object.keys(st.store.stamps).length : -1;
   console.log(`RES ${r.status}|${r.reason}|${r.deliveryAdapter}`);
@@ -235,7 +235,7 @@ const env = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
 let spawnCalls = 0;
 const spawnRunner = () => { spawnCalls += 1; return { status: 1, stdout: '', stderr: 'fixture host broke' }; };
 store.create({ mode: 'on', rootDir, limits: { N: 2, K: 9, B: 9 } });
-loop.create({ rootDir, host: 'gos-fixture-host', env, maxIterations: 9, spawnRunner }).loop.run().then((r) => {
+loop.createLoop({ rootDir, host: 'gos-fixture-host', env, maxIterations: 9, spawnRunner }).loop.run().then((r) => {
   const st = store.load(rootDir);
   const last = st.ok ? [...st.store.breaker.records].reverse().find((x) => x.layer) : null;
   console.log(`RES ${r.status}|${r.reason}|${r.trip && r.trip.layer}|${r.trip && r.trip.cls}`);
@@ -345,10 +345,10 @@ if (hidden.known || hidden.selectable || hidden.failure.class !== 'unknown-host'
 (async () => {
 // the loop refuses to start on both shapes
 store.create({ mode: 'on', rootDir });
-const r1 = await loop.create({ rootDir, host: 'opencode', env, probeRunner: () => ({ ok: false, out: '', err: 'rc=1' }) }).loop.run();
+const r1 = await loop.createLoop({ rootDir, host: 'opencode', env, probeRunner: () => ({ ok: false, out: '', err: 'rc=1' }) }).loop.run();
 if (r1.reason !== 'host-not-selectable') problems.push('loop ran on probe-failed host');
 if (!(r1.hostFailure && String(r1.hostFailure.message).includes('opencode@'))) problems.push('loop refusal lacks matrix entry');
-const r2 = await loop.create({ rootDir, host: 'codex', env, probeRunner: passRunner }).loop.run();
+const r2 = await loop.createLoop({ rootDir, host: 'codex', env, probeRunner: passRunner }).loop.run();
 if (r2.reason !== 'host-not-selectable') problems.push('loop ran on display-only host');
 if (r1.iterations.length || r2.iterations.length) problems.push('refused loops spawned');
 console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
@@ -373,7 +373,7 @@ t104_exit "T11: auto status stays readable inside a spawned session" 0 "$T11_SRC
 T11_MOD="$(node -e "
 const path=require('path');
 const loop=require(path.join(process.env.GOS_ROOT,'bin/lib/ops/auto/loop.cjs'));
-loop.create({env:{GOS_AUTO_SPAWNED:'1'}}).loop.run().then((r)=>{
+loop.createLoop({env:{GOS_AUTO_SPAWNED:'1'}}).loop.run().then((r)=>{
   console.log(r.status + '|' + r.reason);
 });" 2>&1)"
 t104_eq "T11: loop module refuses under the marker before any store/lock touch" "refused|marker-active" "$T11_MOD"
@@ -466,7 +466,7 @@ const spawnRunner = (spec) => {
 };
 (async () => {
 store.create({ mode: 'on', rootDir, limits: { N: 2, K: 9, B: 9 } });
-const r = await loop.create({ rootDir, host: 'gos-fixture-host', env, maxIterations: 9, spawnRunner, stateReader }).loop.run();
+const r = await loop.createLoop({ rootDir, host: 'gos-fixture-host', env, maxIterations: 9, spawnRunner, stateReader }).loop.run();
 if (r.status !== 'paused' || r.reason !== 'external-mutation') problems.push('mutation not paused: ' + r.status + '/' + r.reason);
 if (!String(r.detail || '').includes('stage')) problems.push('mutation report lacks fields');
 if (!r.breaker || r.breaker.consecutive !== 0) problems.push('mutation counted into N');
@@ -483,7 +483,7 @@ if (!kept.ok || kept.store.counters.spawnCount !== 2 || kept.store.counters.trip
 fs.rmSync(store.storeRoot(root2), { recursive: true, force: true });
 const after = store.load(root2);
 if (after.status !== 'paused' || after.reason !== 'missing' || !after.guidance) problems.push('deleted store not paused-with-guidance');
-const loopAfter = await loop.create({ rootDir: root2, host: 'gos-fixture-host', env }).loop.run();
+const loopAfter = await loop.createLoop({ rootDir: root2, host: 'gos-fixture-host', env }).loop.run();
 if (loopAfter.status !== 'paused' || loopAfter.reason !== 'missing') problems.push('loop ran on deleted store');
 console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
 })().catch((e) => { console.error(e); process.exit(1); });
@@ -541,7 +541,7 @@ const mk = (limits) => {
   const root = path.join(process.cwd(), 's' + Math.random().toString(36).slice(2, 8));
   const created = store.create({ mode: 'on', rootDir: root, limits });
   if (!created.ok) throw new Error('store create failed');
-  return { root, made: breaker.create({ rootDir: root, limits }) };
+  return { root, made: breaker.createBreaker({ rootDir: root, limits }) };
 };
 // K only: advance/regress ping-pong trips only K
 const k = mk({ N: 9, K: 2, B: 9 });
@@ -597,14 +597,14 @@ function subrepo(name) {
   const ta = subrepo('ta');
   store.create({ mode: 'on', rootDir: ta, limits: { N: 1, K: 9, B: 9 } });
   const sleepRunner = (spec, ctx) => spawnSync('sleep', ['30'], { timeout: ctx.wallMs });
-  const r1 = await loop.create({ rootDir: ta, host: 'gos-fixture-host', env, spawnRunner: sleepRunner }).loop.run();
+  const r1 = await loop.createLoop({ rootDir: ta, host: 'gos-fixture-host', env, spawnRunner: sleepRunner }).loop.run();
   if (r1.reason !== 'breaker-tripped' || r1.trip.layer !== 'N' || r1.trip.cls !== 'timeout') problems.push('wall timeout not N/timeout: ' + JSON.stringify(r1.trip && r1.trip.layer));
   if (r1.iterations[0].signal !== 'wall-timeout' || !r1.iterations[0].counted) problems.push('timeout not counted');
   // rc0 + terminal event but no new stage-labeled commit since pre-spawn HEAD
   const tb = subrepo('tb');
   store.create({ mode: 'on', rootDir: tb, limits: { N: 1, K: 9, B: 9 } });
   const idleRunner = () => ({ status: 0, stdout: '{"type":"result"}\n', stderr: '' });
-  const r2 = await loop.create({ rootDir: tb, host: 'gos-fixture-host', env, spawnRunner: idleRunner }).loop.run();
+  const r2 = await loop.createLoop({ rootDir: tb, host: 'gos-fixture-host', env, spawnRunner: idleRunner }).loop.run();
   if (r2.reason !== 'breaker-tripped' || r2.trip.layer !== 'N') problems.push('rc0-no-advance did not trip N');
   if (r2.iterations[0].signal !== 'rc0-no-advance' || !r2.iterations[0].counted) problems.push('rc0-no-advance not counted as failure');
   console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');

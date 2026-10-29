@@ -29,7 +29,7 @@
     "pin": {
       "type": "region-sha256",
       "minLine": 46,
-      "regionSha256": "ed5ec68230485118158149a0d063420d0db257dacbc39c5b2909fec0eac908c1"
+      "regionSha256": "8e4c01df79b475fc317a86f16977d7b660b9028e6a45284d7a7ffa3dac920b3c"
     }
   },
   {
@@ -596,11 +596,11 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 496,
+        "line": 158,
         "sha256": "33cedd08736311884abbd57db05446abe6425e1900313b594730d493f6ede948"
       },
       {
-        "line": 555,
+        "line": 217,
         "sha256": "a081128060491ebeb32b696fa4092969fae66f14bb0018a067f463eb724932b7"
       }
     ]
@@ -1015,7 +1015,7 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 98,
+        "line": 99,
         "sha256": "d3b957aaea36c815e67149cb59e0eb066e442648095088b382fe99577511376b"
       }
     ]
@@ -1100,6 +1100,18 @@
         "sha256": "70d8651708941ddfd40596ba17331471e55eabb227571a98607473cc2e4a04f3"
       }
     ]
+  },
+  {
+    "path": "test/sections/T104-auto-core.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 26,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T105-auto-depth.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 11,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T12-wiring.test.sh",

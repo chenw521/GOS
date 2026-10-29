@@ -155,7 +155,7 @@ function liveRunner(command, args) {
   return { ok: true, out: String(r.stdout || ''), err: String(r.stderr || '') };
 }
 
-function fail(classTag, key, params, message) {
+function registryFail(classTag, key, params, message) {
   return { class: classTag, key, params: params || {}, message };
 }
 
@@ -165,10 +165,10 @@ function probeHost(host, ctx) {
   const c = ctx || {};
   const runner = c.runner || liveRunner;
   const am = activeMatrix(c.env);
-  if (am.error) return { ok: false, steps: [], failure: fail('registry-unreadable', 'auto.host.registryUnreadable', { error: am.error }, `host registry unreadable: ${am.error}`) };
+  if (am.error) return { ok: false, steps: [], failure: registryFail('registry-unreadable', 'auto.host.registryUnreadable', { error: am.error }, `host registry unreadable: ${am.error}`) };
   const rows = am.rows.filter((r) => r.host === host);
   if (!rows.length) {
-    return { ok: false, steps: [], failure: fail('unknown-host', 'auto.host.unknown', { host: String(host) }, `unknown host '${host}' — no matrix entry in registry.json`) };
+    return { ok: false, steps: [], failure: registryFail('unknown-host', 'auto.host.unknown', { host: String(host) }, `unknown host '${host}' — no matrix entry in registry.json`) };
   }
   const entryList = rows.map(entryLabel).join(', ');
 
@@ -201,7 +201,7 @@ function probeHost(host, ctx) {
   if (!vr.ok || !parsed) {
     const detail = vr.ok ? `no x.y.z version in '${binary} ${rows[0].version_command.join(' ')}' output` : `${binary} ${rows[0].version_command.join(' ')}: ${vr.err || 'no output'}`;
     steps.push({ id: 'version', ok: false, detail });
-    return { ok: false, steps, failure: fail('probe-version', 'auto.host.probeVersion',
+    return { ok: false, steps, failure: registryFail('probe-version', 'auto.host.probeVersion',
       { host: binary, detail, entries: entryList },
       `host '${host}' probe failed (version step): ${detail} (matrix entries: ${entryList})`) };
   }
@@ -214,14 +214,14 @@ function probeHost(host, ctx) {
   }
   if (matchErrors.length && !matched) {
     steps.push({ id: 'version', ok: false, detail: matchErrors.join('; ') });
-    return { ok: false, steps, failure: fail('invalid-row', 'auto.host.invalidRow',
+    return { ok: false, steps, failure: registryFail('invalid-row', 'auto.host.invalidRow',
       { entries: entryList, detail: matchErrors.join('; ') },
       `host '${host}' probe failed (version step): matrix row(s) invalid — ${matchErrors.join('; ')} (matrix entries: ${entryList})`) };
   }
   if (!matched) {
     const detail = `installed version ${versionText} satisfies no matrix entry`;
     steps.push({ id: 'version', ok: false, detail });
-    return { ok: false, steps, failure: fail('probe-no-match', 'auto.host.probeNoMatch',
+    return { ok: false, steps, failure: registryFail('probe-no-match', 'auto.host.probeNoMatch',
       { host: String(host), version: versionText, entries: entryList },
       `host '${host}' probe failed (version step): ${detail} (matrix entries: ${entryList}) — update the host or add a registry.json row`) };
   }
@@ -234,7 +234,7 @@ function probeHost(host, ctx) {
   if (!hr.ok) {
     const detail = `${binary} ${helpCmd.join(' ')}: ${hr.err || 'no output'}`;
     steps.push({ id: 'help-flags', ok: false, detail });
-    return { ok: false, steps, matchedEntry: matched, failure: fail('probe-help-flags', 'auto.host.probeHelpFlags',
+    return { ok: false, steps, matchedEntry: matched, failure: registryFail('probe-help-flags', 'auto.host.probeHelpFlags',
       { entry: entryLabel(matched), detail },
       `host '${host}' probe failed (help-flags step) against matrix entry ${entryLabel(matched)}: ${detail}`) };
   }
@@ -242,7 +242,7 @@ function probeHost(host, ctx) {
   if (missing.length) {
     const detail = `required flag(s) ${missing.join(', ')} absent from '${binary} ${helpCmd.join(' ')}' output`;
     steps.push({ id: 'help-flags', ok: false, detail });
-    return { ok: false, steps, matchedEntry: matched, failure: fail('probe-help-flags', 'auto.host.probeHelpFlags',
+    return { ok: false, steps, matchedEntry: matched, failure: registryFail('probe-help-flags', 'auto.host.probeHelpFlags',
       { entry: entryLabel(matched), flags: missing.join(', ') },
       `host '${host}' probe failed (help-flags step) against matrix entry ${entryLabel(matched)}: ${detail}`) };
   }
@@ -252,7 +252,7 @@ function probeHost(host, ctx) {
   const cr = configResolve(host, c);
   steps.push({ id: 'config-resolve', ok: cr.ok, detail: cr.detail });
   if (!cr.ok) {
-    return { ok: false, steps, matchedEntry: matched, failure: fail('probe-config', 'auto.host.probeConfig',
+    return { ok: false, steps, matchedEntry: matched, failure: registryFail('probe-config', 'auto.host.probeConfig',
       { entry: entryLabel(matched), detail: cr.detail },
       `host '${host}' probe failed (config-resolve step) against matrix entry ${entryLabel(matched)}: ${cr.detail}`) };
   }
@@ -265,11 +265,11 @@ function probeHost(host, ctx) {
 function evaluateProbe(host, probeResult) {
   const entry = probeResult && probeResult.matchedEntry;
   if (!probeResult || !probeResult.ok) {
-    return { selectable: false, entry: entry || null, failure: (probeResult && probeResult.failure) || fail('unknown-host', 'auto.host.unknown', { host: String(host) }, `unknown host '${host}' — no matrix entry in registry.json`) };
+    return { selectable: false, entry: entry || null, failure: (probeResult && probeResult.failure) || registryFail('unknown-host', 'auto.host.unknown', { host: String(host) }, `unknown host '${host}' — no matrix entry in registry.json`) };
   }
-  if (!entry) return { selectable: false, entry: null, failure: fail('no-entry', 'auto.host.unknown', { host: String(host) }, `host '${host}' probe passed but matched no matrix entry`) };
+  if (!entry) return { selectable: false, entry: null, failure: registryFail('no-entry', 'auto.host.unknown', { host: String(host) }, `host '${host}' probe passed but matched no matrix entry`) };
   if (!VALID_STATUSES.includes(entry.status) || (entry.selectable !== true) || entry.status !== 'verified') {
-    return { selectable: false, entry, failure: fail('status-not-selectable', 'auto.host.statusNotSelectable',
+    return { selectable: false, entry, failure: registryFail('status-not-selectable', 'auto.host.statusNotSelectable',
       { entry: entryLabel(entry), status: String(entry.status) },
       `host '${host}' matrix entry ${entryLabel(entry)} is display-only (status not verified) — not selectable for runs`) };
   }

@@ -76,7 +76,7 @@ function validateFixture(text) {
 }
 
 // Display-only refusal: never spawns, never throws.
-function spawn() {
+function spawnRefused() {
   return {
     ok: false,
     rc: null,
@@ -90,4 +90,4 @@ function spawn() {
   };
 }
 
-module.exports = { NAME, SPAWN_MODE, DISPLAY_ONLY, TERMINAL_TYPES, RECORDED_FIXTURES, validateFixture, spawn };
+module.exports = { NAME, SPAWN_MODE, DISPLAY_ONLY, TERMINAL_TYPES, RECORDED_FIXTURES, validateFixture, spawnRefused };

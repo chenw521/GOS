@@ -31,15 +31,7 @@ const loop = require('./loop.cjs');
 // and archive/push are always held human gates (never delegated).
 const DELEGATED_STAGES = Object.freeze(['THINK', 'PLAN']);
 
-function isPlainObject(v) {
-  return v != null && typeof v === 'object' && !Array.isArray(v);
-}
 
-function guidanceFor(key, params) {
-  const v = core.t(key, params);
-  if (typeof v === 'string') return { what: v };
-  return v;
-}
 
 function isDelegatedStage(stage) {
   return DELEGATED_STAGES.includes(String(stage || '').toUpperCase());
@@ -55,19 +47,19 @@ function spawnMarkerActive(env) {
 // their status field; anything else (absent, BASELINE_RESET records) is
 // neither.
 function isPending(approval) {
-  return isPlainObject(approval) && approval.status === 'PENDING';
+  return store.isPlainObject(approval) && approval.status === 'PENDING';
 }
 
 function isRatified(approval) {
   if (typeof approval === 'string' && approval.length > 0) return true;
-  return isPlainObject(approval) && approval.status === 'ratified';
+  return store.isPlainObject(approval) && approval.status === 'ratified';
 }
 
 // First unratified PENDING in the approvals map, or null. A lingering
 // PENDING means a delegated commit advanced a stage without its runner
 // ratification ever landing — every later stage advance must block on it.
 function advanceBlocker(approvals) {
-  if (!isPlainObject(approvals)) return null;
+  if (!store.isPlainObject(approvals)) return null;
   for (const stage of Object.keys(approvals)) {
     if (isPending(approvals[stage])) return { stage, approval: approvals[stage] };
   }
@@ -109,20 +101,20 @@ function ratify({ stage, spawnId, streamSha256 } = {}, ctx = {}) {
   if (!loaded.ok) {
     return { ok: false, status: loaded.status, reason: loaded.reason, path: loaded.path, guidance: loaded.guidance };
   }
-  const stamps = isPlainObject(loaded.store.stamps) ? loaded.store.stamps : {};
+  const stamps = store.isPlainObject(loaded.store.stamps) ? loaded.store.stamps : {};
   const stamp = stamps[spawnId];
   if (!stamp) {
-    return { ok: false, status: 'refused', reason: 'stamp-missing', spawnId, guidance: guidanceFor('auto.ratify.stampMissing', { spawnId }) };
+    return { ok: false, status: 'refused', reason: 'stamp-missing', spawnId, guidance: store.guidanceFor('auto.ratify.stampMissing', { spawnId }) };
   }
   if (String(stamp.stage || '').toUpperCase() !== stg) {
     return {
       ok: false, status: 'refused', reason: 'stage-mismatch', spawnId,
       detail: `stamp stage ${stamp.stage} does not match ${stg}`,
-      guidance: guidanceFor('auto.ratify.stageMismatch', { spawnId, stage: stg }),
+      guidance: store.guidanceFor('auto.ratify.stageMismatch', { spawnId, stage: stg }),
     };
   }
   if (stamp.streamSha256 !== streamSha256) {
-    return { ok: false, status: 'refused', reason: 'hash-mismatch', spawnId, guidance: guidanceFor('auto.ratify.hashMismatch', { spawnId }) };
+    return { ok: false, status: 'refused', reason: 'hash-mismatch', spawnId, guidance: store.guidanceFor('auto.ratify.hashMismatch', { spawnId }) };
   }
   const approval = {
     status: 'ratified',
@@ -136,9 +128,9 @@ function ratify({ stage, spawnId, streamSha256 } = {}, ctx = {}) {
   try {
     stateObj = JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch (e) {
-    return { ok: false, status: 'refused', reason: fs.existsSync(file) ? 'state-corrupt' : 'no-task', path: file, detail: e.message, guidance: guidanceFor('auto.ratify.noTask') };
+    return { ok: false, status: 'refused', reason: fs.existsSync(file) ? 'state-corrupt' : 'no-task', path: file, detail: e.message, guidance: store.guidanceFor('auto.ratify.noTask') };
   }
-  const approvals = isPlainObject(stateObj.approvals) ? stateObj.approvals : (stateObj.approvals = {});
+  const approvals = store.isPlainObject(stateObj.approvals) ? stateObj.approvals : (stateObj.approvals = {});
   const prev = approvals[stg];
   if (prev === undefined || prev === null || isPending(prev)) {
     approvals[stg] = approval;
@@ -161,5 +153,5 @@ module.exports = {
   advanceBlocker,
   recordPending,
   ratify,
-  guidanceFor,
+  guidanceFor: store.guidanceFor,
 };

@@ -53,15 +53,7 @@ const SIGNALS = {
 
 const OID_RE = /^[0-9a-f]{7,40}$/i;
 
-function isPlainObject(v) {
-  return v != null && typeof v === 'object' && !Array.isArray(v);
-}
 
-function guidanceFor(key, params) {
-  const v = core.t(key, params);
-  if (typeof v === 'string') return { what: v };
-  return v;
-}
 
 // ---- limits ----
 
@@ -70,9 +62,9 @@ function guidanceFor(key, params) {
 function validateLimits(limits) {
   const bad = (detail) => ({
     ok: false, status: 'error', reason: 'invalid-limits', detail,
-    guidance: guidanceFor('auto.breaker.invalidLimits', { detail }),
+    guidance: store.guidanceFor('auto.breaker.invalidLimits', { detail }),
   });
-  if (!isPlainObject(limits)) return bad('limits object with N/K/B required');
+  if (!store.isPlainObject(limits)) return bad('limits object with N/K/B required');
   for (const k of ['N', 'K', 'B']) {
     if (!Number.isInteger(limits[k]) || limits[k] < 1) {
       return bad(`${k} must be an integer >= 1 (got ${JSON.stringify(limits[k])})`);
@@ -112,7 +104,7 @@ function timeoutPolicy(env) {
       return {
         ok: false, status: 'error', reason: 'invalid-timeout', which: name,
         value: String(raw),
-        guidance: guidanceFor('auto.breaker.invalidTimeout', { name, value: String(raw) }),
+        guidance: store.guidanceFor('auto.breaker.invalidTimeout', { name, value: String(raw) }),
       };
     }
     return { ok: true, value: Number(String(raw).trim()) };
@@ -140,7 +132,7 @@ function stageAdvanceRe(stage) {
   return /^chore\(task\): advance [a-z]+(?![a-z])/;
 }
 
-function defaultGitRunner(args, cwd) {
+function breakerGitRunner(args, cwd) {
   return spawnSync('git', args, { encoding: 'utf8', cwd, stdio: ['ignore', 'pipe', 'pipe'] });
 }
 
@@ -149,7 +141,7 @@ function gitFail(what, r) {
   return {
     ok: false, status: 'error', reason: 'git-failed',
     detail: `git ${what} rc=${r && r.status}${err ? ': ' + err : ''}`,
-    guidance: guidanceFor('auto.breaker.advanceCheckFailed', {}),
+    guidance: store.guidanceFor('auto.breaker.advanceCheckFailed', {}),
   };
 }
 
@@ -160,7 +152,7 @@ function gitFail(what, r) {
 // repository. Any git breakage fails closed as an error result — callers
 // pause with a report rather than scoring it as a spawn failure.
 function detectAdvance(opts) {
-  if (!isPlainObject(opts)) {
+  if (!store.isPlainObject(opts)) {
     return { ok: false, status: 'error', reason: 'invalid-input', detail: 'options object required' };
   }
   const pre = opts.preSpawnHead;
@@ -168,10 +160,10 @@ function detectAdvance(opts) {
     return {
       ok: false, status: 'error', reason: 'invalid-head',
       detail: 'preSpawnHead must be the recorded pre-spawn commit oid',
-      guidance: guidanceFor('auto.breaker.advanceCheckFailed', {}),
+      guidance: store.guidanceFor('auto.breaker.advanceCheckFailed', {}),
     };
   }
-  const runner = typeof opts.gitRunner === 'function' ? opts.gitRunner : defaultGitRunner;
+  const runner = typeof opts.gitRunner === 'function' ? opts.gitRunner : breakerGitRunner;
   let head = opts.head;
   if (head == null) {
     const r = runner(['rev-parse', 'HEAD'], opts.cwd);
@@ -183,7 +175,7 @@ function detectAdvance(opts) {
     return {
       ok: false, status: 'error', reason: 'invalid-head',
       detail: 'head must resolve to a commit oid',
-      guidance: guidanceFor('auto.breaker.advanceCheckFailed', {}),
+      guidance: store.guidanceFor('auto.breaker.advanceCheckFailed', {}),
     };
   }
   const range = `${pre}..${head}`;
@@ -217,7 +209,7 @@ function detectAdvance(opts) {
 // callers evaluate one layer at a time. Limits always run through floors
 // validation first.
 function evaluate(input) {
-  if (!isPlainObject(input)) {
+  if (!store.isPlainObject(input)) {
     return { ok: false, status: 'error', reason: 'invalid-input', detail: 'input object required' };
   }
   const v = validateLimits(input.limits);
@@ -263,7 +255,7 @@ function evaluate(input) {
 
 // ---- breaker instance ----
 
-function create(opts = {}) {
+function createBreaker(opts = {}) {
   let limits;
   if (opts.limits != null) {
     const v = validateLimits(opts.limits);
@@ -296,7 +288,7 @@ function create(opts = {}) {
     tripped = {
       ok: true, tripped: true, paused: true, layer, stage: tripStage, cls, reason,
       ts: rec.ok ? rec.record.ts : new Date().toISOString(),
-      guidance: guidanceFor('auto.breaker.tripped', { layer, reason }),
+      guidance: store.guidanceFor('auto.breaker.tripped', { layer, reason }),
     };
     if (rec.ok) {
       tripped.record = rec.record;
@@ -417,5 +409,5 @@ module.exports = {
   detectAdvance,
   stageAdvanceRe,
   evaluate,
-  create,
+  createBreaker,
 };

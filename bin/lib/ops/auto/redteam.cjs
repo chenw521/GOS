@@ -49,18 +49,10 @@ const PROMPT_TEMPLATE = [
 // ---- locale surfaces ----
 // Failure text resolves through locale keys; the catalogs degrade to the
 // key string when an entry has not landed yet, so guidance is never null.
-function guidanceFor(key, params) {
-  const v = core.t(key, params);
-  if (typeof v === 'string') return { what: v };
-  return v;
-}
 
-function sha256Of(text) {
-  return crypto.createHash('sha256').update(text, 'utf8').digest('hex');
-}
 
 function promptSourceHash() {
-  return sha256Of(PROMPT_TEMPLATE);
+  return store.sha256Of(PROMPT_TEMPLATE);
 }
 
 // Interpolate the runner template for one round. Only these four fields
@@ -87,7 +79,7 @@ function ensurePromptRecorded(rootDir) {
       return {
         ok: false, status: 'error', reason: 'prompt-template-drift',
         detail: `stored ${cur.sha256.slice(0, 12)} != template ${want.slice(0, 12)}`,
-        guidance: guidanceFor('auto.redteam.promptDrift'),
+        guidance: store.guidanceFor('auto.redteam.promptDrift'),
       };
     }
     return { ok: true, path: loaded.path, sha256: cur.sha256, snapshot: cur };
@@ -146,7 +138,7 @@ function evaluateClearance(rounds) {
 
 // Real spawn: runs the composed argv to completion under the wall timeout.
 // Returns the spawnSync shape runRound scores.
-function defaultSpawnRunner(spec, ctx) {
+function redteamSpawnRunner(spec, ctx) {
   if (!Array.isArray(spec.argv) || spec.argv.length === 0) {
     return { status: null, stdout: '', stderr: '', error: new Error('no spawn argv composed (lexical tier without a host command)') };
   }
@@ -201,7 +193,7 @@ async function runRound({ stage, spawnId }, ctx = {}) {
   if (!composed.ok) {
     return {
       ok: false, status: 'error', reason: 'compose-failed', code: composed.code,
-      guidance: guidanceFor('auto.redteam.composeFailed', { detail: String(composed.code) }),
+      guidance: store.guidanceFor('auto.redteam.composeFailed', { detail: String(composed.code) }),
     };
   }
 
@@ -221,7 +213,7 @@ async function runRound({ stage, spawnId }, ctx = {}) {
     roWorkspace: true,
   };
 
-  const spawnRunner = ctx.spawnRunner || defaultSpawnRunner;
+  const spawnRunner = ctx.spawnRunner || redteamSpawnRunner;
   const wallMs = Number.isInteger(ctx.wallMs) && ctx.wallMs > 0 ? ctx.wallMs : DEFAULT_WALL_MS;
   let result;
   try {
@@ -233,14 +225,14 @@ async function runRound({ stage, spawnId }, ctx = {}) {
 
   // Stamp before any consumer reads the pairing.
   const streamText = String(result.stdout || '');
-  const streamSha256 = sha256Of(streamText);
+  const streamSha256 = store.sha256Of(streamText);
   const spawnedAtIso = new Date(now()).toISOString();
   const stamp = store.stampStream(spawnId, REDTEAM_STAGE, streamSha256, spawnedAtIso, rootDir);
   if (!stamp.ok) {
     return {
       ok: false, status: 'paused', paused: true, reason: 'stamp-failed',
       detail: stamp.reason, path: stamp.path,
-      guidance: guidanceFor('auto.redteam.stampFailed', { detail: String(stamp.reason) }),
+      guidance: store.guidanceFor('auto.redteam.stampFailed', { detail: String(stamp.reason) }),
     };
   }
 
@@ -261,8 +253,8 @@ async function runRound({ stage, spawnId }, ctx = {}) {
   };
   if (round.classified === 'failure') {
     round.guidance = runnerFailed
-      ? guidanceFor('auto.redteam.roundFailed')
-      : guidanceFor('auto.redteam.findingsUnparsable');
+      ? store.guidanceFor('auto.redteam.roundFailed')
+      : store.guidanceFor('auto.redteam.findingsUnparsable');
   }
   return { ok: true, round, stamp: stamp.stamp, promptSha256: recorded.sha256 };
 }

@@ -116,7 +116,7 @@ function buildSpawnSpec(opts) {
 // missing terminal events are failures, never throws. opts.run injectable
 // for tests (signature run(spec, spawnOpts) → { status, stdout, stderr,
 // error }).
-function spawn(opts) {
+function spawnLive(opts) {
   const o = opts || {};
   const spec = buildSpawnSpec(o);
   const spawnOpts = {
@@ -157,5 +157,5 @@ module.exports = {
   buildSpawnSpec,
   createEventParser,
   parseEventStream,
-  spawn,
+  spawnLive,
 };

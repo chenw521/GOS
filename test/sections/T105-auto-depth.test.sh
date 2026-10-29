@@ -112,7 +112,7 @@ const spawnRunner = (spec) => {
 };
 (async () => {
   store.create({ mode: 'on', rootDir });
-  const r = await loop.create({ rootDir, host: 'gos-fixture-host', env, maxIterations: 5, spawnRunner }).loop.run();
+  const r = await loop.createLoop({ rootDir, host: 'gos-fixture-host', env, maxIterations: 5, spawnRunner }).loop.run();
   if (r.status !== 'ship' || r.deliveryAdapter !== false) problems.push('loop did not end at SHIP delivery-absent: ' + r.status);
   // probe classification: absent covers no-origin and gh-auth shapes
   if (delivery.classifyProbe({ hasOrigin: false }).state !== 'absent') problems.push('no-origin not absent');
@@ -290,7 +290,7 @@ if (disp.status !== 'not-found') problems.push('forged ledger satisfied a gate')
 const mirrors = store.mirrors(rootDir);
 if (!mirrors.ok || mirrors.spawnCount !== 4 || mirrors.tripCount !== 1) problems.push('forged mirror moved the counters');
 // budget authority: the store count trips B despite the forged mirror
-const made = breaker.create({ rootDir, limits: { N: 9, K: 9, B: 4 } });
+const made = breaker.createBreaker({ rootDir, limits: { N: 9, K: 9, B: 4 } });
 if (!made.ok) problems.push('breaker create failed');
 const budget = made.breaker.checkBudget();
 if (!budget.tripped || budget.layer !== 'B') problems.push('forged mirror un-tripped the budget');

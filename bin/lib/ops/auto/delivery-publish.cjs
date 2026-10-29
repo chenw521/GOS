@@ -52,19 +52,8 @@ const PR_TEMPLATE = Object.freeze({
   mergeNote: 'Merge is squash-only; the squash subject passed the repository subject lint before the merge was attempted.',
 });
 
-function isPlainObject(v) {
-  return v != null && typeof v === 'object' && !Array.isArray(v);
-}
 
-function guidanceFor(key, params) {
-  const v = core.t(key, params);
-  if (typeof v === 'string') return { what: v };
-  return v;
-}
 
-function sha256Of(text) {
-  return crypto.createHash('sha256').update(text, 'utf8').digest('hex');
-}
 
 function resolveRoot(rootDir) {
   return rootDir ? path.resolve(String(rootDir)) : (core.currentRootRealpath() || process.cwd());
@@ -72,7 +61,7 @@ function resolveRoot(rootDir) {
 
 // ---------- defaults ----------
 
-function defaultGhRunner(args) {
+function publishGhRunner(args) {
   return spawnSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 }
 
@@ -93,7 +82,7 @@ function defaultSleep(ms) {
 // gh-based CI status for one branch: the newest run is pending until its
 // status is completed, then green only on conclusion success.
 function defaultCiStatus({ ghRunner, slug, branch }) {
-  const run = typeof ghRunner === 'function' ? ghRunner : defaultGhRunner;
+  const run = typeof ghRunner === 'function' ? ghRunner : publishGhRunner;
   if (!slug || !branch) return null;
   return function ciStatus() {
     const res = run(['run', 'list', '--branch', branch, '--limit', '1', '--json', 'status,conclusion,databaseId']);
@@ -105,7 +94,7 @@ function defaultCiStatus({ ghRunner, slug, branch }) {
       const parsed = JSON.parse(String(res.stdout || ''));
       newest = Array.isArray(parsed) ? parsed[0] : null;
     } catch { newest = null; }
-    if (!isPlainObject(newest)) return { state: 'error', detail: 'gh run list output held no runs' };
+    if (!store.isPlainObject(newest)) return { state: 'error', detail: 'gh run list output held no runs' };
     const runId = newest.databaseId != null ? String(newest.databaseId) : null;
     if (newest.status !== 'completed') return { state: 'pending', runId };
     return { state: newest.conclusion === 'success' ? 'green' : 'red', runId, conclusion: newest.conclusion || null };
@@ -128,8 +117,8 @@ function renderQuotedBlock(label, text) {
 // (legacy bare-string approvals are human, not delegated), any other arrays
 // count entries. Anything absent stays absent.
 function shipLedgerCounts(ledger) {
-  if (!isPlainObject(ledger)) return null;
-  const delegated = (v) => (Array.isArray(v) ? v.filter((e) => isPlainObject(e) && e.mode === 'auto').length : v);
+  if (!store.isPlainObject(ledger)) return null;
+  const delegated = (v) => (Array.isArray(v) ? v.filter((e) => store.isPlainObject(e) && e.mode === 'auto').length : v);
   const plain = (v) => (Array.isArray(v) ? v.length : v);
   const out = {};
   if (ledger.delegatedApprovals != null) out.delegatedApprovals = delegated(ledger.delegatedApprovals);
@@ -156,8 +145,8 @@ function renderPrBody(ctx = {}) {
     if (counts.verifyTruths != null) lines.push(`- VERIFY truths: ${counts.verifyTruths}`);
     if (counts.redteamFindings != null) lines.push(`- red-team findings: ${counts.redteamFindings}`);
   }
-  const workerTitle = isPlainObject(ctx.worker) && typeof ctx.worker.title === 'string' ? ctx.worker.title : null;
-  const workerSummary = isPlainObject(ctx.worker) && typeof ctx.worker.summary === 'string' ? ctx.worker.summary : null;
+  const workerTitle = store.isPlainObject(ctx.worker) && typeof ctx.worker.title === 'string' ? ctx.worker.title : null;
+  const workerSummary = store.isPlainObject(ctx.worker) && typeof ctx.worker.summary === 'string' ? ctx.worker.summary : null;
   if (workerTitle != null) {
     lines.push('');
     lines.push(renderQuotedBlock(PR_TEMPLATE.sections.workerTitle, workerTitle));
@@ -204,17 +193,17 @@ function dispositionFor(runId, rootDir) {
 // `gos auto disposition <run> --reason` surface: record into the store,
 // mirror only the record hash into the repo-local ledger.
 function writeDisposition(input, rootDir) {
-  if (!isPlainObject(input)) return { ok: false, status: 'error', reason: 'invalid-disposition' };
+  if (!store.isPlainObject(input)) return { ok: false, status: 'error', reason: 'invalid-disposition' };
   const ts = new Date().toISOString();
   const r = store.recordDisposition({ runId: input.runId, ts, reason: input.reason, by: input.by }, rootDir);
   if (!r.ok) return r;
-  const sha256 = sha256Of(JSON.stringify(r.disposition));
+  const sha256 = store.sha256Of(JSON.stringify(r.disposition));
   const mirror = appendLedgerMirror(rootDir, { kind: 'disposition', runId: r.disposition.runId, sha256, ts });
   return {
     ok: true,
     disposition: r.disposition,
     ledgerMirror: { sha256, path: mirror.ok ? mirror.path : undefined, write: mirror },
-    guidance: guidanceFor('auto.publish.dispositionRecorded', { runId: r.disposition.runId }),
+    guidance: store.guidanceFor('auto.publish.dispositionRecorded', { runId: r.disposition.runId }),
   };
 }
 
@@ -233,7 +222,7 @@ async function watchCi(opts = {}) {
   if (typeof ciStatus !== 'function') {
     return {
       ok: false, status: 'error', reason: 'ci-status-required',
-      guidance: guidanceFor('auto.publish.watchFailed', { detail: 'no CI status source (inject ciStatus, or ghRunner with slug and branch)' }),
+      guidance: store.guidanceFor('auto.publish.watchFailed', { detail: 'no CI status source (inject ciStatus, or ghRunner with slug and branch)' }),
     };
   }
   const startedAt = now();
@@ -244,18 +233,18 @@ async function watchCi(opts = {}) {
     let st;
     try { st = await ciStatus(); }
     catch (e) { st = { state: 'error', detail: e && e.message }; }
-    if (isPlainObject(st) && typeof st.runId === 'string' && st.runId) lastRunId = st.runId;
-    if (isPlainObject(st) && st.state === 'green') {
+    if (store.isPlainObject(st) && typeof st.runId === 'string' && st.runId) lastRunId = st.runId;
+    if (store.isPlainObject(st) && st.state === 'green') {
       return { ok: true, state: 'green', runId: st.runId || lastRunId, polls: polls + 1 };
     }
-    if (isPlainObject(st) && st.state === 'red') {
+    if (store.isPlainObject(st) && st.state === 'red') {
       return { ok: true, state: 'red', runId: st.runId || lastRunId, polls: polls + 1 };
     }
-    if (isPlainObject(st) && st.state === 'error') {
+    if (store.isPlainObject(st) && st.state === 'error') {
       return {
         ok: false, status: 'error', reason: 'ci-status-failed', detail: st.detail,
         runId: lastRunId, polls: polls + 1,
-        guidance: guidanceFor('auto.publish.watchFailed', { detail: st.detail || 'CI status source failed' }),
+        guidance: store.guidanceFor('auto.publish.watchFailed', { detail: st.detail || 'CI status source failed' }),
       };
     }
     polls += 1;
@@ -289,12 +278,12 @@ async function publish(opts = {}) {
     ? opts.branch
     : (taskId ? loop.workBranchName(taskId) : null);
   if (!branch) {
-    return { ok: false, status: 'error', reason: 'branch-required', guidance: guidanceFor('auto.publish.branchRequired') };
+    return { ok: false, status: 'error', reason: 'branch-required', guidance: store.guidanceFor('auto.publish.branchRequired') };
   }
 
   const subject = typeof opts.subject === 'string' ? opts.subject.trim() : '';
   if (!subject) {
-    return { ok: false, status: 'error', reason: 'subject-required', guidance: guidanceFor('auto.publish.subjectRequired') };
+    return { ok: false, status: 'error', reason: 'subject-required', guidance: store.guidanceFor('auto.publish.subjectRequired') };
   }
 
   let baseline = opts.baseline;
@@ -307,7 +296,7 @@ async function publish(opts = {}) {
   if (!slug) {
     return {
       ok: false, status: 'error', reason: 'not-github-remote', remoteUrl: baseline.remoteUrl,
-      guidance: guidanceFor('auto.publish.prCreateFailed', { detail: 'the pinned origin is not a GitHub remote' }),
+      guidance: store.guidanceFor('auto.publish.prCreateFailed', { detail: 'the pinned origin is not a GitHub remote' }),
     };
   }
   const base = typeof opts.base === 'string' && opts.base ? opts.base : DEFAULT_BASE_BRANCH;
@@ -324,12 +313,12 @@ async function publish(opts = {}) {
       reason: pushRes.reason || 'push-failed', branch, refspec,
       drift: pushRes.drift, breaker: pushRes.breaker, argv: pushRes.argv,
       detail: pushRes.detail, steps,
-      guidance: pushRes.guidance || guidanceFor('auto.publish.branchPushFailed', { branch }),
+      guidance: pushRes.guidance || store.guidanceFor('auto.publish.branchPushFailed', { branch }),
     };
   }
 
   // 2. PR create — runner-held template, worker strings quoted.
-  const ghRunner = typeof opts.ghRunner === 'function' ? opts.ghRunner : defaultGhRunner;
+  const ghRunner = typeof opts.ghRunner === 'function' ? opts.ghRunner : publishGhRunner;
   const body = renderPrBody({ taskId, branch, base, worker: opts.worker, shipLedger: opts.shipLedger });
   const prRes = ghRunner(['pr', 'create', '--title', subject, '--body', body, '--base', base, '--head', branch]);
   const prUrl = prRes && prRes.status === 0 ? String(prRes.stdout || '').trim() : null;
@@ -345,7 +334,7 @@ async function publish(opts = {}) {
       reason: prRes && prRes.status === 0 ? 'pr-number-unparsed' : 'pr-create-failed',
       branch, prUrl, steps,
       detail: String((prRes && prRes.stderr) || '').trim().slice(0, 240),
-      guidance: guidanceFor('auto.publish.prCreateFailed', { detail: prUrl ? 'PR created but its number is not parsable from the URL' : 'gh pr create failed' }),
+      guidance: store.guidanceFor('auto.publish.prCreateFailed', { detail: prUrl ? 'PR created but its number is not parsable from the URL' : 'gh pr create failed' }),
     };
   }
 
@@ -358,7 +347,7 @@ async function publish(opts = {}) {
       ok: false, status: 'held', reason: 'subject-lint', merged: false,
       subject, prNumber, prUrl, steps,
       detail: String((lintRes && lintRes.stderr) || '').trim().slice(0, 240),
-      guidance: guidanceFor('auto.publish.subjectLintHeld', { subject }),
+      guidance: store.guidanceFor('auto.publish.subjectLintHeld', { subject }),
     };
   }
 
@@ -372,7 +361,7 @@ async function publish(opts = {}) {
     return {
       ok: false, status: 'error', reason: 'merge-failed', prNumber, prUrl, steps,
       detail: String((mergeRes && mergeRes.stderr) || '').trim().slice(0, 240),
-      guidance: guidanceFor('auto.publish.mergeFailed', { prNumber }),
+      guidance: store.guidanceFor('auto.publish.mergeFailed', { prNumber }),
     };
   }
 
@@ -383,7 +372,7 @@ async function publish(opts = {}) {
     if (ciStatus == null) {
       return {
         ok: false, status: 'error', reason: 'ci-status-required', prNumber, prUrl, steps,
-        guidance: guidanceFor('auto.publish.watchFailed', { detail: 'no CI status source for the base branch' }),
+        guidance: store.guidanceFor('auto.publish.watchFailed', { detail: 'no CI status source for the base branch' }),
       };
     }
   }
@@ -395,7 +384,7 @@ async function publish(opts = {}) {
       ok: false, status: DISPOSITION_UNKNOWN, reason: 'ci-watch-timeout',
       signal: watch.signal, runId: watch.runId || null,
       elapsedMs: watch.elapsedMs, polls: watch.polls, prNumber, prUrl, steps,
-      guidance: guidanceFor('auto.publish.ciUnknown', {
+      guidance: store.guidanceFor('auto.publish.ciUnknown', {
         minutes: Math.round((Number.isFinite(opts.timeoutMs) && opts.timeoutMs > 0 ? opts.timeoutMs : DEFAULT_WATCH_TIMEOUT_MS) / 60000),
       }),
     };
@@ -417,7 +406,7 @@ async function publish(opts = {}) {
       return {
         ok: false, status: 'held', reason: 'red-run', runId,
         prNumber, prUrl, steps, requiresDisposition: true,
-        guidance: guidanceFor('auto.publish.redRun', { runId }),
+        guidance: store.guidanceFor('auto.publish.redRun', { runId }),
       };
     }
     const closure = { runId, status: 'red-dispositioned', ts: new Date(now()).toISOString() };
@@ -436,7 +425,7 @@ async function publish(opts = {}) {
 function purge(rootDir) {
   const r = store.purgeStore(rootDir);
   if (!r.ok) return r;
-  return { ...r, guidance: guidanceFor('auto.publish.purged', { path: r.path || '' }) };
+  return { ...r, guidance: store.guidanceFor('auto.publish.purged', { path: r.path || '' }) };
 }
 
 module.exports = {

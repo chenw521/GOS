@@ -71,7 +71,7 @@
     {
       "from": "bin/lib/nav",
       "to": "bin/lib/knowledge",
-      "edges": 2
+      "edges": 3
     },
     {
       "from": "bin/lib/nav",
@@ -81,7 +81,7 @@
     {
       "from": "bin/lib/ops",
       "to": "bin/lib/core",
-      "edges": 12
+      "edges": 22
     },
     {
       "from": "bin/lib/ops",
@@ -141,7 +141,7 @@
     {
       "from": "bin/lib/task",
       "to": "bin/lib/ops",
-      "edges": 6
+      "edges": 8
     },
     {
       "from": "bin/lib/task",
@@ -150,5 +150,5 @@
     }
   ],
   "free_to": [],
-  "generated_at": "2026-10-15T11:30:35.091Z"
+  "generated_at": "2026-10-29T08:25:05.953Z"
 }

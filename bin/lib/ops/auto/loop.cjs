@@ -49,15 +49,7 @@ const DEFAULT_HEARTBEAT_INTERVAL_MS = 60 * 1000;
 
 const SPAWN_MAX_BUFFER = 64 * 1024 * 1024;
 
-function isPlainObject(v) {
-  return v != null && typeof v === 'object' && !Array.isArray(v);
-}
 
-function guidanceFor(key, params) {
-  const v = core.t(key, params);
-  if (typeof v === 'string') return { what: v };
-  return v;
-}
 
 // ---------- pure helpers ----------
 
@@ -76,7 +68,7 @@ function workBranchName(taskId) {
 // Scalar identity of a GOS task: who the task is and where it stands. Any
 // drift between iterations is a mutation the loop did not cause.
 function identityOf(state, head) {
-  if (!isPlainObject(state)) return null;
+  if (!store.isPlainObject(state)) return null;
   return {
     taskId: core.currentTaskId(state) || null,
     stage: state.current_stage || null,
@@ -115,7 +107,7 @@ function signalForAdapterFailure(failureClass) {
 
 // ---------- defaults ----------
 
-function defaultGitRunner(args, cwd) {
+function loopGitRunner(args, cwd) {
   return spawnSync('git', args, { encoding: 'utf8', cwd, stdio: ['ignore', 'pipe', 'pipe'] });
 }
 
@@ -132,7 +124,7 @@ function defaultStateReader(rootDir) {
 
 // Real spawn: runs the composed argv to completion under the wall timeout.
 // Returns the spawnSync shape the loop scores.
-function defaultSpawnRunner(spec, ctx) {
+function loopSpawnRunner(spec, ctx) {
   try {
     return spawnSync(spec.argv[0], spec.argv.slice(1), {
       cwd: spec.cwd,
@@ -183,13 +175,13 @@ function defaultCliEntryArgs() {
 //   probeRunner        (command, args) -> {ok, out, err} host probe stub
 //   heartbeatIntervalMs run-lock heartbeat cadence during spawn waits
 //   now                () -> epoch ms clock
-function create(opts = {}) {
+function createLoop(opts = {}) {
   const profile = typeof opts.profile === 'string' && opts.profile ? opts.profile : launcher.DEFAULT_PROFILE;
   if (!launcher.KNOWN_PROFILES.includes(profile)) {
     return {
       ok: false, status: 'error', reason: 'unknown-profile', profile,
       known: launcher.KNOWN_PROFILES.slice(),
-      guidance: guidanceFor('auto.launcher.unknown-profile', { name: profile, known: launcher.KNOWN_PROFILES.join(', ') }),
+      guidance: store.guidanceFor('auto.launcher.unknown-profile', { name: profile, known: launcher.KNOWN_PROFILES.join(', ') }),
     };
   }
   if (opts.limits != null) {
@@ -212,11 +204,11 @@ async function runLoop(opts) {
   const env = opts.env || process.env;
   const now = typeof opts.now === 'function' ? opts.now : Date.now;
   const rootDir = opts.rootDir ? path.resolve(String(opts.rootDir)) : (core.currentRootRealpath() || process.cwd());
-  const gitRunner = typeof opts.gitRunner === 'function' ? opts.gitRunner : defaultGitRunner;
+  const gitRunner = typeof opts.gitRunner === 'function' ? opts.gitRunner : loopGitRunner;
 
   // Spawned sessions never run the auto family (the marker is the boundary).
   if (env[SPAWN_MARKER_ENV]) {
-    return report({ ok: false, status: 'refused', reason: 'marker-active', guidance: guidanceFor('auto.loop.markerActive') });
+    return report({ ok: false, status: 'refused', reason: 'marker-active', guidance: store.guidanceFor('auto.loop.markerActive') });
   }
 
   // Detach mode: spawn the CLI run command as a detached child and return.
@@ -237,7 +229,7 @@ async function runLoop(opts) {
     return report({ ok: false, status: loaded.status, reason: loaded.reason, path: loaded.path, guidance: loaded.guidance });
   }
   if (loaded.store.mode !== 'on') {
-    return report({ ok: false, status: 'refused', reason: 'mode-off', guidance: guidanceFor('auto.loop.modeOff') });
+    return report({ ok: false, status: 'refused', reason: 'mode-off', guidance: store.guidanceFor('auto.loop.modeOff') });
   }
 
   // Exclusive run lock: a second instance is refused and the holder named.
@@ -247,7 +239,7 @@ async function runLoop(opts) {
   }
 
   const stateReader = typeof opts.stateReader === 'function' ? opts.stateReader : () => defaultStateReader(rootDir);
-  const spawnRunner = opts.spawnRunner || defaultSpawnRunner;
+  const spawnRunner = opts.spawnRunner || loopSpawnRunner;
   const heartbeatIntervalMs = Number.isInteger(opts.heartbeatIntervalMs) ? opts.heartbeatIntervalMs : DEFAULT_HEARTBEAT_INTERVAL_MS;
 
   try {
@@ -273,10 +265,10 @@ function currentBranch(gitRunner, rootDir) {
 function ensureWorkBranch(gitRunner, rootDir, taskId) {
   const branch = currentBranch(gitRunner, rootDir);
   if (branch == null) {
-    return { ok: false, reason: 'detached-head', guidance: guidanceFor('auto.loop.detachedHead') };
+    return { ok: false, reason: 'detached-head', guidance: store.guidanceFor('auto.loop.detachedHead') };
   }
   if (branch === 'HEAD') {
-    return { ok: false, reason: 'detached-head', branch, guidance: guidanceFor('auto.loop.detachedHead') };
+    return { ok: false, reason: 'detached-head', branch, guidance: store.guidanceFor('auto.loop.detachedHead') };
   }
   if (!TRUNK_BRANCHES.includes(branch)) return { ok: true, branch, switched: false };
   const work = workBranchName(taskId);
@@ -288,7 +280,7 @@ function ensureWorkBranch(gitRunner, rootDir, taskId) {
     return {
       ok: false, reason: 'work-branch-failed', branch, work,
       detail: String((step && step.stderr) || '').trim() || 'git checkout failed',
-      guidance: guidanceFor('auto.loop.workBranchFailed', { branch, work }),
+      guidance: store.guidanceFor('auto.loop.workBranchFailed', { branch, work }),
     };
   }
   return { ok: true, branch: work, switched: true };
@@ -302,8 +294,8 @@ async function drive(ctx) {
   const iterations = [];
   const readTaskState = () => {
     const v = stateReader();
-    if (v && v.corrupt) return { err: report({ ok: false, status: 'paused', paused: true, reason: 'state-corrupt', detail: v.error, guidance: guidanceFor('auto.loop.stateCorrupt') }) };
-    if (!isPlainObject(v)) return { none: true };
+    if (v && v.corrupt) return { err: report({ ok: false, status: 'paused', paused: true, reason: 'state-corrupt', detail: v.error, guidance: store.guidanceFor('auto.loop.stateCorrupt') }) };
+    if (!store.isPlainObject(v)) return { none: true };
     return { state: v };
   };
 
@@ -312,7 +304,7 @@ async function drive(ctx) {
   const first = readTaskState();
   if (first.err) return report(first.err, { iterations, breaker: null });
   if (first.none) {
-    return report({ ok: false, status: 'refused', reason: 'no-task', guidance: guidanceFor('auto.loop.noTask') }, { iterations, breaker: null });
+    return report({ ok: false, status: 'refused', reason: 'no-task', guidance: store.guidanceFor('auto.loop.noTask') }, { iterations, breaker: null });
   }
   let taskState = first.state;
   const taskId = core.currentTaskId(taskState) || 'task';
@@ -321,7 +313,7 @@ async function drive(ctx) {
   if (TERMINAL_STAGES.includes(stage0)) {
     return report({
       ok: true, status: stage0 === 'SHIP' ? 'ship' : 'done', reason: `stage-${stage0.toLowerCase()}`,
-      deliveryAdapter: false, guidance: guidanceFor('auto.loop.taskAtEnd', { stage: stage0 }),
+      deliveryAdapter: false, guidance: store.guidanceFor('auto.loop.taskAtEnd', { stage: stage0 }),
     }, { iterations, breaker: null });
   }
 
@@ -331,16 +323,16 @@ async function drive(ctx) {
     const g = hostStatus.failure || {};
     return report({
       ok: false, status: 'refused', reason: 'host-not-selectable', host: opts.host,
-      hostFailure: g, guidance: guidanceFor('auto.loop.hostNotSelectable', { host: opts.host }),
+      hostFailure: g, guidance: store.guidanceFor('auto.loop.hostNotSelectable', { host: opts.host }),
     }, { iterations, breaker: null });
   }
   const adapter = registry.requireAdapter(opts.host);
   if (!adapter || typeof adapter.buildSpawnSpec !== 'function' || typeof adapter.parseEventStream !== 'function') {
-    return report({ ok: false, status: 'refused', reason: 'host-not-selectable', host: opts.host, guidance: guidanceFor('auto.loop.hostNotSelectable', { host: opts.host }) }, { iterations, breaker: null });
+    return report({ ok: false, status: 'refused', reason: 'host-not-selectable', host: opts.host, guidance: store.guidanceFor('auto.loop.hostNotSelectable', { host: opts.host }) }, { iterations, breaker: null });
   }
 
   // Breaker over the store limits (or the injected override).
-  const made = breakerMod.create({ rootDir, limits: opts.limits || undefined });
+  const made = breakerMod.createBreaker({ rootDir, limits: opts.limits || undefined });
   if (!made.ok) {
     return report({ ok: false, status: made.status, reason: made.reason, path: made.path, guidance: made.guidance }, { iterations, breaker: null });
   }
@@ -379,7 +371,7 @@ async function drive(ctx) {
     const cur = readTaskState();
     if (cur.err) return report(cur.err, { iterations, breaker: breakerView() });
     if (cur.none) {
-      return endWith({ ok: false, status: 'refused', reason: 'no-task', guidance: guidanceFor('auto.loop.noTask') });
+      return endWith({ ok: false, status: 'refused', reason: 'no-task', guidance: store.guidanceFor('auto.loop.noTask') });
     }
     taskState = cur.state;
     const observed = identityOf(taskState, readHead(gitRunner, rootDir));
@@ -388,19 +380,19 @@ async function drive(ctx) {
       return endWith({
         ok: false, status: 'paused', paused: true, reason: 'external-mutation',
         expected: baseline, observed, detail: fields.join('; '),
-        guidance: guidanceFor('auto.loop.externalMutation', { detail: fields.join('; ') }),
+        guidance: store.guidanceFor('auto.loop.externalMutation', { detail: fields.join('; ') }),
       });
     }
     baseline = observed;
 
     const stage = String(taskState.current_stage || '').toUpperCase();
     if (TERMINAL_STAGES.includes(stage)) {
-      return endWith({ ok: true, status: stage === 'SHIP' ? 'ship' : 'done', reason: `stage-${stage.toLowerCase()}`, deliveryAdapter: false, guidance: guidanceFor('auto.loop.taskAtEnd', { stage }) });
+      return endWith({ ok: true, status: stage === 'SHIP' ? 'ship' : 'done', reason: `stage-${stage.toLowerCase()}`, deliveryAdapter: false, guidance: store.guidanceFor('auto.loop.taskAtEnd', { stage }) });
     }
 
     // ---- iteration ceiling ----
     if (opts.maxIterations != null && iterations.length >= opts.maxIterations) {
-      return endWith({ ok: true, status: 'iteration-cap', max: opts.maxIterations, guidance: guidanceFor('auto.loop.iterationCap', { max: String(opts.maxIterations) }) });
+      return endWith({ ok: true, status: 'iteration-cap', max: opts.maxIterations, guidance: store.guidanceFor('auto.loop.iterationCap', { max: String(opts.maxIterations) }) });
     }
 
     // ---- breaker pre-checks: K visits, B budget ----
@@ -423,7 +415,7 @@ async function drive(ctx) {
     if (!composed.ok) {
       const res = b.recordOutcome(stage, 'spawn-error', `launcher ${composed.code}`);
       if (res.tripped) return tripNow();
-      return endWith({ ok: false, status: 'paused', paused: true, reason: 'launch-failed', code: composed.code, guidance: guidanceFor('auto.loop.spawnComposeFailed', { detail: String(composed.code) }) });
+      return endWith({ ok: false, status: 'paused', paused: true, reason: 'launch-failed', code: composed.code, guidance: store.guidanceFor('auto.loop.spawnComposeFailed', { detail: String(composed.code) }) });
     }
 
     const prompt = typeof opts.prompt === 'function' ? opts.prompt({ stage, taskId, rootDir })
@@ -455,7 +447,7 @@ async function drive(ctx) {
 
     const preSpawnHead = readHead(gitRunner, rootDir);
     if (!preSpawnHead) {
-      return endWith({ ok: false, status: 'paused', paused: true, reason: 'no-head', guidance: guidanceFor('auto.breaker.advanceCheckFailed') });
+      return endWith({ ok: false, status: 'paused', paused: true, reason: 'no-head', guidance: store.guidanceFor('auto.breaker.advanceCheckFailed') });
     }
 
     // ---- spawn under heartbeat + wall clock ----
@@ -481,7 +473,7 @@ async function drive(ctx) {
     const spawnedAtIso = new Date(startedAtMs).toISOString();
     const stamp = store.stampStream(spec.spawnId, stage, streamSha256, spawnedAtIso, rootDir);
     if (!stamp.ok) {
-      return endWith({ ok: false, status: 'paused', paused: true, reason: 'stamp-failed', detail: stamp.reason, path: stamp.path, guidance: guidanceFor('auto.loop.stampFailed', { detail: String(stamp.reason) }) });
+      return endWith({ ok: false, status: 'paused', paused: true, reason: 'stamp-failed', detail: stamp.reason, path: stamp.path, guidance: store.guidanceFor('auto.loop.stampFailed', { detail: String(stamp.reason) }) });
     }
 
     seq += 1;
@@ -502,21 +494,21 @@ async function drive(ctx) {
     const after = readTaskState();
     if (after.err) return report(after.err, { iterations, breaker: breakerView() });
     if (after.none) {
-      return endWith({ ok: false, status: 'refused', reason: 'no-task', guidance: guidanceFor('auto.loop.noTask') });
+      return endWith({ ok: false, status: 'refused', reason: 'no-task', guidance: store.guidanceFor('auto.loop.noTask') });
     }
     const postHead = readHead(gitRunner, rootDir);
     const postIdentity = identityOf(after.state, postHead);
     if (iter.advanced && postIdentity.stage === stage) {
       // The advance commit landed but the stage state did not move with it —
       // loop-owned inconsistency, paused rather than retried blind.
-      return endWith({ ok: false, status: 'paused', paused: true, reason: 'advance-state-mismatch', expectedStage: stage, guidance: guidanceFor('auto.loop.externalMutation', { detail: `stage still ${stage} after an advance commit` }) });
+      return endWith({ ok: false, status: 'paused', paused: true, reason: 'advance-state-mismatch', expectedStage: stage, guidance: store.guidanceFor('auto.loop.externalMutation', { detail: `stage still ${stage} after an advance commit` }) });
     }
     if (!iter.advanced && identityDiff(baseline, postIdentity).length) {
       return endWith({
         ok: false, status: 'paused', paused: true, reason: 'external-mutation',
         expected: baseline, observed: postIdentity,
         detail: identityDiff(baseline, postIdentity).join('; '),
-        guidance: guidanceFor('auto.loop.externalMutation', { detail: identityDiff(baseline, postIdentity).join('; ') }),
+        guidance: store.guidanceFor('auto.loop.externalMutation', { detail: identityDiff(baseline, postIdentity).join('; ') }),
       });
     }
     baseline = postIdentity;
@@ -607,5 +599,5 @@ module.exports = {
   identityOf,
   identityDiff,
   defaultPrompt,
-  create,
+  createLoop,
 };

@@ -629,11 +629,12 @@ function cmdArchive(opts = {}) {
   core.writeState(state);
   console.log(`${core.CONTRACTS.state_semantics.archived} ${moved} file(s) + delta.md → ${path.relative('.', dest)}`);
   console.log('Next: state.json kept locally until you start a new task (gos init --force)');
+  // SHIP ledger: auto-mode gate provenance for the human final review —
+  // rendered BEFORE the push hint so the ready-to-run push line stays last.
+  for (const line of shipLedgerLines(state)) console.log(line);
   // Remote publication hint: printed, never invoked — pushing stays a
   // user-executed act (message derives from [Unreleased] at push time).
   console.log(sibPush.archivePushHint());
-  // SHIP ledger: auto-mode gate provenance for the human final review.
-  for (const line of shipLedgerLines(state)) console.log(line);
 }
 
 const sibContext = require('./context.cjs');  // home of archiveSlugParts

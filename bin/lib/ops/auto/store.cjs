@@ -49,6 +49,10 @@ const DEFAULT_LIMITS = { N: 3, K: 5, B: 30 };
 // All user-facing failure text resolves through locale keys; the catalogs
 // degrade to the key string when an entry has not landed yet, so guidance
 // is never null and never a crash.
+function sha256Of(text) {
+  return require('node:crypto').createHash('sha256').update(String(text), 'utf8').digest('hex');
+}
+
 function guidanceFor(key, params) {
   const v = core.t(key, params);
   if (typeof v === 'string') return { what: v };
@@ -594,6 +598,9 @@ module.exports = {
   DEFAULT_LIMITS,
   storeRoot,
   repoKey,
+  guidanceFor,
+  isPlainObject,
+  sha256Of,
   load,
   create,
   probeWritable,
