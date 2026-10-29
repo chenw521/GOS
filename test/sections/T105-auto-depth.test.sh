@@ -624,6 +624,39 @@ if (real.tier === 'bubblewrap') {
     }
   }
 }
+// DNS stub chain: a resolv.conf symlinked into /run must pull its top
+// directory into the argv; a plain resolv.conf adds nothing
+{
+  const fx = launcher.compose('restricted', { env: { ...baseEnv, HOME: bareHome, XDG_DATA_HOME: xdg }, store, engineProbe: bwrapProbe, writableRoots: [path.join(rootDir, '.gos')] });
+  if (!fx.ok) problems.push('resolv compose failed: ' + fx.code);
+  else {
+    let real = null;
+    try { real = fs.realpathSync('/etc/resolv.conf'); } catch { real = null; }
+    const stubbed = real && real !== '/etc/resolv.conf' && real.startsWith('/run/');
+    const hasBind = fx.argv.some((_, i) => fx.argv[i] === '--ro-bind-try' && fx.argv[i + 1] === fx.meta.resolvBind && fx.argv[i + 2] === fx.meta.resolvBind);
+    if (stubbed && !hasBind) problems.push('stub resolv.conf did not bind its /run segment');
+    if (!stubbed && fx.meta.resolvBind) problems.push('plain resolv.conf must add no bind');
+  }
+}
+// model auth: the declared file binds read-only at its declared path with
+// the realpath as the source, inside whatever mask covers the directory
+{
+  const authSrc = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-auth-'));
+  const authReal = path.join(authSrc, 'auth.json');
+  fs.writeFileSync(authReal, '{}');
+  const declaredHome = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-authdest-'));
+  fs.mkdirSync(path.join(declaredHome, '.local', 'share', 'opencode'), { recursive: true });
+  const declared = path.join(declaredHome, '.local', 'share', 'opencode', 'auth.json');
+  fs.symlinkSync(authReal, declared);
+  const ax = launcher.compose('restricted', { env: { ...baseEnv, HOME: declaredHome, XDG_DATA_HOME: xdg }, store, engineProbe: bwrapProbe, authFiles: [declared], writableRoots: [path.join(rootDir, '.gos')] });
+  if (!ax.ok) problems.push('auth compose failed: ' + ax.code);
+  else {
+    const pair = ax.argv.some((_, i) => ax.argv[i] === '--ro-bind' && ax.argv[i + 1] === authReal && ax.argv[i + 2] === declared);
+    if (!pair) problems.push('auth file not bound realpath-source at the declared destination');
+    if (!launcher.maskOverBindHolds(ax)) problems.push('auth ordering violated');
+  }
+  for (const d of [authSrc, declaredHome]) { try { fs.rmSync(d, { recursive: true, force: true }); } catch {} }
+}
 for (const d of [richHome, bareHome, linkHome, outsideAws, fxRoot, xdg]) { try { fs.rmSync(d, { recursive: true, force: true }); } catch {} }
 console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
 EOF

@@ -492,6 +492,7 @@ async function drive(ctx) {
       engineProbe: opts.engineProbe,
       store,
       roBinds: hostStatus.probe && hostStatus.probe.execRoot ? [hostStatus.probe.execRoot] : [],
+      authFiles: adapter.authFilePath ? [adapter.authFilePath(env)] : [],
       writableRoots: opts.writableRoots || [path.join(rootDir, '.gos'), path.join(rootDir, '.gos', 'logs')],
     });
     if (!composed.ok) {

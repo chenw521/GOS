@@ -165,6 +165,10 @@ function composeArgv(ctx) {
     '--dev', '/dev',
     '--tmpfs', '/tmp',
   ];
+  // DNS: a stub resolv.conf managed by systemd-resolved or NetworkManager
+  // symlinks outside /etc into /run, which is not mounted — the link would
+  // dangle and name resolution would die inside the sandbox
+  if (ctx.resolvBind) argv.push('--ro-bind-try', ctx.resolvBind, ctx.resolvBind);
   if (ctx.home) argv.push('--ro-bind-try', ctx.home, ctx.home);
   if (ctx.workspace) {
     argv.push('--ro-bind', ctx.workspace, ctx.workspace);
@@ -182,7 +186,7 @@ function composeArgv(ctx) {
   }
   const seeds = {};
   const seedsSkipped = [];
-  for (const m of ctx.masks) {
+  for (const m of orderedMasks) {
     if (m.kind !== 'seed') continue;
     const root = ctx.seedRoots ? ctx.seedRoots[m.seed] : null;
     if (!root) { seedsSkipped.push(m.seed); continue; }
@@ -193,6 +197,7 @@ function composeArgv(ctx) {
     seeds[m.seed] = abs;
     for (const e of entries) argv.push('--ro-bind', path.join(abs, e.name), path.join(m.dest, e.name));
   }
+  for (const af of (ctx.authFiles || [])) argv.push('--ro-bind', af.src, af.dest);
   return { argv, seeds, seedsSkipped };
 }
 
@@ -256,9 +261,11 @@ function maskOverBindHolds(spec) {
       if (isAncestorPath(m.dest, later.dest)) {
         const seeded = later.op === '--ro-bind' && typeof later.src === 'string'
           && seedRoots.some((r) => isAncestorPath(r, later.src));
+        const authed = later.op === '--ro-bind' && typeof later.src === 'string'
+          && Array.isArray(meta.authFiles) && meta.authFiles.some((a) => a.src === later.src);
         const nestedMask = meta.masks.some((n) => n !== m && n.dest === later.dest
           && maskMountOp([later], n, meta.emptySrc));
-        if (!seeded && !nestedMask) return false; // deeper mask mounts win; anything else re-exposes
+        if (!seeded && !authed && !nestedMask) return false; // deeper mask mounts win; anything else re-exposes
       }
     }
   }
@@ -518,11 +525,37 @@ function compose(profileName, opts) {
     try { st = fs.lstatSync(abs); } catch { st = null; }
     if (st && !st.isSymbolicLink() && abs !== path.parse(abs).root) roBinds.push(abs);
   }
+  // Resolve the DNS stub chain: when /etc/resolv.conf is a symlink into an
+  // unmounted tree, bind its top-level directory so the link resolves.
+  let resolvBind = null;
+  try {
+    const rr = fs.realpathSync('/etc/resolv.conf');
+    if (rr !== '/etc/resolv.conf' && rr.startsWith('/run/')) {
+      const seg = '/' + rr.split('/').slice(1, 3).join('/');
+      let st = null;
+      try { st = fs.lstatSync(seg); } catch { st = null; }
+      if (st && st.isDirectory() && !st.isSymbolicLink()) resolvBind = seg;
+    }
+  } catch { /* resolv.conf unreadable: system mounts carry whatever exists */ }
+  // Adapter-declared model-provider auth files: readable by design even
+  // though their directory is masked; bound read-only after the mask mounts
+  // so the mountpoint lands inside the fresh tmpfs.
+  const authFiles = [];
+  for (const af of (Array.isArray(o.authFiles) ? o.authFiles : [])) {
+    if (typeof af !== 'string' || !path.isAbsolute(af)) continue;
+    let real = null;
+    try { real = fs.realpathSync(af); } catch { real = null; }
+    let st = null;
+    if (real) { try { st = fs.lstatSync(real); } catch { st = null; } }
+    if (real && st && st.isFile()) authFiles.push({ src: real, dest: path.resolve(af) });
+  }
   const { argv, seeds, seedsSkipped } = composeArgv({
     home: env.HOME || os.homedir(),
     workspace: o.workspace ? path.resolve(String(o.workspace)) : null,
     writableRoots,
     roBinds,
+    resolvBind,
+    authFiles,
     seedRoots: o.seedRoots && typeof o.seedRoots === 'object' ? o.seedRoots : {},
     masks,
   });
@@ -545,6 +578,8 @@ function compose(profileName, opts) {
       masks,
       masksSkipped,
       roBinds,
+      resolvBind,
+      authFiles,
       seeds,
       seedsSkipped,
       writableShadowed,

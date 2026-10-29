@@ -153,6 +153,18 @@ function spawnLive(opts) {
   };
 }
 
+// Host-side credential files the spawned session may READ: model-provider
+// auth is the one credential class a spawn needs (the data dir is masked,
+// so the file must be re-bound read-only into the masked tree).
+function authFilePath(env) {
+  const e = env || process.env;
+  const home = e.HOME || require('os').homedir();
+  const dataDir = e.OPENCODE_DATA_DIR && String(e.OPENCODE_DATA_DIR).trim()
+    ? String(e.OPENCODE_DATA_DIR)
+    : require('path').join(home, '.local', 'share', 'opencode');
+  return require('path').join(dataDir, 'auth.json');
+}
+
 module.exports = {
   NAME,
   SPAWN_MODE,
@@ -161,4 +173,5 @@ module.exports = {
   createEventParser,
   parseEventStream,
   spawnLive,
+  authFilePath,
 };
