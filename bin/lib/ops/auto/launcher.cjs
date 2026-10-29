@@ -444,12 +444,28 @@ function compose(profileName, opts) {
     return { ok: false, code: 'auto.launcher.missing-mandatory-mask', profile: name, ...base, missing };
   }
   const resolved = load.profile.masks.map((m) => ({ ...m, dest: path.resolve(resolveTokenPath(m.path, env)) }));
-  // A masked path that does not exist on the host is already invisible inside
-  // the sandbox (its parent is bind-mounted); bwrap cannot create the missing
-  // mountpoint on a read-only bind, so nonexistent destinations are skipped
-  // and recorded rather than fatal.
-  const masks = resolved.filter((m) => fs.existsSync(m.dest));
-  const masksSkipped = resolved.filter((m) => !masks.includes(m)).map((m) => m.path);
+  // A masked path is only mountable when the sandbox sees a real file or
+  // directory at the destination: bwrap cannot create a missing mountpoint
+  // on a read-only bind, and it refuses to mount over a symlink. A symlink
+  // whose real target lives inside the bind-mounted home is masked at its
+  // resolved path; anything else unreachable (absent, or pointing outside
+  // the bind set) is skipped and recorded rather than fatal.
+  const homeRoot = env.HOME || os.homedir();
+  const masks = [];
+  const masksSkipped = [];
+  for (const m of resolved) {
+    let st = null;
+    try { st = fs.lstatSync(m.dest); } catch { st = null; }
+    if (st && !st.isSymbolicLink()) { masks.push(m); continue; }
+    let real = null;
+    if (st) { try { real = fs.realpathSync(m.dest); } catch { real = null; } }
+    let rst = null;
+    if (real) { try { rst = fs.lstatSync(real); } catch { rst = null; } }
+    const insideHome = real && rst && real !== m.dest
+      && (real === homeRoot || real.startsWith(homeRoot + path.sep));
+    if (insideHome) masks.push({ ...m, dest: real, symlinkOf: m.dest });
+    else masksSkipped.push(m.path);
+  }
   const writableRoots = (Array.isArray(o.writableRoots) ? o.writableRoots : [])
     .filter((w) => typeof w === 'string' && w)
     .map((w) => path.resolve(w));

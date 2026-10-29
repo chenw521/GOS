@@ -491,11 +491,21 @@ const bwrapProbe = () => ({ engine: 'bwrap', version: '0.11.0' });
 // fixture homes control which credential paths exist on the host side
 const richHome = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-rich-'));
 const bareHome = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-bare-'));
+const linkHome = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-link-'));
+const outsideAws = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-out-'));
 const xdg = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-xdg-'));
 fs.mkdirSync(path.join(xdg, 'gos'), { recursive: true });
 fs.closeSync(fs.openSync(path.join(richHome, '.git-credentials'), 'w'));
 fs.mkdirSync(path.join(richHome, '.aws'), { recursive: true });
 fs.mkdirSync(path.join(richHome, '.gnupg'), { recursive: true });
+// symlinked host-state shapes: one pointing outside the home bind, one
+// resolving to a real directory inside it
+fs.mkdirSync(path.join(linkHome, 'gh-internal'), { recursive: true });
+fs.mkdirSync(path.join(linkHome, '.config'), { recursive: true });
+fs.symlinkSync(path.join(linkHome, 'gh-internal'), path.join(linkHome, '.config', 'gh'));
+fs.symlinkSync(outsideAws, path.join(linkHome, '.aws'));
+fs.closeSync(fs.openSync(path.join(linkHome, '.git-credentials'), 'w'));
+fs.mkdirSync(path.join(linkHome, '.gnupg'), { recursive: true });
 store.create({ mode: 'on', rootDir });
 const gitDir = path.join(rootDir, '.git');
 function ops(argv) {
@@ -541,6 +551,20 @@ for (const profile of ['restricted', 'workspace', 'full']) {
   }
   if (!launcher.maskOverBindHolds(bare)) problems.push(profile + ': bare ordering violated');
 }
+// symlinked mask destinations: outside-pointing is skipped (unreachable in
+// the sandbox), home-internal is masked at its resolved real path
+{
+  const lk = composeFor('restricted', linkHome);
+  if (!lk.ok) problems.push('link compose failed: ' + lk.code);
+  else {
+    const lo = ops(lk.argv);
+    if (lo.some((x) => x.dest === path.join(linkHome, '.aws'))) problems.push('outside-pointing .aws symlink mounted anyway');
+    if (!(lk.meta.masksSkipped || []).includes('$HOME/.aws')) problems.push('outside-pointing .aws symlink not recorded as skipped');
+    if (!lo.some((x) => x.op === '--tmpfs' && x.dest === path.join(linkHome, 'gh-internal'))) problems.push('home-internal gh symlink not masked at its real path');
+    if (lo.some((x) => x.dest === path.join(linkHome, '.config', 'gh'))) problems.push('mask mounted on the symlink itself');
+    if (!launcher.maskOverBindHolds(lk)) problems.push('link ordering violated');
+  }
+}
 // real-engine regression: a home lacking every masked credential path must
 // still enter the sandbox (mounting a missing path on a read-only bind was
 // a hard spawn failure before the skip rule)
@@ -549,8 +573,11 @@ if (real.tier === 'bubblewrap') {
   const c = composeFor('restricted', bareHome);
   const r = spawnSync('bwrap', [...c.argv, '--', '/bin/sh', '-c', 'exit 0'], { timeout: 20000 });
   if (r.status !== 0) problems.push('bwrap execution failed on credential-free home: rc=' + r.status + ' ' + String(r.stderr).slice(0, 120));
+  const lk = composeFor('restricted', linkHome);
+  const r2 = spawnSync('bwrap', [...lk.argv, '--', '/bin/sh', '-c', 'exit 0'], { timeout: 20000 });
+  if (r2.status !== 0) problems.push('bwrap execution failed on symlinked-state home: rc=' + r2.status + ' ' + String(r2.stderr).slice(0, 120));
 }
-for (const d of [richHome, bareHome, xdg]) { try { fs.rmSync(d, { recursive: true, force: true }); } catch {} }
+for (const d of [richHome, bareHome, linkHome, outsideAws, xdg]) { try { fs.rmSync(d, { recursive: true, force: true }); } catch {} }
 console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
 EOF
 D7_OUT="$(node run-d7.cjs 2>&1 | tail -n 1)"
