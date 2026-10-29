@@ -263,7 +263,12 @@ function printStatus(state) {
   // Phase V [D-06/R1-F1]: parked debt must be visible from ANY stage, not only archived-DONE
   // (doneHint covers the archived case; this line covers mid-flight status checks).
   const projParked = (proj && Array.isArray(proj.phases)) ? proj.phases.filter(x => x && x.status === 'parked').length : 0;
-  if (projParked > 0) console.log(`🅿️ Parked phases: ${projParked} — close out via \`gos phase park <n> --undo\` / \`gos phase mark-done <n>\` (blocks milestone)`);
+  if (projParked > 0) {
+    const parkedList = (proj && Array.isArray(proj.phases) ? proj.phases : [])
+      .map((x, i) => (x && x.status === 'parked') ? `[${i}] ${x.name || 'unnamed'}` : null)
+      .filter(Boolean).join(', ');
+    console.log(`🅿️ Parked phases: ${projParked} (${parkedList}) — close out via \`gos phase park <n> --undo\` / \`gos phase mark-done <n>\` (blocks milestone)`);
+  }
  // (E6): in-flow self-discovery pointer — frozen core.CONTRACTS string ( exact-match)
   console.log(core.CONTRACTS.decorative.fullCapabilityPointer);
 }
@@ -295,7 +300,7 @@ function cmdStatus() {
     return;
   }
   printStatus(state);
-  const skipCount = (state.semantic_skips || []).length; // R4-F9: visible skip accounting
+  const skipCount = (state.semantic_skips || []).length; // visible skip accounting
   if (skipCount > 0) console.log(`⚠ semantic skips recorded: ${skipCount} time(s) via GOS_TEST_SANDBOX escape — review if unexpected`);
   console.log(`\nNext:\n${nextHint(state)}`);
 }
