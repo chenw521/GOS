@@ -53,13 +53,13 @@ FAIL=0
 t94_ok() { echo "  ✓ $1"; PASS=$((PASS+1)); }
 t94_bad() { echo "  ✗ $1"; FAIL=$((FAIL+1)); }
 
-echo "--- T94: schema v5 — migrateState + repo_id derivation (D-12/D-18) ---"
+echo "--- T94: schema v6 — migrateState + repo_id derivation (D-12/D-18) ---"
 
 # --- U1: module surface — STATE_SCHEMA_VERSION=5 + exports ---
 U1=$(node -e '
 const s = require(process.env.GOS_ROOT + "/bin/lib/core/state.cjs");
 const bad = [];
-  if (s.STATE_SCHEMA_VERSION !== 5) bad.push("STATE_SCHEMA_VERSION=" + s.STATE_SCHEMA_VERSION + " (want 5)");
+  if (s.STATE_SCHEMA_VERSION !== 6) bad.push("STATE_SCHEMA_VERSION=" + s.STATE_SCHEMA_VERSION + " (want 6)");
 if (typeof s.deriveRepoId !== "function") bad.push("deriveRepoId not exported");
 if (typeof s.canonicalRepoUrl !== "function") bad.push("canonicalRepoUrl not exported");
 if (bad.length) { console.error(bad.join("; ")); process.exit(1); }
@@ -151,7 +151,7 @@ const fixture = () => ({
   decisions: [], observable_truths: [], gaps: [], checkpoints: [],
 });
 const s = state.migrateState(fixture());
-if (s.schema_version !== 5) problems.push('schema_version=' + s.schema_version + ' (want 5)');
+if (s.schema_version !== 6) problems.push('schema_version=' + s.schema_version + ' (want 6)');
 if ('version' in s) problems.push('dead version key survived');
 if ('project_root' in s) problems.push('project_root survived');
 const expect = state.deriveRepoId(process.env.T94_REMOTE_URL || null);
@@ -159,12 +159,12 @@ if (s.repo_id !== expect) problems.push('repo_id=' + s.repo_id + ' want ' + expe
 if (process.env.T94_REMOTE_URL && s.repo_id === null) problems.push('repo_id null while origin remote present');
 // idempotent re-migration
 const s2 = state.migrateState(s);
-if (s2.schema_version !== 5 || s2.repo_id !== expect) problems.push('re-migration not idempotent');
+if (s2.schema_version !== 6 || s2.repo_id !== expect) problems.push('re-migration not idempotent');
 if ('version' in s2 || 'project_root' in s2) problems.push('re-migration resurrected dropped keys');
 // legacy (pre-schema) state migrates straight to v4
 const l = fixture(); delete l.schema_version;
 const s3 = state.migrateState(l);
-if (s3.schema_version !== 5) problems.push('legacy → v' + s3.schema_version);
+if (s3.schema_version !== 6) problems.push('legacy → v' + s3.schema_version);
 if (s3.repo_id !== expect) problems.push('legacy repo_id=' + s3.repo_id);
 // v2→v3 semantics ride through: arrays stay arrays
 if (!Array.isArray(s3.decisions) || !Array.isArray(s3.gaps)) problems.push('array normalization lost');
@@ -212,7 +212,7 @@ const path = require('path');
 const state = require(path.join(process.env.GOS_ROOT, 'bin/lib/core/state.cjs'));
 const problems = [];
 const s = JSON.parse(fs.readFileSync('.gos/state.json', 'utf8'));
-if (s.schema_version !== 5) problems.push('disk schema_version=' + s.schema_version);
+if (s.schema_version !== 6) problems.push('disk schema_version=' + s.schema_version);
 if ('version' in s) problems.push('dead version key on disk');
 if ('project_root' in s) problems.push('project_root on disk');
 const expect = state.deriveRepoId(process.env.T94_REMOTE_URL);
@@ -232,7 +232,7 @@ if [ "$CPRC" -eq 0 ] && [ "$DISK" = "OK" ]; then
   t94_ok "U5b write-class persists v5: keys dropped, repo_id hashed, raw URL absent"; else t94_bad "U5b write-class: rc=$CPRC disk=$DISK"
 fi
 
-# --- U6: fresh init writes schema v5 with repo_id, no dead version key ---
+# --- U6: fresh init writes schema v6 with repo_id, no dead version key ---
 cd "$T94_DIR" && mkdir -p repo-fresh && cd repo-fresh
 git init -q . && git commit -q --allow-empty -m root
 git remote add origin https://github.com/octocat/widget.git
@@ -243,7 +243,7 @@ const path = require('path');
 const state = require(path.join(process.env.GOS_ROOT, 'bin/lib/core/state.cjs'));
 const problems = [];
 const s = JSON.parse(fs.readFileSync('.gos/state.json', 'utf8'));
-if (s.schema_version !== 5) problems.push('fresh schema_version=' + s.schema_version);
+if (s.schema_version !== 6) problems.push('fresh schema_version=' + s.schema_version);
 if ('version' in s) problems.push('dead version key in fresh state');
 const expect = state.deriveRepoId('https://github.com/octocat/widget.git');
 if (s.repo_id !== expect) problems.push('fresh repo_id=' + s.repo_id + ' want ' + expect);
@@ -344,10 +344,10 @@ fs.writeFileSync(path.join(root, '.gos/state.json'), JSON.stringify(disk, null, 
 const s = state.readState();
 state.writeState(s);
 const after = JSON.parse(fs.readFileSync(path.join(root, '.gos/state.json'), 'utf8'));
-if (after.schema_version !== 5) problems.push('round-trip schema_version=' + after.schema_version + ' (want 5)');
+if (after.schema_version !== 6) problems.push('round-trip schema_version=' + after.schema_version + ' (want 6)');
 if (after.spec_gate_version !== 2) problems.push('round-trip spec_gate_version=' + after.spec_gate_version + ' (want 2 preserved)');
 // validateState type gate: integer required when present (range is gate-side)
-const base = { schema_version: 5, decisions: [], requirements: [] };
+const base = { schema_version: 6, decisions: [], requirements: [] };
 if (state.validateState({ ...base, spec_gate_version: '3' }).length === 0) problems.push('string stamp accepted');
 if (state.validateState({ ...base, spec_gate_version: 1.5 }).length === 0) problems.push('float stamp accepted');
 if (state.validateState({ ...base }).length !== 0) problems.push('absent stamp rejected');

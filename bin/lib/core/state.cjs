@@ -12,7 +12,7 @@ const path = require('node:path');
 const fsio = require('./fsio.cjs');
 const gitprobe = require('./gitprobe.cjs');
 
-const STATE_SCHEMA_VERSION = 5;
+const STATE_SCHEMA_VERSION = 6;
 
 const PROJECT_SCHEMA_VERSION = 1;
 
@@ -235,6 +235,12 @@ function migrateState(s) {
     delete s.version;
     delete s.project_root;
     if (s.repo_id == null) s.repo_id = repoIdFromRemotes();
+  }
+  // v5→v6: the tiered-auto toggle field retires — auto runtime state (mode,
+  // profile, limits, counters, breaker) lives in the machine-local runner
+  // store, so a tracked auto_mode claim would misread on every clone.
+  if (fromV < 6) {
+    delete s.auto_mode;
   }
   if (wasLegacy) console.error(`⚠ state migrated to schema v${STATE_SCHEMA_VERSION} (task/<id>/ paths pinned; identity de-pathed — repo_id derived, version/project_root dropped)`);
   if (!Array.isArray(s.decisions)) s.decisions = [];
@@ -1141,9 +1147,29 @@ const COMMANDS = {
     contractKeys: ['command_contracts.renderDone', 'command_contracts.renderSkip', 'command_contracts.generatedHeader', 'command_contracts.manualMarker'],
   },
   'auto': {
-    desc: 'auto-flow toggle (on | off)', class: 'write', aliases: [], core: false,
-    subs: ['on', 'off'], flags: [], usage: 'gos auto <sub>',
-    next: ['gos'],
+    desc: 'full-auto runner: on | off | status | run | disposition (machine-local store; breaker-guarded fresh-session loop ending at SHIP)',
+    class: 'write', aliases: [], core: false,
+    subs: [
+      'on [--profile restricted|workspace|full] [--max-retries N] [--max-visits K] [--max-sessions B] [--timeout-wall sec] [--timeout-idle sec]',
+      'off [--purge]',
+      'status',
+      'run [--detach]',
+      'disposition <runId> --reason "<text>" [--by <name>]',
+    ],
+    flags: [
+      { name: '--profile', scope: 'on', effect: 'capability profile for spawned sessions (default restricted; full additionally requires a later explicit upgrade)', risk: 'mutating' },
+      { name: '--max-retries', scope: 'on', effect: 'breaker consecutive-failure layer N (integer >= 1)', risk: 'mutating' },
+      { name: '--max-visits', scope: 'on', effect: 'breaker stage re-entry layer K (integer >= 1)', risk: 'mutating' },
+      { name: '--max-sessions', scope: 'on', effect: 'breaker spawn-budget layer B (integer >= 1)', risk: 'mutating' },
+      { name: '--timeout-wall', scope: 'on', effect: 'per-spawn wall-clock timeout in seconds (fail-closed validation; runtime channel GOS_AUTO_TIMEOUT_WALL_SEC)', risk: 'mutating' },
+      { name: '--timeout-idle', scope: 'on', effect: 'per-spawn idle timeout in seconds measured from the last stream event (fail-closed validation; runtime channel GOS_AUTO_TIMEOUT_IDLE_SEC)', risk: 'mutating' },
+      { name: '--purge', scope: 'off', effect: 'remove this repository machine-local auto store entirely (counters, breaker history, dispositions)', risk: 'destructive' },
+      { name: '--detach', scope: 'run', effect: 'spawn the runner as a detached child instead of running in-process', risk: 'mutating' },
+      { name: '--reason', scope: 'disposition', effect: 'human justification recorded with the disposition (required)', risk: 'safe' },
+      { name: '--by', scope: 'disposition', effect: 'disposition author label (defaults to user@host)', risk: 'safe' },
+    ],
+    usage: 'gos auto <on|off|status|run|disposition> [args]',
+    next: ['gos auto status', 'gos auto run'],
     contractKeys: [],
   },
   'approve': {
