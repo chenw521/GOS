@@ -2,10 +2,11 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "BUILD",
+  "current_stage": "REVIEW",
   "completed_stages": [
     "THINK",
-    "PLAN"
+    "PLAN",
+    "BUILD"
   ],
   "intent": {
     "summary": "Ship gos auto on/off/status — toggle full-auto at any stage boundary; per-stage fresh-session auto-loop (spawn next stage session after each commit, never one long conversation); persists across sessions, resume auto-continues; hard gates + D-NN audit stay; guards: push sign-off, dangerous-cmd gates, retry cap after N exit-1, main-push CI closure check (every push terminal-green or dispositioned, 91848545 twice-lived); ends at SHIP",
@@ -259,6 +260,13 @@
       "done": "3 red team rounds, 46 findings dispositioned, spec frozen draft",
       "remaining": "user approval -> approve think -> commit think",
       "at": "2026-10-29T03:50:02.405Z"
+    },
+    {
+      "stage": "BUILD",
+      "unit": "all-waves (auto at commit)",
+      "done": "T1,T2,T3,T4,T5,T6a,T6b,T7a,T7b,T8,T9,T10,T11",
+      "remaining": "",
+      "at": "2026-10-29T10:05:08.089Z"
     }
   ],
   "spec_gate_version": 3,
