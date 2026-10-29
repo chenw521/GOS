@@ -506,6 +506,14 @@ fs.symlinkSync(path.join(linkHome, 'gh-internal'), path.join(linkHome, '.config'
 fs.symlinkSync(outsideAws, path.join(linkHome, '.aws'));
 fs.closeSync(fs.openSync(path.join(linkHome, '.git-credentials'), 'w'));
 fs.mkdirSync(path.join(linkHome, '.gnupg'), { recursive: true });
+// host exec tree in the version-manager shape: bin entry symlinked into a
+// sibling lib tree, both under one root outside the system mounts
+const fxRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-fx-'));
+fs.mkdirSync(path.join(fxRoot, 'bin'), { recursive: true });
+fs.mkdirSync(path.join(fxRoot, 'lib', 'host-real'), { recursive: true });
+fs.writeFileSync(path.join(fxRoot, 'lib', 'host-real', 'run'), '#!/bin/sh\nexit 0\n');
+fs.chmodSync(path.join(fxRoot, 'lib', 'host-real', 'run'), 0o755);
+fs.symlinkSync(path.join(fxRoot, 'lib', 'host-real', 'run'), path.join(fxRoot, 'bin', 'run'));
 store.create({ mode: 'on', rootDir });
 const gitDir = path.join(rootDir, '.git');
 function ops(argv) {
@@ -577,7 +585,25 @@ if (real.tier === 'bubblewrap') {
   const r2 = spawnSync('bwrap', [...lk.argv, '--', '/bin/sh', '-c', 'exit 0'], { timeout: 20000 });
   if (r2.status !== 0) problems.push('bwrap execution failed on symlinked-state home: rc=' + r2.status + ' ' + String(r2.stderr).slice(0, 120));
 }
-for (const d of [richHome, bareHome, linkHome, outsideAws, xdg]) { try { fs.rmSync(d, { recursive: true, force: true }); } catch {} }
+// adapter-declared exec tree: the version-manager layout must be bindable
+// read-only and the bin symlink must execute through it inside the sandbox
+{
+  const fx = launcher.compose('restricted', {
+    workspace: rootDir, env: { ...baseEnv, HOME: bareHome, XDG_DATA_HOME: xdg },
+    store, engineProbe: () => ({ engine: 'bwrap', version: '0.11.0' }),
+    roBinds: [fxRoot], writableRoots: [path.join(rootDir, '.gos')],
+  });
+  if (!fx.ok) problems.push('exec-tree compose failed: ' + fx.code);
+  else {
+    if (!fx.argv.some((_, i) => fx.argv[i] === '--ro-bind' && fx.argv[i + 1] === fxRoot && fx.argv[i + 2] === fxRoot)) problems.push('exec tree not ro-bound');
+    const er = launcher.probeEngine({ env: { ...baseEnv, HOME: bareHome } });
+    if (er.tier === 'bubblewrap') {
+      const rr = spawnSync('bwrap', [...fx.argv, '--', path.join(fxRoot, 'bin', 'run')], { timeout: 20000 });
+      if (rr.status !== 0) problems.push('bin symlink not executable through the ro-bound tree: rc=' + rr.status + ' ' + String(rr.stderr).slice(0, 120));
+    }
+  }
+}
+for (const d of [richHome, bareHome, linkHome, outsideAws, fxRoot, xdg]) { try { fs.rmSync(d, { recursive: true, force: true }); } catch {} }
 console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
 EOF
 D7_OUT="$(node run-d7.cjs 2>&1 | tail -n 1)"

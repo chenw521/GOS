@@ -263,7 +263,28 @@ function probeHost(host, ctx) {
       `host '${host}' probe failed (config-resolve step) against matrix entry ${entryLabel(matched)}: ${cr.detail}`) };
   }
 
-  return { ok: true, version: versionText, matchedEntry: matched, steps };
+  // Exec resolution: the launcher sandbox must bind the tree that makes the
+  // host binary resolvable inside it — nvm-style installs live outside /usr
+  // with the bin entry symlinked into a sibling lib tree, so the bind root is
+  // the nearest ancestor shared by the PATH entry and its real target.
+  let execRoot = null;
+  const wr = runner('which', [binary]);
+  const binPath = wr.ok ? String(wr.out || '').split('\n')[0].trim() : '';
+  if (binPath && path.isAbsolute(binPath)) {
+    let real = null;
+    try { real = fs.realpathSync(binPath); } catch { real = null; }
+    let root = path.dirname(binPath);
+    if (real && real !== binPath) {
+      while (root !== path.parse(root).root && !(real === root || real.startsWith(root + path.sep))) root = path.dirname(root);
+    }
+    let rootOk = false;
+    try { rootOk = root !== path.parse(root).root && fs.lstatSync(root).isDirectory(); } catch { rootOk = false; }
+    if (rootOk) execRoot = root;
+    steps.push({ id: 'exec-path', ok: true, detail: execRoot ? `${binPath}${real && real !== binPath ? ' -> ' + real : ''} (bind root ${execRoot})` : `${binPath} resolves inside system mounts` });
+  } else {
+    steps.push({ id: 'exec-path', ok: true, detail: 'no absolute path from which; relying on system mounts' });
+  }
+  return { ok: true, version: versionText, matchedEntry: matched, execRoot, steps };
 }
 
 // Pure evaluation: probe result + matrix row → selectability verdict. Exposed

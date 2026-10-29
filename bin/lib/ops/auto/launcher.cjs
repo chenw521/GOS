@@ -172,6 +172,7 @@ function composeArgv(ctx) {
     argv.push('--bind', gitDir, gitDir);
   }
   for (const w of ctx.writableRoots) argv.push('--bind', w, w);
+  for (const rb of (ctx.roBinds || [])) argv.push('--ro-bind', rb, rb);
   for (const m of ctx.masks) {
     if (m.kind === 'empty') argv.push('--ro-bind', EMPTY_SRC, m.dest);
     else argv.push('--tmpfs', m.dest); // tmpfs and seed kinds
@@ -469,10 +470,22 @@ function compose(profileName, opts) {
   const writableRoots = (Array.isArray(o.writableRoots) ? o.writableRoots : [])
     .filter((w) => typeof w === 'string' && w)
     .map((w) => path.resolve(w));
+  // Adapter-declared read-only mounts (the host exec tree). Never a symlink
+  // and never the filesystem root — the mount must exist inside the sandbox
+  // without pulling the whole host in.
+  const roBinds = [];
+  for (const rb of (Array.isArray(o.roBinds) ? o.roBinds : [])) {
+    if (typeof rb !== 'string' || !path.isAbsolute(rb)) continue;
+    const abs = path.resolve(rb);
+    let st = null;
+    try { st = fs.lstatSync(abs); } catch { st = null; }
+    if (st && !st.isSymbolicLink() && abs !== path.parse(abs).root) roBinds.push(abs);
+  }
   const { argv, seeds, seedsSkipped } = composeArgv({
     home: env.HOME || os.homedir(),
     workspace: o.workspace ? path.resolve(String(o.workspace)) : null,
     writableRoots,
+    roBinds,
     seedRoots: o.seedRoots && typeof o.seedRoots === 'object' ? o.seedRoots : {},
     masks,
   });
@@ -494,6 +507,7 @@ function compose(profileName, opts) {
     meta: {
       masks,
       masksSkipped,
+      roBinds,
       seeds,
       seedsSkipped,
       writableShadowed,

@@ -491,6 +491,7 @@ async function drive(ctx) {
       env,
       engineProbe: opts.engineProbe,
       store,
+      roBinds: hostStatus.probe && hostStatus.probe.execRoot ? [hostStatus.probe.execRoot] : [],
       writableRoots: opts.writableRoots || [path.join(rootDir, '.gos'), path.join(rootDir, '.gos', 'logs')],
     });
     if (!composed.ok) {
