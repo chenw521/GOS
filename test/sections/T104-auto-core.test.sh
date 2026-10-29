@@ -1161,6 +1161,11 @@ const world = process.cwd();
 store.create({ mode: 'on', rootDir: world, limits: { N: 3, K: 9, B: 9 } });
 const sha = crypto.createHash('sha256').update('orphan stream').digest('hex');
 store.stampStream('legacy-run-1', 'THINK', sha, '2026-01-01T00:00:00.000Z', world);
+// a previous recovery attempt already stamped its (verdict-less) rounds —
+// retry round ids must not collide with those streams
+const staleSha = crypto.createHash('sha256').update('stale round').digest('hex');
+store.stampStream('legacy-run-1-rt1', 'THINK', staleSha, '2026-01-01T00:01:00.000Z', world);
+store.stampStream('legacy-run-1-rt2', 'THINK', staleSha, '2026-01-01T00:02:00.000Z', world);
 const spawnRunner = (spec) => {
   if (spec.roWorkspace) return { status: 0, stdout: 'REDTEAM-FINDINGS: 0\n', stderr: '' };
   problems.push('unexpected working spawn before orphan legs completed');

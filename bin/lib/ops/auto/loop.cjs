@@ -408,6 +408,7 @@ async function drive(ctx) {
   // before any review spawn runs.
   let pendingLeg = null;
   const runId = crypto.randomUUID();
+  const runTag = runId.slice(0, 8);
   let seq = 0;
 
   // Crash-safe delegation: a previous runner may have died between a
@@ -433,7 +434,7 @@ async function drive(ctx) {
         });
       }
       const orphanLeg = { stage: String(orphan.stage).toUpperCase(), spawnId: best.sid, streamSha256: best.st.streamSha256, advanced: true, orphan: true };
-      const legRes = await delegatedLegs({ leg: orphanLeg, opts, env, rootDir, spawnRunner, tp, now });
+      const legRes = await delegatedLegs({ leg: orphanLeg, opts, env, rootDir, spawnRunner, tp, now, runTag });
       if (legRes.err) return report(legRes.err, { iterations, breaker: breakerView() });
       iterations.push({ spawnId: orphanLeg.spawnId, stage: orphanLeg.stage, signal: 'orphan-legs', delegation: legRes.summary });
     }
@@ -492,7 +493,7 @@ async function drive(ctx) {
       pendingLeg = null;
       const modRatify = require('./ratify.cjs');
       if (leg.advanced && modRatify.isDelegatedStage(leg.stage)) {
-        const legRes = await delegatedLegs({ leg, opts, env, rootDir, spawnRunner, tp, now });
+        const legRes = await delegatedLegs({ leg, opts, env, rootDir, spawnRunner, tp, now, runTag });
         if (legRes.err) return report(legRes.err, { iterations, breaker: breakerView() });
         const legIter = iterations.find((i) => i.spawnId === leg.spawnId);
         if (legIter) legIter.delegation = legRes.summary;
@@ -757,11 +758,13 @@ async function score(ctx) {
 // read-only spawn prompted from the runner-held store template. The
 // double-zero rule needs findings=0 from both rounds; findings>0 or rounds
 // without a verdict hold the stage for human review.
-async function redteamPasses({ leg, opts, env, rootDir, spawnRunner, tp, now }) {
+async function redteamPasses({ leg, opts, env, rootDir, spawnRunner, tp, now, runTag }) {
   const redteamMod = require('./redteam.cjs');
   const rounds = [];
   for (let i = 1; i <= redteamMod.REQUIRED_ZEROS; i += 1) {
-    const spawnId = `${leg.spawnId}-rt${i}`;
+    // Round ids carry the runner tag so a retry after a verdict-less or
+    // failed attempt never collides with the previously stamped streams.
+    const spawnId = `${leg.spawnId}-rt${i}${runTag ? '-' + runTag : ''}`;
     const round = await redteamMod.runRound({ stage: leg.stage, spawnId }, {
       rootDir,
       env,
@@ -806,11 +809,11 @@ async function redteamPasses({ leg, opts, env, rootDir, spawnRunner, tp, now }) 
 // gate, then the approval is ratified from the store stamp (converting the
 // in-spawn PENDING record; a PENDING without this step blocks the next
 // advance at the commit gate).
-async function delegatedLegs({ leg, opts, env, rootDir, spawnRunner, tp, now }) {
+async function delegatedLegs({ leg, opts, env, rootDir, spawnRunner, tp, now, runTag }) {
   const modRatify = require('./ratify.cjs');
   let redteam = null;
   if (String(leg.stage).toUpperCase() === 'THINK') {
-    const rt = await redteamPasses({ leg, opts, env, rootDir, spawnRunner, tp, now });
+    const rt = await redteamPasses({ leg, opts, env, rootDir, spawnRunner, tp, now, runTag });
     if (rt.err) return rt;
     redteam = {
       rounds: rt.rounds.length,
