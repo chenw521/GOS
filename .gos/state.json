@@ -2,7 +2,7 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "SHIP",
+  "current_stage": "DONE",
   "completed_stages": [
     "THINK",
     "PLAN",
@@ -16,10 +16,11 @@
   },
   "approvals": {
     "THINK": "2026-10-29T03:57:23.227Z",
-    "PLAN": "2026-10-29T04:31:45.005Z"
+    "PLAN": "2026-10-29T04:31:45.005Z",
+    "ARCHIVE": "2026-10-29T12:31:07.263Z"
   },
-  "spec_path": ".gos/task/p0/spec.md",
-  "plan_path": ".gos/task/p0/plan.md",
+  "spec_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/spec.md",
+  "plan_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/plan.md",
   "project": true,
   "requirements": [
     {
@@ -189,7 +190,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
         "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
-        "artifact_path": ".gos/task/p0/evidence/t1-dogfood.md",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t1-dogfood.md",
         "replay": true
       }
     },
@@ -200,7 +201,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
         "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
-        "artifact_path": ".gos/task/p0/evidence/t104-truths.md",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
         "replay": true
       }
     },
@@ -211,7 +212,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
         "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
-        "artifact_path": ".gos/task/p0/evidence/t104-truths.md",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
         "replay": true
       }
     },
@@ -222,7 +223,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
         "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
-        "artifact_path": ".gos/task/p0/evidence/t104-truths.md",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
         "replay": true
       }
     },
@@ -233,7 +234,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
         "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
-        "artifact_path": ".gos/task/p0/evidence/t104-truths.md",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
         "replay": true
       }
     },
@@ -244,7 +245,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T105-auto-depth\"]",
         "output_excerpt": "--- T105 summary: 9 passed, 0 failed ---",
-        "artifact_path": ".gos/task/p0/evidence/t105-truths.md",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t105-truths.md",
         "replay": true
       }
     },
@@ -255,7 +256,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T105-auto-depth\"]",
         "output_excerpt": "--- T105 summary: 9 passed, 0 failed ---",
-        "artifact_path": ".gos/task/p0/evidence/t105-truths.md",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t105-truths.md",
         "replay": true
       }
     },
@@ -266,7 +267,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
         "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
-        "artifact_path": ".gos/task/p0/evidence/t104-truths.md",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
         "replay": true
       }
     },
@@ -277,7 +278,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T105-auto-depth\"]",
         "output_excerpt": "--- T105 summary: 9 passed, 0 failed ---",
-        "artifact_path": ".gos/task/p0/evidence/t105-truths.md",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t105-truths.md",
         "replay": true
       }
     },
@@ -288,7 +289,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T105-auto-depth\"]",
         "output_excerpt": "--- T105 summary: 9 passed, 0 failed ---",
-        "artifact_path": ".gos/task/p0/evidence/t105-truths.md",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t105-truths.md",
         "replay": true
       }
     },
@@ -299,7 +300,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
         "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
-        "artifact_path": ".gos/task/p0/evidence/t104-truths.md",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
         "replay": true
       }
     },
@@ -310,7 +311,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
         "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
-        "artifact_path": ".gos/task/p0/evidence/t104-truths.md",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
         "replay": true
       }
     },
@@ -321,7 +322,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
         "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
-        "artifact_path": ".gos/task/p0/evidence/t104-truths.md",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
         "replay": true
       }
     },
@@ -332,7 +333,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
         "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
-        "artifact_path": ".gos/task/p0/evidence/t104-truths.md",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
         "replay": true
       }
     },
@@ -343,7 +344,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
         "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
-        "artifact_path": ".gos/task/p0/evidence/t104-truths.md",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
         "replay": true
       }
     },
@@ -354,7 +355,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
         "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
-        "artifact_path": ".gos/task/p0/evidence/t104-truths.md",
+        "artifact_path": ".gos/archive/2026-10-29-v1.0.0-dev-phase-p0-ship-gos-auto-on-off-status-to/task/p0/evidence/t104-truths.md",
         "replay": true
       }
     }
@@ -417,85 +418,7 @@
       "what": "claim"
     }
   ],
-  "checkpoints": [
-    {
-      "stage": "THINK",
-      "unit": "gray-A",
-      "done": "D-40 spawn contract + host adapters",
-      "remaining": "B approval gates, C breaker, D push/CI, E persistence, F capability profile",
-      "at": "2026-10-29T02:14:45.116Z"
-    },
-    {
-      "stage": "THINK",
-      "unit": "gray-B",
-      "done": "D-41 approval routing 3 classes",
-      "remaining": "C breaker, D push/CI, E persistence, F capability profile",
-      "at": "2026-10-29T02:42:31.687Z"
-    },
-    {
-      "stage": "THINK",
-      "unit": "gray-C",
-      "done": "D-42 3-layer breaker, D-43 evidence privacy boundary",
-      "remaining": "D push/CI, E persistence, F capability profile",
-      "at": "2026-10-29T02:52:57.169Z"
-    },
-    {
-      "stage": "THINK",
-      "unit": "gray-D",
-      "done": "D-44 delivery adapter probe-gated",
-      "remaining": "E persistence, F capability profile",
-      "at": "2026-10-29T03:00:31.476Z"
-    },
-    {
-      "stage": "THINK",
-      "unit": "gray-E",
-      "done": "D-45 machine-local runtime + explicit resume",
-      "remaining": "F capability profile",
-      "at": "2026-10-29T03:04:19.149Z"
-    },
-    {
-      "stage": "THINK",
-      "unit": "gray-F-version",
-      "done": "D-46 capability negotiation",
-      "remaining": "card F pick, then spec compile + red team",
-      "at": "2026-10-29T03:20:51.678Z"
-    },
-    {
-      "stage": "THINK",
-      "unit": "gray-F",
-      "done": "D-47 3-layer danger gates",
-      "remaining": "spec compile + red team + approval",
-      "at": "2026-10-29T03:21:38.147Z"
-    },
-    {
-      "stage": "THINK",
-      "unit": "rt-r1",
-      "done": "RT1 12 findings dispositioned (12 ACCEPT/PARTIAL), D-48 trust store",
-      "remaining": "spec fold + R2 edge + R3 completeness",
-      "at": "2026-10-29T03:31:49.415Z"
-    },
-    {
-      "stage": "THINK",
-      "unit": "rt-complete",
-      "done": "3 red team rounds, 46 findings dispositioned, spec frozen draft",
-      "remaining": "user approval -> approve think -> commit think",
-      "at": "2026-10-29T03:50:02.405Z"
-    },
-    {
-      "stage": "BUILD",
-      "unit": "all-waves (auto at commit)",
-      "done": "T1,T2,T3,T4,T5,T6a,T6b,T7a,T7b,T8,T9,T10,T11",
-      "remaining": "",
-      "at": "2026-10-29T10:05:08.089Z"
-    },
-    {
-      "stage": "BUILD",
-      "unit": "all-waves (auto at commit)",
-      "done": "T1,T2,T3,T4,T5,T6a,T6b,T7a,T7b,T8,T9,T10,T11",
-      "remaining": "",
-      "at": "2026-10-29T11:49:39.859Z"
-    }
-  ],
+  "checkpoints": [],
   "spec_gate_version": 3,
   "spec_sha256": "48b0aeda8ae484dfb515af5a43e6c8886abeb3b266e14e7dde98efdbda2d949f",
   "plan_snapshot": {
@@ -698,5 +621,7 @@
       }
     ],
     "audit": []
-  }
+  },
+  "changelog_user_summary": "Harden full-auto mode after review: strip gh/git/ssh/aws credential variables from every spawned session while keeping model-provider keys, mask ~/.git-credentials, ~/.aws and ~/.gnupg in every capability profile, bind the repo .git read-write at the kernel tier so spawned sessions can commit, classify spawn-authored non-advancing commits as retryable failures instead of external mutations, and expose auto run --break-lock, auto on --allow-full and persisted timeout overrides",
+  "completed_at": "2026-10-29T12:31:09.574Z"
 }
