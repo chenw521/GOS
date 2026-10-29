@@ -1,0 +1,29 @@
+{
+  "profile_version": 1,
+  "name": "workspace",
+  "default": false,
+  "description": "Working profile. Delivery and destructive commands stay denied; the deny baseline is reduced for normal workspace tooling. Masks are identical to restricted: credentials and host state never become writable or readable.",
+  "deny": [
+    "sudo",
+    "su -",
+    "su root",
+    "git push",
+    "gh pr merge",
+    "rm -rf /",
+    "gos auto",
+    "gos approve archive"
+  ],
+  "writable": [],
+  "writable_note": "Adapter-supplied at compose time (opts.writableRoots, e.g. the repo root plus a scratch directory); this file never declares writable roots.",
+  "masks": [
+    { "path": "$GOS_STORE", "kind": "tmpfs", "why": "runner trust store (counters, breaker, lock, approval stamps) must be invisible to the sandbox" },
+    { "path": "$HOME/.config/gh", "kind": "tmpfs", "why": "delivery credentials (gh hosts/token)" },
+    { "path": "$HOME/.gitconfig", "kind": "empty", "why": "global git config (url.insteadOf, credential.helper, core.sshCommand levers)" },
+    { "path": "$HOME/.config/git", "kind": "tmpfs", "why": "XDG global git config" },
+    { "path": "$HOME/.ssh", "kind": "tmpfs", "why": "delivery credentials (ssh keys and config)" },
+    { "path": "$HOME/.netrc", "kind": "empty", "why": "delivery credentials (netrc)" },
+    { "path": "$HOME/.config/opencode", "kind": "seed", "seed": "host-config", "why": "host state: seeded read-only from the runner snapshot, never writable-bound" },
+    { "path": "$HOME/.local/share/opencode", "kind": "seed", "seed": "host-data", "why": "host state: model-provider auth readable by design, scratch state ephemeral" },
+    { "path": "$HOME/.cache/opencode", "kind": "tmpfs", "why": "host cache: ephemeral per spawn" }
+  ]
+}

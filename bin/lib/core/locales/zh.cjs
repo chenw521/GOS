@@ -281,4 +281,146 @@ module.exports = {
     why: '已越过的阶段不能重复推进——该提交会给历史早已越过的节点再写一次推进标签',
     fix: '如需幂等重交请重跑当前阶段提交；要重新冻结 spec 请用 gos commit think --refreeze（仅改状态，不推进阶段）',
   },
+
+  // ---- auto 模式：runner 信任存储（机器本地） ----
+  'auto.store.missing': {
+    what: '未找到 auto 运行时存储：{path}',
+    why: '存储缺失与损坏同等对待——绝不静默重建新存储',
+    fix: '运行 {cmd:auto} on 创建（若追踪计数器暗示历史用量会先告警）',
+  },
+  'auto.store.corrupt': {
+    what: '{path} 的 auto 运行时存储损坏或未通过结构校验',
+    why: '损坏的存储无法核验 runner 信任状态（计数器、熔断、锁、审批）',
+    fix: '检查该文件；无法恢复时运行 {cmd:auto} off --purge 后 {cmd:auto} on——成本历史由追踪镜像计数保留',
+  },
+  'auto.store.versionMismatch': {
+    what: '存储 schema v{found} 高于本 CLI 已知版本（已知 v{known}）',
+    why: '未来形态的存储可能包含本版本会误读的记录',
+    fix: '升级写入该存储的 GOS 版本；切勿手改 store_schema_version',
+  },
+  'auto.store.unwritable': {
+    what: 'auto 运行时存储目录不可写：{path}',
+    why: '不可写则 auto 循环无法持久化计数器、熔断状态与运行锁',
+    fix: '检查属主/权限（及 XDG_DATA_HOME 覆盖值）后重新运行 {cmd:auto} on',
+  },
+  'auto.store.lockHeld': {
+    what: '已有 auto 运行在进行中（pid {pid}，始于 {since}）',
+    why: '运行锁按机器+仓库排他',
+    fix: '等待其结束；确认真正卡死时，待心跳过期或核实无 gos 进程后再谨慎移除',
+  },
+  'auto.store.lockHeartbeatStale': {
+    what: '运行锁由 pid {pid} 持有，但心跳已过期',
+    why: 'pid 复用可伪造存活；过期心跳是第二信号',
+    fix: '确认持有进程已死后，加 --break-lock 重试',
+  },
+  'auto.store.lockCrossHost': {
+    what: '运行锁由另一台机器持有（{hostname}，克隆 {clone}）',
+    why: '本机存储无法判断远端 pid——跨主机是否过期在本机不可验证',
+    fix: '确认那台机器上无 runner 存活后再加 --break-lock（会记录为接管事件）',
+  },
+  'auto.store.lockBreakRefused': {
+    what: '--break-lock 被拒绝：pid {pid} 在 {hostname} 上存活',
+    why: '存活 pid + 新鲜心跳即锁的合法持有者；强拆会破坏运行中的循环（本次尝试已记录为接管事件）',
+    fix: '等待运行结束；持有进程死亡后才可 break',
+  },
+  'auto.store.recreatedOverHistory': {
+    what: '追踪计数器暗示存在历史用量（spawn {spawnCount} 次、trip {tripCount} 次），却要新建空存储',
+    why: '成本历史不能因存储丢失而静默清零',
+    fix: '确认这是预期行为——计数器会从追踪镜像继承',
+  },
+
+  // ---- auto 模式：主机适配器 / 能力协商 ----
+  'auto.host.unknown': {
+    what: '主机在 registry.json 矩阵中无条目',
+    why: '未知主机一律 fail-closed',
+    fix: '安装受支持的主机或新增矩阵条目',
+  },
+  'auto.host.probeVersion': {
+    what: '二进制版本缺失或无法解析',
+    why: 'spawn 时能力探测失败',
+    fix: '更新主机二进制；消息中已列出矩阵条目',
+  },
+  'auto.host.probeNoMatch': {
+    what: '已安装版本不满足任何矩阵条目',
+    why: '版本偏斜',
+    fix: '更新主机或新增 registry.json 条目',
+  },
+  'auto.host.probeHelpFlags': {
+    what: '帮助输出缺少必需旗标',
+    why: 'CLI 契约已变化',
+    fix: '更新主机或修正条目的 required_flags',
+  },
+  'auto.host.probeConfig': {
+    what: '主机配置根目录无法解析',
+    why: '适配器需要配置根目录',
+    fix: '创建主机配置目录或设置 OPENCODE_CONFIG_DIR',
+  },
+  'auto.host.invalidRow': {
+    what: '矩阵条目 version_range 无效',
+    why: '策略禁止恒等锁定',
+    fix: '在 registry.json 使用语义谓词 (>=, <)',
+  },
+  'auto.host.registryUnreadable': {
+    what: 'registry.json 缺失或损坏',
+    why: '协商数据不可用',
+    fix: '重装 GOS 或修复 registry.json',
+  },
+  'auto.host.statusNotSelectable': {
+    what: '矩阵状态非 verified',
+    why: 'fixture-tested/probe-pending 仅作展示',
+    fix: '主机经 dogfood 验证翻转条目后方可选用',
+  },
+  'auto.host.streamMalformed': {
+    what: '事件流包含畸形 JSON',
+    why: '流契约被破坏',
+    fix: '归类为失败计入熔断器，绝不崩溃',
+  },
+  'auto.host.streamNoTerminal': {
+    what: '流结束时缺少终态事件',
+    why: '无可验证结果',
+    fix: '计为失败；建议重新探测主机版本',
+  },
+  'auto.host.displayOnly': {
+    what: '对仅展示主机尝试 spawn',
+    why: '该适配器无活动路径',
+    fix: '改用 verified 主机',
+  },
+  'auto.host.spawnError': {
+    what: '主机进程 spawn 失败或超时',
+    why: '环境类失败',
+    fix: '以 env 类失败计入熔断器',
+  },
+
+  // ---- auto 模式：能力启动器（档位 + 沙箱引擎） ----
+  'auto.launcher.unknown-profile': {
+    what: 'auto 档位 "{name}" 不在可选列表：{known}',
+    why: '未知档位绝不静默回退——掩码与 deny 姿态不能靠猜测',
+    fix: '传 {known} 之一（默认 restricted）；full 还需显式 allowFull 标志',
+  },
+  'auto.launcher.full-flag-required': {
+    what: '请求 full 能力档位但未携带显式升级标志',
+    why: 'full 放宽了 deny 基线，必须是明确选择而非默认漂移',
+    fix: '带上显式 allowFull 选项重跑，或继续使用 restricted/workspace',
+  },
+  'auto.launcher.missing-mandatory-mask': {
+    what: '档位 "{profile}" 缺少强制掩码：{missing}',
+    why: '信任存储、交付凭据与宿主状态目录在所有档位都必须被掩蔽——缺一项就重新打开旁路',
+    fix: '在 profile 文件中恢复对应 mask 条目，或升级 CLI 使档位保持完整',
+  },
+  'auto.launcher.profile-corrupt': {
+    what: 'auto 档位 "{name}" 校验失败：{detail}',
+    why: '残缺的能力档位无法安全组装',
+    fix: '修复 {file} 中的 JSON 或重装模板',
+  },
+  'auto.launcher.profile-unreadable': {
+    what: 'auto 档位 "{name}" 无法读取（{detail}）',
+    why: '启动器拒绝在未验证档位时派生会话',
+    fix: '恢复 {file} 或重装 CLI 包',
+  },
+  'auto.launcher.escape-detected': {
+    what: '派生会话流命中 deny 模式 "{pattern}"：{line}',
+    why: '词法层是纵深而非冗余——捕获流出现命中说明注入配置被绕过或忽略',
+    fix: '检查 store 中的派生记录；断路器将其计为一次失败',
+  },
+  'auto.launcher.tier-lexical': '加固档位：lexical——PATH 上无沙箱引擎（bwrap）；deny 仅由注入配置与逃逸探测器兜底（网络保持开放；模型提供方凭据按设计可读）',
 };

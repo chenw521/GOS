@@ -1,0 +1,25 @@
+{
+  "profile_version": 1,
+  "name": "full",
+  "default": false,
+  "description": "Unrestricted-working profile, reachable only with an explicit allowFull flag at compose time. The deny baseline shrinks to privilege-escalation and self-run guards; credential and host-state masks stay in place, so delivery credentials never become readable even here.",
+  "deny": [
+    "sudo",
+    "su -",
+    "su root",
+    "gos auto"
+  ],
+  "writable": [],
+  "writable_note": "Adapter-supplied at compose time (opts.writableRoots); this file never declares writable roots.",
+  "masks": [
+    { "path": "$GOS_STORE", "kind": "tmpfs", "why": "runner trust store (counters, breaker, lock, approval stamps) must be invisible to the sandbox" },
+    { "path": "$HOME/.config/gh", "kind": "tmpfs", "why": "delivery credentials (gh hosts/token) stay masked in every profile" },
+    { "path": "$HOME/.gitconfig", "kind": "empty", "why": "global git config (url.insteadOf, credential.helper, core.sshCommand levers) stays masked in every profile" },
+    { "path": "$HOME/.config/git", "kind": "tmpfs", "why": "XDG global git config stays masked in every profile" },
+    { "path": "$HOME/.ssh", "kind": "tmpfs", "why": "delivery credentials (ssh keys and config) stay masked in every profile" },
+    { "path": "$HOME/.netrc", "kind": "empty", "why": "delivery credentials (netrc) stay masked in every profile" },
+    { "path": "$HOME/.config/opencode", "kind": "seed", "seed": "host-config", "why": "host state: seeded read-only from the runner snapshot, never writable-bound" },
+    { "path": "$HOME/.local/share/opencode", "kind": "seed", "seed": "host-data", "why": "host state: model-provider auth readable by design, scratch state ephemeral" },
+    { "path": "$HOME/.cache/opencode", "kind": "tmpfs", "why": "host cache: ephemeral per spawn" }
+  ]
+}

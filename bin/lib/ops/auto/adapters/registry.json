@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "matrix": [
+    {
+      "host": "opencode",
+      "binary": "opencode",
+      "version_range": ">=1.18.0 <2.0.0",
+      "status": "verified",
+      "selectable": true,
+      "spawn_mode": "opencode-run-json",
+      "version_command": ["--version"],
+      "help_command": ["run", "--help"],
+      "required_flags": ["--format"],
+      "notes": "headless run verified: rc=0, JSON event stream, fresh session per invocation"
+    },
+    {
+      "host": "opencode",
+      "binary": "opencode",
+      "version_range": ">=2.0.0",
+      "status": "probe-pending",
+      "selectable": false,
+      "spawn_mode": "opencode-run-json",
+      "version_command": ["--version"],
+      "help_command": ["run", "--help"],
+      "required_flags": ["--format"],
+      "notes": "v2 announced; becomes selectable only after a dogfood run re-verifies the event contract"
+    },
+    {
+      "host": "codex",
+      "binary": "codex",
+      "version_range": ">=0.20.0",
+      "status": "fixture-tested",
+      "selectable": false,
+      "spawn_mode": "display-only",
+      "version_command": ["--version"],
+      "help_command": ["exec", "--help"],
+      "required_flags": ["--json"],
+      "notes": "exec JSONL shapes verified against recorded fixtures only; display-only until dogfooded"
+    }
+  ],
+  "fixture_hosts": [
+    {
+      "host": "gos-fixture-host",
+      "binary": "gos-fixture-host",
+      "version_range": ">=0.0.1",
+      "status": "verified",
+      "selectable": true,
+      "spawn_mode": "opencode-run-json",
+      "version_command": ["--version"],
+      "help_command": ["run", "--help"],
+      "required_flags": ["--format"],
+      "probe_fixture": { "version": "9.9.9", "steps": "recorded-ok" },
+      "notes": "test-only row; active only while GOS_AUTO_TEST_FIXTURE is set — probe answers from recorded fixture data, never a live spawn"
+    }
+  ]
+}

@@ -288,4 +288,146 @@ module.exports = {
     why: 'an already-passed stage cannot re-advance — the commit would write an advance label history already moved past',
     fix: 're-run the current stage commit if idempotent redelivery is intended; to re-freeze a frozen spec use gos commit think --refreeze (state-only, no stage advance)',
   },
+
+  // ---- auto mode: runner trust store (machine-local) ----
+  'auto.store.missing': {
+    what: 'auto runtime store not found at {path}',
+    why: 'a missing store is treated like a corrupt one — never a silent fresh start',
+    fix: 'run `gos auto on` to create it (tracked counters warn over implied prior history)',
+  },
+  'auto.store.corrupt': {
+    what: 'auto runtime store at {path} is corrupt or failed schema validation',
+    why: 'runner trust state (counters, breaker, lock, approvals) cannot be verified from a damaged store',
+    fix: 'inspect the file; if unrecoverable run `gos auto off --purge` then `gos auto on` — cost history survives via tracked mirror counters',
+  },
+  'auto.store.versionMismatch': {
+    what: 'store schema v{found} is not known to this CLI (knows v{known})',
+    why: 'a future-shaped store may contain records this version would misread',
+    fix: 'upgrade GOS to the version that wrote the store; never hand-edit store_schema_version',
+  },
+  'auto.store.unwritable': {
+    what: 'auto runtime store directory {path} is not writable',
+    why: 'the auto loop cannot persist counters, breaker state, or the run lock without it',
+    fix: 'check ownership/permissions (and the XDG_DATA_HOME override), then re-run `gos auto on`',
+  },
+  'auto.store.lockHeld': {
+    what: 'an auto run is already active (pid {pid}, since {since})',
+    why: 'the run lock is exclusive per machine and repository',
+    fix: 'wait for it to finish; if it is genuinely stuck, wait for heartbeat staleness or remove it deliberately only after verifying no gos process runs',
+  },
+  'auto.store.lockHeartbeatStale': {
+    what: 'auto run lock held by pid {pid} but its heartbeat is stale',
+    why: 'pid reuse can fake liveness; the stale heartbeat is the second signal',
+    fix: 're-run with --break-lock once the holder is confirmed dead',
+  },
+  'auto.store.lockCrossHost': {
+    what: 'auto run lock held by another machine ({hostname}, clone {clone})',
+    why: 'this machine-local store cannot judge a remote pid — cross-host staleness is unverifiable from here',
+    fix: 'confirm no runner is live on that host, then re-run with --break-lock (recorded as a takeover event)',
+  },
+  'auto.store.lockBreakRefused': {
+    what: '--break-lock refused: pid {pid} is alive on {hostname}',
+    why: 'a live pid with a fresh heartbeat owns the lock; breaking it would corrupt a running loop (attempt recorded as a takeover event)',
+    fix: 'wait for the run to finish; only break after the holder process is dead',
+  },
+  'auto.store.recreatedOverHistory': {
+    what: 'creating a fresh store while tracked counters imply prior history (spawns {spawnCount}, trips {tripCount})',
+    why: 'cost history must not silently reset when the store is lost',
+    fix: 'confirm this is intended — counters carry over from the tracked mirrors',
+  },
+
+  // ---- auto mode: host adapters / capability negotiation ----
+  'auto.host.unknown': {
+    what: 'host has no registry.json matrix row',
+    why: 'fail-closed on unknown hosts',
+    fix: 'install a supported host or add a registry.json row',
+  },
+  'auto.host.probeVersion': {
+    what: 'binary version missing/unparsable',
+    why: 'spawn-time capability check failed',
+    fix: 'update the host binary; matrix entries named in message',
+  },
+  'auto.host.probeNoMatch': {
+    what: 'installed version satisfies no matrix entry',
+    why: 'version skew',
+    fix: 'update the host or add a registry.json row',
+  },
+  'auto.host.probeHelpFlags': {
+    what: 'help output lacks required flags',
+    why: 'CLI contract changed',
+    fix: 'update the host or the row\u0027s required_flags',
+  },
+  'auto.host.probeConfig': {
+    what: 'host config root unresolvable',
+    why: 'adapter needs a config root',
+    fix: 'create the host config dir or set OPENCODE_CONFIG_DIR',
+  },
+  'auto.host.invalidRow': {
+    what: 'matrix row has invalid version_range',
+    why: 'identity pins are forbidden policy',
+    fix: 'use semantic predicates (>=, <) in registry.json',
+  },
+  'auto.host.registryUnreadable': {
+    what: 'registry.json missing/corrupt',
+    why: 'negotiation data unavailable',
+    fix: 'reinstall GOS or repair registry.json',
+  },
+  'auto.host.statusNotSelectable': {
+    what: 'matrix status is not verified',
+    why: 'fixture-tested/probe-pending are display-only',
+    fix: 'host becomes selectable after dogfood verification flips the row',
+  },
+  'auto.host.streamMalformed': {
+    what: 'event stream contained malformed JSON',
+    why: 'stream contract broken',
+    fix: 'classified failure — counts into the breaker, never crashes',
+  },
+  'auto.host.streamNoTerminal': {
+    what: 'stream ended without a terminal event',
+    why: 'no verifiable outcome',
+    fix: 'counts as failure; re-probe the host version',
+  },
+  'auto.host.displayOnly': {
+    what: 'spawn attempted on a display-only host',
+    why: 'adapter has no live path',
+    fix: 'use a verified host',
+  },
+  'auto.host.spawnError': {
+    what: 'host process failed to spawn/timeout',
+    why: 'environment failure',
+    fix: 'counts as env-class failure into the breaker',
+  },
+
+  // ---- auto mode: capability launcher (profiles + sandbox engine) ----
+  'auto.launcher.unknown-profile': {
+    what: "auto profile '{name}' is not one of: {known}",
+    why: 'an unknown profile must never fall back silently — the mask and deny posture would be a guess',
+    fix: 'pass one of {known} (default: restricted); full additionally requires an explicit allowFull flag',
+  },
+  'auto.launcher.full-flag-required': {
+    what: 'the full capability profile was requested without an explicit upgrade flag',
+    why: 'full lowers the deny baseline, so it must be a deliberate choice rather than a default drift',
+    fix: 're-run with the explicit allowFull option, or keep restricted/workspace',
+  },
+  'auto.launcher.missing-mandatory-mask': {
+    what: "profile '{profile}' is missing mandatory masks: {missing}",
+    why: 'the trust store, delivery credentials, and host state dirs must stay masked in every profile — dropping one reopens a bypass',
+    fix: 'restore the mask entries in the profile file or update the CLI so profiles stay complete',
+  },
+  'auto.launcher.profile-corrupt': {
+    what: "auto profile '{name}' failed validation: {detail}",
+    why: 'a malformed capability profile cannot be composed safely',
+    fix: 'fix the JSON in {file} or reinstall the templates',
+  },
+  'auto.launcher.profile-unreadable': {
+    what: "auto profile '{name}' could not be read ({detail})",
+    why: 'the launcher refuses to spawn without a verified profile',
+    fix: 'restore {file} or reinstall the CLI package',
+  },
+  'auto.launcher.escape-detected': {
+    what: "spawned stream matched deny pattern '{pattern}': {line}",
+    why: 'the lexical layer is depth, not redundancy — a deny hit in the captured stream means the injected config was bypassed or ignored',
+    fix: 'review the spawn record in the store; the breaker counts this as a failure',
+  },
+  'auto.launcher.tier-lexical': 'hardening tier: lexical — no sandbox engine (bwrap) on PATH; deny is enforced by the injected config and the escape detector only (network stays open; model-provider auth readable by design)',
 };
