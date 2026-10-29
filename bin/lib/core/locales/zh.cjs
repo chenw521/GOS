@@ -562,4 +562,26 @@ module.exports = {
     why: '失败的派生不构成审查证据，绝不计为零发现',
     fix: '排查派生失败详情（本地存储）后重跑该轮',
   },
+
+  // ---- auto 模式：交付探测 + 特权 git ----
+  'auto.delivery.probeAdvisory': {
+    what: '交付探测：GitHub 认证可用但看不到任何 CI 工作流',
+    why: '仓库可能确实没有 CI；也可能是细粒度 PAT 缺少 workflows 读取范围导致的假阴性',
+    fix: '若 CI 确实存在，请改用包含 Actions/workflows 读取范围的 PAT 重新认证，或确认工作流位于 .github/workflows',
+  },
+  'auto.delivery.probeAbsent': {
+    what: '交付探测：交付适配器未激活（{reason}）',
+    why: '发布守卫只绑定真实存在的能力——循环在 SHIP 结束，交付侧零负担',
+    fix: '如需启用 PR 交付，添加 origin 远程并完成 gh CLI 认证；否则无需任何操作',
+  },
+  'auto.delivery.driftDetected': {
+    what: '仓库 git 元数据偏离了已固定的交付基线（{detail}）',
+    why: '交付适配器不信任仓库 git 元数据——远程 URL 变更或植入的钩子绝不能搭上特权 git 调用',
+    fix: '检查漂移项；确认仓库可信后运行 {cmd:auto} on 重新固定基线',
+  },
+  'auto.delivery.baselineFailed': {
+    what: '捕获交付基线失败：{detail}',
+    why: '没有固定的远程/钩子快照可供校验时，特权 git 拒绝运行',
+    fix: '确认仓库配置了 origin 远程且 .git 目录可读后重试',
+  },
 };

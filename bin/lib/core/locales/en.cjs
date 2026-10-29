@@ -569,4 +569,26 @@ module.exports = {
     why: 'a failed spawn is no scrutiny evidence and never counts as a zero',
     fix: 're-run the round after checking the spawn failure detail in the local store',
   },
+
+  // ---- auto mode: delivery probe + privileged git ----
+  'auto.delivery.probeAdvisory': {
+    what: 'delivery probe: GitHub auth works but no CI workflows are visible',
+    why: 'the repository may genuinely have none, or a fine-grained PAT without the workflows read scope cannot see them (false negative)',
+    fix: 'if CI exists, re-auth with a PAT that includes the Actions/workflows read scope, or confirm workflows are present under .github/workflows',
+  },
+  'auto.delivery.probeAbsent': {
+    what: 'delivery probe: delivery is not active ({reason})',
+    why: 'publish guards bind only to actions that exist — the loop ends at SHIP with zero delivery burden',
+    fix: 'to enable PR delivery add an origin remote and authenticate the gh CLI; otherwise no action is needed',
+  },
+  'auto.delivery.driftDetected': {
+    what: 'repo git metadata drifted from the pinned delivery baseline ({detail})',
+    why: 'the delivery adapter treats repo git metadata as untrusted — a changed remote URL or a planted hook must never ride a privileged git call',
+    fix: 'inspect the drift, then re-run `gos auto on` to re-pin the baseline once the repository is trusted again',
+  },
+  'auto.delivery.baselineFailed': {
+    what: 'capturing the delivery baseline failed: {detail}',
+    why: 'privileged git refuses to run without a pinned remote/hooks snapshot to verify against',
+    fix: 'check that the repository has an origin remote and a readable .git directory, then re-run',
+  },
 };
