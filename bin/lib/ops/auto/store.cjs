@@ -347,6 +347,31 @@ function stampStream(spawnId, stage, streamSha256, spawnedAtIso, rootDir) {
 
 // Human dispositions (red runs, unknown-state CI) live here — the repo
 // ledger mirrors only their hashes.
+
+// Review-round evidence: the full text tail of a red-team round (bounded),
+// kept machine-local so a held delegation is decidable by a human reading
+// what the reviewer actually wrote.
+function recordReviewRound({ spawnId, stage, findings, classified, text }, rootDir) {
+  if (typeof spawnId !== 'string' || !spawnId) return { ok: false, status: 'error', reason: 'invalid-spawn-id' };
+  if (typeof stage !== 'string' || !stage) return { ok: false, status: 'error', reason: 'invalid-stage' };
+  const bounded = typeof text === 'string' ? text.slice(-8192) : '';
+  const conflict = false;
+  const r = mutate(rootDir, (st) => {
+    if (!isPlainObject(st.reviewRounds)) st.reviewRounds = {};
+    st.reviewRounds[spawnId] = {
+      stage, findings: findings == null ? null : Number(findings), classified: String(classified || ''),
+      text: bounded, ts: new Date().toISOString(),
+    };
+    const keys = Object.keys(st.reviewRounds);
+    if (keys.length > CAPS.stamps) {
+      keys.sort((a, b) => st.reviewRounds[a].ts.localeCompare(st.reviewRounds[b].ts));
+      for (const k of keys.slice(0, keys.length - CAPS.stamps)) delete st.reviewRounds[k];
+    }
+    return st;
+  });
+  if (conflict) return { ok: false, status: 'error', reason: 'stamp-conflict', path: r.path };
+  return r.ok ? { ok: true, path: r.path, record: r.store.reviewRounds[spawnId] } : r;
+}
 function recordDisposition(d, rootDir) {
   if (!isPlainObject(d)) return { ok: false, status: 'error', reason: 'invalid-disposition' };
   if (typeof d.runId !== 'string' || !d.runId) return { ok: false, status: 'error', reason: 'invalid-disposition', detail: 'runId required' };
@@ -677,6 +702,7 @@ module.exports = {
   networkFsUnderStore,
   heartbeatStaleThresholdMs,
   stampStream,
+  recordReviewRound,
   recordDisposition,
   saveSnapshot,
   saveProbeResult,

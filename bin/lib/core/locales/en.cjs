@@ -681,6 +681,8 @@ module.exports = {
   'auto.cli.status.paused': 'auto: store paused ({reason}) — the loop refuses to run until it is inspected',
   'auto.cli.status.hostMatrix': 'host matrix ({n} rows; fixture rows appear only under the test env gate):',
   'auto.cli.status.counters': 'counters: spawns {spawns} · trips {trips}',
+  'auto.cli.status.heldRound': 'held {stage} review round {id}: findings {findings} ({cls})',
+  'auto.cli.status.heldWhere': 'full round texts: reviewRounds in the machine-local auto store (auto status never prints them)',
   'auto.cli.status.countersAbsent': 'counters: — (no store)',
   'auto.cli.status.breakerClean': 'breaker: clean ({n} non-trip record(s))',
   'auto.cli.status.breakerTripped': 'breaker: TRIPPED layer {layer} ({cls}) at {ts}{detail} — paused; explicit re-enable via `{cmd:auto} on`',

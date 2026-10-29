@@ -319,6 +319,13 @@ async function runRound({ stage, spawnId }, ctx = {}) {
     round.readOnlyEnforcement = 'lexical';
     round.lexicalTierNote = core.t('auto.redteam.lexicalTier');
   }
+  // Evidence for the human gate: a held delegation is only decidable when
+  // the reviewer's actual text survives somewhere a human can read.
+  store.recordReviewRound({
+    spawnId, stage: 'redteam',
+    findings: round.findings, classified: round.classified,
+    text: typeof streamText === 'string' ? streamText : '',
+  }, rootDir);
   return { ok: true, round, stamp: stamp.stamp, promptSha256: recorded.sha256 };
 }
 

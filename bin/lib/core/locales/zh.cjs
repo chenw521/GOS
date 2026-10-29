@@ -674,6 +674,8 @@ module.exports = {
   'auto.cli.status.paused': 'auto：存储已暂停（{reason}）— 检查前循环拒绝运行',
   'auto.cli.status.hostMatrix': '宿主矩阵（{n} 行；fixture 行仅在测试环境门下出现）：',
   'auto.cli.status.counters': '计数：spawn {spawns} 次 · trip {trips} 次',
+  'auto.cli.status.heldRound': '{stage} 阶段审查轮 {id}：发现 {findings} 项（{cls}）',
+  'auto.cli.status.heldWhere': '完整轮次文本：机器本地 auto store 的 reviewRounds（status 不打印全文）',
   'auto.cli.status.countersAbsent': '计数：—（无存储）',
   'auto.cli.status.breakerClean': '熔断器：正常（{n} 条非跳闸记录）',
   'auto.cli.status.breakerTripped': '熔断器：已跳闸 层 {layer}（{cls}）于 {ts}{detail} — 已暂停；需显式 `{cmd:auto} on` 重新启用',
