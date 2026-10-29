@@ -514,6 +514,11 @@ fs.mkdirSync(path.join(fxRoot, 'lib', 'host-real'), { recursive: true });
 fs.writeFileSync(path.join(fxRoot, 'lib', 'host-real', 'run'), '#!/bin/sh\nexit 0\n');
 fs.chmodSync(path.join(fxRoot, 'lib', 'host-real', 'run'), 0o755);
 fs.symlinkSync(path.join(fxRoot, 'lib', 'host-real', 'run'), path.join(fxRoot, 'bin', 'run'));
+// host-state dir symlinked outside the home bind with a real parent: the
+// mask climbs to the nearest real ancestor so the host can still create
+// its state dir inside the sandbox
+fs.mkdirSync(path.join(linkHome, '.local', 'share'), { recursive: true });
+fs.symlinkSync(outsideAws, path.join(linkHome, '.local', 'share', 'opencode'));
 store.create({ mode: 'on', rootDir });
 const gitDir = path.join(rootDir, '.git');
 function ops(argv) {
@@ -571,6 +576,22 @@ for (const profile of ['restricted', 'workspace', 'full']) {
     if (!lo.some((x) => x.op === '--tmpfs' && x.dest === path.join(linkHome, 'gh-internal'))) problems.push('home-internal gh symlink not masked at its real path');
     if (lo.some((x) => x.dest === path.join(linkHome, '.config', 'gh'))) problems.push('mask mounted on the symlink itself');
     if (!launcher.maskOverBindHolds(lk)) problems.push('link ordering violated');
+    // ancestor climb: tmpfs at the real parent, no mount on the symlink,
+    // and the nested store mask still mounted AFTER the ancestor tmpfs
+    const shareIdx = lk.argv.findIndex((_, i) => lk.argv[i] === '--tmpfs' && lk.argv[i + 1] === path.join(linkHome, '.local', 'share'));
+    if (shareIdx < 0) problems.push('host-state symlink did not climb to its real parent');
+    if (lk.argv.some((_, i) => lk.argv[i + 1] === path.join(linkHome, '.local', 'share', 'opencode'))) problems.push('mask mounted on the dangling symlink itself');
+    const storeIdx = lk.argv.findIndex((_, i) => lk.argv[i] === '--tmpfs' && lk.argv[i + 1] === path.join(xdg, 'gos'));
+    if (shareIdx < 0 || storeIdx < 0) problems.push('ancestor tmpfs or nested store mask missing');
+    else {
+      const shareP = path.join(linkHome, '.local', 'share');
+      if (path.join(xdg, 'gos').startsWith(shareP + path.sep) && storeIdx < shareIdx) problems.push('nested store mask mounted before the ancestor tmpfs');
+    }
+    const erL = launcher.probeEngine({ env: { ...baseEnv, HOME: linkHome } });
+    if (erL.tier === 'bubblewrap') {
+      const rm = spawnSync('bwrap', [...lk.argv, '--', '/bin/sh', '-c', 'mkdir "$HOME/.local/share/opencode"'], { timeout: 20000, env: { ...process.env, HOME: linkHome } });
+      if (rm.status !== 0) problems.push('host cannot create its state dir through the ancestor tmpfs: rc=' + rm.status + ' ' + String(rm.stderr).slice(0, 120));
+    }
   }
 }
 // real-engine regression: a home lacking every masked credential path must

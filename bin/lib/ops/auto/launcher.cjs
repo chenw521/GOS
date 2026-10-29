@@ -173,7 +173,10 @@ function composeArgv(ctx) {
   }
   for (const w of ctx.writableRoots) argv.push('--bind', w, w);
   for (const rb of (ctx.roBinds || [])) argv.push('--ro-bind', rb, rb);
-  for (const m of ctx.masks) {
+  // Shallowest dest first: an ancestor tmpfs mounted before a nested mask
+  // lets the deeper mount win explicitly, so nested hides stay visible in argv.
+  const orderedMasks = ctx.masks.slice().sort((a, b) => a.dest.split(path.sep).length - b.dest.split(path.sep).length || (a.dest < b.dest ? -1 : 1));
+  for (const m of orderedMasks) {
     if (m.kind === 'empty') argv.push('--ro-bind', EMPTY_SRC, m.dest);
     else argv.push('--tmpfs', m.dest); // tmpfs and seed kinds
   }
@@ -241,11 +244,21 @@ function maskOverBindHolds(spec) {
     }
     for (const later of ops) {
       if (later.index <= mo.index) continue;
-      if (isAncestorPath(later.dest, m.dest)) return false; // same-path/ancestor remount
+      if (isAncestorPath(later.dest, m.dest)) {
+        // a later ancestor mount normally re-exposes, except when it is
+        // itself another recorded mask (an ancestor tmpfs hides more,
+        // never less)
+        const ancestorMask = meta.masks.some((n) => n !== m && n.dest === later.dest
+          && maskMountOp([later], n, meta.emptySrc));
+        if (!ancestorMask) return false;
+        continue;
+      }
       if (isAncestorPath(m.dest, later.dest)) {
         const seeded = later.op === '--ro-bind' && typeof later.src === 'string'
           && seedRoots.some((r) => isAncestorPath(r, later.src));
-        if (!seeded) return false;
+        const nestedMask = meta.masks.some((n) => n !== m && n.dest === later.dest
+          && maskMountOp([later], n, meta.emptySrc));
+        if (!seeded && !nestedMask) return false; // deeper mask mounts win; anything else re-exposes
       }
     }
   }
@@ -447,10 +460,15 @@ function compose(profileName, opts) {
   const resolved = load.profile.masks.map((m) => ({ ...m, dest: path.resolve(resolveTokenPath(m.path, env)) }));
   // A masked path is only mountable when the sandbox sees a real file or
   // directory at the destination: bwrap cannot create a missing mountpoint
-  // on a read-only bind, and it refuses to mount over a symlink. A symlink
-  // whose real target lives inside the bind-mounted home is masked at its
-  // resolved path; anything else unreachable (absent, or pointing outside
-  // the bind set) is skipped and recorded rather than fatal.
+  // on a read-only bind, and it refuses to mount over a symlink. Credential
+  // files that are absent or dangle outside the bind set are skipped (they
+  // are already invisible). Host-state directories are different: the host
+  // process needs those paths to EXIST and be writable inside the sandbox,
+  // so an unmountable destination climbs to its nearest real ancestor and
+  // mounts the tmpfs there — deeper mask mounts still win, so nested masks
+  // (for example the trust store under a masked share dir) stay hidden. A
+  // symlink whose real target lives inside the home bind is masked at the
+  // resolved path instead.
   const homeRoot = env.HOME || os.homedir();
   const masks = [];
   const masksSkipped = [];
@@ -462,9 +480,21 @@ function compose(profileName, opts) {
     if (st) { try { real = fs.realpathSync(m.dest); } catch { real = null; } }
     let rst = null;
     if (real) { try { rst = fs.lstatSync(real); } catch { rst = null; } }
-    const insideHome = real && rst && real !== m.dest
-      && (real === homeRoot || real.startsWith(homeRoot + path.sep));
-    if (insideHome) masks.push({ ...m, dest: real, symlinkOf: m.dest });
+    if (real && rst && real !== m.dest
+      && (real === homeRoot || real.startsWith(homeRoot + path.sep))) {
+      masks.push({ ...m, dest: real, symlinkOf: m.dest });
+      continue;
+    }
+    if (m.kind === 'empty') { masksSkipped.push(m.path); continue; }
+    let anc = path.dirname(m.dest);
+    let ancOk = false;
+    while (anc !== homeRoot && anc !== path.parse(anc).root) {
+      let ast = null;
+      try { ast = fs.lstatSync(anc); } catch { ast = null; }
+      if (ast && ast.isDirectory() && !ast.isSymbolicLink()) { ancOk = true; break; }
+      anc = path.dirname(anc);
+    }
+    if (ancOk) masks.push({ ...m, dest: anc, redirectTo: anc });
     else masksSkipped.push(m.path);
   }
   const writableRoots = (Array.isArray(o.writableRoots) ? o.writableRoots : [])
