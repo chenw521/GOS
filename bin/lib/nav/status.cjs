@@ -300,7 +300,7 @@ function cmdStatus() {
     return;
   }
   printStatus(state);
-  const skipCount = (state.semantic_skips || []).length; // R4-F9: visible skip accounting
+  const skipCount = (state.semantic_skips || []).length; // visible skip accounting
   if (skipCount > 0) console.log(`⚠ semantic skips recorded: ${skipCount} time(s) via GOS_TEST_SANDBOX escape — review if unexpected`);
   console.log(`\nNext:\n${nextHint(state)}`);
 }
