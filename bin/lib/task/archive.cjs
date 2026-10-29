@@ -62,8 +62,8 @@ function shipLedgerLines(state) {
     const v = approvals[name];
     if (v != null && typeof v === 'object') {
       if (v.mode === 'auto') {
-        delegated.push(v.pending ? `${name} (pending ratification)` : name);
-        if (v.pending) pendingCount++;
+        delegated.push(v.status === 'PENDING' || v.pending === true ? `${name} (pending ratification)` : name);
+        if (v.status === 'PENDING' || v.pending === true) pendingCount++;
       } else humanCount++;
     } else if (typeof v === 'string' && v) humanCount++;
   }

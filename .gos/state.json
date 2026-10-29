@@ -186,6 +186,12 @@
       "type": "major",
       "description": "Fluid back to PLAN: discovered during PLAN",
       "status": "open"
+    },
+    {
+      "id": "G-1793270736213",
+      "type": "major",
+      "description": "Fluid back to BUILD: --reason phase-1 FAIL: ratify/redteam legs unwired in loop (D-41); publish() unreachable (D-44); NFS advisory missing (D-45); allowFull dead-end (D-47). phase-2 High: env credential passthrough into spawns; mask gaps (.git-credentials/.aws/.gnupg); kernel-tier .git ro blocks commit; own commits misread as external mutation; redteam spawn spec malformed; quotapath typo run-sections.sh:251",
+      "status": "open"
     }
   ],
   "phase_name": "P0: full-auto mode",
@@ -267,6 +273,13 @@
       "done": "T1,T2,T3,T4,T5,T6a,T6b,T7a,T7b,T8,T9,T10,T11",
       "remaining": "",
       "at": "2026-10-29T10:05:08.089Z"
+    },
+    {
+      "stage": "BUILD",
+      "unit": "all-waves (auto at commit)",
+      "done": "T1,T2,T3,T4,T5,T6a,T6b,T7a,T7b,T8,T9,T10,T11",
+      "remaining": "",
+      "at": "2026-10-29T11:49:39.859Z"
     }
   ],
   "spec_gate_version": 3,

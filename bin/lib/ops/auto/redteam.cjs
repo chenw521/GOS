@@ -1,14 +1,16 @@
 // ops/auto/redteam — runner-orchestrated red-team review rounds for
 // delegated stage approvals. The runner owns the prompt template below
 // (workers never receive prompt source from repo files), composes a
-// separate spawn whose only repository view is the read-only workspace
-// mount (no writable roots), stamps the captured stream into the
-// machine-local store before any consumer reads the pairing, and
-// classifies the worker verdict into a findings count. Delegation
-// clearance follows the double-zero rule: two INDEPENDENT findings=0
-// rounds (distinct spawn ids) clear the gate, a single zero never does,
-// and any round with findings>0 holds the gate for human disposition —
-// never auto-cleared.
+// separate spawn through the host adapter's command line under a
+// capability profile whose only repository view is the read-only workspace
+// (writable set empty; at the lexical tier the read-only posture rests on
+// the injected config and the escape detector, not a kernel mount), stamps
+// the captured stream into the machine-local store before any consumer
+// reads the pairing, and classifies the worker verdict into a findings
+// count. Delegation clearance follows the double-zero rule: two INDEPENDENT
+// findings=0 rounds (distinct spawn ids) clear the gate, a single zero
+// never does, and any round with findings>0 holds the gate for human
+// disposition — never auto-cleared.
 'use strict';
 
 const crypto = require('node:crypto');
@@ -18,6 +20,7 @@ const { spawnSync } = require('node:child_process');
 const store = require('./store.cjs');
 const launcher = require('./launcher.cjs');
 const loop = require('./loop.cjs');
+const registry = require('./adapters/registry.cjs');
 const core = require('../../core/index.cjs');
 
 // Stamp stage label and prompt snapshot kind in the trust store.
@@ -29,7 +32,11 @@ const SNAPSHOT_KIND = 'redteamPrompt';
 const REQUIRED_ZEROS = 2;
 
 const DEFAULT_PROFILE = 'restricted';
-const DEFAULT_WALL_MS = 60 * 60 * 1000;
+// Wall clock per review round: the runner's GOS_AUTO_TIMEOUT_WALL_SEC
+// override wins over the 60-minute default, with the same strict positive
+// integer grammar (a malformed override fails closed, never falls back).
+const WALL_ENV = 'GOS_AUTO_TIMEOUT_WALL_SEC';
+const DEFAULT_WALL_SEC = 60 * 60;
 const SPAWN_MAX_BUFFER = 64 * 1024 * 1024;
 
 // Runner-held prompt template. The sha256 of this exact constant is the
@@ -156,27 +163,49 @@ function redteamSpawnRunner(spec, ctx) {
   }
 }
 
+// Wall-clock ceiling for one round: explicit ctx.wallMs, else the shared
+// env override, else the default. Malformed overrides fail closed.
+function resolveWallMs(ctx) {
+  if (Number.isInteger(ctx.wallMs) && ctx.wallMs > 0) return { ok: true, wallMs: ctx.wallMs };
+  const raw = (ctx.env || process.env)[WALL_ENV];
+  if (raw == null) return { ok: true, wallMs: DEFAULT_WALL_SEC * 1000 };
+  const text = String(raw).trim();
+  if (!/^[1-9][0-9]*$/.test(text)) {
+    return {
+      ok: false, status: 'error', reason: 'invalid-timeout', which: WALL_ENV, value: String(raw),
+      guidance: store.guidanceFor('auto.breaker.invalidTimeout', { name: WALL_ENV, value: String(raw) }),
+    };
+  }
+  return { ok: true, wallMs: Number(text) * 1000 };
+}
+
 // Run one red-team review round. Composes a SEPARATE spawn under a
 // capability profile with the workspace mounted read-only and NO writable
 // roots (the reviewer may read the repository, never write it), takes its
-// prompt solely from the runner-held template, stamps the captured stream
-// into the trust store, and classifies the verdict. Never throws; a
-// failed spawn or unparsable output yields a failure-classified round.
+// prompt solely from the runner-held template, delivers it through the host
+// adapter's real command line, stamps the captured stream into the trust
+// store, and classifies the verdict. Never throws; a failed spawn or
+// unparsable output yields a failure-classified round.
 //
 // runRound({stage, spawnId}, ctx) with ctx:
 //   rootDir       repo root (default: resolved cwd)
 //   env           environment for profile token resolution
+//   host          adapter host name (default 'opencode')
 //   profile       launcher profile name (default 'restricted')
 //   seed          independence seed (default: the spawnId)
 //   spawnRunner   (spec, {wallMs}) -> spawnSync shape; sync or promise
 //   engineProbe   () -> {engine, version?} launcher probe stub
-//   wallMs        wall-clock ceiling for the spawn (default 60 min)
+//   wallMs        wall-clock ceiling (default: GOS_AUTO_TIMEOUT_WALL_SEC,
+//                 else 60 minutes)
 //   now           () -> epoch ms clock
 async function runRound({ stage, spawnId }, ctx = {}) {
   if (typeof stage !== 'string' || !stage) return { ok: false, status: 'error', reason: 'invalid-stage' };
   if (typeof spawnId !== 'string' || !spawnId) return { ok: false, status: 'error', reason: 'invalid-spawn-id' };
   const rootDir = ctx.rootDir ? path.resolve(String(ctx.rootDir)) : (core.currentRootRealpath() || process.cwd());
   const now = typeof ctx.now === 'function' ? ctx.now : Date.now;
+
+  const wall = resolveWallMs(ctx);
+  if (!wall.ok) return wall;
 
   const recorded = ensurePromptRecorded(rootDir);
   if (!recorded.ok) return recorded;
@@ -197,12 +226,34 @@ async function runRound({ stage, spawnId }, ctx = {}) {
     };
   }
 
+  // Host command line: the adapter spec turns the runner template into a
+  // real spawn argv (prompt delivered per the adapter contract, PATH/HOME
+  // carried by the adapter env); the launcher frame wraps it at the kernel
+  // tier and the injected permission config rides the env either way.
+  const host = typeof ctx.host === 'string' && ctx.host ? ctx.host : 'opencode';
+  const adapterMod = registry.requireAdapter(host);
+  if (!adapterMod || typeof adapterMod.buildSpawnSpec !== 'function') {
+    return {
+      ok: false, status: 'error', reason: 'host-adapter-unavailable', host,
+      guidance: store.guidanceFor('auto.redteam.hostUnavailable', { host }),
+    };
+  }
+
   const seed = typeof ctx.seed === 'string' && ctx.seed ? ctx.seed : spawnId;
   const prompt = renderPrompt({ stage, spawnId, seed, rootDir });
-  const spec = {
-    argv: composed.argv,
-    env: { ...composed.env, [loop.SPAWN_MARKER_ENV]: '1' },
+  const adapterSpec = adapterMod.buildSpawnSpec({
+    prompt,
+    env: loop.spawnEnvTemplate(ctx.env === process.env ? {} : (ctx.env || {})),
     cwd: rootDir,
+  });
+  const specEnv = { ...adapterSpec.env, ...composed.env, [loop.SPAWN_MARKER_ENV]: '1' };
+  const argv = composed.tier === 'bubblewrap'
+    ? ['bwrap', ...composed.argv, '--', ...adapterSpec.argv]
+    : adapterSpec.argv.slice();
+  const spec = {
+    argv,
+    env: specEnv,
+    cwd: adapterSpec.cwd || rootDir,
     prompt,
     stage,
     spawnId,
@@ -214,7 +265,7 @@ async function runRound({ stage, spawnId }, ctx = {}) {
   };
 
   const spawnRunner = ctx.spawnRunner || redteamSpawnRunner;
-  const wallMs = Number.isInteger(ctx.wallMs) && ctx.wallMs > 0 ? ctx.wallMs : DEFAULT_WALL_MS;
+  const wallMs = wall.wallMs;
   let result;
   try {
     result = await spawnRunner(spec, { wallMs });
@@ -255,6 +306,12 @@ async function runRound({ stage, spawnId }, ctx = {}) {
     round.guidance = runnerFailed
       ? store.guidanceFor('auto.redteam.roundFailed')
       : store.guidanceFor('auto.redteam.findingsUnparsable');
+  }
+  if (spec.tier !== 'bubblewrap') {
+    // No kernel sandbox engine: the read-only workspace posture rests on the
+    // injected config and the escape detector, not on a mount flag.
+    round.readOnlyEnforcement = 'lexical';
+    round.lexicalTierNote = core.t('auto.redteam.lexicalTier');
   }
   return { ok: true, round, stamp: stamp.stamp, promptSha256: recorded.sha256 };
 }

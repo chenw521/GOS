@@ -16,6 +16,7 @@
 'use strict';
 
 const { spawnSync } = require('child_process');
+const registryMod = require('./registry.cjs');
 
 const NAME = 'opencode';
 const SPAWN_MODE = 'opencode-run-json';
@@ -100,14 +101,16 @@ function parseEventStream(text, opts) {
 
 // Fresh-session spawn spec: `opencode run --format json <prompt>` with a
 // scratch env. No session id, no resume flag — each spec is a new session.
-// opts: { prompt, args?, env?, cwd? } — extra args land verbatim between the
-// flags and the prompt (e.g. ['--model', '<id>']); env overlays process.env.
+// The env base is a sanitized copy of process.env (credential classes
+// stripped; model-provider auth survives) with the caller's opts.env
+// overlays applied last. opts: { prompt, args?, env?, cwd? } — extra args
+// land verbatim between the flags and the prompt (e.g. ['--model', '<id>']).
 function buildSpawnSpec(opts) {
   const o = opts || {};
   const argv = ['opencode', 'run', '--format', 'json'];
   for (const a of Array.isArray(o.args) ? o.args : []) argv.push(String(a));
   if (o.prompt != null && o.prompt !== '') argv.push(String(o.prompt));
-  const env = Object.assign({}, process.env, o.env || {});
+  const env = Object.assign({}, registryMod.sanitizedSpawnEnv(process.env), o.env || {});
   return { argv, env, cwd: o.cwd || process.cwd() };
 }
 

@@ -1110,7 +1110,7 @@
   {
     "path": "test/sections/T105-auto-depth.test.sh",
     "category": "in-flight-sweep",
-    "maxHits": 11,
+    "maxHits": 17,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {

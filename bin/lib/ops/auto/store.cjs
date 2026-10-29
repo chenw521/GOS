@@ -23,10 +23,19 @@ const STORE_FILE = 'store.json';
 
 const RUN_LOCK_FILE = 'run.lock';
 
-// A held run lock is breakable only past this heartbeat age. The threshold
-// sits above the longest single wait the runner performs (spawn wall clock,
-// CI watch) so a healthy runner is never breakable, only a dead one is.
+// A held run lock is breakable only past this heartbeat age. The floor sits
+// above the longest single wait the runner performs (spawn wall clock, CI
+// watch); heartbeatStaleThresholdMs raises it further whenever a configured
+// wall timeout could legally outlast the floor.
 const LOCK_HEARTBEAT_STALE_MS = 90 * 60 * 1000;
+
+// Safety margin added to a resolved wall timeout when it feeds the heartbeat
+// staleness threshold: a spawn may run the full wall clock plus teardown.
+const LOCK_HEARTBEAT_MARGIN_MS = 15 * 60 * 1000;
+
+// Network filesystem types whose presence under the store path warns about
+// shared-home double-runner hazards at `auto on`.
+const NETWORK_FS_TYPES = new Set(['nfs', 'nfs4', 'cifs', '9p', 'lustre', 'lustre2', 'gpfs', 'beegfs']);
 
 // Failure-class taxonomy for breaker records. Takeover is a lock-family
 // event class, not a loop failure class — it appends records but never
@@ -114,6 +123,14 @@ function validateStoreShape(st) {
   if (!isPlainObject(st.limits) || !['N', 'K', 'B'].every((k) => Number.isInteger(st.limits[k]) && st.limits[k] >= 1)) {
     errs.push('limits: integers >= 1 required for N/K/B');
   }
+  if (st.timeouts != null && (!isPlainObject(st.timeouts)
+    || !Number.isInteger(st.timeouts.wallSec) || st.timeouts.wallSec < 1
+    || !Number.isInteger(st.timeouts.idleSec) || st.timeouts.idleSec < 1)) {
+    errs.push('timeouts: integers >= 1 required for wallSec/idleSec');
+  }
+  if (st.allowFull != null && typeof st.allowFull !== 'boolean') {
+    errs.push('allowFull: boolean required');
+  }
   if (!isPlainObject(st.counters) || !nonNegInt(st.counters.spawnCount) || !nonNegInt(st.counters.tripCount)) {
     errs.push('counters: integers >= 0 required for spawnCount/tripCount');
   }
@@ -171,7 +188,7 @@ function load(rootDir) {
 }
 
 function freshStore(opts) {
-  return {
+  const st = {
     store_schema_version: STORE_SCHEMA_VERSION,
     mode: opts.mode === 'on' ? 'on' : 'off',
     profile: typeof opts.profile === 'string' && opts.profile.length ? opts.profile : 'restricted',
@@ -183,6 +200,9 @@ function freshStore(opts) {
     snapshots: {},
     probeResults: [],
   };
+  if (opts.timeouts != null) st.timeouts = { wallSec: opts.timeouts.wallSec, idleSec: opts.timeouts.idleSec };
+  if (opts.allowFull === true) st.allowFull = true;
+  return st;
 }
 
 // The only sanctioned fresh-store path (`auto on`). Refuses to reset an
@@ -194,6 +214,15 @@ function create(opts = {}) {
     if (!isPlainObject(l) || !['N', 'K', 'B'].every((k) => Number.isInteger(l[k]) && l[k] >= 1)) {
       return { ok: false, status: 'error', reason: 'invalid-limits', detail: 'limits must be integers >= 1 for N/K/B' };
     }
+  }
+  if (opts.timeouts != null) {
+    const t = opts.timeouts;
+    if (!isPlainObject(t) || !Number.isInteger(t.wallSec) || t.wallSec < 1 || !Number.isInteger(t.idleSec) || t.idleSec < 1) {
+      return { ok: false, status: 'error', reason: 'invalid-timeouts', detail: 'timeouts must be integers >= 1 for wallSec/idleSec' };
+    }
+  }
+  if (opts.allowFull != null && typeof opts.allowFull !== 'boolean') {
+    return { ok: false, status: 'error', reason: 'invalid-allow-full', detail: 'allowFull must be a boolean' };
   }
   const file = storeFile(opts.rootDir);
   if (file == null) return paused('unwritable', null, 'no XDG data home resolvable', 'auto.store.unwritable');
@@ -237,6 +266,32 @@ function probeWritable(rootDir) {
   } catch (e) {
     return { ok: false, reason: 'unwritable', path: root, detail: e.message, guidance: guidanceFor('auto.store.unwritable', { path: root }) };
   }
+}
+
+// Detect a network filesystem holding the store directory: parse /proc/mounts
+// for the longest-prefix mount of the resolved store path and report it when
+// its type is network-shaped. Purely advisory — callers print the shared-home
+// double-runner hazard; cross-host lock staleness stays hostname-guarded.
+function networkFsUnderStore(rootDir) {
+  const root = storeRoot(rootDir);
+  if (root == null) return null;
+  let target;
+  try { target = fs.realpathSync(root); } catch { target = path.resolve(root); }
+  let lines;
+  try { lines = fs.readFileSync('/proc/mounts', 'utf8').split('\n'); } catch { return null; }
+  let best = null;
+  for (const line of lines) {
+    const parts = line.trim().split(/\s+/);
+    if (parts.length < 3) continue;
+    const mp = parts[1].replace(/\\([0-7]{3})/g, (m, oct) => String.fromCharCode(parseInt(oct, 8)));
+    const fstype = parts[2];
+    let cmp;
+    try { cmp = fs.realpathSync(mp); } catch { cmp = mp; }
+    if (target === cmp || target.startsWith(cmp + path.sep)) {
+      if (!best || cmp.length > best.mount.length) best = { mount: cmp, fstype };
+    }
+  }
+  return best != null && NETWORK_FS_TYPES.has(best.fstype) ? best : null;
 }
 
 // ---- shared writer plumbing ----
@@ -416,11 +471,26 @@ function readLockFile(lp) {
 
 let _lockHeldPath = null;
 
-function lockHeartbeatStale(rec, lp) {
+// Effective heartbeat staleness threshold: never below the fixed floor, and
+// raised to wallTimeout + margin whenever a configured wall timeout (store
+// config, then the env override, via the breaker's policy resolution) could
+// let a legal spawn outlast the floor. Function-level require: breaker.cjs
+// loads this module first, so a top-level require would see partial exports.
+function heartbeatStaleThresholdMs(rootDir) {
+  const breaker = require('./breaker.cjs');
+  const loaded = load(rootDir);
+  const defaults = loaded.ok && isPlainObject(loaded.store.timeouts) ? loaded.store.timeouts : undefined;
+  const tp = breaker.timeoutPolicy(process.env, defaults);
+  const wallMs = (tp.ok ? tp.wallSec : breaker.DEFAULT_WALL_SEC) * 1000;
+  return Math.max(LOCK_HEARTBEAT_STALE_MS, wallMs + LOCK_HEARTBEAT_MARGIN_MS);
+}
+
+function lockHeartbeatStale(rec, lp, rootDir) {
+  const threshold = heartbeatStaleThresholdMs(rootDir);
   if (typeof rec.heartbeat_at === 'string' && ISO_RE.test(rec.heartbeat_at)) {
-    return Date.now() - Date.parse(rec.heartbeat_at) > LOCK_HEARTBEAT_STALE_MS;
+    return Date.now() - Date.parse(rec.heartbeat_at) > threshold;
   }
-  try { return Date.now() - fs.statSync(lp).mtimeMs > LOCK_HEARTBEAT_STALE_MS; }
+  try { return Date.now() - fs.statSync(lp).mtimeMs > threshold; }
   catch { return true; }
 }
 
@@ -458,7 +528,7 @@ function acquireRunLock(opts = {}) {
         console.error(`⚠ stale auto run lock (pid ${rec.pid} not running) — auto-recovered`);
         remove = true;
       } else {
-        const stale = lockHeartbeatStale(rec, lp);
+        const stale = lockHeartbeatStale(rec, lp, opts.rootDir);
         if (!stale || !breakLock) {
           return {
             ok: false, status: 'refused', reason: stale ? 'heartbeat-stale' : 'live', holder: rec, path: lp,
@@ -501,7 +571,9 @@ function acquireRunLock(opts = {}) {
 }
 
 // Refresh the heartbeat of OUR lock (long spawn waits and CI watches must
-// not let a healthy runner look stale).
+// not let a healthy runner look stale). The write goes through the same
+// atomic writer the rest of the store uses: a torn direct write would read
+// as unreadable, unproven ownership, and a reclaimable live lock.
 function heartbeatRunLock(rootDir) {
   const lp = lockPath(rootDir);
   if (lp == null || !fs.existsSync(lp)) return { ok: false, status: 'error', reason: 'no-lock' };
@@ -510,10 +582,8 @@ function heartbeatRunLock(rootDir) {
     return { ok: false, status: 'error', reason: 'not-owner' };
   }
   rec.heartbeat_at = new Date().toISOString();
-  try {
-    fs.writeFileSync(lp, JSON.stringify(rec));
-    fs.utimesSync(lp, new Date(), new Date());
-  } catch (e) {
+  try { core.writeAtomicJson(lp, rec); }
+  catch (e) {
     return { ok: false, status: 'error', reason: 'write-failed', detail: e.message };
   }
   return { ok: true, path: lp };
@@ -559,7 +629,7 @@ function breakRunLock(rootDir) {
     const myBoot = readBootId();
     const bootChanged = myBoot != null && rec.boot_id != null && rec.boot_id !== myBoot;
     const live = livePid(rec.pid) && !bootChanged;
-    if (live && !lockHeartbeatStale(rec, lp)) {
+    if (live && !lockHeartbeatStale(rec, lp, rootDir)) {
       const rec2 = recordBreaker({ cls: 'takeover', detail: `refused --break-lock: pid ${rec.pid} live on ${rec.hostname}` }, rootDir);
       return {
         ok: false, refused: true, holder: rec, path: lp, recorded: !!(rec2 && rec2.ok),
@@ -604,6 +674,8 @@ module.exports = {
   load,
   create,
   probeWritable,
+  networkFsUnderStore,
+  heartbeatStaleThresholdMs,
   stampStream,
   recordDisposition,
   saveSnapshot,

@@ -145,7 +145,7 @@ if [ "$MODE" = "affected" ]; then
     INPUT_FILES="$*"
   else
     BASE="${BASE_REF:-$(node -e "const c=require('./bin/lib/core/index.cjs');const s=c.readState();process.stdout.write(s.task_head||'HEAD')" 2>/dev/null || echo HEAD)}"
-    INPUT_FILES="$(git -C "$GOS_ROOT" -c core.quotapath=off diff --name-only "$BASE" 2>/dev/null; git -C "$GOS_ROOT" -c core.quotapath=off ls-files --others --exclude-standard 2>/dev/null)"
+    INPUT_FILES="$(git -C "$GOS_ROOT" -c core.quotepath=off diff --name-only "$BASE" 2>/dev/null; git -C "$GOS_ROOT" -c core.quotepath=off ls-files --others --exclude-standard 2>/dev/null)"
   fi
   if [ -z "$INPUT_FILES" ]; then
     echo "── affected mode: empty input set (no diff vs base) — nothing to select"; exit 0
@@ -248,7 +248,7 @@ RAN_SECS="$(printf '%s\n' "$RAN_NAMES" | python3 -c "import json,sys; print(json
 RESULTS_FINAL="$(printf '%s' "${RESULTS_JSON%,}" | python3 -c "import json,sys; s=sys.stdin.read().strip(); print('{'+s+'}' if s else '{}')" 2>/dev/null || echo '{}')"
 FAILED_FINAL="$(printf '%s' "$FAILED_SECS" | python3 -c "import json,sys,re; s=sys.argv[1]; print(json.dumps(sorted(re.sub(r'\(\d+\)$','',x) for x in s.split())))" "$FAILED_SECS" 2>/dev/null || echo '[]')"
 WTH_H="$(git -C "$GOS_ROOT" rev-parse 'HEAD^{tree}' 2>/dev/null)"
-WTH_P="$(git -C "$GOS_ROOT" -c core.quotapath=off diff --no-color --no-ext-diff --no-textconv HEAD 2>/dev/null | sha256sum | cut -d' ' -f1)"
+WTH_P="$(git -C "$GOS_ROOT" -c core.quotepath=off diff --no-color --no-ext-diff --no-textconv HEAD 2>/dev/null | sha256sum | cut -d' ' -f1)"
 mkdir -p "$GOS_ROOT/.gos/cache"
 printf '{"schema_version":2,"selector":"%s","sections_run":%s,"failed_sections":%s,"results":%s,"log":"%s","head_tree":"%s","patch_sha":"%s","finished_at":"%s"}\n' \
   "$SELECTOR" "$RAN_SECS" "$FAILED_FINAL" "$RESULTS_FINAL" "${RUN_LOG#"$GOS_ROOT"/}" "${WTH_H:-unknown}" "${WTH_P:-unknown}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$GOS_ROOT/.gos/cache/run-manifest.json"

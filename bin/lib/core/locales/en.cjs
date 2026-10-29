@@ -514,6 +514,11 @@ module.exports = {
     why: 'an explicit safety bound stopped the loop before the breaker layers fired',
     fix: 'raise the ceiling or start a fresh run',
   },
+  'auto.loop.delegationHeld': {
+    what: 'delegated stage {stage} held for human review: {detail}',
+    why: 'red-team findings and failed review rounds never auto-clear — in auto mode dispositions are never written for the working stage',
+    fix: 'review the red-team evidence, then either fix the stage work and start a fresh auto run or approve the stage yourself as the human gate',
+  },
 
   // ---- auto mode: ratification boundary (delegated approvals) ----
   'auto.ratify.pendingRecorded': 'stage {stage} approval recorded as PENDING (auto): structural checks only — the runner ratifies it from the captured-stream stamp after this session exits',
@@ -569,6 +574,12 @@ module.exports = {
     why: 'a failed spawn is no scrutiny evidence and never counts as a zero',
     fix: 're-run the round after checking the spawn failure detail in the local store',
   },
+  'auto.redteam.hostUnavailable': {
+    what: 'no spawn adapter is available for host {host}',
+    why: 'a red-team round needs a real host command line composed by the host adapter',
+    fix: 'select a host with an adapter (opencode) or register one, then retry the round',
+  },
+  'auto.redteam.lexicalTier': 'read-only workspace enforced at the lexical tier only (no sandbox engine): the reviewer is denied writes by the injected config and the escape detector, not by the kernel',
 
   // ---- auto mode: delivery probe + privileged git ----
   'auto.delivery.probeAdvisory': {
@@ -642,8 +653,15 @@ module.exports = {
   'auto.publish.purged': 'auto runtime store removed ({path}) — cost history survives only in tracked mirror counters',
   // ---- auto mode: CLI surface ----
   'auto.cli.usage': 'Usage: {cmd:auto} <on|off|status|run|disposition> [args] — full-auto runner (machine-local store; ends at SHIP)',
-  'auto.cli.subs': 'on [--profile restricted|workspace|full] [--max-retries N] [--max-visits K] [--max-sessions B] [--timeout-wall sec] [--timeout-idle sec] | off [--purge] | status | run [--detach] | disposition <runId> --reason "<text>" [--by <name>]',
-  'auto.cli.on.usage': 'Usage: {cmd:auto} on [--profile restricted|workspace|full] [--max-retries N] [--max-visits K] [--max-sessions B] [--timeout-wall sec] [--timeout-idle sec]',
+  'auto.cli.subs': 'on [--profile restricted|workspace|full] [--allow-full] [--max-retries N] [--max-visits K] [--max-sessions B] [--timeout-wall sec] [--timeout-idle sec] | off [--purge] | status | run [--detach] [--break-lock] | disposition <runId> --reason "<text>" [--by <name>]',
+  'auto.cli.on.usage': 'Usage: {cmd:auto} on [--profile restricted|workspace|full] [--allow-full] [--max-retries N] [--max-visits K] [--max-sessions B] [--timeout-wall sec] [--timeout-idle sec]',
+  'auto.cli.on.nfsAdvisory': 'store path sits on a network filesystem ({fstype}, mount {mount}): a shared home lets same-path clones on different machines collide (cross-host lock staleness is hostname-guarded, but that guard cannot see a second machine running against this store) — prefer a machine-local store (point XDG_DATA_HOME at local disk)',
+  'auto.cli.on.allowFullWithoutFull': {
+    what: '--allow-full only applies to the full profile (requested {profile})',
+    why: 'the capability-upgrade gate exists so raising the sandbox ceiling is always a deliberate act',
+    fix: 'pass --profile full together with --allow-full, or drop the flag',
+  },
+  'auto.cli.run.lockBroken': 'stale run lock broken ({broke}) — recorded as a takeover event',
   'auto.cli.on.created': 'auto store created at {path}',
   'auto.cli.on.reconfigured': 'existing auto store reconfigured at {path}',
   'auto.cli.on.done': 'auto mode ON — profile {profile}, limits N={n}/K={k}/B={b}',
@@ -657,7 +675,8 @@ module.exports = {
   'auto.cli.off.already': 'auto mode is already off (no store exists for this repository)',
   'auto.cli.off.done': 'auto mode OFF — store kept at {path} (configuration and history preserved)',
   'auto.cli.off.purgeHint': 'to also remove the store and its history: `{cmd:auto} off --purge`',
-  'auto.cli.status.head': 'auto: mode {mode} · profile {profile} · limits N={n}/K={k}/B={b}',
+  'auto.cli.status.head': 'auto: mode {mode} · profile {profile}{full} · limits N={n}/K={k}/B={b}',
+  'auto.cli.status.allowFullTag': ' · allow-full (explicit upgrade)',
   'auto.cli.status.absent': 'auto: no store at {path} — auto was never enabled for this repository (`{cmd:auto} on` creates it)',
   'auto.cli.status.paused': 'auto: store paused ({reason}) — the loop refuses to run until it is inspected',
   'auto.cli.status.hostMatrix': 'host matrix ({n} rows; fixture rows appear only under the test env gate):',

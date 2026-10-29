@@ -159,12 +159,14 @@ function registryFail(classTag, key, params, message) {
   return { class: classTag, key, params: params || {}, message };
 }
 
-// Probe one host against its matrix rows. ctx: { runner, home, env } —
-// runner injectable for tests (signature runner(command, args) → {ok,out,err}).
+// Probe one host against its matrix rows. ctx: { runner, home, env, matrix }
+// — runner injectable for tests (signature runner(command, args) →
+// {ok,out,err}); matrix injectable for tests (array of matrix rows replacing
+// the registry.json load).
 function probeHost(host, ctx) {
   const c = ctx || {};
   const runner = c.runner || liveRunner;
-  const am = activeMatrix(c.env);
+  const am = Array.isArray(c.matrix) ? { rows: c.matrix.slice() } : activeMatrix(c.env);
   if (am.error) return { ok: false, steps: [], failure: registryFail('registry-unreadable', 'auto.host.registryUnreadable', { error: am.error }, `host registry unreadable: ${am.error}`) };
   const rows = am.rows.filter((r) => r.host === host);
   if (!rows.length) {
@@ -194,12 +196,16 @@ function probeHost(host, ctx) {
   // stderr with rc=0); rc still governs success, so this stays fail-closed.
   const combined = (r) => `${r.out || ''}\n${r.err || ''}`;
 
-  // Step 1: version parses AND satisfies exactly one row's range.
-  const vr = runner(binary, rows[0].version_command || ['--version']);
+  // Step 1: version parses AND satisfies exactly one row's range. A row
+  // missing version_command falls back to ['--version'] everywhere the
+  // command is rendered, so a missing field classifies a failure instead
+  // of crashing.
+  const versionCommand = rows[0].version_command || ['--version'];
+  const vr = runner(binary, versionCommand);
   const parsed = vr.ok ? parseVersion(combined(vr)) : undefined;
   const versionText = parsed ? parsed.join('.') : null;
   if (!vr.ok || !parsed) {
-    const detail = vr.ok ? `no x.y.z version in '${binary} ${rows[0].version_command.join(' ')}' output` : `${binary} ${rows[0].version_command.join(' ')}: ${vr.err || 'no output'}`;
+    const detail = vr.ok ? `no x.y.z version in '${binary} ${versionCommand.join(' ')}' output` : `${binary} ${versionCommand.join(' ')}: ${vr.err || 'no output'}`;
     steps.push({ id: 'version', ok: false, detail });
     return { ok: false, steps, failure: registryFail('probe-version', 'auto.host.probeVersion',
       { host: binary, detail, entries: entryList },
@@ -301,6 +307,53 @@ function requireAdapter(host) {
   return mod ? require(mod) : null;
 }
 
+// Credential-class env names stripped from every spawned-session
+// environment: runner and delivery credentials (gh, git, ssh, aws) never
+// cross the sandbox boundary. Model-provider auth (ANTHROPIC_/OPENAI_/
+// GEMINI_/GOOGLE_/OPENROUTER_ API keys) is the one credential class a
+// spawned session may read by design.
+const STRIP_SPAWN_ENV_EXACT = Object.freeze([
+  'GH_TOKEN',
+  'GITHUB_TOKEN',
+  'GITHUB_ENTERPRISE_TOKEN',
+  'GITHUB_PAT',
+  'GIT_ASKPASS',
+  'GIT_ASKPASS_HELPER',
+  'GIT_SSH_COMMAND',
+  'GIT_CONFIG',
+  'GIT_CONFIG_COUNT',
+  'GIT_CONFIG_SYSTEM',
+  'GIT_CONFIG_GLOBAL',
+  'SSH_AUTH_SOCK',
+  'SSH_AGENT_PID',
+  'AWS_ACCESS_KEY_ID',
+  'AWS_SECRET_ACCESS_KEY',
+  'AWS_SESSION_TOKEN',
+  'AWS_PROFILE',
+  'AWS_DEFAULT_PROFILE',
+  'AWS_WEB_IDENTITY_TOKEN_FILE',
+]);
+
+// Conservative generic net for the same credential families: GH_/GITHUB_/
+// AWS_ names carrying TOKEN/SECRET/KEY/CREDENTIAL after the prefix. Kept
+// anchored and case-sensitive so PATH/HOME/LANG/TERM/XDG_* and other
+// vendors' keys never match.
+const STRIP_SPAWN_ENV_PATTERN = /^(GH|GITHUB|AWS)_.*(TOKEN|SECRET|KEY|CREDENTIAL)/;
+
+// Copy of baseEnv (default process.env) with every credential-class entry
+// removed. Callers apply their own overrides AFTER this so runner-injected
+// values (OPENCODE_CONFIG_CONTENT, the spawned-session marker) always land.
+function sanitizedSpawnEnv(baseEnv) {
+  const src = baseEnv && typeof baseEnv === 'object' ? baseEnv : process.env;
+  const out = {};
+  for (const k of Object.keys(src)) {
+    if (STRIP_SPAWN_ENV_EXACT.includes(k)) continue;
+    if (STRIP_SPAWN_ENV_PATTERN.test(k)) continue;
+    out[k] = src[k];
+  }
+  return out;
+}
+
 module.exports = {
   hostStatus,
   probeHost,
@@ -313,6 +366,8 @@ module.exports = {
   requireAdapter,
   entryLabel,
   fixtureEnvActive,
+  sanitizedSpawnEnv,
+  STRIP_SPAWN_ENV_EXACT,
   FAKE_HOST: 'gos-fixture-host',
   FIXTURE_ENV,
   VALID_STATUSES,

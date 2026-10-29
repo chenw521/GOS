@@ -7,11 +7,20 @@
 // the loop never runs on a trunk branch (it creates/joins a per-task work
 // branch). Every iteration revalidates task identity and delta origin — a
 // mutation made outside the loop pauses with a report and never counts into
-// the breaker's consecutive layer. Spawn outcomes flow through the
-// three-layer breaker (consecutive N, stage visits K, spawn budget B) with
-// class-tagged failures; streams are sha256-stamped into the store at spawn
-// exit before any consumer reads them. Reaching SHIP (or DONE) ends the loop
-// cleanly with no delivery adapter involved.
+// the breaker's consecutive layer; head drift from a spawn's own
+// non-advancing commits is scored as rc0-no-advance instead. Delegated
+// stages (THINK/PLAN) gain runner-side legs after their spawn exits: THINK
+// must first clear a two-pass independent red-team review under the
+// double-zero rule, then both stages have their in-spawn PENDING approval
+// ratified from the store stamp; findings or failed rounds hold the stage
+// for human review. At SHIP a green delivery probe runs the mechanical
+// publish leg (branch push -> PR -> subject lint -> squash merge -> CI
+// watch); red CI and unknown-state watches pause for a human disposition.
+// Spawn outcomes flow through the three-layer breaker (consecutive N, stage
+// visits K, spawn budget B) with class-tagged failures; streams are
+// sha256-stamped into the store at spawn exit before any consumer reads
+// them. Reaching SHIP (or DONE) ends the loop cleanly; without a green
+// delivery adapter nothing delivery-shaped runs.
 //
 // Every external effect (git, state reads, spawn, clock, host probe, engine
 // probe, detached child) is injectable; the defaults are real.
@@ -84,6 +93,29 @@ function identityDiff(expected, observed) {
     if (String(expected[k]) !== String(observed[k])) fields.push(`${k}: ${JSON.stringify(expected[k])} -> ${JSON.stringify(observed[k])}`);
   }
   return fields;
+}
+
+// Identity without the head field: post-spawn discrimination between a
+// spawn's own non-advancing commits (head drift only) and a real external
+// mutation (task/phase/stage identity or the owning branch moved).
+function stripIdentityHead(identity) {
+  const out = { ...(identity || {}) };
+  delete out.head;
+  return out;
+}
+
+// External-mutation probe between two identity snapshots plus the branch the
+// loop owns. Head drift alone is NOT a mutation — a spawn may commit without
+// advancing (that is rc0-no-advance, scored into the consecutive layer); a
+// moved stage/task/level/phase identity or a branch switch is.
+function mutationBetween(baseline, observed, expectedBranch, actualBranch) {
+  if (!store.isPlainObject(baseline) || !store.isPlainObject(observed)) return null;
+  const fields = identityDiff(stripIdentityHead(baseline), stripIdentityHead(observed));
+  const branchMoved = typeof expectedBranch === 'string' && typeof actualBranch === 'string' && actualBranch !== expectedBranch;
+  if (!fields.length && !branchMoved) return null;
+  const parts = fields.slice();
+  if (branchMoved) parts.push(`branch: ${JSON.stringify(expectedBranch)} -> ${JSON.stringify(actualBranch)}`);
+  return { fields, branchMoved, branch: actualBranch, detail: parts.join('; ') };
 }
 
 // Runner-held stage prompt template: one-shot stage instruction. The loop
@@ -171,6 +203,10 @@ function defaultCliEntryArgs() {
 //   gitRunner          (args, cwd) -> spawnSync shape
 //   stateReader        () -> GOS state object | null | {corrupt}
 //   spawnRunner        (spec, {wallMs}) -> spawnSync shape (sync or promise)
+//   delivery           options bag for the SHIP publish leg: {subject, base,
+//                      worker, baseline, gitRunner, privilegedRunner,
+//                      ghRunner, lintRunner, ciStatus, sleep, timeoutMs,
+//                      pollMs, publish (fn override)}
 //   engineProbe        () -> {engine, version?} launcher probe stub
 //   probeRunner        (command, args) -> {ok, out, err} host probe stub
 //   heartbeatIntervalMs run-lock heartbeat cadence during spawn waits
@@ -289,7 +325,7 @@ function ensureWorkBranch(gitRunner, rootDir, taskId) {
 // ---------- the iteration engine ----------
 
 async function drive(ctx) {
-  const { opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs } = ctx;
+  const { opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs, loaded } = ctx;
 
   const iterations = [];
   const readTaskState = () => {
@@ -345,15 +381,21 @@ async function drive(ctx) {
   if (!branched.ok) {
     return endWith({ ok: false, status: 'refused', reason: branched.reason, branch: branched.branch, work: branched.work || null, detail: branched.detail, guidance: branched.guidance });
   }
+  const loopBranch = branched.branch;
 
-  // Timeout policy (wall/idle) from env overrides, fail-closed.
-  const tp = breakerMod.timeoutPolicy(env);
+  // Timeout policy (wall/idle): store-config defaults from `auto on
+  // --timeout-*`, env overrides still win, fail-closed on malformed values.
+  const tp = breakerMod.timeoutPolicy(env, store.isPlainObject(loaded.store.timeouts) ? loaded.store.timeouts : undefined);
   if (!tp.ok) {
     return endWith({ ok: false, status: 'error', reason: tp.reason, which: tp.which, guidance: tp.guidance });
   }
 
   // Identity baseline: what the loop last saw and takes responsibility for.
   let baseline = identityOf(taskState, readHead(gitRunner, rootDir));
+  // Delegated leg carried into the next iteration: set after a spawn exits,
+  // consumed after identity revalidation so a mutation pauses the loop
+  // before any review spawn runs.
+  let pendingLeg = null;
   const runId = crypto.randomUUID();
   let seq = 0;
 
@@ -385,9 +427,47 @@ async function drive(ctx) {
     }
     baseline = observed;
 
+    // ---- runner-side legs for the previous delegated spawn ----
+    // A delegated-stage advance left a PENDING approval behind (structural
+    // checks only, written inside the sandbox): THINK must clear the
+    // red-team double-zero gate first, then the runner ratifies from the
+    // store stamp. Held gates pause here — no auto-advance, no dispositions.
+    if (pendingLeg) {
+      const leg = pendingLeg;
+      pendingLeg = null;
+      const modRatify = require('./ratify.cjs');
+      if (leg.advanced && modRatify.isDelegatedStage(leg.stage)) {
+        const legRes = await delegatedLegs({ leg, opts, env, rootDir, spawnRunner, tp, now });
+        if (legRes.err) return report(legRes.err, { iterations, breaker: breakerView() });
+        const legIter = iterations.find((i) => i.spawnId === leg.spawnId);
+        if (legIter) legIter.delegation = legRes.summary;
+      }
+    }
+
     const stage = String(taskState.current_stage || '').toUpperCase();
     if (TERMINAL_STAGES.includes(stage)) {
-      return endWith({ ok: true, status: stage === 'SHIP' ? 'ship' : 'done', reason: `stage-${stage.toLowerCase()}`, deliveryAdapter: false, guidance: store.guidanceFor('auto.loop.taskAtEnd', { stage }) });
+      // Delivery is probe-gated: without a green adapter state in the store
+      // the loop ends cleanly at SHIP with zero delivery involvement.
+      let delivery = null;
+      if (stage === 'SHIP' && deliveryProbeGreen(rootDir)) {
+        const pub = await publishLeg({ opts, rootDir, taskId, taskState, now, withHeartbeat });
+        if (!pub.ok) {
+          // Red CI and unknown-state watches wait for a human disposition;
+          // every other delivery failure pauses for review too. None of
+          // these ever count into the breaker's consecutive layer.
+          return endWith({
+            ok: false, status: 'paused', paused: true, reason: pub.reason || 'delivery-failed',
+            requiresDisposition: pub.requiresDisposition === true,
+            detail: pub.detail, delivery: pub, guidance: pub.guidance,
+          });
+        }
+        delivery = pub;
+      }
+      return endWith({
+        ok: true, status: stage === 'SHIP' ? 'ship' : 'done', reason: `stage-${stage.toLowerCase()}`,
+        deliveryAdapter: delivery != null, ...(delivery ? { delivery } : {}),
+        guidance: store.guidanceFor('auto.loop.taskAtEnd', { stage }),
+      });
     }
 
     // ---- iteration ceiling ----
@@ -407,6 +487,7 @@ async function drive(ctx) {
     // ---- compose the spawn: launcher profile + adapter spec ----
     const composed = launcher.compose(opts.profile, {
       workspace: rootDir,
+      allowFull: opts.allowFull === true,
       env,
       engineProbe: opts.engineProbe,
       store,
@@ -485,12 +566,7 @@ async function drive(ctx) {
     };
     iterations.push(iter);
 
-    // ---- score the outcome ----
-    const scored = await score({ iter, spec, result, streamText, b, stage, gitRunner, rootDir, adapter, endedAtMs, idleMs: tp.idleSec * 1000 });
-    if (scored.err) return report(scored.err, { iterations, breaker: breakerView() });
-    if (scored.tripped) return tripNow();
-
-    // ---- refresh the identity baseline from post-spawn truth ----
+    // ---- post-spawn truth: read once, shared by scoring and the checks ----
     const after = readTaskState();
     if (after.err) return report(after.err, { iterations, breaker: breakerView() });
     if (after.none) {
@@ -498,17 +574,30 @@ async function drive(ctx) {
     }
     const postHead = readHead(gitRunner, rootDir);
     const postIdentity = identityOf(after.state, postHead);
+    const mutation = mutationBetween(baseline, postIdentity, loopBranch, currentBranch(gitRunner, rootDir));
+
+    // ---- score the outcome ----
+    const scored = await score({ iter, spec, result, streamText, b, stage, gitRunner, rootDir, adapter, endedAtMs, idleMs: tp.idleSec * 1000, baseline, postIdentity, mutation });
+    if (scored.err) return report(scored.err, { iterations, breaker: breakerView() });
+    if (scored.tripped) return tripNow();
+
+    // Carry the delegated leg (ratification pairs this spawn's stamp); a
+    // pause below discards it and the PENDING blocks any further advance.
+    pendingLeg = { stage, spawnId: spec.spawnId, streamSha256: iter.streamSha256, advanced: iter.advanced === true };
+
     if (iter.advanced && postIdentity.stage === stage) {
       // The advance commit landed but the stage state did not move with it —
       // loop-owned inconsistency, paused rather than retried blind.
       return endWith({ ok: false, status: 'paused', paused: true, reason: 'advance-state-mismatch', expectedStage: stage, guidance: store.guidanceFor('auto.loop.externalMutation', { detail: `stage still ${stage} after an advance commit` }) });
     }
-    if (!iter.advanced && identityDiff(baseline, postIdentity).length) {
+    if (!iter.advanced && mutation && iter.signal !== 'rc0-no-advance') {
+      // A failed-signal spawn alongside a concurrent external mutation: the
+      // spawn's own failure is already scored; the mutation still pauses
+      // with a report instead of retrying blind into a moved world.
       return endWith({
         ok: false, status: 'paused', paused: true, reason: 'external-mutation',
-        expected: baseline, observed: postIdentity,
-        detail: identityDiff(baseline, postIdentity).join('; '),
-        guidance: store.guidanceFor('auto.loop.externalMutation', { detail: identityDiff(baseline, postIdentity).join('; ') }),
+        expected: baseline, observed: postIdentity, detail: mutation.detail,
+        guidance: store.guidanceFor('auto.loop.externalMutation', { detail: mutation.detail }),
       });
     }
     baseline = postIdentity;
@@ -519,7 +608,7 @@ async function drive(ctx) {
 // detector and advance attribution. Never throws; git breakage during
 // attribution pauses instead of scoring.
 async function score(ctx) {
-  const { iter, spec, result, streamText, b, stage, gitRunner, rootDir, endedAtMs, idleMs, adapter } = ctx;
+  const { iter, spec, result, streamText, b, stage, gitRunner, rootDir, endedAtMs, idleMs, adapter, baseline, postIdentity, mutation } = ctx;
 
   const runnerError = result && result.error;
   const timedOut = !!(runnerError && (runnerError.code === 'ETIMEDOUT' || runnerError.killed === true || /timed?out/i.test(String(runnerError.message || ''))));
@@ -582,10 +671,167 @@ async function score(ctx) {
     return {};
   }
   iter.signal = 'rc0-no-advance';
+  if (mutation) {
+    // The missing advance may be the mutation's doing, not the spawn's: an
+    // identity or delta-origin move during the spawn window pauses with a
+    // report instead of counting into the consecutive layer.
+    return {
+      err: {
+        ok: false, status: 'paused', paused: true, reason: 'external-mutation',
+        expected: baseline, observed: postIdentity, detail: mutation.detail,
+        guidance: store.guidanceFor('auto.loop.externalMutation', { detail: mutation.detail }),
+      },
+    };
+  }
   iter.counted = true;
   const res = b.recordOutcome(stage, 'rc0-no-advance', 'terminal ok but no new stage-labeled commit reachable from HEAD');
   if (res.tripped) return { tripped: true };
   return {};
+}
+
+// ---------- runner-side delegated legs ----------
+//
+// ratify/redteam/delivery-publish all require this module; requiring them at
+// the top would hand them a partially populated export object under Node's
+// cycle resolution. Function-level requires run only after every module has
+// finished loading.
+
+// Two INDEPENDENT red-team review rounds over the THINK work, each a separate
+// read-only spawn prompted from the runner-held store template. The
+// double-zero rule needs findings=0 from both rounds; findings>0 or rounds
+// without a verdict hold the stage for human review.
+async function redteamPasses({ leg, opts, env, rootDir, spawnRunner, tp, now }) {
+  const redteamMod = require('./redteam.cjs');
+  const rounds = [];
+  for (let i = 1; i <= redteamMod.REQUIRED_ZEROS; i += 1) {
+    const spawnId = `${leg.spawnId}-rt${i}`;
+    const round = await redteamMod.runRound({ stage: leg.stage, spawnId }, {
+      rootDir,
+      env,
+      host: opts.host,
+      profile: opts.profile,
+      spawnRunner,
+      engineProbe: opts.engineProbe,
+      wallMs: tp.wallSec * 1000,
+      now,
+    });
+    if (!round.ok) {
+      return {
+        err: {
+          ok: false, status: 'paused', paused: true, reason: round.reason || 'redteam-round-failed',
+          detail: round.detail, path: round.path, guidance: round.guidance,
+        },
+      };
+    }
+    rounds.push(round.round);
+  }
+  const clearance = redteamMod.evaluateClearance(rounds);
+  if (!clearance.cleared) {
+    const detail = clearance.held
+      ? `red-team findings total ${clearance.findingsTotal} over ${clearance.totalRounds} round(s)`
+      : `${clearance.independentZeros} independent findings=0 round(s) of ${clearance.requiredZeros} required, ${clearance.failedRounds} round(s) produced no verdict`;
+    let text = detail;
+    if (rounds.some((r) => r && r.readOnlyEnforcement === 'lexical')) {
+      text += ` — ${core.t('auto.redteam.lexicalTier')}`;
+    }
+    return {
+      err: {
+        ok: false, status: 'paused', paused: true, reason: 'delegation-held', held: true,
+        stage: leg.stage, rounds, clearance, detail,
+        guidance: store.guidanceFor('auto.loop.delegationHeld', { stage: leg.stage, detail: text }),
+      },
+    };
+  }
+  return { rounds, clearance };
+}
+
+// Full leg sequence for one delegated advance: THINK clears the red-team
+// gate, then the approval is ratified from the store stamp (converting the
+// in-spawn PENDING record; a PENDING without this step blocks the next
+// advance at the commit gate).
+async function delegatedLegs({ leg, opts, env, rootDir, spawnRunner, tp, now }) {
+  const modRatify = require('./ratify.cjs');
+  let redteam = null;
+  if (String(leg.stage).toUpperCase() === 'THINK') {
+    const rt = await redteamPasses({ leg, opts, env, rootDir, spawnRunner, tp, now });
+    if (rt.err) return rt;
+    redteam = {
+      rounds: rt.rounds.length,
+      zeros: rt.clearance.independentZeros,
+      tier: rt.rounds[0] && rt.rounds[0].tier,
+    };
+  }
+  const ratified = modRatify.ratify({ stage: leg.stage, spawnId: leg.spawnId, streamSha256: leg.streamSha256 }, { rootDir });
+  if (!ratified.ok) {
+    return {
+      err: {
+        ok: false, status: 'paused', paused: true, reason: ratified.reason || 'ratify-refused',
+        detail: ratified.detail, path: ratified.path, guidance: ratified.guidance,
+      },
+    };
+  }
+  return {
+    ok: true,
+    summary: { stage: leg.stage, redteam, ratified: true, keptExisting: ratified.keptExisting === true },
+  };
+}
+
+// ---------- delivery leg ----------
+
+// True when the store's latest delivery probe result is green (the only
+// state under which any delivery-shaped action exists at all).
+function deliveryProbeGreen(rootDir) {
+  const delivery = require('./delivery.cjs');
+  const loaded = store.load(rootDir);
+  if (!loaded.ok) return false;
+  const list = Array.isArray(loaded.store.probeResults) ? loaded.store.probeResults : [];
+  for (let i = list.length - 1; i >= 0; i -= 1) {
+    const entry = list[i];
+    if (store.isPlainObject(entry) && entry.host === delivery.PROBE_HOST) {
+      return entry.state === 'green';
+    }
+  }
+  return false;
+}
+
+// Mechanical publish leg at SHIP: push the per-task work branch, open the
+// runner-rendered PR, lint the squash subject, squash-merge, watch CI. Red
+// runs and unknown-state watches come back as held/disposition-unknown
+// shapes the caller pauses on — never breaker counts. Every external effect
+// is injectable through the `delivery` options bag.
+async function publishLeg({ opts, rootDir, taskId, taskState, now, withHeartbeat }) {
+  const publishMod = require('./delivery-publish.cjs');
+  const deliveryOpts = store.isPlainObject(opts.delivery) ? opts.delivery : {};
+  const subject = typeof deliveryOpts.subject === 'string' && deliveryOpts.subject.trim()
+    ? deliveryOpts.subject.trim()
+    : `chore(task): land task ${taskId} via auto delivery`;
+  const shipLedger = {
+    delegatedApprovals: Object.entries((taskState && taskState.approvals) || {})
+      .filter(([, v]) => store.isPlainObject(v) && v.mode === 'auto')
+      .map(([k]) => k),
+  };
+  if (Array.isArray(taskState && taskState.observable_truths)) shipLedger.verifyTruths = taskState.observable_truths;
+  if (Array.isArray(taskState && taskState.redteam_rounds)) shipLedger.redteamFindings = taskState.redteam_rounds;
+  const publisher = typeof deliveryOpts.publish === 'function' ? deliveryOpts.publish : publishMod.publish;
+  return withHeartbeat(() => publisher({
+    rootDir,
+    taskId,
+    branch: workBranchName(taskId),
+    subject,
+    base: deliveryOpts.base,
+    worker: deliveryOpts.worker,
+    shipLedger,
+    baseline: deliveryOpts.baseline,
+    gitRunner: opts.gitRunner,
+    privilegedRunner: deliveryOpts.privilegedRunner,
+    ghRunner: deliveryOpts.ghRunner,
+    lintRunner: deliveryOpts.lintRunner,
+    ciStatus: deliveryOpts.ciStatus,
+    sleep: deliveryOpts.sleep,
+    timeoutMs: deliveryOpts.timeoutMs,
+    pollMs: deliveryOpts.pollMs,
+    now,
+  }));
 }
 
 module.exports = {

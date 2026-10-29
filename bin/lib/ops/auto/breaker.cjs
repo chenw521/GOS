@@ -93,10 +93,12 @@ function classify(signal) {
 
 // ---- timeouts ----
 
-// Wall/idle timeout policy from env overrides. A malformed override is a
-// fail-closed error, never a silent fallback to the default.
-function timeoutPolicy(env) {
+// Wall/idle timeout policy: defaults may come from the store config
+// (`auto on --timeout-*`), and env overrides win over both. A malformed
+// override is a fail-closed error, never a silent fallback.
+function timeoutPolicy(env, defaults) {
   const e = env || process.env;
+  const d = store.isPlainObject(defaults) ? defaults : {};
   const read = (name, dflt) => {
     const raw = e[name];
     if (raw == null) return { ok: true, value: dflt };
@@ -109,9 +111,9 @@ function timeoutPolicy(env) {
     }
     return { ok: true, value: Number(String(raw).trim()) };
   };
-  const wall = read(WALL_ENV, DEFAULT_WALL_SEC);
+  const wall = read(WALL_ENV, Number.isInteger(d.wallSec) && d.wallSec >= 1 ? d.wallSec : DEFAULT_WALL_SEC);
   if (!wall.ok) return wall;
-  const idle = read(IDLE_ENV, DEFAULT_IDLE_SEC);
+  const idle = read(IDLE_ENV, Number.isInteger(d.idleSec) && d.idleSec >= 1 ? d.idleSec : DEFAULT_IDLE_SEC);
   if (!idle.ok) return idle;
   return { ok: true, wallSec: wall.value, idleSec: idle.value };
 }

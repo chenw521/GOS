@@ -49,17 +49,20 @@ function cmdAuto(args) {
   if (sub === 'disposition') return autoDisposition(mods, rest, { guidanceOf, dieGuidance, refuseIfSpawned });
   console.log(core.t('auto.cli.usage'));
   console.log(core.t('auto.cli.subs'));
+  process.exitCode = 1;
 }
 
-// Reconfigure an existing healthy store (mode/profile/limits). Only fields
-// the on/off surface owns are touched; every other record (counters,
-// breaker, dispositions, snapshots, probes) rides over untouched through
-// the same atomic writer the store module uses.
+// Reconfigure an existing healthy store (mode/profile/limits/timeouts).
+// Only fields the on/off surface owns are touched; every other record
+// (counters, breaker, dispositions, snapshots, probes) rides over untouched
+// through the same atomic writer the store module uses.
 function autoReconfigureStore(mods, loaded, patch) {
   const next = { ...loaded.store };
   if (patch.mode != null) next.mode = patch.mode;
   if (patch.profile != null) next.profile = patch.profile;
   if (patch.limits != null) next.limits = patch.limits;
+  if (patch.timeouts != null) next.timeouts = patch.timeouts;
+  if (patch.allowFull !== undefined) next.allowFull = patch.allowFull;
   const v = mods.breaker.validateLimits(next.limits);
   if (!v.ok) return v;
   next.limits = v.limits;
@@ -91,6 +94,7 @@ function autoOn(mods, rest, ui) {
   let profile = mods.launcher.DEFAULT_PROFILE;
   let wall = null;
   let idle = null;
+  let allowFull = false;
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
     const val = () => {
@@ -104,6 +108,7 @@ function autoOn(mods, rest, ui) {
     else if (a === '--max-sessions') limits.B = val();
     else if (a === '--timeout-wall') wall = val();
     else if (a === '--timeout-idle') idle = val();
+    else if (a === '--allow-full') allowFull = true;
     else core.die(core.t('auto.cli.unknownArg', { sub: 'on', arg: a }));
   }
   for (const k of ['N', 'K', 'B']) {
@@ -116,6 +121,11 @@ function autoOn(mods, rest, ui) {
   if (!mods.launcher.KNOWN_PROFILES.includes(profile)) {
     ui.dieGuidance('auto on', ui.guidanceOf('auto.launcher.unknown-profile', { name: profile, known: mods.launcher.KNOWN_PROFILES.join(', ') }));
   }
+  // The capability-upgrade flag only means something for the full profile —
+  // accepting it elsewhere would let the gate look satisfied by accident.
+  if (allowFull && profile !== 'full') {
+    ui.dieGuidance('auto on', ui.guidanceOf('auto.cli.on.allowFullWithoutFull', { profile }));
+  }
   const lv = mods.breaker.validateLimits(limits);
   if (!lv.ok) ui.dieGuidance('auto on', lv.guidance);
   // Timeout flags ride the same fail-closed grammar the runner reads at
@@ -125,8 +135,9 @@ function autoOn(mods, rest, ui) {
   if (idle != null) envForPolicy.GOS_AUTO_TIMEOUT_IDLE_SEC = idle;
   const tp = mods.breaker.timeoutPolicy(envForPolicy);
   if (!tp.ok) ui.dieGuidance('auto on', tp.guidance);
+  const timeouts = { wallSec: tp.wallSec, idleSec: tp.idleSec };
 
-  const made = mods.store.create({ mode: 'on', profile, limits });
+  const made = mods.store.create({ mode: 'on', profile, limits, timeouts, allowFull });
   if (!made.ok) {
     if (made.guidance) ui.dieGuidance('auto on', made.guidance);
     core.die(`auto on: ${made.reason}${made.detail ? `: ${made.detail}` : ''}`);
@@ -140,7 +151,7 @@ function autoOn(mods, rest, ui) {
       if (g.fix) console.log(`  ${g.fix}`);
     }
   } else {
-    const rc = autoReconfigureStore(mods, made, { mode: 'on', profile, limits });
+    const rc = autoReconfigureStore(mods, made, { mode: 'on', profile, limits, timeouts, allowFull });
     if (!rc.ok) core.die(`auto on: ${rc.reason}${rc.detail ? `: ${rc.detail}` : ''}`);
     finalStore = rc.store;
     console.log(core.t('auto.cli.on.reconfigured', { path: rc.path }));
@@ -150,6 +161,8 @@ function autoOn(mods, rest, ui) {
   // writable by the create above).
   console.log(core.t('auto.cli.probe.header'));
   console.log(`  ${core.t('auto.cli.probe.store')}: writable — ${made.path}`);
+  const nfs = mods.store.networkFsUnderStore();
+  if (nfs) console.log(`  ⚠ ${core.t('auto.cli.on.nfsAdvisory', { fstype: nfs.fstype, mount: nfs.mount })}`);
   const hostLine = autoHostLine(mods, 'opencode');
   console.log(`  ${core.t('auto.cli.probe.host')}: ${hostLine.line}`);
   if (hostLine.state === 'failed') console.log(`    ${core.t('auto.cli.probe.hint')}`);
@@ -166,6 +179,7 @@ function autoOn(mods, rest, ui) {
     profile: finalStore.profile, n: finalStore.limits.N, k: finalStore.limits.K, b: finalStore.limits.B,
   }));
   console.log(`  ${core.t('auto.cli.timeoutPolicy', { wall: tp.wallSec, idle: tp.idleSec })}`);
+  if (finalStore.allowFull === true) console.log(`  ${core.t('auto.cli.status.allowFullTag').trim()}`);
 }
 
 function autoOff(mods, rest, ui) {
@@ -199,6 +213,7 @@ function autoStatus(mods, ui) {
     const st = loaded.store;
     console.log(core.t('auto.cli.status.head', {
       mode: st.mode, profile: st.profile, n: st.limits.N, k: st.limits.K, b: st.limits.B,
+      full: st.allowFull === true ? core.t('auto.cli.status.allowFullTag') : '',
     }));
   } else if (loaded.reason === 'missing') {
     console.log(core.t('auto.cli.status.absent', { path: loaded.path || '' }));
@@ -254,16 +269,32 @@ function autoStatus(mods, ui) {
 
 function autoRun(mods, rest, ui) {
   ui.refuseIfSpawned('run');
+  // The CLI entry strips --break-lock from argv (the flag doubles as the
+  // top-level command-lock break), so the run subcommand recovers it from
+  // the raw process argv — for `auto run` it targets the store's run lock.
+  const breakLock = rest.includes('--break-lock') || process.argv.slice(2).includes('--break-lock');
   let detach = false;
   for (const a of rest) {
     if (a === '--detach') detach = true;
+    else if (a === '--break-lock') continue;
     else core.die(core.t('auto.cli.unknownArg', { sub: 'run', arg: a }));
+  }
+  // Explicit lock takeover: the store refuses while the recorded pid+hostname
+  // is alive and records every attempt as a takeover breaker event.
+  if (breakLock) {
+    const br = mods.store.breakRunLock();
+    if (!br.ok) {
+      if (br.guidance) ui.dieGuidance('auto run --break-lock refused', br.guidance);
+      core.die(`auto run --break-lock: ${br.reason}${br.detail ? `: ${br.detail}` : ''}`);
+    }
+    if (!br.absent) console.log(core.t('auto.cli.run.lockBroken', { broke: br.broke }));
   }
   const loaded = mods.store.load();
   const opts = { detach };
   if (loaded.ok) {
     opts.profile = loaded.store.profile;
     opts.limits = loaded.store.limits;
+    opts.allowFull = loaded.store.allowFull === true;
   }
   const created = mods.loop.createLoop(opts);
   if (!created.ok) {

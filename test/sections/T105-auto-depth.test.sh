@@ -18,6 +18,14 @@
 #           and url.insteadOf poison make the privileged git leg abort into
 #           the breaker instead of pushing; a global-config insteadOf plant
 #           is neutralized by the sanitized privileged environment
+#   RT1-F3 D6  spawn env: credential env vars (gh/git/ssh/aws) never reach
+#           the spawned session; PATH and model-provider keys survive;
+#           runner overrides land after sanitization
+#   RT1-F3 D7  credential masks (.git-credentials/.aws/.gnupg) in every
+#           profile incl. full; repo .git rw-bound beside the ro workspace
+#           at the kernel tier; mask-over-bind ordering intact
+#   D8  registry rows without version_command classify a probe failure via
+#           the --version fallback instead of crashing
 # Fake host: GOS_AUTO_TEST_FIXTURE=1 activates the registry fixture row;
 # loop spawns run through injected spawnRunner harnesses only. HOME and
 # XDG_DATA_HOME are pinned per case under TESTBASE;
@@ -104,6 +112,7 @@ const problems = [];
 const stateFile = path.join(rootDir, '.gos', 'state.json');
 const NEXT = { THINK: 'PLAN', PLAN: 'SHIP' };
 const spawnRunner = (spec) => {
+  if (spec.roWorkspace) return { status: 0, stdout: 'review clean\nREDTEAM-FINDINGS: 0\n', stderr: '' };
   spawnSync('git', ['commit', '--allow-empty', '-m', `chore(task): advance ${spec.stage.toLowerCase()}`], { cwd: rootDir });
   const st = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
   st.current_stage = NEXT[spec.stage];
@@ -414,6 +423,126 @@ store.create({ mode: 'on', rootDir });
 EOF
 D5_OUT="$(node run-d5.cjs 2>&1 | tail -n 1)"
 t105_eq "T10: hook/remote/insteadOf plants abort into the breaker; global-config poison neutralized by sanitized privileged git" "OK" "$D5_OUT"
+
+# ---------------------------------------------------------------- D6 / RT1-F3 --
+t105_case d6
+t105_state THINK > .gos/state.json
+cat > run-d6.cjs <<'EOF'
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const registry = require(path.join(GR, 'bin/lib/ops/auto/adapters/registry.cjs'));
+const opencode = require(path.join(GR, 'bin/lib/ops/auto/adapters/opencode.cjs'));
+const problems = [];
+// poisoned parent env: runner/delivery credentials beside the keys a
+// spawned session legitimately needs
+process.env.LANG = process.env.LANG || 'C.UTF-8';
+process.env.GH_TOKEN = 'gh-t105-secret';
+process.env.GITHUB_TOKEN = 'github-t105-secret';
+process.env.GIT_ASKPASS = '/t105/askpass';
+process.env.AWS_SECRET_ACCESS_KEY = 'aws-t105-secret';
+process.env.SSH_AUTH_SOCK = '/t105/agent.sock';
+process.env.GITHUB_ACTIONS_TOKEN_CACHE = 'pattern-t105-secret';
+process.env.ANTHROPIC_API_KEY = 'model-key-t105-keep';
+process.env.OPENAI_API_KEY = 'model-key-t105-keep-openai';
+const stripped = ['GH_TOKEN', 'GITHUB_TOKEN', 'GIT_ASKPASS', 'AWS_SECRET_ACCESS_KEY', 'SSH_AUTH_SOCK', 'GITHUB_ACTIONS_TOKEN_CACHE'];
+const kept = ['PATH', 'HOME', 'LANG', 'XDG_DATA_HOME', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY'];
+// direct sanitizer surface: credentials gone, everything else intact
+const s = registry.sanitizedSpawnEnv(process.env);
+for (const k of stripped) if (k in s) problems.push('sanitizer kept credential: ' + k);
+for (const k of kept) if (!(k in s)) problems.push('sanitizer stripped a benign key: ' + k);
+// adapter spawn spec: the same contract on the real build path, with the
+// runner's overrides landing after sanitization
+const spec = opencode.buildSpawnSpec({
+  prompt: 'stage work',
+  env: { OPENCODE_CONFIG_CONTENT: '{"permission":{}}', GOS_AUTO_SPAWNED: '1' },
+});
+for (const k of stripped) if (k in spec.env) problems.push('spawn spec leaked credential: ' + k);
+for (const k of kept) if (!(k in spec.env)) problems.push('spawn spec stripped a benign key: ' + k);
+if (spec.env.OPENCODE_CONFIG_CONTENT !== '{"permission":{}}') problems.push('runner override OPENCODE_CONFIG_CONTENT lost');
+if (spec.env.GOS_AUTO_SPAWNED !== '1') problems.push('spawn marker override lost');
+if (spec.env.ANTHROPIC_API_KEY !== 'model-key-t105-keep') problems.push('model-provider key lost in spawn spec');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+D6_OUT="$(node run-d6.cjs 2>&1 | tail -n 1)"
+t105_eq "RT1-F3: spawn env strips gh/git/ssh/aws credentials; PATH + model keys survive; overrides land last" "OK" "$D6_OUT"
+
+# ---------------------------------------------------------------- D7 / RT1-F3 --
+t105_case d7
+t105_state THINK > .gos/state.json
+cat > run-d7.cjs <<'EOF'
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const launcher = require(path.join(GR, 'bin/lib/ops/auto/launcher.cjs'));
+const rootDir = process.cwd();
+const env = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
+const problems = [];
+const home = process.env.HOME;
+const bwrapProbe = () => ({ engine: 'bwrap', version: '0.11.0' });
+store.create({ mode: 'on', rootDir });
+const gitDir = path.join(rootDir, '.git');
+function ops(argv) {
+  const out = [];
+  for (let i = 0; i < argv.length;) {
+    const t = argv[i];
+    if (['--ro-bind', '--ro-bind-try', '--bind', '--bind-try', '--dev-bind'].includes(t)) { out.push({ op: t, src: argv[i + 1], dest: argv[i + 2] }); i += 3; }
+    else if (['--tmpfs', '--proc', '--dev', '--dir'].includes(t)) { out.push({ op: t, dest: argv[i + 1] }); i += 2; }
+    else i += 1;
+  }
+  return out;
+}
+for (const profile of ['restricted', 'workspace', 'full']) {
+  const c = launcher.compose(profile, {
+    workspace: rootDir, env, store, engineProbe: bwrapProbe,
+    writableRoots: [path.join(rootDir, '.gos')],
+    ...(profile === 'full' ? { allowFull: true } : {}),
+  });
+  if (!c.ok) { problems.push(profile + ' compose failed: ' + c.code); continue; }
+  // mandatory credential masks present in EVERY profile including full
+  const dests = new Set(c.meta.masks.map((m) => m.dest));
+  for (const p of [path.join(home, '.git-credentials'), path.join(home, '.aws'), path.join(home, '.gnupg')]) {
+    if (!dests.has(p)) problems.push(profile + ' lacks mask for ' + p);
+  }
+  // argv mounts: .git-credentials empty-mounted, .aws/.gnupg tmpfs-mounted
+  const o = ops(c.argv);
+  if (!o.some((x) => x.op === '--ro-bind' && x.src === '/dev/null' && x.dest === path.join(home, '.git-credentials'))) problems.push(profile + ': .git-credentials not empty-masked');
+  for (const p of [path.join(home, '.aws'), path.join(home, '.gnupg')]) {
+    if (!o.some((x) => x.op === '--tmpfs' && x.dest === p)) problems.push(profile + ': ' + p + ' not tmpfs-masked');
+  }
+  // the repo .git dir is bound read-write beside the read-only workspace
+  if (!o.some((x) => x.op === '--bind' && x.dest === gitDir)) problems.push(profile + ': .git not rw-bound');
+  if (o.some((x) => x.op === '--ro-bind' && x.dest === gitDir)) problems.push(profile + ': .git bound read-only');
+  // ordering invariants hold with the new bind and masks
+  if (!launcher.maskOverBindHolds(c)) problems.push(profile + ': mask-over-bind ordering violated');
+}
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+D7_OUT="$(node run-d7.cjs 2>&1 | tail -n 1)"
+t105_eq "RT1-F3: .git-credentials/.aws/.gnupg masked in every profile; repo .git rw-bound at kernel tier; ordering intact" "OK" "$D7_OUT"
+
+# ---------------------------------------------------------------- D8 --
+t105_case d8
+t105_state THINK > .gos/state.json
+cat > run-d8.cjs <<'EOF'
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const registry = require(path.join(GR, 'bin/lib/ops/auto/adapters/registry.cjs'));
+const problems = [];
+// matrix row with no version_command: the probe must classify a failure
+// naming the --version fallback, never crash on the missing field
+const row = { host: 't105-novcmd', binary: 't105-novcmd', version_range: '>=1.0.0', status: 'verified', selectable: true, spawn_mode: 'opencode-run-json' };
+const noVersion = registry.probeHost('t105-novcmd', { matrix: [row], runner: () => ({ ok: true, out: 'no version triplet here', err: '' }) });
+if (noVersion.ok) problems.push('rc0-no-version probe passed');
+if (!noVersion.failure || noVersion.failure.class !== 'probe-version') problems.push('rc0-no-version not a classified probe-version failure');
+if (!noVersion.steps.some((s) => s.id === 'version' && !s.ok && /t105-novcmd --version/.test(s.detail))) problems.push('version step detail missing --version fallback');
+const failing = registry.probeHost('t105-novcmd', { matrix: [row], runner: () => ({ ok: false, out: '', err: 'rc=127 command not found' }) });
+if (failing.ok) problems.push('failed runner probe passed');
+if (!failing.failure || failing.failure.class !== 'probe-version') problems.push('runner failure not classified probe-version');
+if (!failing.steps.some((s) => s.id === 'version' && !s.ok && /t105-novcmd --version/.test(s.detail))) problems.push('failure detail missing --version fallback');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+D8_OUT="$(node run-d8.cjs 2>&1 | tail -n 1)"
+t105_eq "registry: row without version_command classifies a probe failure (fallback --version), never crashes" "OK" "$D8_OUT"
 
 echo "--- T105 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]

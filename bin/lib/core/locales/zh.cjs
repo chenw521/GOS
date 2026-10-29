@@ -507,6 +507,11 @@ module.exports = {
     why: '显式安全上限先于熔断层止住了循环',
     fix: '提高上限或重新发起一次运行',
   },
+  'auto.loop.delegationHeld': {
+    what: '委派阶段 {stage} 已挂起，等待人工审查：{detail}',
+    why: '红队发现与失败的评审轮次绝不自动清除——auto 模式下绝不代工作阶段写处置',
+    fix: '审查红队证据后：修复阶段工作并重新发起 auto run，或由人工亲自批准该阶段',
+  },
 
   // ---- auto 模式：批准边界（委派审批） ----
   'auto.ratify.pendingRecorded': '阶段 {stage} 的审批已记为 PENDING（auto）：仅做结构性检查——runner 会在会话退出后依据捕获流戳记完成批准',
@@ -562,6 +567,12 @@ module.exports = {
     why: '失败的派生不构成审查证据，绝不计为零发现',
     fix: '排查派生失败详情（本地存储）后重跑该轮',
   },
+  'auto.redteam.hostUnavailable': {
+    what: '主机 {host} 没有可用的 spawn 适配器',
+    why: '红队轮次需要由主机适配器组装的真实主机命令行',
+    fix: '选择带适配器的主机（opencode）或注册一个，然后重试该轮次',
+  },
+  'auto.redteam.lexicalTier': '只读工作区仅在 lexical 档位生效（无沙箱引擎）：评审者的写操作由注入配置与逃逸探测器拒绝，而非内核',
 
   // ---- auto 模式：交付探测 + 特权 git ----
   'auto.delivery.probeAdvisory': {
@@ -635,8 +646,15 @@ module.exports = {
   'auto.publish.purged': 'auto 运行时存储已移除（{path}）——成本历史仅保留在追踪镜像计数器中',
   // ---- auto mode: CLI surface ----
   'auto.cli.usage': '用法：{cmd:auto} <on|off|status|run|disposition> [参数] — 全自动运行器（机器本地存储；止于 SHIP）',
-  'auto.cli.subs': 'on [--profile restricted|workspace|full] [--max-retries N] [--max-visits K] [--max-sessions B] [--timeout-wall 秒] [--timeout-idle 秒] | off [--purge] | status | run [--detach] | disposition <runId> --reason "<说明>" [--by <署名>]',
-  'auto.cli.on.usage': '用法：{cmd:auto} on [--profile restricted|workspace|full] [--max-retries N] [--max-visits K] [--max-sessions B] [--timeout-wall 秒] [--timeout-idle 秒]',
+  'auto.cli.subs': 'on [--profile restricted|workspace|full] [--allow-full] [--max-retries N] [--max-visits K] [--max-sessions B] [--timeout-wall 秒] [--timeout-idle 秒] | off [--purge] | status | run [--detach] [--break-lock] | disposition <runId> --reason "<说明>" [--by <署名>]',
+  'auto.cli.on.usage': '用法：{cmd:auto} on [--profile restricted|workspace|full] [--allow-full] [--max-retries N] [--max-visits K] [--max-sessions B] [--timeout-wall 秒] [--timeout-idle 秒]',
+  'auto.cli.on.nfsAdvisory': '存储路径位于网络文件系统上（{fstype}，挂载点 {mount}）：共享 home 目录会让不同机器上同路径的克隆发生冲突（跨主机锁过期有 hostname 防护，但该防护看不到另一台机器正在运行本存储）— 建议使用机器本地存储（将 XDG_DATA_HOME 指向本地磁盘）',
+  'auto.cli.on.allowFullWithoutFull': {
+    what: '--allow-full 仅适用于 full profile（当前请求 {profile}）',
+    why: '能力升级门的存在就是为了抬高沙箱上限必须始终是明确之举',
+    fix: '将 --profile full 与 --allow-full 一同传入，或去掉该旗标',
+  },
+  'auto.cli.run.lockBroken': '过期运行锁已解除（{broke}）— 已记录为接管事件',
   'auto.cli.on.created': '已创建 auto 存储于 {path}',
   'auto.cli.on.reconfigured': '已重新配置现有 auto 存储于 {path}',
   'auto.cli.on.done': 'auto 模式已开启 — profile {profile}，限额 N={n}/K={k}/B={b}',
@@ -650,7 +668,8 @@ module.exports = {
   'auto.cli.off.already': 'auto 模式已是关闭（本仓库尚无存储）',
   'auto.cli.off.done': 'auto 模式已关闭 — 存储保留于 {path}（配置与历史不丢）',
   'auto.cli.off.purgeHint': '如需连存储及历史一并移除：`{cmd:auto} off --purge`',
-  'auto.cli.status.head': 'auto：模式 {mode} · profile {profile} · 限额 N={n}/K={k}/B={b}',
+  'auto.cli.status.head': 'auto：模式 {mode} · profile {profile}{full} · 限额 N={n}/K={k}/B={b}',
+  'auto.cli.status.allowFullTag': ' · allow-full（显式升级）',
   'auto.cli.status.absent': 'auto：{path} 无存储 — 本仓库从未启用 auto（`{cmd:auto} on` 创建）',
   'auto.cli.status.paused': 'auto：存储已暂停（{reason}）— 检查前循环拒绝运行',
   'auto.cli.status.hostMatrix': '宿主矩阵（{n} 行；fixture 行仅在测试环境门下出现）：',

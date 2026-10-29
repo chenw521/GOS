@@ -26,9 +26,12 @@ const MANDATORY_MASK_TOKENS = Object.freeze([
   '$GOS_STORE',
   '$HOME/.config/gh',
   '$HOME/.gitconfig',
+  '$HOME/.git-credentials',
   '$HOME/.config/git',
   '$HOME/.ssh',
   '$HOME/.netrc',
+  '$HOME/.aws',
+  '$HOME/.gnupg',
   '$HOME/.config/opencode',
   '$HOME/.local/share/opencode',
   '$HOME/.cache/opencode',
@@ -143,6 +146,11 @@ function isAncestorPath(anc, desc) {
 // binds, then every tmpfs/empty mask OVER the binds (bwrap later-mount-wins,
 // so masks must come after any bind they cover), then seed ro-binds inside
 // seeded tmpfs mounts. Mask entries must not nest inside each other.
+// The repository .git dir is bound read-write right after its read-only
+// workspace: every stage session runs `gos commit`, which writes
+// .git/objects and the index, so a read-only .git would dead-end every
+// kernel-tier spawn. .git is never a mask dest, so masks keep winning for
+// store/credential paths.
 function composeArgv(ctx) {
   const argv = [
     '--die-with-parent',
@@ -158,7 +166,11 @@ function composeArgv(ctx) {
     '--tmpfs', '/tmp',
   ];
   if (ctx.home) argv.push('--ro-bind-try', ctx.home, ctx.home);
-  if (ctx.workspace) argv.push('--ro-bind', ctx.workspace, ctx.workspace);
+  if (ctx.workspace) {
+    argv.push('--ro-bind', ctx.workspace, ctx.workspace);
+    const gitDir = path.join(ctx.workspace, '.git');
+    argv.push('--bind', gitDir, gitDir);
+  }
   for (const w of ctx.writableRoots) argv.push('--bind', w, w);
   for (const m of ctx.masks) {
     if (m.kind === 'empty') argv.push('--ro-bind', EMPTY_SRC, m.dest);

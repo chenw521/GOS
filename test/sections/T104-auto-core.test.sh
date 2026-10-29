@@ -28,6 +28,23 @@
 #   T16 C12 live lock refuses --break-lock (recorded as takeover); cross-host
 #           lock names the owning clone and recovers; a second auto run is
 #           refused pointing at the live instance
+#   C16 cli surface: --allow-full round-trips into the store and the status
+#           first line (profile full without the flag still fails compose;
+#           the flag without the profile is refused); auto run --break-lock
+#           releases a stale lock and refuses a live holder; unknown
+#           subcommands exit non-zero; --timeout-* flags persist into the
+#           store and the loop resolves them as defaults (env still wins)
+#   runner-legs case (extends the ratification + red-team truths): in-spawn
+#           PENDING -> red-team double-zero (two findings=0) -> ratification
+#           -> advance proceeds; a lone zero or findings>0 holds the gate
+#           without ratifying (human approval required)
+#   delivery case (extends the publish truths): the publish leg runs at SHIP
+#           when the fixture delivery adapter is green (closure record
+#           written); a red CI run pauses the loop awaiting disposition
+#           (never the N layer)
+#   mutation case (extends the external-mutation truth): spawn-authored
+#           non-advancing commits count into N (rc0-no-advance), an external
+#           stage change pauses with a report
 # Fake host: GOS_AUTO_TEST_FIXTURE=1 activates the registry fixture row
 # (gos-fixture-host; probe answers from recorded data, never a live spawn).
 # Loop spawns run through injected spawnRunner harnesses only — no real host
@@ -59,7 +76,7 @@ t104_ok() { echo "  ✓ $1"; PASS=$((PASS+1)); }
 t104_bad() { echo "  ✗ $1"; FAIL=$((FAIL+1)); }
 t104_contains() {
   local label="$1" expected="$2" actual="$3"
-  if printf '%s' "$actual" | grep -qF "$expected"; then t104_ok "$label"; else
+  if printf '%s' "$actual" | grep -qF -- "$expected"; then t104_ok "$label"; else
     t104_bad "$label (expected: '$expected')"
     echo "    actual: $(printf '%s' "$actual" | head -c 160)"
   fi
@@ -122,8 +139,10 @@ function setStage(s) {
   st.current_stage = s;
   fs.writeFileSync(stateFile, JSON.stringify(st, null, 2));
 }
-// fake host session: one stage-advance commit + state move + terminal event
+// fake host session: one stage-advance commit + state move + terminal event;
+// red-team review spawns (read-only workspace) answer a findings=0 verdict
 const spawnRunner = (spec) => {
+  if (spec.roWorkspace) return { status: 0, stdout: 'review clean\nREDTEAM-FINDINGS: 0\n', stderr: '' };
   spawnSync('git', ['commit', '--allow-empty', '-m', `chore(task): advance ${spec.stage.toLowerCase()}`], { cwd: rootDir });
   setStage(NEXT[spec.stage]);
   return { status: 0, stdout: '{"type":"message","text":"stage work done"}\n{"type":"result"}\n', stderr: '' };
@@ -140,7 +159,7 @@ EOF
 T1_OUT="$(node run-t1.cjs 2>&1)"
 t104_eq "T1: fake-host loop ends at SHIP with no delivery adapter" "ship|stage-ship|false" "$(printf '%s\n' "$T1_OUT" | grep '^RES ' | cut -d' ' -f2-)"
 t104_eq "T1: every spawn advanced its stage (one fresh session per stage)" "2|advanced,advanced" "$(printf '%s\n' "$T1_OUT" | grep '^ITER ' | cut -d' ' -f2-)"
-t104_eq "T1: store records every spawn (counters>0) and stamps each stream" "2|2|0" "$(printf '%s\n' "$T1_OUT" | grep '^STORE ' | cut -d' ' -f2-)"
+t104_eq "T1: store records every spawn (counters>0); stamps cover stage spawns and red-team rounds" "2|4|0" "$(printf '%s\n' "$T1_OUT" | grep '^STORE ' | cut -d' ' -f2-)"
 
 # ---------------------------------------------------------------- C2 / T2 --
 # the CLI write-class guard requires an active task in the case root (a
@@ -666,6 +685,411 @@ t104_exit "T16: second concurrent auto run refuses while the first holds the loc
 t104_contains "T16: refusal points at the live instance (pid)" "an auto run is already active (pid $T16_CHILD" "$(cat t16-run.txt)"
 kill "$T16_CHILD" 2>/dev/null
 T104_PIDS=""
+
+# ------------------------------------------- runner legs (delegation) ------
+# runner legs end to end: the fake host runs the REAL in-spawn commit for the
+# delegated stages (PENDING recorded by the commit gate), red-team rounds
+# answer findings=0 twice, and the loop ratifies from the store stamp before
+# the next stage spawn proceeds.
+t104_case c13
+mkdir -p .gos/task/p0
+printf '# Spec\n\np0 auto spec\n' > .gos/task/p0/spec.md
+printf '# Plan\n\np0 auto plan\n' > .gos/task/p0/plan.md
+t104_state THINK 3 ',"spec_path":".gos/task/p0/spec.md","plan_path":".gos/task/p0/plan.md"' > .gos/state.json
+export GOS_AUTO_TIMEOUT_WALL_SEC=5 GOS_AUTO_TIMEOUT_IDLE_SEC=2
+cat > run-c13.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const rootDir = process.cwd();
+const env = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
+const problems = [];
+const stateFile = path.join(rootDir, '.gos', 'state.json');
+const NEXT = { BUILD: 'REVIEW', REVIEW: 'VERIFY', VERIFY: 'SHIP' };
+function setStage(s) {
+  const st = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  st.current_stage = s;
+  fs.writeFileSync(stateFile, JSON.stringify(st, null, 2));
+}
+const gosCommit = (stage) => spawnSync(process.execPath, [path.join(GR, 'bin', 'gos.cjs'), 'commit', stage], {
+  cwd: rootDir, env: { ...process.env, GOS_AUTO_SPAWNED: '1' }, encoding: 'utf8',
+});
+const spawnRunner = (spec) => {
+  if (spec.roWorkspace) return { status: 0, stdout: 'independent review\nREDTEAM-FINDINGS: 0\n', stderr: '' };
+  if (spec.stage === 'THINK' || spec.stage === 'PLAN') {
+    const r = gosCommit(spec.stage.toLowerCase());
+    if (r.status !== 0) problems.push(`in-spawn commit ${spec.stage} rc=${r.status}: ${String(r.stderr || r.stdout).slice(0, 200)}`);
+    return { status: 0, stdout: '{"type":"message","text":"stage work done"}\n{"type":"result"}\n', stderr: '' };
+  }
+  spawnSync('git', ['commit', '--allow-empty', '-m', `chore(task): advance ${spec.stage.toLowerCase()}`], { cwd: rootDir });
+  setStage(NEXT[spec.stage]);
+  return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
+};
+(async () => {
+  store.create({ mode: 'on', rootDir, limits: { N: 3, K: 9, B: 30 } });
+  const r = await loop.createLoop({ rootDir, host: 'gos-fixture-host', env, maxIterations: 9, spawnRunner }).loop.run();
+  if (r.status !== 'ship' || r.ok !== true) problems.push('loop did not ship: ' + r.status + '/' + r.reason);
+  const st = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  const aT = (st.approvals || {}).THINK || {};
+  const aP = (st.approvals || {}).PLAN || {};
+  if (aT.status !== 'ratified' || aT.mode !== 'auto') problems.push('THINK not ratified: ' + JSON.stringify(aT));
+  if (aP.status !== 'ratified' || aP.mode !== 'auto') problems.push('PLAN not ratified: ' + JSON.stringify(aP));
+  const thinkIter = (r.iterations || []).find((i) => i.stage === 'THINK');
+  if (!thinkIter) problems.push('no THINK iteration recorded');
+  else {
+    const dl = thinkIter.delegation;
+    if (!dl || !dl.redteam || dl.redteam.rounds !== 2 || dl.redteam.zeros !== 2) problems.push('THINK red-team leg summary missing');
+    if (aT.evidence && aT.evidence.spawnId !== thinkIter.spawnId) problems.push('evidence does not pair the stage spawn');
+  }
+  const s = store.load(rootDir);
+  const rt1 = s.ok && s.store.stamps[`${thinkIter.spawnId}-rt1`];
+  const rt2 = s.ok && s.store.stamps[`${thinkIter.spawnId}-rt2`];
+  if (!rt1 || !rt2 || rt1.stage !== 'redteam' || rt2.stage !== 'redteam') problems.push('red-team rounds not stamped under the redteam stage');
+  const pend = Object.values(st.approvals || {}).filter((v) => v && v.status === 'PENDING');
+  if (pend.length) problems.push('PENDING approvals remain: ' + pend.length);
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+T13A_OUT="$(node run-c13.cjs 2>&1 | tail -n 1)"
+t104_eq "T3: runner legs — in-spawn PENDING, double-zero red-team, ratification, advance proceeds" "OK" "$T13A_OUT"
+
+# ------------------------------------------- held gates (delegation) ------
+# held gates: a lone findings=0 round never clears the double-zero rule and
+# findings>0 holds outright — the PENDING approval stays unratified (the next
+# advance stays blocked at the ratification boundary) and the breaker's
+# consecutive layer never moves.
+t104_case c13b
+mkdir -p .gos/task/p0
+printf '# Spec\n\np0 auto spec\n' > .gos/task/p0/spec.md
+t104_state THINK 3 ',"spec_path":".gos/task/p0/spec.md"' > .gos/state.json
+cat > run-c13b.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const problems = [];
+function mkWorld(name, verdictFor) {
+  const dir = path.join(process.cwd(), name);
+  fs.mkdirSync(path.join(dir, '.gos', 'task', 'p0'), { recursive: true });
+  fs.mkdirSync(path.join(dir, '.gos', 'logs'), { recursive: true });
+  fs.copyFileSync(path.join(process.cwd(), '.gos', 'task', 'p0', 'spec.md'), path.join(dir, '.gos', 'task', 'p0', 'spec.md'));
+  const base = JSON.parse(fs.readFileSync(path.join(process.cwd(), '.gos', 'state.json'), 'utf8'));
+  fs.writeFileSync(path.join(dir, '.gos', 'state.json'), JSON.stringify(base));
+  spawnSync('git', ['init', '-q', '-b', 'work', '.'], { cwd: dir });
+  spawnSync('git', ['commit', '--allow-empty', '-m', 'root'], { cwd: dir });
+  const env = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
+  const spawnRunner = (spec) => {
+    if (spec.roWorkspace) return { status: 0, stdout: verdictFor(spec.spawnId), stderr: '' };
+    if (spec.stage !== 'THINK') throw new Error('unexpected stage ' + spec.stage);
+    const r = spawnSync(process.execPath, [path.join(GR, 'bin', 'gos.cjs'), 'commit', 'think'], {
+      cwd: dir, env: { ...process.env, GOS_AUTO_SPAWNED: '1' }, encoding: 'utf8',
+    });
+    if (r.status !== 0) problems.push(`in-spawn commit rc=${r.status}: ${String(r.stderr || r.stdout).slice(0, 200)}`);
+    return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
+  };
+  return { dir, env, spawnRunner };
+}
+(async () => {
+  const cases = [
+    { name: 'single-zero', verdict: (id) => (id.endsWith('-rt1') ? 'REDTEAM-FINDINGS: 0\n' : 'reviewer said nothing verdict-shaped\n') },
+    { name: 'findings', verdict: () => 'REDTEAM-FINDINGS: 3\n' },
+  ];
+  for (const c of cases) {
+    const w = mkWorld(c.name, c.verdict);
+    store.create({ mode: 'on', rootDir: w.dir, limits: { N: 3, K: 9, B: 30 } });
+    const r = await loop.createLoop({ rootDir: w.dir, host: 'gos-fixture-host', env: w.env, maxIterations: 5, spawnRunner: w.spawnRunner }).loop.run();
+    if (r.status !== 'paused' || r.reason !== 'delegation-held' || r.held !== true) problems.push(c.name + ' not held: ' + r.status + '/' + r.reason);
+    if (!r.guidance || !String(r.guidance.what).includes('THINK')) problems.push(c.name + ' guidance lacks the stage');
+    if (!r.breaker || r.breaker.consecutive !== 0) problems.push(c.name + ' counted into N');
+    const st = JSON.parse(fs.readFileSync(path.join(w.dir, '.gos', 'state.json'), 'utf8'));
+    const aT = (st.approvals || {}).THINK || {};
+    if (aT.status !== 'PENDING') problems.push(c.name + ' approval left the PENDING state: ' + JSON.stringify(aT.status));
+    const blocked = spawnSync(process.execPath, [path.join(GR, 'bin', 'gos.cjs'), 'commit', 'plan'], { cwd: w.dir, encoding: 'utf8' });
+    if (blocked.status !== 1 || !String(blocked.stderr || '').includes('ratification boundary')) problems.push(c.name + ' next advance not blocked at the boundary');
+  }
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+T13B_OUT="$(node run-c13b.cjs 2>&1 | tail -n 1)"
+t104_eq "T12: single zero and findings>0 hold the gate — PENDING stays, next advance blocked, never N" "OK" "$T13B_OUT"
+
+# ------------------------------------------- publish leg at SHIP ------
+# publish leg at SHIP: with a green fixture delivery adapter (probe state in
+# the store) the loop invokes publish (push -> PR -> subject lint -> squash
+# merge -> CI watch) and the closure record lands in the repo ledger mirror;
+# a red CI run pauses the loop awaiting a human disposition (never N). With no
+# adapter the loop still ends cleanly at SHIP (covered by C1).
+t104_case c14
+git remote add origin https://github.com/octocat/widget.git
+t104_state BUILD > .gos/state.json
+cat > run-c14.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const delivery = require(path.join(GR, 'bin/lib/ops/auto/delivery.cjs'));
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const problems = [];
+const templateState = JSON.parse(fs.readFileSync(path.join(process.cwd(), '.gos', 'state.json'), 'utf8'));
+const NEXT = { BUILD: 'VERIFY', VERIFY: 'SHIP' };
+function mkWorld(name) {
+  const dir = path.join(process.cwd(), name);
+  fs.mkdirSync(path.join(dir, '.gos', 'logs'), { recursive: true });
+  fs.writeFileSync(path.join(dir, '.gos', 'state.json'), JSON.stringify(templateState));
+  spawnSync('git', ['init', '-q', '-b', 'work', '.'], { cwd: dir });
+  spawnSync('git', ['remote', 'add', 'origin', 'https://github.com/octocat/widget.git'], { cwd: dir });
+  spawnSync('git', ['commit', '--allow-empty', '-m', 'root'], { cwd: dir });
+  const stateFile = path.join(dir, '.gos', 'state.json');
+  const setStage = (s) => {
+    const st = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    st.current_stage = s;
+    fs.writeFileSync(stateFile, JSON.stringify(st, null, 2));
+  };
+  const gitRunner = (args) => (args[0] === 'ls-remote'
+    ? { status: 0, stdout: 'f'.repeat(40) + '\tHEAD\n', stderr: '' }
+    : spawnSync('git', args, { cwd: dir, encoding: 'utf8' }));
+  const spawnRunner = (spec) => {
+    if (spec.roWorkspace) return { status: 0, stdout: 'REDTEAM-FINDINGS: 0\n', stderr: '' };
+    spawnSync('git', ['commit', '--allow-empty', '-m', `chore(task): advance ${spec.stage.toLowerCase()}`], { cwd: dir });
+    setStage(NEXT[spec.stage]);
+    return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
+  };
+  return { dir, stateFile, gitRunner, spawnRunner };
+}
+const deliveryOpts = (baseline, ci) => ({
+  subject: 'fix widget ratchet for ci gate',
+  baseline,
+  ghRunner: (args) => (args[0] === 'pr' ? { status: 0, stdout: 'https://github.com/octocat/widget/pull/9\n', stderr: '' } : { status: 0, stdout: '{}', stderr: '' }),
+  privilegedRunner: () => ({ status: 0, stdout: '', stderr: '' }),
+  lintRunner: () => ({ status: 0, stdout: '', stderr: '' }),
+  ciStatus: ci,
+  sleep: () => Promise.resolve(),
+  timeoutMs: 400,
+  pollMs: 40,
+});
+(async () => {
+  const env = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
+  // green CI: publish completes, closure record written
+  const g = mkWorld('green');
+  store.create({ mode: 'on', rootDir: g.dir });
+  store.saveProbeResult({ host: 'delivery', state: 'green', checkedAtIso: new Date().toISOString() }, g.dir);
+  const pinned = delivery.captureBaseline({ rootDir: g.dir, gitRunner: g.gitRunner });
+  if (!pinned.ok) throw new Error('baseline capture failed: ' + pinned.reason);
+  if (!delivery.pinBaseline(pinned.baseline, g.dir).ok) problems.push('baseline pin failed');
+  const green = await loop.createLoop({
+    rootDir: g.dir, host: 'gos-fixture-host', env, maxIterations: 6,
+    spawnRunner: g.spawnRunner, gitRunner: g.gitRunner,
+    delivery: deliveryOpts(pinned.baseline, async () => ({ state: 'green', runId: '555' })),
+  }).loop.run();
+  if (green.status !== 'ship' || green.ok !== true) problems.push('green run did not ship: ' + green.status + '/' + green.reason);
+  if (green.deliveryAdapter !== true) problems.push('deliveryAdapter not reported active');
+  if (!green.delivery || green.delivery.status !== 'green' || !green.delivery.closure) problems.push('green publish outcome missing');
+  const steps = green.delivery && Array.isArray(green.delivery.steps) ? green.delivery.steps.map((s) => s.name).join(',') : '';
+  if (!steps.includes('subject-lint') || !steps.includes('ci-watch')) problems.push('publish steps missing: ' + steps);
+  const ledger = fs.readFileSync(path.join(g.dir, '.gos', 'logs', 'auto-ledger.ndjson'), 'utf8');
+  if (!ledger.includes('"kind":"closure"') || !ledger.includes('"555"')) problems.push('closure record not written to the ledger mirror');
+  // red CI: pause awaiting disposition, never into N
+  const w = mkWorld('red');
+  store.create({ mode: 'on', rootDir: w.dir });
+  store.saveProbeResult({ host: 'delivery', state: 'green', checkedAtIso: new Date().toISOString() }, w.dir);
+  const pinned2 = delivery.captureBaseline({ rootDir: w.dir, gitRunner: w.gitRunner });
+  if (!delivery.pinBaseline(pinned2.baseline, w.dir).ok) problems.push('baseline pin 2 failed');
+  const red = await loop.createLoop({
+    rootDir: w.dir, host: 'gos-fixture-host', env, maxIterations: 6,
+    spawnRunner: w.spawnRunner, gitRunner: w.gitRunner,
+    delivery: deliveryOpts(pinned2.baseline, async () => ({ state: 'red', runId: '999' })),
+  }).loop.run();
+  if (red.status !== 'paused' || red.reason !== 'red-run' || red.requiresDisposition !== true) problems.push('red CI did not hold: ' + red.status + '/' + red.reason);
+  if (!red.breaker || red.breaker.consecutive !== 0) problems.push('red CI counted into N');
+  if (!red.guidance || !String(red.guidance.what).includes('999')) problems.push('red-run guidance lacks the run id');
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+T14_OUT="$(node run-c14.cjs 2>&1 | tail -n 1)"
+t104_eq "T5: publish leg at SHIP — green adapter publishes with a closure record; red CI pauses for disposition (never N)" "OK" "$T14_OUT"
+
+# ------------------------------------------- mutation classification ------
+# mutation classification: head drift from the spawn's own non-advancing
+# commits is rc0-no-advance (counts into N, never an external-mutation
+# pause); a stage identity move during the spawn window is an external
+# mutation (pause with a report, never into N).
+t104_case c15
+t104_state THINK > .gos/state.json
+cat > run-c15.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const problems = [];
+const templateState = fs.readFileSync(path.join(process.cwd(), '.gos', 'state.json'), 'utf8');
+function mkSub(name, startStage) {
+  const dir = path.join(process.cwd(), name);
+  fs.mkdirSync(path.join(dir, '.gos', 'logs'), { recursive: true });
+  const base = JSON.parse(templateState);
+  base.current_stage = startStage;
+  fs.writeFileSync(path.join(dir, '.gos', 'state.json'), JSON.stringify(base));
+  spawnSync('git', ['init', '-q', '-b', 'work', '.'], { cwd: dir });
+  spawnSync('git', ['commit', '--allow-empty', '-m', 'root'], { cwd: dir });
+  return dir;
+}
+(async () => {
+  const env = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
+  // spawn-authored non-advance commit: rc0-no-advance into N (two spawns:
+  // the first must not pause on its own head drift, the second trips N)
+  const d1 = mkSub('d1', 'THINK');
+  store.create({ mode: 'on', rootDir: d1, limits: { N: 2, K: 9, B: 9 } });
+  const wipRunner = (spec) => {
+    if (spec.roWorkspace) return { status: 0, stdout: 'REDTEAM-FINDINGS: 0\n', stderr: '' };
+    spawnSync('git', ['commit', '--allow-empty', '-m', 'wip scratch work'], { cwd: d1 });
+    return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
+  };
+  const r1 = await loop.createLoop({ rootDir: d1, host: 'gos-fixture-host', env, maxIterations: 5, spawnRunner: wipRunner }).loop.run();
+  if (r1.reason === 'external-mutation' || r1.status !== 'paused' || r1.reason !== 'breaker-tripped' || !r1.trip || r1.trip.layer !== 'N') {
+    problems.push('wip commit misrouted: ' + r1.status + '/' + r1.reason);
+  }
+  if (!r1.iterations.length || r1.iterations[0].signal !== 'rc0-no-advance' || r1.iterations[0].counted !== true) problems.push('rc0-no-advance not scored');
+  // external stage change mid-window: pause with a report, never into N
+  const d2 = mkSub('d2', 'PLAN');
+  store.create({ mode: 'on', rootDir: d2, limits: { N: 3, K: 9, B: 9 } });
+  const d2State = path.join(d2, '.gos', 'state.json');
+  let reads = 0;
+  const stateReader = () => {
+    reads += 1;
+    const raw = JSON.parse(fs.readFileSync(d2State, 'utf8'));
+    if (reads >= 3) raw.current_stage = 'THINK';
+    return raw;
+  };
+  const idleRunner = () => ({ status: 0, stdout: '{"type":"result"}\n', stderr: '' });
+  const r2 = await loop.createLoop({ rootDir: d2, host: 'gos-fixture-host', env, maxIterations: 5, spawnRunner: idleRunner, stateReader }).loop.run();
+  if (r2.status !== 'paused' || r2.reason !== 'external-mutation') problems.push('stage-back not paused: ' + r2.status + '/' + r2.reason);
+  if (!String(r2.detail || '').includes('stage')) problems.push('stage-back report lacks the field');
+  if (!r2.breaker || r2.breaker.consecutive !== 0) problems.push('stage-back counted into N');
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+T15C_OUT="$(node run-c15.cjs 2>&1 | tail -n 1)"
+t104_eq "T13: spawn-authored non-advance counts into N; external stage change pauses with a report" "OK" "$T15C_OUT"
+
+# ------------------------------------------- cli surface (C16) -------------
+# CLI surface: the --allow-full gate, the --break-lock entry, unknown
+# subcommands and timeout persistence. The capability-upgrade flag is the
+# only surface that may unlock the full profile compose; the break-lock flag
+# routes through the store's audited takeover path; timeout flags persist
+# into the store and serve as loop defaults under the env overrides.
+t104_case c16
+t104_state THINK > .gos/state.json
+node "$GOS" auto on --profile full --allow-full > t16f-on.txt 2>&1; C16_ONRC=$?
+t104_exit "C16: auto on --profile full --allow-full succeeds" 0 "$C16_ONRC"
+t104_contains "C16: status first line carries the allow-full indicator" "profile full · allow-full" "$(node "$GOS" auto status 2>&1 | head -n 1)"
+T16F_AF="$(node -e "
+const path=require('path');
+const s=require(path.join(process.env.GOS_ROOT,'bin/lib/ops/auto/store.cjs'));
+const r=s.load(process.cwd());
+console.log(r.ok ? r.store.allowFull === true : 'load-failed');")"
+t104_eq "C16: allowFull round-trips through the store" "true" "$T16F_AF"
+T16F_COMP="$(node -e "
+const path=require('path');
+const l=require(path.join(process.env.GOS_ROOT,'bin/lib/ops/auto/launcher.cjs'));
+const r=l.compose('full',{workspace:process.cwd()});
+console.log(r.ok, r.code);")"
+t104_eq "C16: profile full without --allow-full still fails compose at the gate" "false auto.launcher.full-flag-required" "$T16F_COMP"
+T16F_OK="$(node -e "
+const path=require('path');
+const l=require(path.join(process.env.GOS_ROOT,'bin/lib/ops/auto/launcher.cjs'));
+const r=l.compose('full',{workspace:process.cwd(),allowFull:true});
+console.log(r.ok);")"
+t104_eq "C16: the persisted allowFull gate unlocks the full profile compose" "true" "$T16F_OK"
+node "$GOS" auto on --allow-full > t16f-no.txt 2>&1; C16_NO=$?
+t104_exit "C16: --allow-full without profile full is refused" 1 "$C16_NO"
+t104_contains "C16: refusal explains the flag scope" "--allow-full only applies to the full profile" "$(cat t16f-no.txt)"
+
+# stale lock: --break-lock releases it (audited takeover), then the run ends
+# cleanly at a SHIP-stage task before any host negotiation or spawn
+t104_case c16b
+t104_state SHIP > .gos/state.json
+node "$GOS" auto on > /dev/null 2>&1
+node -e "
+const fs=require('fs');const path=require('path');const os=require('os');
+const s=require(path.join(process.env.GOS_ROOT,'bin/lib/ops/auto/store.cjs'));
+const now=new Date().toISOString();
+fs.writeFileSync(path.join(s.storeRoot(process.cwd()),'run.lock'),JSON.stringify({hostname:os.hostname(),pid:4194304,boot_id:null,clone_path:process.cwd(),started_at:now,heartbeat_at:now}));
+console.log('planted');" > /dev/null
+node "$GOS" auto run --break-lock > t16b-run.txt 2>&1; C16B_RC=$?
+t104_exit "C16: --break-lock releases a stale lock (run then ends at SHIP)" 0 "$C16B_RC"
+t104_contains "C16: stale lock break is reported" "stale run lock broken (stale)" "$(cat t16b-run.txt)"
+T16B_GONE="$(node -e "
+const path=require('path');
+const s=require(path.join(process.env.GOS_ROOT,'bin/lib/ops/auto/store.cjs'));
+console.log(s.readRunLock(process.cwd()) === null);")"
+t104_eq "C16: broken lock is gone after the run" "true" "$T16B_GONE"
+
+# live holder: --break-lock refused with the audited takeover attempt
+t104_case c16c
+t104_state THINK > .gos/state.json
+node "$GOS" auto on > /dev/null 2>&1
+cat > t16c-child.cjs <<'EOF'
+const path = require('path');
+const store = require(path.join(process.env.GOS_ROOT, 'bin/lib/ops/auto/store.cjs'));
+const r = store.acquireRunLock({ rootDir: process.argv[2] });
+if (!r.ok) { console.error('child acquire failed'); process.exit(1); }
+console.log('READY');
+setInterval(() => {}, 1000);
+EOF
+node t16c-child.cjs "$PWD" > t16c-ready.txt 2>&1 &
+C16C_CHILD=$!
+T104_PIDS="$T104_PIDS $C16C_CHILD"
+for i in $(seq 1 50); do grep -q READY t16c-ready.txt 2>/dev/null && break; sleep 0.1; done
+node "$GOS" auto run --break-lock > t16c-run.txt 2>&1; C16C_RC=$?
+t104_exit "C16: --break-lock refused while the holder pid is alive" 1 "$C16C_RC"
+t104_contains "C16: live-pid refusal names the holder" "pid $C16C_CHILD is alive" "$(cat t16c-run.txt)"
+kill "$C16C_CHILD" 2>/dev/null
+T104_PIDS=""
+
+# unknown subcommand exits non-zero after printing usage
+t104_case c16d
+t104_state THINK > .gos/state.json
+node "$GOS" auto xyz > t16d-usage.txt 2>&1; C16D_RC=$?
+t104_exit "C16: unknown auto subcommand exits non-zero" 1 "$C16D_RC"
+t104_contains "C16: unknown subcommand prints the usage line" "Usage:" "$(cat t16d-usage.txt)"
+
+# timeout flags persist into the store and serve as loop defaults; env wins
+t104_case c16e
+t104_state THINK > .gos/state.json
+node "$GOS" auto on --timeout-wall 120 --timeout-idle 30 > /dev/null 2>&1; C16E_ON=$?
+t104_exit "C16: auto on --timeout-wall/--timeout-idle succeeds" 0 "$C16E_ON"
+T16E_STORE="$(node -e "
+const path=require('path');
+const s=require(path.join(process.env.GOS_ROOT,'bin/lib/ops/auto/store.cjs'));
+const r=s.load(process.cwd());
+console.log(r.ok ? r.store.timeouts.wallSec + '/' + r.store.timeouts.idleSec : 'load-failed');")"
+t104_eq "C16: timeout flags persist into the store config" "120/30" "$T16E_STORE"
+cat > run-c16e.cjs <<'EOF'
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const rootDir = process.cwd();
+const captured = [];
+const spawnRunner = (spec, ctx) => { captured.push(ctx.wallMs); return { status: 1, stdout: '', stderr: 'fixture host broke' }; };
+const baseEnv = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
+delete baseEnv.GOS_AUTO_TIMEOUT_WALL_SEC;
+delete baseEnv.GOS_AUTO_TIMEOUT_IDLE_SEC;
+(async () => {
+  await loop.createLoop({ rootDir, host: 'gos-fixture-host', env: baseEnv, limits: { N: 1, K: 9, B: 9 }, spawnRunner }).loop.run();
+  const envWin = { ...baseEnv, GOS_AUTO_TIMEOUT_WALL_SEC: '5' };
+  await loop.createLoop({ rootDir, host: 'gos-fixture-host', env: envWin, limits: { N: 1, K: 9, B: 9 }, spawnRunner }).loop.run();
+  console.log('WALL ' + captured.join(','));
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+T16E_LOOP="$(node run-c16e.cjs 2>&1 | grep '^WALL ' | cut -d' ' -f2-)"
+t104_eq "C16: loop resolves store timeouts as defaults; the env override still wins" "120000,5000" "$T16E_LOOP"
 
 echo "--- T104 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]

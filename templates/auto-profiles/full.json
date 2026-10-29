@@ -18,6 +18,9 @@
     { "path": "$HOME/.config/git", "kind": "tmpfs", "why": "XDG global git config stays masked in every profile" },
     { "path": "$HOME/.ssh", "kind": "tmpfs", "why": "delivery credentials (ssh keys and config) stay masked in every profile" },
     { "path": "$HOME/.netrc", "kind": "empty", "why": "delivery credentials (netrc) stay masked in every profile" },
+    { "path": "$HOME/.git-credentials", "kind": "empty", "why": "delivery credentials (credential.helper=store default file) stay masked in every profile" },
+    { "path": "$HOME/.aws", "kind": "tmpfs", "why": "delivery credentials (aws cli key/profile files) stay masked in every profile" },
+    { "path": "$HOME/.gnupg", "kind": "tmpfs", "why": "signing material (gpg keyrings for commit/tag signing) stays masked in every profile" },
     { "path": "$HOME/.config/opencode", "kind": "seed", "seed": "host-config", "why": "host state: seeded read-only from the runner snapshot, never writable-bound" },
     { "path": "$HOME/.local/share/opencode", "kind": "seed", "seed": "host-data", "why": "host state: model-provider auth readable by design, scratch state ephemeral" },
     { "path": "$HOME/.cache/opencode", "kind": "tmpfs", "why": "host cache: ephemeral per spawn" }
