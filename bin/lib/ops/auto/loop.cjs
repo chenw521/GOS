@@ -430,11 +430,26 @@ async function drive(ctx) {
     const observed = identityOf(taskState, readHead(gitRunner, rootDir));
     if (baseline && identityDiff(baseline, observed).length) {
       const fields = identityDiff(baseline, observed);
-      return endWith({
-        ok: false, status: 'paused', paused: true, reason: 'external-mutation',
-        expected: baseline, observed, detail: fields.join('; '),
-        guidance: store.guidanceFor('auto.loop.externalMutation', { detail: fields.join('; ') }),
-      });
+      // A spawn-attributed advance may settle in the state file one read
+      // after its git commit: when the previous spawn was scored advanced,
+      // the baseline still holds that spawn's stage, the only moved identity
+      // field is the stage, and the observed history marks the old stage
+      // completed (forward move — a stage-back never completes its victim),
+      // the delta belongs to this loop and the baseline rebases.
+      const forward = Array.isArray(taskState.completed_stages)
+        && taskState.completed_stages.map(String).includes(String(baseline.stage));
+      const lateAdvance = pendingLeg && pendingLeg.advanced === true
+        && String(baseline.stage) === String(pendingLeg.stage)
+        && fields.length === 1 && fields[0].startsWith('stage: ')
+        && String(baseline.stage) !== String(observed.stage)
+        && forward;
+      if (!lateAdvance) {
+        return endWith({
+          ok: false, status: 'paused', paused: true, reason: 'external-mutation',
+          expected: baseline, observed, detail: fields.join('; '),
+          guidance: store.guidanceFor('auto.loop.externalMutation', { detail: fields.join('; ') }),
+        });
+      }
     }
     baseline = observed;
 

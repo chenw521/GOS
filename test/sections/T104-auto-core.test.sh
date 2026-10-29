@@ -1093,5 +1093,53 @@ EOF
 T16E_LOOP="$(node run-c16e.cjs 2>&1 | grep '^WALL ' | cut -d' ' -f2-)"
 t104_eq "C16: loop resolves store timeouts as defaults; the env override still wins" "120000,5000" "$T16E_LOOP"
 
+# A spawn-attributed advance may settle in the state file one read after
+# its git commit: the post-spawn snapshot still shows the old stage while
+# the next top-of-loop read shows the new one. The only-moved-field-is-
+# stage delta rebases the baseline; anything else still pauses.
+t104_case c17
+mkdir -p .gos/task/p0 .gos/logs
+printf '# Spec\n\np0 auto spec\n' > .gos/task/p0/spec.md
+t104_state THINK 3 ',"spec_path":".gos/task/p0/spec.md"' > .gos/state.json
+cat > run-c17.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const GR = process.env.GOS_ROOT;
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const problems = [];
+const world = process.cwd();
+store.create({ mode: 'on', rootDir: world, limits: { N: 3, K: 9, B: 9 } });
+function snapshotState() {
+  try { return JSON.parse(fs.readFileSync(path.join(world, '.gos', 'state.json'), 'utf8')); } catch { return null; }
+}
+(async () => {
+  let servedStale = false;
+  const stateReader = () => {
+    let raw = null;
+    try { raw = JSON.parse(fs.readFileSync(path.join(world, '.gos', 'state.json'), 'utf8')); } catch { return null; }
+    if (!servedStale && String(raw.current_stage) === 'BUILD') {
+      servedStale = true;
+      return { ...raw, current_stage: 'THINK' };
+    }
+    return raw;
+  };
+  const spawnRunner = (spec) => {
+    if (spec.roWorkspace) return { status: 0, stdout: 'REDTEAM-FINDINGS: 0\n', stderr: '' };
+    spawnSync(process.execPath, [path.join(GR, 'bin', 'gos.cjs'), 'commit', 'think'], {
+      cwd: world, env: { ...process.env, GOS_AUTO_SPAWNED: '1' }, encoding: 'utf8',
+    });
+    return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
+  };
+  const r = await loop.createLoop({ rootDir: world, host: 'gos-fixture-host', env: { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' }, maxIterations: 2, spawnRunner, stateReader }).loop.run();
+  if (r.reason === 'external-mutation') problems.push('late-settling advance paused the loop: ' + String(r.detail).slice(0, 80));
+  if (r.status === 'paused') problems.push('unexpected pause: ' + r.status + '/' + r.reason);
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+C17_OUT="$(node run-c17.cjs 2>&1 | tail -n 1)"
+t104_eq "late-settling spawn advance rebases the baseline instead of pausing" "OK" "$C17_OUT"
+
 echo "--- T104 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]
