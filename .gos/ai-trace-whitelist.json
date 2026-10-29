@@ -633,12 +633,6 @@
     ]
   },
   {
-    "path": "bin/lib/ops/auto/launcher.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "bin/lib/ops/changelog-core.cjs",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -1100,18 +1094,6 @@
         "sha256": "70d8651708941ddfd40596ba17331471e55eabb227571a98607473cc2e4a04f3"
       }
     ]
-  },
-  {
-    "path": "test/sections/T104-auto-core.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 26,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T105-auto-depth.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 17,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T12-wiring.test.sh",

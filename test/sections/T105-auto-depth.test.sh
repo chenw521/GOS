@@ -1,27 +1,27 @@
 #!/usr/bin/env bash
 # gos-map:none
-# Full-auto adversarial depth section — spec §4 truths against the landed
+# Full-auto adversarial depth section — the observable-truths spec section against the landed
 # auto modules. Case map (truth id -> case):
-#   T5  D1  delivery adapter absent: the loop ends cleanly at SHIP with
+#   truth-five  D1  delivery adapter absent: the loop ends cleanly at SHIP with
 #           deliveryAdapter=false; the delivery probe classifies absent
 #           shapes and persists its three-state result
-#   T6  D2  bwrap mask surface (store prefix + credential paths masked over
+#   truth-six  D2  bwrap mask surface (store prefix + credential paths masked over
 #           binds), host-state poisoning isolation (deny baseline derives
 #           from the runner snapshot, seeds come from runner-held roots),
 #           and honest lexical degrade on an engine-less machine
-#   T7  D3  tracked privacy: a ratified approval carries hash/count only —
+#   truth-seven  D3  tracked privacy: a ratified approval carries hash/count only —
 #           zero session ids, model names or output tails in tracked bytes
-#   T9  D4  repo-local tamper (forged ledger, forged counters mirror, forged
+#   truth-nine  D4  repo-local tamper (forged ledger, forged counters mirror, forged
 #           approval evidence) satisfies no gate — verification reads the
 #           masked store and the tamper is surfaced
-#   T10 D5  delivery plants: a .git/hooks/pre-push plant, a remote rewrite
+#   truth-ten D5  delivery plants: a .git/hooks/pre-push plant, a remote rewrite
 #           and url.insteadOf poison make the privileged git leg abort into
 #           the breaker instead of pushing; a global-config insteadOf plant
 #           is neutralized by the sanitized privileged environment
-#   RT1-F3 D6  spawn env: credential env vars (gh/git/ssh/aws) never reach
+#   credential-isolation D6  spawn env: credential env vars (gh/git/ssh/aws) never reach
 #           the spawned session; PATH and model-provider keys survive;
 #           runner overrides land after sanitization
-#   RT1-F3 D7  credential masks (.git-credentials/.aws/.gnupg) in every
+#   credential-isolation D7  credential masks (.git-credentials/.aws/.gnupg) in every
 #           profile incl. full; repo .git rw-bound beside the ro workspace
 #           at the kernel tier; mask-over-bind ordering intact
 #   D8  registry rows without version_command classify a probe failure via
@@ -93,7 +93,7 @@ t105_state() { # $1=current_stage
   printf '{"schema_version":6,"level":1,"current_stage":"%s","completed_stages":["INTENT"],"intent":{"summary":"t105 fixture","confirmed":true},"task_head":"abc123def0123456789abcdef0123456789abcdef","spec_path":null,"plan_path":null,"requirements":[],"decisions":[],"observable_truths":[],"gaps":[],"checkpoints":[],"approvals":{}}' "$1"
 }
 
-# ---------------------------------------------------------------- D1 / T5 --
+# ---------------------------------------------------------------- D1 --
 t105_case d1
 t105_state THINK > .gos/state.json
 export GOS_AUTO_TIMEOUT_WALL_SEC=2 GOS_AUTO_TIMEOUT_IDLE_SEC=1
@@ -144,7 +144,7 @@ EOF
 D1_OUT="$(node run-d1.cjs 2>&1 | tail -n 1)"
 t105_eq "T5: delivery adapter absent — loop ends at SHIP; probe classifies absent shapes and persists its state" "OK" "$D1_OUT"
 
-# ---------------------------------------------------------------- D2 / T6 --
+# ---------------------------------------------------------------- D2 --
 t105_case d2
 t105_state THINK > .gos/state.json
 cat > run-d2.cjs <<'EOF'
@@ -226,7 +226,7 @@ EOF
 D2_OUT="$(node run-d2.cjs 2>&1 | tail -n 1)"
 t105_eq "T6: bwrap masks (store + credentials) over binds; poisoning isolated to runner snapshots; lexical degrade honest" "OK" "$D2_OUT"
 
-# ---------------------------------------------------------------- D3 / T7 --
+# ---------------------------------------------------------------- D3 --
 t105_case d3
 t105_state THINK > .gos/state.json
 cat > run-d3.cjs <<'EOF'
@@ -269,7 +269,7 @@ EOF
 D3_OUT="$(node run-d3.cjs 2>&1 | tail -n 1)"
 t105_eq "T7: tracked state carries hash/count only — zero session ids, model names or output tails; store keyed by hash" "OK" "$D3_OUT"
 
-# ---------------------------------------------------------------- D4 / T9 --
+# ---------------------------------------------------------------- D4 --
 t105_case d4
 t105_state PLAN > .gos/state.json
 cat > run-d4.cjs <<'EOF'
@@ -325,7 +325,7 @@ t105_eq "T9: forged ledger/counter/approval records satisfy no gate — verifica
 D4_STATUS="$(node "$GOS" auto status 2>&1 | grep -F 'counters:')"
 t105_contains "T9: status counters come from the masked store, not the forged mirror" "counters: spawns 4 · trips 2" "$D4_STATUS"
 
-# ---------------------------------------------------------------- D5 / T10 --
+# ---------------------------------------------------------------- D5 --
 t105_case d5
 t105_state THINK > .gos/state.json
 git init -q --bare "$T105_CASE/origin.git"
@@ -424,7 +424,7 @@ EOF
 D5_OUT="$(node run-d5.cjs 2>&1 | tail -n 1)"
 t105_eq "T10: hook/remote/insteadOf plants abort into the breaker; global-config poison neutralized by sanitized privileged git" "OK" "$D5_OUT"
 
-# ---------------------------------------------------------------- D6 / RT1-F3 --
+# ---------------------------------------------------------------- D6 --
 t105_case d6
 t105_state THINK > .gos/state.json
 cat > run-d6.cjs <<'EOF'
@@ -464,9 +464,9 @@ if (spec.env.ANTHROPIC_API_KEY !== 'model-key-t105-keep') problems.push('model-p
 console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
 EOF
 D6_OUT="$(node run-d6.cjs 2>&1 | tail -n 1)"
-t105_eq "RT1-F3: spawn env strips gh/git/ssh/aws credentials; PATH + model keys survive; overrides land last" "OK" "$D6_OUT"
+t105_eq "credential env: strips gh/git/ssh/aws credentials; PATH + model keys survive; overrides land last" "OK" "$D6_OUT"
 
-# ---------------------------------------------------------------- D7 / RT1-F3 --
+# ---------------------------------------------------------------- D7 --
 t105_case d7
 t105_state THINK > .gos/state.json
 cat > run-d7.cjs <<'EOF'
@@ -518,7 +518,7 @@ for (const profile of ['restricted', 'workspace', 'full']) {
 console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
 EOF
 D7_OUT="$(node run-d7.cjs 2>&1 | tail -n 1)"
-t105_eq "RT1-F3: .git-credentials/.aws/.gnupg masked in every profile; repo .git rw-bound at kernel tier; ordering intact" "OK" "$D7_OUT"
+t105_eq "credential masks: .git-credentials/.aws/.gnupg masked in every profile; repo .git rw-bound at kernel tier; ordering intact" "OK" "$D7_OUT"
 
 # ---------------------------------------------------------------- D8 --
 t105_case d8

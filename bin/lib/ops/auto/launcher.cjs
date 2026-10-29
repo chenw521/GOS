@@ -388,7 +388,7 @@ function globToRegExp(pattern) {
     else if (ch === '?') body += '.';
     else body += ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
-  const tail = /[A-Za-z0-9_]$/.test(String(pattern)) ? '\\b' : '';
+  const tail = /\w$/.test(String(pattern)) ? '\\b' : '';
   return new RegExp(`\\b${body}${tail}`);
 }
 

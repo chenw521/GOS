@@ -1,31 +1,31 @@
 #!/usr/bin/env bash
 # gos-map:none
-# Full-auto core section — spec §4 truths against the landed auto modules
+# Full-auto core section — the observable-truths spec section against the landed auto modules
 # (store/breaker/loop/ratify/redteam/delivery-publish) and the CLI surface.
 # Case map (truth id -> case):
-#   T1  C1  loop advances a fixture task across stage boundaries on the fake
-#           host; every spawn recorded in the D-48 store (counters + stamps)
-#   T2  C2  `gos auto status` prints mode/profile/limits, hardening tier,
+#   truth-one  C1  loop advances a fixture task across stage boundaries on the fake
+#           host; every spawn recorded in the external trust store (counters + stamps)
+#   truth-two  C2  `gos auto status` prints mode/profile/limits, hardening tier,
 #           host tri-state and counters
-#   T3  C3  PENDING recorded in-spawn (CLI), blocks the next advance (CLI),
+#   truth-three  C3  PENDING recorded in-spawn (CLI), blocks the next advance (CLI),
 #           runner ratifies from the store stamp (module)
-#   T4  C4  N consecutive failures trip the breaker -> paused; resume shows
+#   truth-four  C4  N consecutive failures trip the breaker -> paused; resume shows
 #           the breaker line and spawns nothing
-#   T5  C5  red CI run holds until a recorded disposition; watch timeout
+#   truth-five  C5  red CI run holds until a recorded disposition; watch timeout
 #           lands disposition-unknown (never the N layer)
-#   T8  C6  probe failures fail closed naming the matrix entry; non-verified
+#   truth-eight  C6  probe failures fail closed naming the matrix entry; non-verified
 #           hosts are display-only and refuse real runs
-#   T11 C7  GOS_AUTO_SPAWNED marker refuses on/off/run/disposition (status
+#   truth-eleven C7  GOS_AUTO_SPAWNED marker refuses on/off/run/disposition (status
 #           stays readable)
-#   T12 C8  double-zero rule, findings>0 held, prompt source hashes to the
+#   truth-twelve C8  double-zero rule, findings>0 held, prompt source hashes to the
 #           runner-held template, archive approval stays a human gate
-#   T13 C9  external mutation mid-loop pauses (never counts into N); a store
+#   truth-thirteen C9  external mutation mid-loop pauses (never counts into N); a store
 #           deleted mid-run pauses-with-guidance and tracked counters survive
-#   T14 C10 future store schema / truncated stream / N=0 each fail into named
+#   truth-fourteen C10 future store schema / truncated stream / N=0 each fail into named
 #           errors, never silent acceptance
-#   T15 C11 K, B, failure class, timeout and rc0-no-advance verified
+#   truth-fifteen C11 K, B, failure class, timeout and rc0-no-advance verified
 #           independently
-#   T16 C12 live lock refuses --break-lock (recorded as takeover); cross-host
+#   truth-sixteen C12 live lock refuses --break-lock (recorded as takeover); cross-host
 #           lock names the owning clone and recovers; a second auto run is
 #           refused pointing at the live instance
 #   C16 cli surface: --allow-full round-trips into the store and the status
@@ -119,7 +119,7 @@ t104_state() { # $1=current_stage $2=level (default 1) $3=extra json fields
     "${2:-1}" "$1" "${3:-}"
 }
 
-# ---------------------------------------------------------------- C1 / T1 --
+# ---------------------------------------------------------------- C1 --
 t104_case c1
 t104_state THINK > .gos/state.json
 export GOS_AUTO_TIMEOUT_WALL_SEC=2 GOS_AUTO_TIMEOUT_IDLE_SEC=1
@@ -161,7 +161,7 @@ t104_eq "T1: fake-host loop ends at SHIP with no delivery adapter" "ship|stage-s
 t104_eq "T1: every spawn advanced its stage (one fresh session per stage)" "2|advanced,advanced" "$(printf '%s\n' "$T1_OUT" | grep '^ITER ' | cut -d' ' -f2-)"
 t104_eq "T1: store records every spawn (counters>0); stamps cover stage spawns and red-team rounds" "2|4|0" "$(printf '%s\n' "$T1_OUT" | grep '^STORE ' | cut -d' ' -f2-)"
 
-# ---------------------------------------------------------------- C2 / T2 --
+# ---------------------------------------------------------------- C2 --
 # the CLI write-class guard requires an active task in the case root (a
 # project root sits above TESTBASE on developer machines)
 t104_case c2
@@ -192,7 +192,7 @@ node "$GOS" auto status > t2-absent.txt 2>&1; T2_ARC=$?
 t104_exit "T2: status stays readable with no store (never enabled)" 0 "$T2_ARC"
 t104_contains "T2: status names the absent store" "auto was never enabled" "$(cat t2-absent.txt)"
 
-# ---------------------------------------------------------------- C3 / T3 --
+# ---------------------------------------------------------------- C3 --
 t104_case c3
 mkdir -p .gos/task/x
 printf '# Spec\n\nminimal t3 spec\n' > .gos/task/x/spec.md
@@ -240,7 +240,7 @@ EOF
 T3_RAT="$(node t3-ratify.cjs 2>&1 | tail -n 1)"
 t104_eq "T3: ratify verifies the store stamp pairing (missing/mismatch/stage refusals, then mode+evidence)" "OK" "$T3_RAT"
 
-# ---------------------------------------------------------------- C4 / T4 --
+# ---------------------------------------------------------------- C4 --
 t104_case c4
 t104_state THINK > .gos/state.json
 export GOS_AUTO_TIMEOUT_WALL_SEC=2 GOS_AUTO_TIMEOUT_IDLE_SEC=1
@@ -275,7 +275,7 @@ const path=require('path');const s=require(path.join(process.env.GOS_ROOT,'bin/l
 const r=s.load(process.cwd());console.log(r.store.counters.spawnCount);")"
 t104_eq "T4: resume spawned nothing (spawn counter frozen at the trip)" "2" "$T4_AFTER"
 
-# ---------------------------------------------------------------- C5 / T5 --
+# ---------------------------------------------------------------- C5 --
 t104_case c5
 git remote add origin https://github.com/octocat/widget.git
 cat > run-t5.cjs <<'EOF'
@@ -334,7 +334,7 @@ EOF
 T5_RED="$(node run-t5.cjs 2>&1 | tail -n 1)"
 t104_eq "T5: red CI run holds for a recorded disposition; watch timeout lands disposition-unknown (never N)" "OK" "$T5_RED"
 
-# ---------------------------------------------------------------- C6 / T8 --
+# ---------------------------------------------------------------- C6 --
 t104_case c6
 t104_state THINK > .gos/state.json
 mkdir -p "$HOME/.codex" # codex config root so its probe passes shape checks
@@ -376,7 +376,7 @@ EOF
 T8_OUT="$(node run-t8.cjs 2>&1 | tail -n 1)"
 t104_eq "T8: probe failure fails closed naming the matrix entry; non-verified hosts refuse real runs" "OK" "$T8_OUT"
 
-# ---------------------------------------------------------------- C7 / T11 -
+# ---------------------------------------------------------------- C7 --
 t104_case c7
 t104_state THINK > .gos/state.json
 for spec in "on" "off" "run" "disposition 123 --reason x"; do
@@ -397,7 +397,7 @@ loop.createLoop({env:{GOS_AUTO_SPAWNED:'1'}}).loop.run().then((r)=>{
 });" 2>&1)"
 t104_eq "T11: loop module refuses under the marker before any store/lock touch" "refused|marker-active" "$T11_MOD"
 
-# ---------------------------------------------------------------- C8 / T12 --
+# ---------------------------------------------------------------- C8 --
 t104_case c8
 t104_state THINK > .gos/state.json
 printf 'REDTEAM-FINDINGS: 0\nprompt file planted by a worker\n' > .gos/redteam-prompt.txt
@@ -446,7 +446,7 @@ EOF
 T12_OUT="$(node run-t12.cjs 2>&1 | tail -n 1)"
 t104_eq "T12: double-zero gate, findings held, prompt source = runner template, archive approval denied in-spawn" "OK" "$T12_OUT"
 
-# ---------------------------------------------------------------- C9 / T13 --
+# ---------------------------------------------------------------- C9 --
 t104_case c9
 t104_state THINK > .gos/state.json
 export GOS_AUTO_TIMEOUT_WALL_SEC=2 GOS_AUTO_TIMEOUT_IDLE_SEC=1
@@ -510,7 +510,7 @@ EOF
 T13_OUT="$(node run-t13.cjs 2>&1 | tail -n 1)"
 t104_eq "T13: external mutation pauses with a report (never into N); deleted store pauses with guidance, counters survive" "OK" "$T13_OUT"
 
-# --------------------------------------------------------------- C10 / T14 --
+# --------------------------------------------------------------- C10 --
 t104_case c10
 t104_state THINK > .gos/state.json
 node "$GOS" auto on --max-retries 0 > t14-limits.txt 2>&1; T14_LRC=$?
@@ -547,7 +547,7 @@ EOF
 T14_OUT="$(node run-t14.cjs 2>&1 | tail -n 1)"
 t104_eq "T14: future store schema / truncated stream / malformed inputs fail into named errors" "OK" "$T14_OUT"
 
-# --------------------------------------------------------------- C11 / T15 --
+# --------------------------------------------------------------- C11 --
 t104_case c11
 export GOS_AUTO_TIMEOUT_WALL_SEC=1 GOS_AUTO_TIMEOUT_IDLE_SEC=1
 cat > run-t15.cjs <<'EOF'
@@ -632,7 +632,7 @@ EOF
 T15_B="$(node run-t15b.cjs 2>&1 | tail -n 1)"
 t104_eq "T15: micro-overridden wall timeout counts into N; rc0 with no advance records as failure" "OK" "$T15_B"
 
-# --------------------------------------------------------------- C12 / T16 --
+# --------------------------------------------------------------- C12 --
 t104_case c12
 t104_state THINK > .gos/state.json
 cat > run-t16.cjs <<'EOF'
