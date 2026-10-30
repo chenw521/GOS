@@ -2,7 +2,7 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 1,
-  "current_stage": "VERIFY",
+  "current_stage": "DONE",
   "completed_stages": [
     "BUILD",
     "VERIFY"
@@ -18,8 +18,8 @@
   "approvals": {
     "ARCHIVE": "2026-10-30T06:09:58.813Z"
   },
-  "spec_path": ".gos/task/03a3ab58/spec.md",
-  "plan_path": ".gos/task/03a3ab58/plan.md",
+  "spec_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-harden-auto-supervision-per-us/task/03a3ab58/spec.md",
+  "plan_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-harden-auto-supervision-per-us/task/03a3ab58/plan.md",
   "project": false,
   "requirements": [
     {
@@ -38,7 +38,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
         "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
-        "artifact_path": ".gos/task/03a3ab58/evidence-t104.md",
+        "artifact_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-harden-auto-supervision-per-us/task/03a3ab58/evidence-t104.md",
         "replay": true
       }
     },
@@ -49,7 +49,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
         "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
-        "artifact_path": ".gos/task/03a3ab58/evidence-t104.md",
+        "artifact_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-harden-auto-supervision-per-us/task/03a3ab58/evidence-t104.md",
         "replay": true
       }
     },
@@ -60,7 +60,7 @@
       "evidence": {
         "command": "[\"node\",\".gos/task/03a3ab58/evidence-lock-advice.cjs\"]",
         "output_excerpt": "aliveBranch=1 breakLockAdvice=0 exit=1 OK",
-        "artifact_path": ".gos/task/03a3ab58/evidence-lock-advice.cjs",
+        "artifact_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-harden-auto-supervision-per-us/task/03a3ab58/evidence-lock-advice.cjs",
         "replay": true
       }
     }
@@ -76,5 +76,7 @@
     }
   ],
   "spec_gate_version": 3,
-  "changelog_user_summary": "Harden auto supervision: spawned stage commits exclude the supervisor's pre-existing uncommitted files via a spawn-time dirty baseline, and the spawn runners go async with process-group kills — run-lock heartbeats stay live during waits, stalled streams die at the idle limit, and lock advice never suggests break-lock against a live pid"
+  "changelog_user_summary": "Harden auto supervision: spawned stage commits exclude the supervisor's pre-existing uncommitted files via a spawn-time dirty baseline, and the spawn runners go async with process-group kills — run-lock heartbeats stay live during waits, stalled streams die at the idle limit, and lock advice never suggests break-lock against a live pid",
+  "checkpoints": [],
+  "completed_at": "2026-10-30T06:57:36.542Z"
 }
