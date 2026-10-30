@@ -325,6 +325,13 @@ function autoRun(mods, rest, ui) {
       return;
     }
     console.log(core.t('auto.cli.run.report', { status: report.status, reason: report.reason || '' }));
+    // Full report for post-mortem: the compact summary cannot carry the
+    // identity snapshots a pause diagnosis needs.
+    try {
+      const logDir = path.join(process.cwd(), '.gos', 'logs');
+      fs.mkdirSync(logDir, { recursive: true });
+      fs.writeFileSync(path.join(logDir, `auto-report-${Date.now()}.json`), JSON.stringify(report, null, 1));
+    } catch { /* unwritable: the summary above still printed */ }
     if (Number.isInteger(report.iterations)) console.log(`  ${core.t('auto.cli.run.iterations', { n: report.iterations })}`);
     if (report.breaker && report.breaker.tripped) {
       console.log(`  ${core.t('auto.cli.status.breakerTripped', { layer: report.breaker.layer, cls: report.breaker.cls, ts: report.breaker.ts || '', detail: report.breaker.reason || '' })}`);

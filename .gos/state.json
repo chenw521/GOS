@@ -2,11 +2,12 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 2,
-  "current_stage": "VERIFY",
+  "current_stage": "DONE",
   "completed_stages": [
     "INTENT",
     "THINK",
-    "BUILD"
+    "BUILD",
+    "VERIFY"
   ],
   "intent": {
     "summary": "Cure between-tasks false reds: with a DONE-state task left in state.json, gos gate all downgrades coverage/diff-hit/manifest-stale checks to advisory lines with an init hint instead of hard-failing (twice-lived: P0 closeout manifest-stale 2026-10-29, dffa50f0 2026-09-23)",
@@ -35,14 +36,24 @@
     {
       "id": "T1",
       "description": "With a DONE+completed_at (archived) task left in state.json, node bin/gos.cjs gate all exits 0 and prints one coverage idle advisory and one semantic idle advisory, each carrying the gos init hint; standalone gate coverage and gate semantic behave the same; --json reports verdict pass with the idle lines in advisories",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T33\"]",
+        "output_excerpt": "✓ T33.3a stale manifest → gate all non-zero (exit 1)",
+        "artifact_path": ".gos/cache/section-runs/20261030T024631Z-full4587.log",
+        "replay": true
+      }
     },
     {
       "id": "T2",
       "description": "A live task with a stale run-manifest still fails gate all (exit 1, manifest-stale), and a bare-DONE state without completed_at keeps task-level checks live - the downgrade is exclusive to the archived window",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T33\"]",
+        "output_excerpt": "✓ T33.3a stale manifest → gate all non-zero (exit 1)",
+        "artifact_path": ".gos/cache/section-runs/20261030T024631Z-full4587.log",
+        "replay": true
+      }
     }
   ],
   "gaps": [
