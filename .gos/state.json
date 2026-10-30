@@ -2,9 +2,10 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 1,
-  "current_stage": "BUILD",
+  "current_stage": "VERIFY",
   "completed_stages": [
-    "BUILD"
+    "BUILD",
+    "VERIFY"
   ],
   "intent": {
     "summary": "Harden auto supervision per user rulings 2026-10-30: (1) dirty-snapshot guard — the loop passes the pre-spawn dirty-file baseline into the spawn env and in-spawn stage commits exclude those paths with a loud warning, so a runner session can never sweep the supervisor's uncommitted edits into an advance commit (live incident: VERIFY advance swept a half-written cli.cjs); (2) async spawn execution — replace the synchronous spawn runner with an event-loop-alive child process so run-lock heartbeats fire during spawn waits and the idle timeout kills a stalled stream live instead of classifying after the fact (also cures status being blocked by a stale-heartbeat concurrency guard and its dangerous break-lock advice against a live runner)",
@@ -27,8 +28,50 @@
     }
   ],
   "decisions": [],
-  "observable_truths": [],
+  "observable_truths": [
+    {
+      "id": "T1",
+      "description": "spawn baseline guard: files already uncommitted at spawn time are excluded from the in-spawn advance commit with a loud line; the session's own files still land",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
+        "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
+        "artifact_path": ".gos/task/03a3ab58/evidence-t104.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T2",
+      "description": "async spawn runner: a silent stream is killed at the idle limit within a second of the last chunk, a chatty stream at the wall limit, and a healthy command resolves rc 0",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
+        "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
+        "artifact_path": ".gos/task/03a3ab58/evidence-t104.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T3",
+      "description": "lock advice: a stale-heartbeat lock whose pid is alive never suggests --break-lock — it tells the user to verify the pid first",
+      "verified": true,
+      "evidence": {
+        "command": "[\"node\",\".gos/task/03a3ab58/evidence-lock-advice.cjs\"]",
+        "output_excerpt": "aliveBranch=1 breakLockAdvice=0 exit=1 OK",
+        "artifact_path": ".gos/task/03a3ab58/evidence-lock-advice.cjs",
+        "replay": true
+      }
+    }
+  ],
   "gaps": [],
   "activation_source": "headless",
-  "task_head": "03a3ab58044fc5e715869839dc41785fdf8db087"
+  "task_head": "03a3ab58044fc5e715869839dc41785fdf8db087",
+  "spec_sha256": "38b3dd848ec093e73a7c06090cc7d8d992a3df9a6948d71b45883d80a7256ea8",
+  "lazy_freeze_audit": [
+    {
+      "at": "2026-10-30T06:09:44.571Z",
+      "what": "lazy-freeze:spec"
+    }
+  ],
+  "spec_gate_version": 3
 }
