@@ -5,6 +5,8 @@
 'use strict';
 
 const core = require('../../core/index.cjs');
+const fs = require('node:fs');
+const path = require('node:path');
 const store = require('./store.cjs');
 const registry = require('./adapters/registry.cjs');
 const launcher = require('./launcher.cjs');
@@ -260,6 +262,22 @@ function autoStatus(mods, ui) {
     const lastTrip = [...st.breaker.records].reverse().find((r) => r.layer);
     if (lastTrip) console.log(core.t('auto.cli.status.breakerTripped', { layer: lastTrip.layer, cls: lastTrip.cls, ts: lastTrip.ts, detail: lastTrip.detail || '' }));
     else console.log(core.t('auto.cli.status.breakerClean', { n: st.breaker.records.length }));
+    // A held delegation is only decidable with its evidence: surface the
+    // stored review rounds when a delegated stage waits on a human.
+    const ratify = require('./ratify.cjs');
+    let blocker = null;
+    try {
+      const stJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), '.gos', 'state.json'), 'utf8'));
+      blocker = ratify.advanceBlocker(stJson.approvals);
+    } catch { blocker = null; }
+    if (blocker && ratify.isDelegatedStage(blocker.stage)) {
+      const rounds = store.isPlainObject(st.reviewRounds) ? st.reviewRounds : {};
+      const recent = Object.entries(rounds).sort((a, b) => String(a[1].ts).localeCompare(String(b[1].ts))).slice(-4);
+      for (const [id, r] of recent) {
+        console.log(core.t('auto.cli.status.heldRound', { stage: blocker.stage, id: id.slice(-24), findings: r.findings == null ? '?' : r.findings, cls: r.classified }));
+      }
+      if (recent.length) console.log(core.t('auto.cli.status.heldWhere'));
+    }
     const lock = mods.store.readRunLock();
     if (lock) console.log(core.t('auto.cli.status.lock', { pid: lock.pid, host: lock.hostname }));
   } else {
@@ -303,10 +321,17 @@ function autoRun(mods, rest, ui) {
   }
   created.loop.run().then((report) => {
     if (report.ok && report.status === 'detached') {
-      console.log(core.t('auto.cli.run.detached', { pid: report.pid }));
+      console.log(core.t('auto.cli.run.detached', { pid: report.pid, log: report.log || '.gos/logs/auto-run-*.log' }));
       return;
     }
     console.log(core.t('auto.cli.run.report', { status: report.status, reason: report.reason || '' }));
+    // Full report for post-mortem: the compact summary cannot carry the
+    // identity snapshots a pause diagnosis needs.
+    try {
+      const logDir = path.join(process.cwd(), '.gos', 'logs');
+      fs.mkdirSync(logDir, { recursive: true });
+      fs.writeFileSync(path.join(logDir, `auto-report-${Date.now()}.json`), JSON.stringify(report, null, 1));
+    } catch { /* unwritable: the summary above still printed */ }
     if (Number.isInteger(report.iterations)) console.log(`  ${core.t('auto.cli.run.iterations', { n: report.iterations })}`);
     if (report.breaker && report.breaker.tripped) {
       console.log(`  ${core.t('auto.cli.status.breakerTripped', { layer: report.breaker.layer, cls: report.breaker.cls, ts: report.breaker.ts || '', detail: report.breaker.reason || '' })}`);

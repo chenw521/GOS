@@ -158,6 +158,12 @@ const env = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
 const problems = [];
 const storePrefix = path.join(process.env.XDG_DATA_HOME, 'gos');
 const home = process.env.HOME;
+// credential artifacts exist on the host side so the mask layer has real
+// files to hide (absent paths are the skip branch covered by the later case)
+fs.closeSync(fs.openSync(path.join(home, '.gitconfig'), 'w'));
+fs.closeSync(fs.openSync(path.join(home, '.netrc'), 'w'));
+fs.mkdirSync(path.join(home, '.ssh'), { recursive: true });
+fs.mkdirSync(path.join(home, '.config', 'gh'), { recursive: true });
 store.create({ mode: 'on', rootDir });
 const bwrapProbe = () => ({ engine: 'bwrap', version: '0.11.0' });
 const noEngineProbe = () => ({ engine: 'none', reason: 'not installed' });
@@ -471,14 +477,48 @@ t105_case d7
 t105_state THINK > .gos/state.json
 cat > run-d7.cjs <<'EOF'
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
+const { spawnSync } = require('child_process');
 const GR = process.env.GOS_ROOT;
 const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
 const launcher = require(path.join(GR, 'bin/lib/ops/auto/launcher.cjs'));
 const rootDir = process.cwd();
-const env = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
+const baseEnv = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
 const problems = [];
-const home = process.env.HOME;
 const bwrapProbe = () => ({ engine: 'bwrap', version: '0.11.0' });
+
+// fixture homes control which credential paths exist on the host side
+const richHome = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-rich-'));
+const bareHome = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-bare-'));
+const linkHome = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-link-'));
+const outsideAws = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-out-'));
+const xdg = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-xdg-'));
+fs.mkdirSync(path.join(xdg, 'gos'), { recursive: true });
+fs.closeSync(fs.openSync(path.join(richHome, '.git-credentials'), 'w'));
+fs.mkdirSync(path.join(richHome, '.aws'), { recursive: true });
+fs.mkdirSync(path.join(richHome, '.gnupg'), { recursive: true });
+// symlinked host-state shapes: one pointing outside the home bind, one
+// resolving to a real directory inside it
+fs.mkdirSync(path.join(linkHome, 'gh-internal'), { recursive: true });
+fs.mkdirSync(path.join(linkHome, '.config'), { recursive: true });
+fs.symlinkSync(path.join(linkHome, 'gh-internal'), path.join(linkHome, '.config', 'gh'));
+fs.symlinkSync(outsideAws, path.join(linkHome, '.aws'));
+fs.closeSync(fs.openSync(path.join(linkHome, '.git-credentials'), 'w'));
+fs.mkdirSync(path.join(linkHome, '.gnupg'), { recursive: true });
+// host exec tree in the version-manager shape: bin entry symlinked into a
+// sibling lib tree, both under one root outside the system mounts
+const fxRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-fx-'));
+fs.mkdirSync(path.join(fxRoot, 'bin'), { recursive: true });
+fs.mkdirSync(path.join(fxRoot, 'lib', 'host-real'), { recursive: true });
+fs.writeFileSync(path.join(fxRoot, 'lib', 'host-real', 'run'), '#!/bin/sh\nexit 0\n');
+fs.chmodSync(path.join(fxRoot, 'lib', 'host-real', 'run'), 0o755);
+fs.symlinkSync(path.join(fxRoot, 'lib', 'host-real', 'run'), path.join(fxRoot, 'bin', 'run'));
+// host-state dir symlinked outside the home bind with a real parent: the
+// mask climbs to the nearest real ancestor so the host can still create
+// its state dir inside the sandbox
+fs.mkdirSync(path.join(linkHome, '.local', 'share'), { recursive: true });
+fs.symlinkSync(outsideAws, path.join(linkHome, '.local', 'share', 'opencode'));
 store.create({ mode: 'on', rootDir });
 const gitDir = path.join(rootDir, '.git');
 function ops(argv) {
@@ -491,34 +531,142 @@ function ops(argv) {
   }
   return out;
 }
-for (const profile of ['restricted', 'workspace', 'full']) {
-  const c = launcher.compose(profile, {
-    workspace: rootDir, env, store, engineProbe: bwrapProbe,
+function composeFor(profile, home) {
+  return launcher.compose(profile, {
+    workspace: rootDir, env: { ...baseEnv, HOME: home, XDG_DATA_HOME: xdg },
+    store, engineProbe: bwrapProbe,
     writableRoots: [path.join(rootDir, '.gos')],
     ...(profile === 'full' ? { allowFull: true } : {}),
   });
-  if (!c.ok) { problems.push(profile + ' compose failed: ' + c.code); continue; }
-  // mandatory credential masks present in EVERY profile including full
-  const dests = new Set(c.meta.masks.map((m) => m.dest));
-  for (const p of [path.join(home, '.git-credentials'), path.join(home, '.aws'), path.join(home, '.gnupg')]) {
-    if (!dests.has(p)) problems.push(profile + ' lacks mask for ' + p);
-  }
-  // argv mounts: .git-credentials empty-mounted, .aws/.gnupg tmpfs-mounted
-  const o = ops(c.argv);
-  if (!o.some((x) => x.op === '--ro-bind' && x.src === '/dev/null' && x.dest === path.join(home, '.git-credentials'))) problems.push(profile + ': .git-credentials not empty-masked');
-  for (const p of [path.join(home, '.aws'), path.join(home, '.gnupg')]) {
-    if (!o.some((x) => x.op === '--tmpfs' && x.dest === p)) problems.push(profile + ': ' + p + ' not tmpfs-masked');
+}
+const creds = ['.git-credentials', '.aws', '.gnupg'];
+for (const profile of ['restricted', 'workspace', 'full']) {
+  // existing credential paths are masked in EVERY profile including full
+  const rich = composeFor(profile, richHome);
+  if (!rich.ok) { problems.push(profile + ' rich compose failed: ' + rich.code); continue; }
+  const ro = ops(rich.argv);
+  if (!ro.some((x) => x.op === '--ro-bind' && x.src === '/dev/null' && x.dest === path.join(richHome, '.git-credentials'))) problems.push(profile + ': existing .git-credentials not empty-masked');
+  for (const p of ['.aws', '.gnupg']) {
+    if (!ro.some((x) => x.op === '--tmpfs' && x.dest === path.join(richHome, p))) problems.push(profile + ': existing ' + p + ' not tmpfs-masked');
   }
   // the repo .git dir is bound read-write beside the read-only workspace
-  if (!o.some((x) => x.op === '--bind' && x.dest === gitDir)) problems.push(profile + ': .git not rw-bound');
-  if (o.some((x) => x.op === '--ro-bind' && x.dest === gitDir)) problems.push(profile + ': .git bound read-only');
-  // ordering invariants hold with the new bind and masks
-  if (!launcher.maskOverBindHolds(c)) problems.push(profile + ': mask-over-bind ordering violated');
+  if (!ro.some((x) => x.op === '--bind' && x.dest === gitDir)) problems.push(profile + ': .git not rw-bound');
+  if (ro.some((x) => x.op === '--ro-bind' && x.dest === gitDir)) problems.push(profile + ': .git bound read-only');
+  if (!launcher.maskOverBindHolds(rich)) problems.push(profile + ': mask-over-bind ordering violated');
+  // nonexistent credential paths are skipped and recorded, never mounted
+  const bare = composeFor(profile, bareHome);
+  if (!bare.ok) { problems.push(profile + ' bare compose failed: ' + bare.code); continue; }
+  const bo = ops(bare.argv);
+  for (const p of creds) {
+    const dest = path.join(bareHome, p);
+    if (bo.some((x) => x.dest === dest)) problems.push(profile + ': nonexistent ' + p + ' mounted anyway');
+    if (!(bare.meta.masksSkipped || []).includes('$HOME/' + p)) problems.push(profile + ': nonexistent ' + p + ' not recorded as skipped');
+  }
+  if (!launcher.maskOverBindHolds(bare)) problems.push(profile + ': bare ordering violated');
 }
+// symlinked mask destinations: outside-pointing is skipped (unreachable in
+// the sandbox), home-internal is masked at its resolved real path
+{
+  const lk = composeFor('restricted', linkHome);
+  if (!lk.ok) problems.push('link compose failed: ' + lk.code);
+  else {
+    const lo = ops(lk.argv);
+    if (lo.some((x) => x.dest === path.join(linkHome, '.aws'))) problems.push('outside-pointing .aws symlink mounted anyway');
+    if (!(lk.meta.masksSkipped || []).includes('$HOME/.aws')) problems.push('outside-pointing .aws symlink not recorded as skipped');
+    if (!lo.some((x) => x.op === '--tmpfs' && x.dest === path.join(linkHome, 'gh-internal'))) problems.push('home-internal gh symlink not masked at its real path');
+    if (lo.some((x) => x.dest === path.join(linkHome, '.config', 'gh'))) problems.push('mask mounted on the symlink itself');
+    if (!launcher.maskOverBindHolds(lk)) problems.push('link ordering violated');
+    // ancestor climb: tmpfs at the real parent, no mount on the symlink,
+    // and the nested store mask still mounted AFTER the ancestor tmpfs
+    const shareIdx = lk.argv.findIndex((_, i) => lk.argv[i] === '--tmpfs' && lk.argv[i + 1] === path.join(linkHome, '.local', 'share'));
+    if (shareIdx < 0) problems.push('host-state symlink did not climb to its real parent');
+    if (lk.argv.some((_, i) => lk.argv[i + 1] === path.join(linkHome, '.local', 'share', 'opencode'))) problems.push('mask mounted on the dangling symlink itself');
+    const storeIdx = lk.argv.findIndex((_, i) => lk.argv[i] === '--tmpfs' && lk.argv[i + 1] === path.join(xdg, 'gos'));
+    if (shareIdx < 0 || storeIdx < 0) problems.push('ancestor tmpfs or nested store mask missing');
+    else {
+      const shareP = path.join(linkHome, '.local', 'share');
+      if (path.join(xdg, 'gos').startsWith(shareP + path.sep) && storeIdx < shareIdx) problems.push('nested store mask mounted before the ancestor tmpfs');
+    }
+    const erL = launcher.probeEngine({ env: { ...baseEnv, HOME: linkHome } });
+    if (erL.tier === 'bubblewrap') {
+      const rm = spawnSync('bwrap', [...lk.argv, '--', '/bin/sh', '-c', 'mkdir "$HOME/.local/share/opencode"'], { timeout: 20000, env: { ...process.env, HOME: linkHome } });
+      if (rm.status !== 0) problems.push('host cannot create its state dir through the ancestor tmpfs: rc=' + rm.status + ' ' + String(rm.stderr).slice(0, 120));
+    }
+  }
+}
+// real-engine regression: a home lacking every masked credential path must
+// still enter the sandbox (mounting a missing path on a read-only bind was
+// a hard spawn failure before the skip rule)
+const real = launcher.probeEngine({ env: { ...baseEnv, HOME: bareHome } });
+if (real.tier === 'bubblewrap') {
+  const c = composeFor('restricted', bareHome);
+  const r = spawnSync('bwrap', [...c.argv, '--', '/bin/sh', '-c', 'exit 0'], { timeout: 20000 });
+  if (r.status !== 0) problems.push('bwrap execution failed on credential-free home: rc=' + r.status + ' ' + String(r.stderr).slice(0, 120));
+  const lk = composeFor('restricted', linkHome);
+  const r2 = spawnSync('bwrap', [...lk.argv, '--', '/bin/sh', '-c', 'exit 0'], { timeout: 20000 });
+  if (r2.status !== 0) problems.push('bwrap execution failed on symlinked-state home: rc=' + r2.status + ' ' + String(r2.stderr).slice(0, 120));
+}
+// adapter-declared exec tree: the version-manager layout must be bindable
+// read-only and the bin symlink must execute through it inside the sandbox
+{
+  const fx = launcher.compose('restricted', {
+    workspace: rootDir, env: { ...baseEnv, HOME: bareHome, XDG_DATA_HOME: xdg },
+    store, engineProbe: () => ({ engine: 'bwrap', version: '0.11.0' }),
+    roBinds: [fxRoot], writableRoots: [path.join(rootDir, '.gos')],
+  });
+  if (!fx.ok) problems.push('exec-tree compose failed: ' + fx.code);
+  else {
+    if (!fx.argv.some((_, i) => fx.argv[i] === '--ro-bind' && fx.argv[i + 1] === fxRoot && fx.argv[i + 2] === fxRoot)) problems.push('exec tree not ro-bound');
+    const er = launcher.probeEngine({ env: { ...baseEnv, HOME: bareHome } });
+    if (er.tier === 'bubblewrap') {
+      const rr = spawnSync('bwrap', [...fx.argv, '--', path.join(fxRoot, 'bin', 'run')], { timeout: 20000 });
+      if (rr.status !== 0) problems.push('bin symlink not executable through the ro-bound tree: rc=' + rr.status + ' ' + String(rr.stderr).slice(0, 120));
+    }
+  }
+}
+// DNS stub chain: a resolv.conf symlinked into /run must pull its top
+// directory into the argv; a plain resolv.conf adds nothing
+{
+  const fx = launcher.compose('restricted', { env: { ...baseEnv, HOME: bareHome, XDG_DATA_HOME: xdg }, store, engineProbe: bwrapProbe, writableRoots: [path.join(rootDir, '.gos')] });
+  if (!fx.ok) problems.push('resolv compose failed: ' + fx.code);
+  else {
+    let real = null;
+    try { real = fs.realpathSync('/etc/resolv.conf'); } catch { real = null; }
+    const stubbed = real && real !== '/etc/resolv.conf' && real.startsWith('/run/');
+    const hasBind = fx.argv.some((_, i) => fx.argv[i] === '--ro-bind-try' && fx.argv[i + 1] === fx.meta.resolvBind && fx.argv[i + 2] === fx.meta.resolvBind);
+    if (stubbed && !hasBind) problems.push('stub resolv.conf did not bind its /run segment');
+    if (!stubbed && fx.meta.resolvBind) problems.push('plain resolv.conf must add no bind');
+  }
+}
+// model auth: the declared file binds read-only at its declared path with
+// the realpath as the source, inside whatever mask covers the directory
+{
+  const authSrc = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-auth-'));
+  const authReal = path.join(authSrc, 'auth.json');
+  fs.writeFileSync(authReal, '{}');
+  const declaredHome = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-authdest-'));
+  fs.mkdirSync(path.join(declaredHome, '.local', 'share', 'opencode'), { recursive: true });
+  const declared = path.join(declaredHome, '.local', 'share', 'opencode', 'auth.json');
+  fs.symlinkSync(authReal, declared);
+  const ax = launcher.compose('restricted', { env: { ...baseEnv, HOME: declaredHome, XDG_DATA_HOME: xdg }, store, engineProbe: bwrapProbe, authFiles: [declared], writableRoots: [path.join(rootDir, '.gos')] });
+  if (!ax.ok) problems.push('auth compose failed: ' + ax.code);
+  else {
+    const pair = ax.argv.some((_, i) => ax.argv[i] === '--ro-bind' && ax.argv[i + 1] === authReal && ax.argv[i + 2] === declared);
+    if (!pair) problems.push('auth file not bound realpath-source at the declared destination');
+    if (!launcher.maskOverBindHolds(ax)) problems.push('auth ordering violated');
+  }
+  for (const d of [authSrc, declaredHome]) { try { fs.rmSync(d, { recursive: true, force: true }); } catch {} }
+}
+for (const d of [richHome, bareHome, linkHome, outsideAws, fxRoot, xdg]) { try { fs.rmSync(d, { recursive: true, force: true }); } catch {} }
 console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
 EOF
-D7_OUT="$(node run-d7.cjs 2>&1 | tail -n 1)"
-t105_eq "credential masks: .git-credentials/.aws/.gnupg masked in every profile; repo .git rw-bound at kernel tier; ordering intact" "OK" "$D7_OUT"
+D7_RAW="$(node run-d7.cjs 2>&1)"
+D7_OUT="$(printf '%s\n' "$D7_RAW" | tail -n 1)"
+case "$D7_OUT" in
+  OK|BAD\ *) ;;
+  *) printf 'D7 raw output (%d chars): %s\n' "${#D7_RAW}" "$(printf '%s' "$D7_RAW" | head -c 400)" ;;
+esac
+t105_eq "credential masks: existing paths masked in every profile, absent paths skipped+recorded; repo .git rw-bound at kernel tier; ordering intact; credential-free home enters the sandbox" "OK" "$D7_OUT"
 
 # ---------------------------------------------------------------- D8 --
 t105_case d8

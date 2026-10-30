@@ -171,11 +171,22 @@ function loopSpawnRunner(spec, ctx) {
   }
 }
 
-// Real detach: spawns the CLI run command detached from this parent.
+// Real detach: spawns the CLI run command detached from this parent. The
+// child's output tees into a machine-local run log so a silent exit is
+// diagnosable from an artifact instead of a black hole.
 function defaultDetacher(command, args, opts) {
-  const child = spawnChild(command, args, { detached: true, stdio: 'ignore', env: opts.env });
+  const logDir = path.join(opts.rootDir || process.cwd(), '.gos', 'logs');
+  try { fs.mkdirSync(logDir, { recursive: true }); } catch { /* unwritable: fall back to ignore */ }
+  let stdio = 'ignore';
+  let logPath = null;
+  try {
+    logPath = path.join(logDir, `auto-run-${process.pid}-${Date.now()}.log`);
+    const fd = fs.openSync(logPath, 'a');
+    stdio = ['ignore', fd, fd];
+  } catch { logPath = null; }
+  const child = spawnChild(command, args, { detached: true, stdio, env: opts.env });
   child.unref();
-  return { pid: child.pid };
+  return { pid: child.pid, log: logPath };
 }
 
 function defaultCliEntry() {
@@ -254,8 +265,8 @@ async function runLoop(opts) {
     const detacher = typeof opts.detacher === 'function' ? opts.detacher : defaultDetacher;
     const command = defaultCliEntry();
     const args = [...defaultCliEntryArgs(), 'auto', 'run'];
-    const res = await detacher(command, args, { detached: true, env: { ...env } });
-    return report({ ok: true, status: 'detached', pid: res && res.pid, argv: [command, ...args] });
+    const res = await detacher(command, args, { detached: true, rootDir, env: { ...env } });
+    return report({ ok: true, status: 'detached', pid: res && res.pid, log: res && res.log, argv: [command, ...args] });
   }
 
   // Trust store: fail-closed load, then the mode gate (resume never
@@ -397,7 +408,37 @@ async function drive(ctx) {
   // before any review spawn runs.
   let pendingLeg = null;
   const runId = crypto.randomUUID();
+  const runTag = runId.slice(0, 8);
   let seq = 0;
+
+  // Crash-safe delegation: a previous runner may have died between a
+  // delegated advance and its ratification, leaving a PENDING approval no
+  // in-memory leg will ever clear. The store stamps carry the pairing —
+  // recover the leg from the latest stamp of that stage and run the full
+  // delegation sequence now, before any new spawn extends the task.
+  {
+    const modRatify = require('./ratify.cjs');
+    const orphan = modRatify.advanceBlocker(taskState.approvals);
+    if (orphan && modRatify.isDelegatedStage(orphan.stage)) {
+      const stamps = store.isPlainObject(loaded.store.stamps) ? loaded.store.stamps : {};
+      let best = null;
+      for (const [sid, st] of Object.entries(stamps)) {
+        if (!store.isPlainObject(st)) continue;
+        if (String(st.stage || '').toUpperCase() !== String(orphan.stage).toUpperCase()) continue;
+        if (!best || String(st.stampedAtIso || '') > String(best.st.stampedAtIso || '')) best = { sid, st };
+      }
+      if (!best) {
+        return endWith({
+          ok: false, status: 'paused', paused: true, reason: 'orphan-pending-unrecoverable', stage: orphan.stage,
+          guidance: store.guidanceFor('auto.ratify.stampMissing', { spawnId: '(previous run)' }),
+        });
+      }
+      const orphanLeg = { stage: String(orphan.stage).toUpperCase(), spawnId: best.sid, streamSha256: best.st.streamSha256, advanced: true, orphan: true };
+      const legRes = await delegatedLegs({ leg: orphanLeg, opts, env, rootDir, spawnRunner, tp, now, runTag });
+      if (legRes.err) return report(legRes.err, { iterations, breaker: breakerView() });
+      iterations.push({ spawnId: orphanLeg.spawnId, stage: orphanLeg.stage, signal: 'orphan-legs', delegation: legRes.summary });
+    }
+  }
 
   // Heartbeat during spawn waits so a long-running spawn never makes the
   // runner's lock look stale.
@@ -419,11 +460,26 @@ async function drive(ctx) {
     const observed = identityOf(taskState, readHead(gitRunner, rootDir));
     if (baseline && identityDiff(baseline, observed).length) {
       const fields = identityDiff(baseline, observed);
-      return endWith({
-        ok: false, status: 'paused', paused: true, reason: 'external-mutation',
-        expected: baseline, observed, detail: fields.join('; '),
-        guidance: store.guidanceFor('auto.loop.externalMutation', { detail: fields.join('; ') }),
-      });
+      // A spawn-attributed advance may settle in the state file one read
+      // after its git commit: when the previous spawn was scored advanced,
+      // the baseline still holds that spawn's stage, the only moved identity
+      // field is the stage, and the observed history marks the old stage
+      // completed (forward move — a stage-back never completes its victim),
+      // the delta belongs to this loop and the baseline rebases.
+      const forward = Array.isArray(taskState.completed_stages)
+        && taskState.completed_stages.map(String).includes(String(baseline.stage));
+      const lateAdvance = pendingLeg && pendingLeg.advanced === true
+        && String(baseline.stage) === String(pendingLeg.stage)
+        && fields.length === 1 && fields[0].startsWith('stage: ')
+        && String(baseline.stage) !== String(observed.stage)
+        && forward;
+      if (!lateAdvance) {
+        return endWith({
+          ok: false, status: 'paused', paused: true, reason: 'external-mutation',
+          expected: baseline, observed, detail: fields.join('; '),
+          guidance: store.guidanceFor('auto.loop.externalMutation', { detail: fields.join('; ') }),
+        });
+      }
     }
     baseline = observed;
 
@@ -437,7 +493,7 @@ async function drive(ctx) {
       pendingLeg = null;
       const modRatify = require('./ratify.cjs');
       if (leg.advanced && modRatify.isDelegatedStage(leg.stage)) {
-        const legRes = await delegatedLegs({ leg, opts, env, rootDir, spawnRunner, tp, now });
+        const legRes = await delegatedLegs({ leg, opts, env, rootDir, spawnRunner, tp, now, runTag });
         if (legRes.err) return report(legRes.err, { iterations, breaker: breakerView() });
         const legIter = iterations.find((i) => i.spawnId === leg.spawnId);
         if (legIter) legIter.delegation = legRes.summary;
@@ -491,7 +547,16 @@ async function drive(ctx) {
       env,
       engineProbe: opts.engineProbe,
       store,
-      writableRoots: opts.writableRoots || [path.join(rootDir, '.gos'), path.join(rootDir, '.gos', 'logs')],
+      roBinds: hostStatus.probe && hostStatus.probe.execRoot ? [hostStatus.probe.execRoot] : [],
+      authFiles: adapter.authFilePath ? [adapter.authFilePath(env)] : [],
+      // Workspace-writing profiles grant the repo root (the profile data
+      // deliberately never declares writable roots — compose-time supply is
+      // the contract); restricted stays read-only outside .gos.
+      writableRoots: opts.writableRoots || (
+        opts.profile === 'workspace' || opts.profile === 'full'
+          ? [rootDir, path.join(rootDir, '.gos'), path.join(rootDir, '.gos', 'logs')]
+          : [path.join(rootDir, '.gos'), path.join(rootDir, '.gos', 'logs')]
+      ),
     });
     if (!composed.ok) {
       const res = b.recordOutcome(stage, 'spawn-error', `launcher ${composed.code}`);
@@ -641,6 +706,24 @@ async function score(ctx) {
   }
 
   if (signal != null) {
+    // A stage-labeled advance commit reachable from the post-spawn head is
+    // the attribution of record: the work landed even when the process then
+    // exited dirty, so the advance outranks the failure signal (the dirty
+    // exit rides along as a note instead of burning the retry budget).
+    // Escape-detector hits are the exception — a deny violation outranks
+    // any progress the same session made.
+    const escapeDriven = hits.length > 0;
+    const advEarly = breakerMod.detectAdvance({ preSpawnHead: iter.preSpawnHead, cwd: rootDir, gitRunner, stage: iter.stage });
+    if (!escapeDriven && advEarly.ok && advEarly.advanced === true) {
+      iter.head = advEarly.head;
+      iter.advanced = true;
+      iter.dirtyExit = signal;
+      iter.signal = 'advanced';
+      iter.counted = false;
+      const res = b.recordSuccess(stage);
+      if (res.tripped) return { tripped: true };
+      return {};
+    }
     iter.signal = signal;
     const tax = breakerMod.classify(signal);
     iter.counted = !!(tax.ok && tax.countsTowardN);
@@ -700,11 +783,13 @@ async function score(ctx) {
 // read-only spawn prompted from the runner-held store template. The
 // double-zero rule needs findings=0 from both rounds; findings>0 or rounds
 // without a verdict hold the stage for human review.
-async function redteamPasses({ leg, opts, env, rootDir, spawnRunner, tp, now }) {
+async function redteamPasses({ leg, opts, env, rootDir, spawnRunner, tp, now, runTag }) {
   const redteamMod = require('./redteam.cjs');
   const rounds = [];
   for (let i = 1; i <= redteamMod.REQUIRED_ZEROS; i += 1) {
-    const spawnId = `${leg.spawnId}-rt${i}`;
+    // Round ids carry the runner tag so a retry after a verdict-less or
+    // failed attempt never collides with the previously stamped streams.
+    const spawnId = `${leg.spawnId}-rt${i}${runTag ? '-' + runTag : ''}`;
     const round = await redteamMod.runRound({ stage: leg.stage, spawnId }, {
       rootDir,
       env,
@@ -749,11 +834,11 @@ async function redteamPasses({ leg, opts, env, rootDir, spawnRunner, tp, now }) 
 // gate, then the approval is ratified from the store stamp (converting the
 // in-spawn PENDING record; a PENDING without this step blocks the next
 // advance at the commit gate).
-async function delegatedLegs({ leg, opts, env, rootDir, spawnRunner, tp, now }) {
+async function delegatedLegs({ leg, opts, env, rootDir, spawnRunner, tp, now, runTag }) {
   const modRatify = require('./ratify.cjs');
   let redteam = null;
   if (String(leg.stage).toUpperCase() === 'THINK') {
-    const rt = await redteamPasses({ leg, opts, env, rootDir, spawnRunner, tp, now });
+    const rt = await redteamPasses({ leg, opts, env, rootDir, spawnRunner, tp, now, runTag });
     if (rt.err) return rt;
     redteam = {
       rounds: rt.rounds.length,

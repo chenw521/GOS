@@ -655,7 +655,8 @@ store.releaseRunLock(rootDir);
 // stale cross-host lock: refusal names the owning clone; recovery via break
 const lp = path.join(store.storeRoot(rootDir), 'run.lock');
 const now = new Date().toISOString();
-fs.writeFileSync(lp, JSON.stringify({ hostname: 't104-other-box', pid: 4194304, boot_id: null, clone_path: '/t104/other-clone', started_at: now, heartbeat_at: now }));
+const deadPid=(()=>{try{const mx=parseInt(fs.readFileSync('/proc/sys/kernel/pid_max','utf8'),10)||4194304;for(let p=mx-1;p>1;p--){try{process.kill(p,0);}catch(e){if(e.code==='ESRCH')return p;}}}catch(e){}return 999999;})();
+fs.writeFileSync(lp, JSON.stringify({ hostname: 't104-other-box', pid: deadPid, boot_id: null, clone_path: '/t104/other-clone', started_at: now, heartbeat_at: now }));
 const xh = store.acquireRunLock({ rootDir });
 if (xh.ok || xh.reason !== 'cross-host') problems.push('cross-host lock acquired');
 if (!(xh.holder && xh.holder.clone_path === '/t104/other-clone')) problems.push('refusal lacks owning clone');
@@ -745,9 +746,12 @@ const spawnRunner = (spec) => {
     if (aT.evidence && aT.evidence.spawnId !== thinkIter.spawnId) problems.push('evidence does not pair the stage spawn');
   }
   const s = store.load(rootDir);
-  const rt1 = s.ok && s.store.stamps[`${thinkIter.spawnId}-rt1`];
-  const rt2 = s.ok && s.store.stamps[`${thinkIter.spawnId}-rt2`];
-  if (!rt1 || !rt2 || rt1.stage !== 'redteam' || rt2.stage !== 'redteam') problems.push('red-team rounds not stamped under the redteam stage');
+  const stampKeys = s.ok && store.isPlainObject(s.store.stamps) ? Object.keys(s.store.stamps) : [];
+  const roundStage = (prefix) => {
+    const key = stampKeys.find((k) => k === prefix || k.startsWith(prefix + '-'));
+    return key ? s.store.stamps[key].stage : null;
+  };
+  if (roundStage(`${thinkIter.spawnId}-rt1`) !== 'redteam' || roundStage(`${thinkIter.spawnId}-rt2`) !== 'redteam') problems.push('red-team rounds not stamped under the redteam stage');
   const pend = Object.values(st.approvals || {}).filter((v) => v && v.status === 'PENDING');
   if (pend.length) problems.push('PENDING approvals remain: ' + pend.length);
   console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
@@ -1020,7 +1024,8 @@ node -e "
 const fs=require('fs');const path=require('path');const os=require('os');
 const s=require(path.join(process.env.GOS_ROOT,'bin/lib/ops/auto/store.cjs'));
 const now=new Date().toISOString();
-fs.writeFileSync(path.join(s.storeRoot(process.cwd()),'run.lock'),JSON.stringify({hostname:os.hostname(),pid:4194304,boot_id:null,clone_path:process.cwd(),started_at:now,heartbeat_at:now}));
+const deadPid=(()=>{try{const mx=parseInt(fs.readFileSync('/proc/sys/kernel/pid_max','utf8'),10)||4194304;for(let p=mx-1;p>1;p--){try{process.kill(p,0);}catch(e){if(e.code==='ESRCH')return p;}}}catch(e){}return 999999;})();
+fs.writeFileSync(path.join(s.storeRoot(process.cwd()),'run.lock'),JSON.stringify({hostname:os.hostname(),pid:deadPid,boot_id:null,clone_path:process.cwd(),started_at:now,heartbeat_at:now}));
 console.log('planted');" > /dev/null
 node "$GOS" auto run --break-lock > t16b-run.txt 2>&1; C16B_RC=$?
 t104_exit "C16: --break-lock releases a stale lock (run then ends at SHIP)" 0 "$C16B_RC"
@@ -1090,6 +1095,134 @@ delete baseEnv.GOS_AUTO_TIMEOUT_IDLE_SEC;
 EOF
 T16E_LOOP="$(node run-c16e.cjs 2>&1 | grep '^WALL ' | cut -d' ' -f2-)"
 t104_eq "C16: loop resolves store timeouts as defaults; the env override still wins" "120000,5000" "$T16E_LOOP"
+
+# A spawn-attributed advance may settle in the state file one read after
+# its git commit: the post-spawn snapshot still shows the old stage while
+# the next top-of-loop read shows the new one. The only-moved-field-is-
+# stage delta rebases the baseline; anything else still pauses.
+t104_case c17
+mkdir -p .gos/task/p0 .gos/logs
+printf '# Spec\n\np0 auto spec\n' > .gos/task/p0/spec.md
+t104_state THINK 3 ',"spec_path":".gos/task/p0/spec.md"' > .gos/state.json
+cat > run-c17.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const GR = process.env.GOS_ROOT;
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const problems = [];
+const world = process.cwd();
+store.create({ mode: 'on', rootDir: world, limits: { N: 3, K: 9, B: 9 } });
+function snapshotState() {
+  try { return JSON.parse(fs.readFileSync(path.join(world, '.gos', 'state.json'), 'utf8')); } catch { return null; }
+}
+(async () => {
+  let servedStale = false;
+  const stateReader = () => {
+    let raw = null;
+    try { raw = JSON.parse(fs.readFileSync(path.join(world, '.gos', 'state.json'), 'utf8')); } catch { return null; }
+    if (!servedStale && String(raw.current_stage) === 'BUILD') {
+      servedStale = true;
+      return { ...raw, current_stage: 'THINK' };
+    }
+    return raw;
+  };
+  const spawnRunner = (spec) => {
+    if (spec.roWorkspace) return { status: 0, stdout: 'REDTEAM-FINDINGS: 0\n', stderr: '' };
+    spawnSync(process.execPath, [path.join(GR, 'bin', 'gos.cjs'), 'commit', 'think'], {
+      cwd: world, env: { ...process.env, GOS_AUTO_SPAWNED: '1' }, encoding: 'utf8',
+    });
+    return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
+  };
+  const r = await loop.createLoop({ rootDir: world, host: 'gos-fixture-host', env: { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' }, maxIterations: 2, spawnRunner, stateReader }).loop.run();
+  if (r.reason === 'external-mutation') problems.push('late-settling advance paused the loop: ' + String(r.detail).slice(0, 80));
+  if (r.status === 'paused') problems.push('unexpected pause: ' + r.status + '/' + r.reason);
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+C17_OUT="$(node run-c17.cjs 2>&1 | tail -n 1)"
+t104_eq "late-settling spawn advance rebases the baseline instead of pausing" "OK" "$C17_OUT"
+
+# Crash-safe delegation: a runner that died between a delegated advance and
+# its ratification leaves an orphaned PENDING. A fresh loop recovers the leg
+# from the store stamp, runs the red-team double-zero and ratifies before
+# any new spawn — without it, the next stage advance would block forever.
+t104_case c18
+mkdir -p .gos/task/p0 .gos/logs
+printf '# Spec\n\np0 auto spec\n' > .gos/task/p0/spec.md
+t104_state THINK 3 ',"spec_path":".gos/task/p0/spec.md","approvals":{"THINK":{"status":"PENDING","ts":"2026-01-01T00:00:00.000Z","mode":"auto","stage":"THINK"}}' > .gos/state.json
+cat > run-c18.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const GR = process.env.GOS_ROOT;
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const problems = [];
+const world = process.cwd();
+store.create({ mode: 'on', rootDir: world, limits: { N: 3, K: 9, B: 9 } });
+const sha = crypto.createHash('sha256').update('orphan stream').digest('hex');
+store.stampStream('legacy-run-1', 'THINK', sha, '2026-01-01T00:00:00.000Z', world);
+// a previous recovery attempt already stamped its (verdict-less) rounds —
+// retry round ids must not collide with those streams
+const staleSha = crypto.createHash('sha256').update('stale round').digest('hex');
+store.stampStream('legacy-run-1-rt1', 'THINK', staleSha, '2026-01-01T00:01:00.000Z', world);
+store.stampStream('legacy-run-1-rt2', 'THINK', staleSha, '2026-01-01T00:02:00.000Z', world);
+const spawnRunner = (spec) => {
+  if (spec.roWorkspace) return { status: 0, stdout: 'REDTEAM-FINDINGS: 0\n', stderr: '' };
+  problems.push('unexpected working spawn before orphan legs completed');
+  return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
+};
+(async () => {
+  const r = await loop.createLoop({ rootDir: world, host: 'gos-fixture-host', env: { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' }, maxIterations: 1, spawnRunner }).loop.run();
+  if (r.reason === 'orphan-pending-unrecoverable') problems.push('stamp present but orphan declared unrecoverable');
+  const st = JSON.parse(fs.readFileSync(path.join(world, '.gos', 'state.json'), 'utf8'));
+  const aT = (st.approvals || {}).THINK || {};
+  if (aT.status !== 'ratified') problems.push('orphan PENDING not ratified: ' + JSON.stringify(aT.status));
+  if (r.status === 'paused' && r.reason !== 'iteration-cap') problems.push('paused: ' + r.reason);
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+C18_OUT="$(node run-c18.cjs 2>&1 | tail -n 1)"
+t104_eq "orphaned PENDING is recovered from the store stamp and ratified at loop start" "OK" "$C18_OUT"
+
+# Profile-dependent writable grant: workspace-writing profiles bind the
+# repo root read-write so BUILD-shaped stages can edit code; restricted
+# never grants it.
+t104_case c19
+mkdir -p .gos/task/p0 .gos/logs
+t104_state BUILD > .gos/state.json
+cat > run-c19.cjs <<'EOF'
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const problems = [];
+const world = process.cwd();
+store.create({ mode: 'on', rootDir: world });
+const seen = [];
+const stateReader = () => JSON.parse(require('fs').readFileSync(path.join(world, '.gos', 'state.json'), 'utf8'));
+const spawnRunner = (spec) => { seen.push(spec); return { status: 0, stdout: '{"type":"result"}\n', stderr: '' }; };
+(async () => {
+  for (const profile of ['restricted', 'workspace']) {
+    seen.length = 0;
+    const r = await loop.createLoop({ rootDir: world, host: 'gos-fixture-host', env: { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' }, profile, maxIterations: 1, spawnRunner, stateReader, ...(profile === 'full' ? { allowFull: true } : {}) }).loop.run();
+    const spec = seen.find((s) => s && Array.isArray(s.argv));
+    if (!spec) { problems.push(profile + ': no spawn spec captured'); continue; }
+    // Mount tables exist only at the kernel tier: a lexical degrade carries
+    // the adapter command line, so the bind assertions gate on the tier.
+    const rw = spec.argv.some((_, i) => spec.argv[i] === '--bind' && spec.argv[i + 1] === world && spec.argv[i + 2] === world);
+    if (spec.tier === 'bubblewrap') {
+      if (profile === 'workspace' && !rw) problems.push('workspace profile did not bind the repo root read-write');
+    }
+    if (profile === 'restricted' && rw) problems.push('restricted profile bound the repo root writable');
+  }
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+C19_OUT="$(node run-c19.cjs 2>&1 | tail -n 1)"
+t104_eq "workspace-writing profiles grant the repo root; restricted never does" "OK" "$C19_OUT"
 
 echo "--- T104 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]

@@ -210,22 +210,6 @@ async function runRound({ stage, spawnId }, ctx = {}) {
   const recorded = ensurePromptRecorded(rootDir);
   if (!recorded.ok) return recorded;
 
-  // Read-only repo view: the workspace is ro-bound by the composer and the
-  // writable-roots list is deliberately empty.
-  const composed = launcher.compose(ctx.profile || DEFAULT_PROFILE, {
-    workspace: rootDir,
-    writableRoots: [],
-    env: ctx.env || process.env,
-    engineProbe: ctx.engineProbe,
-    store,
-  });
-  if (!composed.ok) {
-    return {
-      ok: false, status: 'error', reason: 'compose-failed', code: composed.code,
-      guidance: store.guidanceFor('auto.redteam.composeFailed', { detail: String(composed.code) }),
-    };
-  }
-
   // Host command line: the adapter spec turns the runner template into a
   // real spawn argv (prompt delivered per the adapter contract, PATH/HOME
   // carried by the adapter env); the launcher frame wraps it at the kernel
@@ -236,6 +220,28 @@ async function runRound({ stage, spawnId }, ctx = {}) {
     return {
       ok: false, status: 'error', reason: 'host-adapter-unavailable', host,
       guidance: store.guidanceFor('auto.redteam.hostUnavailable', { host }),
+    };
+  }
+
+  // Read-only repo view: the workspace is ro-bound by the composer and the
+  // writable-roots list is deliberately empty. The spawn frame carries the
+  // same exec tree and model-auth binds as a working spawn — a review that
+  // cannot run or authenticate produces no verdict, which holds the stage.
+  const reviewEnv = ctx.env || process.env;
+  const hostProbe = registry.hostStatus(host, { env: reviewEnv });
+  const composed = launcher.compose(ctx.profile || DEFAULT_PROFILE, {
+    workspace: rootDir,
+    writableRoots: [],
+    env: reviewEnv,
+    engineProbe: ctx.engineProbe,
+    store,
+    roBinds: hostProbe.probe && hostProbe.probe.execRoot ? [hostProbe.probe.execRoot] : [],
+    authFiles: adapterMod.authFilePath ? [adapterMod.authFilePath(reviewEnv)] : [],
+  });
+  if (!composed.ok) {
+    return {
+      ok: false, status: 'error', reason: 'compose-failed', code: composed.code,
+      guidance: store.guidanceFor('auto.redteam.composeFailed', { detail: String(composed.code) }),
     };
   }
 
@@ -313,6 +319,13 @@ async function runRound({ stage, spawnId }, ctx = {}) {
     round.readOnlyEnforcement = 'lexical';
     round.lexicalTierNote = core.t('auto.redteam.lexicalTier');
   }
+  // Evidence for the human gate: a held delegation is only decidable when
+  // the reviewer's actual text survives somewhere a human can read.
+  store.recordReviewRound({
+    spawnId, stage: 'redteam',
+    findings: round.findings, classified: round.classified,
+    text: typeof streamText === 'string' ? streamText : '',
+  }, rootDir);
   return { ok: true, round, stamp: stamp.stamp, promptSha256: recorded.sha256 };
 }
 

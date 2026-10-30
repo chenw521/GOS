@@ -113,7 +113,29 @@ function probeEngine(opts) {
     try { r = spawnSync(c.name, ['--version'], { env, encoding: 'utf8' }); }
     catch { r = { error: new Error('spawn failed') }; }
     if (r && !r.error && r.status === 0) {
-      return { engine: c.name, tier: c.tier, version: (r.stdout || '').trim() || null, probed };
+      // Version presence is not capability: a binary that cannot map a user
+      // namespace (kernel policy, AppArmor, setuid helpers missing) would
+      // report a bubblewrap tier whose every spawn dies at setup. Probe with
+      // a minimal real sandbox before trusting the engine.
+      let cap = null;
+      try {
+        cap = spawnSync(c.name, [
+          '--ro-bind', '/usr', '/usr',
+          '--ro-bind-try', '/bin', '/bin',
+          '--ro-bind-try', '/lib', '/lib',
+          '--ro-bind-try', '/lib64', '/lib64',
+          '--dev', '/dev', '--proc', '/proc',
+          '--', '/bin/true',
+        ], { env, encoding: 'utf8', timeout: 15000 });
+      } catch { cap = { error: new Error('capability probe failed') }; }
+      if (cap && !cap.error && cap.status === 0) {
+        return { engine: c.name, tier: c.tier, version: (r.stdout || '').trim() || null, probed };
+      }
+      return {
+        engine: null, tier: 'lexical',
+        reason: `${c.name} present but cannot start a sandbox: ${cap && cap.error ? cap.error.message : 'uid map or mount setup refused'}`,
+        probed,
+      };
     }
   }
   return { engine: null, tier: 'lexical', reason: 'no sandbox engine found on PATH', probed };
@@ -165,6 +187,10 @@ function composeArgv(ctx) {
     '--dev', '/dev',
     '--tmpfs', '/tmp',
   ];
+  // DNS: a stub resolv.conf managed by systemd-resolved or NetworkManager
+  // symlinks outside /etc into /run, which is not mounted — the link would
+  // dangle and name resolution would die inside the sandbox
+  if (ctx.resolvBind) argv.push('--ro-bind-try', ctx.resolvBind, ctx.resolvBind);
   if (ctx.home) argv.push('--ro-bind-try', ctx.home, ctx.home);
   if (ctx.workspace) {
     argv.push('--ro-bind', ctx.workspace, ctx.workspace);
@@ -172,13 +198,17 @@ function composeArgv(ctx) {
     argv.push('--bind', gitDir, gitDir);
   }
   for (const w of ctx.writableRoots) argv.push('--bind', w, w);
-  for (const m of ctx.masks) {
+  for (const rb of (ctx.roBinds || [])) argv.push('--ro-bind', rb, rb);
+  // Shallowest dest first: an ancestor tmpfs mounted before a nested mask
+  // lets the deeper mount win explicitly, so nested hides stay visible in argv.
+  const orderedMasks = ctx.masks.slice().sort((a, b) => a.dest.split(path.sep).length - b.dest.split(path.sep).length || (a.dest < b.dest ? -1 : 1));
+  for (const m of orderedMasks) {
     if (m.kind === 'empty') argv.push('--ro-bind', EMPTY_SRC, m.dest);
     else argv.push('--tmpfs', m.dest); // tmpfs and seed kinds
   }
   const seeds = {};
   const seedsSkipped = [];
-  for (const m of ctx.masks) {
+  for (const m of orderedMasks) {
     if (m.kind !== 'seed') continue;
     const root = ctx.seedRoots ? ctx.seedRoots[m.seed] : null;
     if (!root) { seedsSkipped.push(m.seed); continue; }
@@ -189,6 +219,7 @@ function composeArgv(ctx) {
     seeds[m.seed] = abs;
     for (const e of entries) argv.push('--ro-bind', path.join(abs, e.name), path.join(m.dest, e.name));
   }
+  for (const af of (ctx.authFiles || [])) argv.push('--ro-bind', af.src, af.dest);
   return { argv, seeds, seedsSkipped };
 }
 
@@ -240,11 +271,23 @@ function maskOverBindHolds(spec) {
     }
     for (const later of ops) {
       if (later.index <= mo.index) continue;
-      if (isAncestorPath(later.dest, m.dest)) return false; // same-path/ancestor remount
+      if (isAncestorPath(later.dest, m.dest)) {
+        // a later ancestor mount normally re-exposes, except when it is
+        // itself another recorded mask (an ancestor tmpfs hides more,
+        // never less)
+        const ancestorMask = meta.masks.some((n) => n !== m && n.dest === later.dest
+          && maskMountOp([later], n, meta.emptySrc));
+        if (!ancestorMask) return false;
+        continue;
+      }
       if (isAncestorPath(m.dest, later.dest)) {
         const seeded = later.op === '--ro-bind' && typeof later.src === 'string'
           && seedRoots.some((r) => isAncestorPath(r, later.src));
-        if (!seeded) return false;
+        const authed = later.op === '--ro-bind' && typeof later.src === 'string'
+          && Array.isArray(meta.authFiles) && meta.authFiles.some((a) => a.src === later.src);
+        const nestedMask = meta.masks.some((n) => n !== m && n.dest === later.dest
+          && maskMountOp([later], n, meta.emptySrc));
+        if (!seeded && !authed && !nestedMask) return false; // deeper mask mounts win; anything else re-exposes
       }
     }
   }
@@ -340,11 +383,18 @@ function injectPermissionConfig(userConfig, profileDeny) {
   const base = userConfig && typeof userConfig === 'object' && !Array.isArray(userConfig) ? userConfig : {};
   const merged = { ...base };
   const perm = { ...((merged.permission && typeof merged.permission === 'object') ? merged.permission : {}) };
+  // Host permission rules are shaped as capability -> { command pattern ->
+  // action literal }, so each deny entry becomes a key mapped to "deny".
+  // A key already carrying an allow from the user config is overwritten:
+  // the deny union is one-way.
   const bash = { ...((perm.bash && typeof perm.bash === 'object') ? perm.bash : {}) };
-  bash.deny = unionDeny(bash.deny, profileDeny);
+  const legacyDeny = Array.isArray(bash.deny) ? bash.deny : [];
+  delete bash.deny;
+  const denyPatterns = unionDeny(legacyDeny, profileDeny);
+  for (const p of denyPatterns) bash[String(p)] = 'deny';
   perm.bash = bash;
   merged.permission = perm;
-  return merged;
+  return { config: merged, denyPatterns };
 }
 
 // ---- snapshots (store-facing helpers) --------------------------------------
@@ -443,21 +493,98 @@ function compose(profileName, opts) {
   if (missing.length) {
     return { ok: false, code: 'auto.launcher.missing-mandatory-mask', profile: name, ...base, missing };
   }
-  const masks = load.profile.masks.map((m) => ({ ...m, dest: path.resolve(resolveTokenPath(m.path, env)) }));
+  const resolved = load.profile.masks.map((m) => ({ ...m, dest: path.resolve(resolveTokenPath(m.path, env)) }));
+  // A masked path is only mountable when the sandbox sees a real file or
+  // directory at the destination: bwrap cannot create a missing mountpoint
+  // on a read-only bind, and it refuses to mount over a symlink. Credential
+  // files that are absent or dangle outside the bind set are skipped (they
+  // are already invisible). Host-state directories are different: the host
+  // process needs those paths to EXIST and be writable inside the sandbox,
+  // so an unmountable destination climbs to its nearest real ancestor and
+  // mounts the tmpfs there — deeper mask mounts still win, so nested masks
+  // (for example the trust store under a masked share dir) stay hidden. A
+  // symlink whose real target lives inside the home bind is masked at the
+  // resolved path instead.
+  const homeRoot = env.HOME || os.homedir();
+  const masks = [];
+  const masksSkipped = [];
+  for (const m of resolved) {
+    let st = null;
+    try { st = fs.lstatSync(m.dest); } catch { st = null; }
+    if (st && !st.isSymbolicLink()) { masks.push(m); continue; }
+    let real = null;
+    if (st) { try { real = fs.realpathSync(m.dest); } catch { real = null; } }
+    let rst = null;
+    if (real) { try { rst = fs.lstatSync(real); } catch { rst = null; } }
+    if (real && rst && real !== m.dest
+      && (real === homeRoot || real.startsWith(homeRoot + path.sep))) {
+      masks.push({ ...m, dest: real, symlinkOf: m.dest });
+      continue;
+    }
+    if (m.kind === 'empty') { masksSkipped.push(m.path); continue; }
+    let anc = path.dirname(m.dest);
+    let ancOk = false;
+    while (anc !== homeRoot && anc !== path.parse(anc).root) {
+      let ast = null;
+      try { ast = fs.lstatSync(anc); } catch { ast = null; }
+      if (ast && ast.isDirectory() && !ast.isSymbolicLink()) { ancOk = true; break; }
+      anc = path.dirname(anc);
+    }
+    if (ancOk) masks.push({ ...m, dest: anc, redirectTo: anc });
+    else masksSkipped.push(m.path);
+  }
   const writableRoots = (Array.isArray(o.writableRoots) ? o.writableRoots : [])
     .filter((w) => typeof w === 'string' && w)
     .map((w) => path.resolve(w));
+  // Adapter-declared read-only mounts (the host exec tree). Never a symlink
+  // and never the filesystem root — the mount must exist inside the sandbox
+  // without pulling the whole host in.
+  const roBinds = [];
+  for (const rb of (Array.isArray(o.roBinds) ? o.roBinds : [])) {
+    if (typeof rb !== 'string' || !path.isAbsolute(rb)) continue;
+    const abs = path.resolve(rb);
+    let st = null;
+    try { st = fs.lstatSync(abs); } catch { st = null; }
+    if (st && !st.isSymbolicLink() && abs !== path.parse(abs).root) roBinds.push(abs);
+  }
+  // Resolve the DNS stub chain: when /etc/resolv.conf is a symlink into an
+  // unmounted tree, bind its top-level directory so the link resolves.
+  let resolvBind = null;
+  try {
+    const rr = fs.realpathSync('/etc/resolv.conf');
+    if (rr !== '/etc/resolv.conf' && rr.startsWith('/run/')) {
+      const seg = '/' + rr.split('/').slice(1, 3).join('/');
+      let st = null;
+      try { st = fs.lstatSync(seg); } catch { st = null; }
+      if (st && st.isDirectory() && !st.isSymbolicLink()) resolvBind = seg;
+    }
+  } catch { /* resolv.conf unreadable: system mounts carry whatever exists */ }
+  // Adapter-declared model-provider auth files: readable by design even
+  // though their directory is masked; bound read-only after the mask mounts
+  // so the mountpoint lands inside the fresh tmpfs.
+  const authFiles = [];
+  for (const af of (Array.isArray(o.authFiles) ? o.authFiles : [])) {
+    if (typeof af !== 'string' || !path.isAbsolute(af)) continue;
+    let real = null;
+    try { real = fs.realpathSync(af); } catch { real = null; }
+    let st = null;
+    if (real) { try { st = fs.lstatSync(real); } catch { st = null; } }
+    if (real && st && st.isFile()) authFiles.push({ src: real, dest: path.resolve(af) });
+  }
   const { argv, seeds, seedsSkipped } = composeArgv({
     home: env.HOME || os.homedir(),
     workspace: o.workspace ? path.resolve(String(o.workspace)) : null,
     writableRoots,
+    roBinds,
+    resolvBind,
+    authFiles,
     seedRoots: o.seedRoots && typeof o.seedRoots === 'object' ? o.seedRoots : {},
     masks,
   });
   const injected = injectPermissionConfig(readResolvedPermissionConfig(o), load.profile.deny);
   const envOut = {
     ...(o.envPassthrough && typeof o.envPassthrough === 'object' ? o.envPassthrough : {}),
-    OPENCODE_CONFIG_CONTENT: JSON.stringify(injected),
+    OPENCODE_CONFIG_CONTENT: JSON.stringify(injected.config),
   };
   const writableShadowed = writableRoots.filter((w) => masks.some((m) => isAncestorPath(m.dest, w)));
   return {
@@ -468,9 +595,13 @@ function compose(profileName, opts) {
     engineVersion: probe.version || null,
     argv,
     env: envOut,
-    deny: injected.permission.bash.deny.slice(),
+    deny: Array.isArray(injected.denyPatterns) ? injected.denyPatterns.slice() : [],
     meta: {
       masks,
+      masksSkipped,
+      roBinds,
+      resolvBind,
+      authFiles,
       seeds,
       seedsSkipped,
       writableShadowed,

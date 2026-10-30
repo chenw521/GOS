@@ -1,1841 +1,1841 @@
 [
- {
-  "path": ".gitattributes",
-  "category": "meta-doc-quoting",
-  "maxHits": 1,
-  "reason": "Header comment quotes the finding ids that motivated the eol policy pin.",
-  "pin": {
-   "type": "region-sha256",
-   "minLine": 1,
-   "regionSha256": "78f1e2d35c9101002e65f22fc147e05d2e7449a2d3bc65df27aebacc29c0fce9"
+  {
+    "path": ".gitattributes",
+    "category": "meta-doc-quoting",
+    "maxHits": 1,
+    "reason": "Header comment quotes the finding ids that motivated the eol policy pin.",
+    "pin": {
+      "type": "region-sha256",
+      "minLine": 1,
+      "regionSha256": "78f1e2d35c9101002e65f22fc147e05d2e7449a2d3bc65df27aebacc29c0fce9"
+    }
+  },
+  {
+    "path": ".gitignore",
+    "category": "meta-doc-quoting",
+    "maxHits": 5,
+    "reason": "Anchor-style history quotes in ignore-rule comments document why machine-local zones are ignored.",
+    "pin": {
+      "type": "region-sha256",
+      "minLine": 75,
+      "regionSha256": "96ff79551bf03345bec55a85e6e0c41ebb0564af485387bbed44a6e89e59e70c"
+    }
+  },
+  {
+    "path": "AGENTS.md",
+    "category": "meta-doc-quoting",
+    "maxHits": 4,
+    "reason": "Ban-definition quotes: the policy document names the banned forms by example, pinned to the rules section tail.",
+    "pin": {
+      "type": "region-sha256",
+      "minLine": 46,
+      "regionSha256": "8e4c01df79b475fc317a86f16977d7b660b9028e6a45284d7a7ffa3dac920b3c"
+    }
+  },
+  {
+    "path": "bin/gos.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 75,
+        "sha256": "a6f2fa2b40bacd9821582c02f1960a91c3e6af15f32806eae78feb3bfbfc4dff"
+      },
+      {
+        "line": 85,
+        "sha256": "6d5eac3d3ba023138107a46c9bda2ea7d838825d9bef4cdf9ac0644e359fb19a"
+      },
+      {
+        "line": 87,
+        "sha256": "d08f352ba7edab589c2845bcfad8467a46ff227844f8820bd7d81ab2875ee797"
+      },
+      {
+        "line": 95,
+        "sha256": "53fddf48b760cef83523f3be1dc46598a57ea0bc55c5c2286adbeb4ab6cc0d6d"
+      },
+      {
+        "line": 104,
+        "sha256": "dff0a3f397084b25a0dcd263e1c42f5729315fbfb10f9ed62182d5473143b01d"
+      },
+      {
+        "line": 140,
+        "sha256": "b93988fe86491dbf88c246e2eb795a5ed2f8248632ddc475d7b3c3144aca78f5"
+      },
+      {
+        "line": 228,
+        "sha256": "917879b435bf6edecc0d8608990938fee016405f06b02d829270a25e8efc49b1"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/core/fsio.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 62,
+        "sha256": "0573dba3bd383e0a24cc5a12e741c7095a410676fa06a426f198521b97ca0e1f"
+      },
+      {
+        "line": 172,
+        "sha256": "b33262f223f3d6663a997ab673b6f81db8f89259d2b2dec47d064e0ebcbb524e"
+      },
+      {
+        "line": 217,
+        "sha256": "30806c4832294a4f3c5bb73dc7f732390a016e33a02f0bcc1e5c6d66041ffaa1"
+      },
+      {
+        "line": 280,
+        "sha256": "6a5b37d241eef87a36f8333e5055be6560e1aa265415f6cc86c832a47ae69ff6"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/core/i18n.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 63,
+        "sha256": "b8d57cca5c353c8284b87dcc3c6f0759162d725085a8490ec0ec24913fd09f83"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/core/locales/en.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings in prompts, level labels and error text quote finding ids by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 61,
+        "sha256": "eaab1cd5c1dc4a8379d3564ad0e02e38cc23ef821047e93e2e528de1b4f7338b"
+      },
+      {
+        "line": 161,
+        "sha256": "fa281827af2a018981bf990b310d983e8858b7031e9ef93a031f7de68461541f"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/core/locales/zh.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings in prompts, level labels and error text quote finding ids by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 70,
+        "sha256": "2d8302905090989b148140d4754cb05c7bdac2ccd826856d2ca88404cbc1173f"
+      },
+      {
+        "line": 71,
+        "sha256": "085bca11a0ebc8b937fb750a2786b876dd85a7040824244907fcd383dc73819e"
+      },
+      {
+        "line": 155,
+        "sha256": "c622c4c447046aba57ced45acbef918bd94b9e490aafa58f450b053068e9b52c"
+      },
+      {
+        "line": 162,
+        "sha256": "494559409849c5c2685fa26f213780054ae24ac85ebb9f42f5bc41c4dbb65726"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/core/lock.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 48,
+        "sha256": "fe7abfc2b2a903501d5eba25253ba35b65b3754f81eab29ec8d3973f62a0bcb7"
+      },
+      {
+        "line": 78,
+        "sha256": "ccf22489afefb7d670dc867998d3e2fb4fed87cf76f38457bfb8597c4456202a"
+      },
+      {
+        "line": 115,
+        "sha256": "ea2ad7db4b016100102a660c16c96d3497a27750e628e09b7860d8991b40f2ac"
+      },
+      {
+        "line": 151,
+        "sha256": "8babfe0d1ec5f029c13db236a208ec128b99f5c917cf1bb0eea43ab27603994b"
+      },
+      {
+        "line": 187,
+        "sha256": "e24c0860b95cc633fe482fc18f674587553b9a350ecdd030357ce7b0ada6d0dc"
+      },
+      {
+        "line": 228,
+        "sha256": "dd2f1c2a6b864313fc5e5b3e887b9f1f21ed7dad532b89d8dd9b77b19b6f5c39"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/core/state.cjs",
+    "category": "frozen-string",
+    "reason": "Contract sidecar-hash table: the lessonsAnchor verdict string is a frozen product contract line asserted by suite sections.",
+    "lines": [
+      {
+        "line": 83,
+        "sha256": "20d067efbf754de09b017018edbe514de815453b2177766f9922875420d96652"
+      },
+      {
+        "line": 97,
+        "sha256": "28b61207c1b32a4de3d3bc5238feb070220bf6a4537a0e29b269dbb4674cde65"
+      },
+      {
+        "line": 141,
+        "sha256": "2d2dc804a52f9bd0f1f76cc83821714e6a0d47817463e8898bcd2455a968ac60"
+      },
+      {
+        "line": 230,
+        "sha256": "a2fb225c53471894577b9d0a057b9f7ffc24a017a937e7c77b57e014554c332a"
+      },
+      {
+        "line": 294,
+        "sha256": "dc2ce2b65f74cc6e78b3ba48befd84f8ec6cdae5175c0085214a7eb879dbbc79"
+      },
+      {
+        "line": 354,
+        "sha256": "6ca9501762993358c8e17e5ab61ad9042c1f9af942a5aa20848b3304ffb71d94"
+      },
+      {
+        "line": 384,
+        "sha256": "f723db315b7141b0357bd5561d0119be3a2f496c85a525c6cac71df06e21e31d"
+      },
+      {
+        "line": 508,
+        "sha256": "93b440665f771baf724e60de3b8936c5ce5f2792604b5beb62cae13e3a36b92c"
+      },
+      {
+        "line": 542,
+        "sha256": "15f455b3fddd67d2918917bf292e9d1099953f1830e8240367ac231054343dad"
+      },
+      {
+        "line": 545,
+        "sha256": "a5c88576155b222c784bcb44d393b927646204402537fe833c7b595ed3d33837"
+      },
+      {
+        "line": 554,
+        "sha256": "e954c22361d5f1ca9559c85e4b306ad7530f055d80961381ff1c088929fe1eb9"
+      },
+      {
+        "line": 565,
+        "sha256": "028d4fedf4ca878ee6e429044f6d33a56655a6dae0a2c1ef2e88450aac43370b"
+      },
+      {
+        "line": 583,
+        "sha256": "09e0a31484878828ac752039e7892e788b5ab304861a78edf4133ff9e47f8bcb"
+      },
+      {
+        "line": 585,
+        "sha256": "23838e953fff9008092984c53069b18e7c301a3cdf78cb4893492eccead63000"
+      },
+      {
+        "line": 594,
+        "sha256": "7fcd673dc9ddc9c9c56e250d68b08d2f407dff8f70f2e274d72d520296a99c4e"
+      },
+      {
+        "line": 595,
+        "sha256": "56eeef7fe46d604e2123d79d74b1ea6a3757d20f5463291a6144fc51153539b2"
+      },
+      {
+        "line": 596,
+        "sha256": "0907727304fb24284e10f7143433c1b61a7402a4d7bd9b8b83be59a01f9f488f"
+      },
+      {
+        "line": 597,
+        "sha256": "54bd657d19b9c1ffbb77daef7b7d337e2a450a9ca74d76bf0d7cf32ee26a6dd0"
+      },
+      {
+        "line": 598,
+        "sha256": "77a356385c92d8bb4b20d06daa63e330124291d24c02c8f2e5e2cab9f8cbff27"
+      },
+      {
+        "line": 599,
+        "sha256": "47886b3085bfb9139153a3637c0a4d26ee2a72b07b6aca75f56a9d517e791fb6"
+      },
+      {
+        "line": 600,
+        "sha256": "6da500ccb5ca91af60583218fca55a48547cb70244ffb90ac7ecc958e2af128f"
+      },
+      {
+        "line": 601,
+        "sha256": "fd471eb358fe6f87c9ce0ab4b7642f30177458e0f2a45d04e86972de0aea61fb"
+      },
+      {
+        "line": 602,
+        "sha256": "890473ae82a17ca574b665a6c76238b39535d50b6733dc82196f8065ef3625e2"
+      },
+      {
+        "line": 625,
+        "sha256": "240c812812f58b4809f741c136fa52d8c41c968e82c34a399faf7d361ac12b18"
+      },
+      {
+        "line": 653,
+        "sha256": "0951eb661c86165b2571cc369d10a7ff60c9caf9e59d76a3f6bc08cefba6724e"
+      },
+      {
+        "line": 654,
+        "sha256": "7534bfb1adb03e24ac3349f274b3c9e4d78cca372208083c10d10d2e50b9e1a3"
+      },
+      {
+        "line": 676,
+        "sha256": "fe5c20c078e2b37840e05e8d799175e0a77a46e1629b05ee03b0e335f33d1acf"
+      },
+      {
+        "line": 677,
+        "sha256": "297a8678f34ca3d871efbb7374e5c459608519a709f012e2a17797987175075b"
+      },
+      {
+        "line": 706,
+        "sha256": "a0ff656a387c7c04e75a71d5532b53b2357212b5445457b4ecda155f3cf8ac9e"
+      },
+      {
+        "line": 781,
+        "sha256": "f844494e3ebcc483d9e03525c5fa7e75397862b27fbed6f89e9a0c93541333ce"
+      },
+      {
+        "line": 1283,
+        "sha256": "bdc502fca27a64bba42503b69d9518aa43d98cb47c79a1e9d71c515488c395f5"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/knowledge/concerns.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 31,
+        "sha256": "180353a8b50924f37647b288d7bcb3d8cfd5b16cd86f6c817c031ef7fa9f2366"
+      },
+      {
+        "line": 37,
+        "sha256": "e8e58dcd06ea30b4b0118e3f898fec600b1ca746f63b6ef055e1878214d82a28"
+      },
+      {
+        "line": 58,
+        "sha256": "c4a3c31ded1f1d44f9e474eb86977404899202fef0d87d215222e59ce26dc652"
+      },
+      {
+        "line": 99,
+        "sha256": "b18c21f9033d3f99362eb2d4e62f7d9de49fa4a4a90348c19a636280ffe89a67"
+      },
+      {
+        "line": 123,
+        "sha256": "f08b205d377aa6d1a36ecc4fa03fe5c9ab19b05a1d1b3c96585999f732a61f1c"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/knowledge/lessons-json.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 77,
+        "sha256": "67750376a4a7aaab8e9319a6355ff79bde57bb360098d91f0816ec1bde7abfdb"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/knowledge/lessons.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings in prompts, level labels and error text quote finding ids by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 99,
+        "sha256": "2fb0396d0df1ca4513acf5260b85c1c2d4305c6bf3a2b35c2ce37610518b27bc"
+      },
+      {
+        "line": 102,
+        "sha256": "09ace9da9add63f35757ef737d67b327ded4a1c33ca02a6f7c659ed2c58033ff"
+      },
+      {
+        "line": 137,
+        "sha256": "5bf251f676aa7c5cba75af7040e4e875b5b64714169a64be8c1cecf4df3cc6ef"
+      },
+      {
+        "line": 321,
+        "sha256": "35f2171509778f91f6315449a42d256fa0d943738cdb7a8f31a9c916cf378e2d"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/knowledge/phase.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 209,
+        "sha256": "ecb6baa6f011bd679616ca0bf5a11c0b62ac00020fe38d1f3dbcada9cf81c480"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/knowledge/truth.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings in prompts, level labels and error text quote finding ids by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 78,
+        "sha256": "3557c0dc2961fd2807a72c6ae7650f213c968d0281ed7b607b1d30f03d3c9975"
+      },
+      {
+        "line": 98,
+        "sha256": "e71ff27d8e918bd4da2a94c6a3541fb6ce096318c8cedcb7a9ffa8c6edfc1679"
+      },
+      {
+        "line": 103,
+        "sha256": "ad8077dd5d13511c62cd13d6879046b16ab247165665d39284fc79f3a5426596"
+      },
+      {
+        "line": 112,
+        "sha256": "24d64081cfd6973d2f70f1eeea16cee66cf0b3638020eff58a782f316cc44f8e"
+      },
+      {
+        "line": 115,
+        "sha256": "711ebc2e880f7e4d08b87ac28ceee74f55a4d3d6777bbadda58bcd8453768658"
+      },
+      {
+        "line": 119,
+        "sha256": "55945c4d5323ac57895accd173fec4dd2873c6d8df0e3c4a6a6ebbb832a8ace1"
+      },
+      {
+        "line": 125,
+        "sha256": "a0734266bbadebd690b1d7067aad2a94cc81f9aadf640b4ccac21ffc9494fb61"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/map/allowlist.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 338,
+        "sha256": "90562ffc5b70c8e043af322950cbf8e7717f64f45247b484ea205e815981499a"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/map/anchor.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 29,
+        "sha256": "0926d73e954c13ff7fb43c0b8f16c830a3234c0e5643654146273f85a288e519"
+      },
+      {
+        "line": 43,
+        "sha256": "1874cbd7854b180b7aee6d968c39ead30bd423f9e4dcb7b6e53058a48668cb63"
+      },
+      {
+        "line": 94,
+        "sha256": "fc1d3f7306145e0a1e0b32dcfdb28f7ece996e8261e4491228c784ab84bf7bcb"
+      },
+      {
+        "line": 99,
+        "sha256": "f0b9c3cf95a107fe42376cfdc444f39d8620c4c0ec681dde52b6ed0c2f633838"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/map/edges.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 56,
+        "sha256": "1aa15befb85f70671a25625c2869aa5fbb174718020ce9e21182c9e232ae9d6f"
+      },
+      {
+        "line": 61,
+        "sha256": "879c30df6c146119db8a9947f119587d7610bd1b07803b90e62a584f3a2672b3"
+      },
+      {
+        "line": 91,
+        "sha256": "9e83f4ffb5ddb750e29dd8088c566e19b71ff202ab69b16938bb8906807390f9"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/map/engine.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 70,
+        "sha256": "fb724d72ef2919bdb9c2955bd6893c5680c8f265a9b2f9401732e8429b6f9050"
+      },
+      {
+        "line": 96,
+        "sha256": "5b0eb380be685294bea92c69ebfda51c50acde51f796cf8c7aa1993fd8795184"
+      },
+      {
+        "line": 116,
+        "sha256": "c3583779179c17c595823c36b7d01958699ebd9246f6fb8a1fcd6c751063cef3"
+      },
+      {
+        "line": 240,
+        "sha256": "d7d676bc8674aecf65a479445ed4e5628f1b5e6f98d9c51351d774a9f82b898c"
+      },
+      {
+        "line": 256,
+        "sha256": "85226e70c88dceb050bd2480e349e4148ae5c6949692f79af1ec5498c9ae42b4"
+      },
+      {
+        "line": 585,
+        "sha256": "b4a29488d1862d4a0594392ac58ae8af21707c8cac209865722acee5a8730ceb"
+      },
+      {
+        "line": 650,
+        "sha256": "978d77702cee974a8336f30381ff89bcbc99153319ed61164408397b2befe145"
+      },
+      {
+        "line": 703,
+        "sha256": "5465ad10817e1dfff6020182260d6323fe94285bf9b773de6109c92a268d611e"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/map/index.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 93,
+        "sha256": "cff0ea7139e162e8ea736ae08ae600bde059fd83ff5514201d0c2e82276c94f1"
+      },
+      {
+        "line": 95,
+        "sha256": "088341da44d656963d1ba083a90d8cd183786bd48658320e0f92919652c255ff"
+      },
+      {
+        "line": 101,
+        "sha256": "71d0a82de0b14e419be1b0de1cdc4b59cc32d5786de5e8dacd585e7a56bee14d"
+      },
+      {
+        "line": 110,
+        "sha256": "4f768796bdc78b735dfe31cb62edb23dce02c3d40e0b96e493abc5d25ac707f2"
+      },
+      {
+        "line": 205,
+        "sha256": "c0724bd0b99eef4f78629a0c44ba51c42cc1b45ca038cfce57251900494ab113"
+      },
+      {
+        "line": 297,
+        "sha256": "3c737750bfcb91490a00979844837756bf26deac26932c78214a98d3250ad3b2"
+      },
+      {
+        "line": 300,
+        "sha256": "2235d74fb0388c0e77dbbf784337fdfe4d1801e0d27c34d209d492e30f800c56"
+      },
+      {
+        "line": 302,
+        "sha256": "d37d6a038adebbd5cb0419e66f16f00a9001d667f09d8fc276354c0d7d1a747a"
+      },
+      {
+        "line": 326,
+        "sha256": "cf0e4a566c258796a487e62f85647157b08ba1454d42df9d2af53b27c25d42bd"
+      },
+      {
+        "line": 335,
+        "sha256": "c191910788c83dffc5f8a2b2f8bc049d1610151007685becbbc949144f2eab12"
+      },
+      {
+        "line": 363,
+        "sha256": "2362cb69509c9baa6ee6da803e9148d50263e99aa1bf6ba7d6cc577efcf6f028"
+      },
+      {
+        "line": 367,
+        "sha256": "f7b61a4b0e6a69321b1606574b88f3044bdc38167bde7b2e233be22e6b810721"
+      },
+      {
+        "line": 377,
+        "sha256": "7eafe3cd8d1bf6c2cfb5ab8e989e87b6b3512314750dda13df8cba01be2970c1"
+      },
+      {
+        "line": 394,
+        "sha256": "cc02ed0146c52572e607e2b6245dfb2457962e2e60da8bd2f1627830746ec82a"
+      },
+      {
+        "line": 397,
+        "sha256": "9468a2702b569215675da68e050528930541f0f0391d6d39628f3dd97e2eb205"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/map/views.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 20,
+        "sha256": "bf84cee091ea5456f4d40b057506130749803f0c6b609e92ff5fbce54cba584e"
+      },
+      {
+        "line": 68,
+        "sha256": "233d1b6676d24f1ccbc6b4289586ed531b4818a880f71839d7ab47b17a28fbdf"
+      },
+      {
+        "line": 270,
+        "sha256": "f9a48baaf31be856504bdc453ca0bf730027ab2fbc6b97c7baa009e8a04cdcb8"
+      },
+      {
+        "line": 282,
+        "sha256": "8c3d4919c8764ebc48c3a8e597ab89fe31673ab45e154e38ff451e72f15323fc"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/nav/cmds.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 158,
+        "sha256": "33cedd08736311884abbd57db05446abe6425e1900313b594730d493f6ede948"
+      },
+      {
+        "line": 217,
+        "sha256": "a081128060491ebeb32b696fa4092969fae66f14bb0018a067f463eb724932b7"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/nav/status.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 66,
+        "sha256": "3b4fde333e854d915380aa7d4a70fd7fae0607217e33451301e7e28e3cecdcb7"
+      },
+      {
+        "line": 124,
+        "sha256": "6a67d97312325c52956f5739c068c7850229fe9a8e5c4eb5e94cc7a61f165832"
+      },
+      {
+        "line": 259,
+        "sha256": "1963d8ee6d207f0f3a3122d3a3b1a5993b89e058f507ccad54fa770f99b5e8cc"
+      },
+      {
+        "line": 263,
+        "sha256": "b071393ff1e2b7059460a79ad119db4c13b4ebed103ea0607c7a5f0e4e858f65"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/ops/changelog-core.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 64,
+        "sha256": "3397302cb4cb8aa305b40ab00acb03c5a64cd090f9f2c65d42a2b4cb02448894"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/ops/config.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 22,
+        "sha256": "c67e2beadb88a71f77dedbe618fb4952850c33e9e1db0ff7601aefb9598a13c3"
+      },
+      {
+        "line": 131,
+        "sha256": "3511a9ae6e0a562f6a2c3f8de7e763397a67b2eb24bacada268d912a4c0197c0"
+      },
+      {
+        "line": 142,
+        "sha256": "7f07555f8ccadf61139196b1c32a7a18c6e7bc9f57ac1840a5a7557264d0de4d"
+      },
+      {
+        "line": 292,
+        "sha256": "fd2fa2ca9f3a9db239041e1ee671624d90105a933c7494a2420c6a24bf8c9d59"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/ops/doctor.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 137,
+        "sha256": "8fd9b8bfbd2f0524e1b0e5de0fbd20572b19b14ff47b8ca71787826765fefcef"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/ops/feedback.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 276,
+        "sha256": "afed28f0218254742154ece5ce7283bf5fb618c239c5d9ba133f79de3a54d6f7"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/ops/gate.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 74,
+        "sha256": "c038f141933b6b6f24c031f1914f9c20ccc16fd299c04b0a7a83ac7c9335f81c"
+      },
+      {
+        "line": 170,
+        "sha256": "3fb0dbfda6bab9ba93d53e37ba65c687980e594fddb66f18b12a9a4913f8a00c"
+      },
+      {
+        "line": 190,
+        "sha256": "28776075c6125071b4119585c886163cfe6844f25ca99c471f066a5e20a0b448"
+      },
+      {
+        "line": 197,
+        "sha256": "938ec32285ffcdf6b0a9884742b6d672d442974b400bd0e1722eb26ef7b3a4b7"
+      },
+      {
+        "line": 226,
+        "sha256": "873c71eb3a7dce3239349c9dad4196b00421981a7323892df06d314bd16e1afd"
+      },
+      {
+        "line": 234,
+        "sha256": "ec9638a2f0f2c5e6f1096d7b882bde74979df79912755ed7c2358ecdc1b0003b"
+      },
+      {
+        "line": 324,
+        "sha256": "2aa8581bc82dddb1e77413ade8aaaa4ed625c062b30b0b174d8eddf2add25064"
+      },
+      {
+        "line": 344,
+        "sha256": "dd270527073e472dd3e56dc87d782bbf2dbe804b6ea1fd6dcfcd8c942a490000"
+      },
+      {
+        "line": 354,
+        "sha256": "d1846688e0f770e1fb50772d65c5d3e1b39e328df5415c1b3f8fff99e535f921"
+      },
+      {
+        "line": 548,
+        "sha256": "7fbbd5482f6b6c9e5c52f1a597e72a178604b2c87bda40dbd326854dfac32d90"
+      },
+      {
+        "line": 573,
+        "sha256": "e49968e9ccfbd292bfc7d3c73575e12ff82e1719f00ff52975fc78f4613e6681"
+      },
+      {
+        "line": 672,
+        "sha256": "af52abb2e8bb517c35de7f3eefb9506167750108c4f946e3a1fda9f3f69c6b65"
+      },
+      {
+        "line": 717,
+        "sha256": "a7818a133d907b0b4a888f4b89e2f50e78b46866daf52527d3b2db8a8d26e9c2"
+      },
+      {
+        "line": 722,
+        "sha256": "f69cdae81003f8cdcf1de1b2a11b77fd714f66025a5d8894939329d35669756f"
+      },
+      {
+        "line": 770,
+        "sha256": "9e738a1abff613739e7cd9ddeb2f253493c672c18734ea82afbbb8f788f603f3"
+      },
+      {
+        "line": 775,
+        "sha256": "aa8d30ee0dbf4e2b2bd9f1cb75fc54495b6a76232e236aa8bc43a6079877107a"
+      },
+      {
+        "line": 957,
+        "sha256": "5d6c9768aabde105b966bc8ed23bab733dc648e376e2ba1dc4a9998650ec07cc"
+      },
+      {
+        "line": 967,
+        "sha256": "6d3196b5e6a8ffbffa3a81b00146cbe43f0993099f3a37f75cfcd87e2910a6dc"
+      },
+      {
+        "line": 1262,
+        "sha256": "3471b41ccdef2d24fb7a74200e8483f22be994e0e242eed44e74ee4f33f2a2a5"
+      },
+      {
+        "line": 1278,
+        "sha256": "76b61f6ea9edff48418c510972f1a37168708b30c4ec1969ae883ca70632f7db"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/ops/gitseed.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 37,
+        "sha256": "190a6046f22398b810d2dc10446446c2c0ca69dda57614dc0bb779dd1b45c277"
+      },
+      {
+        "line": 41,
+        "sha256": "8f013504a87ecdf6f2b28db349a4ab7eb29ae4a414b7d0f76884e48df0fb3a3d"
+      },
+      {
+        "line": 106,
+        "sha256": "bae8eefdc0ee97d348b9b9a6fc02a119f00006023527d8a57d9832126bc5fce3"
+      },
+      {
+        "line": 188,
+        "sha256": "715fb913aafd9c04abd90d24725a5105ed866d9133c692b82733e1f4f980d16a"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/ops/push.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 78,
+        "sha256": "2b0a2dcaf8fb2986725ec7fd5b1805c192029a895e083f107726973987de93d4"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/ops/setup.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 301,
+        "sha256": "b3f4eabfdb45ac06d98600a50b133537bf4ac63cd36fe7665d716a7b41d8e4ba"
+      },
+      {
+        "line": 349,
+        "sha256": "df5013ea42c0a0ca7f9deae4c24486d11dd06c8c8c6575d2fc3fd1f2fdb86d53"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/render/views.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 29,
+        "sha256": "3bdffb71b4869839186d5d2c73b1cf4a95aa1a0dd997794d049317d57411f1fc"
+      },
+      {
+        "line": 37,
+        "sha256": "f5820d1054035079352a6e055474861d8ba0ee5b6f0316b7d86959edde6e245e"
+      },
+      {
+        "line": 61,
+        "sha256": "8bc23635dc5c2b09931477d2acf670fe6ce1d71e8926d680b19b41429723123f"
+      },
+      {
+        "line": 77,
+        "sha256": "1c477b08d4eb4643002945522cfbdaaa09300d4a8c3e81989890d928494183b7"
+      },
+      {
+        "line": 400,
+        "sha256": "2aed8ced42c1927d2711d60505a10314cff8cf75d7b99765c64432b896b9cd0e"
+      },
+      {
+        "line": 475,
+        "sha256": "ad84bcab2c535c40e8e5cafe299dd27f65cbed1df157f9a3fc2b9ea279d6cdcb"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/task/archive.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 262,
+        "sha256": "ba595698c5feccc15e9b3b8fc0a1cff6f2665d21d92f24060ef13949f9e536ad"
+      },
+      {
+        "line": 477,
+        "sha256": "8638628646a84624acfd64faf64766d6f92c2a8ccb2423e483657dbc3afed673"
+      },
+      {
+        "line": 590,
+        "sha256": "829ec48da19a6121f8d61b41da0dae442d73885705855f41cc81f083b6b69ae5"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/task/changelog.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 89,
+        "sha256": "c48475dd626dd15e3b041b50d13844f649e7f926c7a2fee4cf81a054fa0617a4"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/task/commit.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 28,
+        "sha256": "5d491c14ca7747f5773b35ff1c4bfee13f9d3dc25c3b01e22d45fc3102bd535f"
+      },
+      {
+        "line": 41,
+        "sha256": "c89ead33587de59b009e41bcfe91968b695ba56f791271c08592a75afb24d4b6"
+      },
+      {
+        "line": 89,
+        "sha256": "a064e8412ae3d281e5c96fe898775d078c92db514fc636ddcf350f155ba24c66"
+      },
+      {
+        "line": 351,
+        "sha256": "aa8fe970ed66b9709c6d5d86d529747fc96b06d4e6b4592fe42d0b8bcddc9cc6"
+      },
+      {
+        "line": 367,
+        "sha256": "a4f6de1c08fe635a6d35acbfffbda8d2cf7f66d25d9d6248d5e5649b0c697f4b"
+      },
+      {
+        "line": 413,
+        "sha256": "4db0d21811326a7b3d419cd2248bd3285ce39ba2ad16cec26fec864218a6ca86"
+      },
+      {
+        "line": 466,
+        "sha256": "2cb3e3cdb36470b0e240873a3a0d4e7cbd6f5cf983787c13db2a3ed932220b94"
+      },
+      {
+        "line": 469,
+        "sha256": "a6069318b2995096085266d5104175719d458edc088e727dd37307ec98c61f1b"
+      },
+      {
+        "line": 471,
+        "sha256": "de87e2674cddab5f2dd808fed2d807f9284d03fe53a0cdb8673986b190bf0397"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/task/context.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 71,
+        "sha256": "76c80b1496534dac1007fa92e21c2cf96e52cbc1287f1dff7d05a3e764fa8609"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/task/init.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 111,
+        "sha256": "367f6ec57c2fb11fa27df4078857209522133f3feed278d86b28ab246337d429"
+      },
+      {
+        "line": 141,
+        "sha256": "4542fe52aeb41510a0d6f5bf99cad0fdd8ecc10e7c7f1ac3a00469c0378c47b1"
+      },
+      {
+        "line": 204,
+        "sha256": "e3ab1267f11cdf86dd0e194d4a44a052dde959fc7bc504e7c80eb5da385e7817"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/task/plansnap.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 19,
+        "sha256": "8815a4d2e597b3020e9137c05efd61d1c0209ca65df0d2a956f177795e83a0c0"
+      }
+    ]
+  },
+  {
+    "path": "bin/lib/task/stage.cjs",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 26,
+        "sha256": "2779b7e742532f5c08386a4732902c01f491d8f2920b4825d9f2eb15fd6e9a0f"
+      }
+    ]
+  },
+  {
+    "path": "scripts/census-dispose.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 125,
+        "sha256": "2f00ea2ed313d5e6f78099684f81d6e3dee3a18abdccc56cdb7be62a0c098721"
+      },
+      {
+        "line": 138,
+        "sha256": "6edc984051820ed2831017a483eaca511f1fc188128bf70aa3e9623824f0e15f"
+      },
+      {
+        "line": 144,
+        "sha256": "f7b0a39d32451e6d93d41bbab94df437f7bea2a6fbd2b43874afcab78a24c357"
+      },
+      {
+        "line": 172,
+        "sha256": "b62b79672583e73febef85c101f94c07901bca11b049f4500ca871a7ec31b34b"
+      }
+    ]
+  },
+  {
+    "path": "skills/gos-router/SKILL.md",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 99,
+        "sha256": "d3b957aaea36c815e67149cb59e0eb066e442648095088b382fe99577511376b"
+      }
+    ]
+  },
+  {
+    "path": "skills/gos-ship/scripts/security.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 8,
+        "sha256": "3d0a7b3535d77faef03146e9dac7b113997f6e7f0ef919450a698b8ce148bd7b"
+      }
+    ]
+  },
+  {
+    "path": "test/checks/stale-verbs.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 76,
+        "sha256": "ffb16930e35a04596e21c011dc230e98457169cefbd3e922ee7235a5dabbb264"
+      },
+      {
+        "line": 77,
+        "sha256": "e2042baa34d2f9cc8071676837d38962bbcd5c9bb8e0af9040b4af0279f0be2d"
+      }
+    ]
+  },
+  {
+    "path": "test/fixtures/ai-trace/anchors.json",
+    "category": "lint-fixture",
+    "maxHits": 4,
+    "reason": "Permanent red fixture for the ai-trace lint section; the anchors are the fixture content itself."
+  },
+  {
+    "path": "test/fixtures/ai-trace/anchors.md",
+    "category": "lint-fixture",
+    "maxHits": 3,
+    "reason": "Permanent red fixture for the ai-trace lint section; the anchors are the fixture content itself."
+  },
+  {
+    "path": "test/fixtures/ai-trace/anchors.sh",
+    "category": "lint-fixture",
+    "maxHits": 3,
+    "reason": "Permanent red fixture for the ai-trace lint section; the anchors are the fixture content itself."
+  },
+  {
+    "path": "test/golden/pre-split/contract.txt",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 142,
+        "sha256": "f1e66f95d015b3bb61dbe603451383f3d7934a8f27bd4d960d031cb8245fa042"
+      }
+    ]
+  },
+  {
+    "path": "test/run-sections.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 64,
+        "sha256": "ce56c664db6abf69430a9850e8078d1151ed3a2e885a99846882000f2a9a2b07"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T10-security-e2e.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 140,
+        "sha256": "a2def5f8faf996d600ac5435caccd5fbd8d7ac9b8a4898c329608fa7fdbf7e9a"
+      },
+      {
+        "line": 276,
+        "sha256": "70d8651708941ddfd40596ba17331471e55eabb227571a98607473cc2e4a04f3"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T12-wiring.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 119,
+        "sha256": "ac5b54754427d965a1cd77f8eaed6261271ced29a77a637ec9b72ba593ec7246"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T13-semantic-contracts.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 20,
+        "sha256": "294cda802cad8dda26c507cb77f0d854b02f49cd5409290ba055e6a0f550211e"
+      },
+      {
+        "line": 43,
+        "sha256": "f73ec6102be439f5077328243d3992b4c280bb3be27211c34d5331e205227539"
+      },
+      {
+        "line": 50,
+        "sha256": "b011f82f8b3785fa0bdfceda9f3d6d2781a50e6d71069433a1f2f0d223c9e873"
+      },
+      {
+        "line": 52,
+        "sha256": "c192c187cdf333a5a91ed235c65644868a153c6bcfc7a1dccb02dd6d472e6276"
+      },
+      {
+        "line": 61,
+        "sha256": "a2def5f8faf996d600ac5435caccd5fbd8d7ac9b8a4898c329608fa7fdbf7e9a"
+      },
+      {
+        "line": 99,
+        "sha256": "131f320587720a074132bb67eb67cd46bff09fd2c05b8433a615231b8c1f3f70"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T14-state-b.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 22,
+        "sha256": "955fec64f68b228a52a2a61fdc0ae21fbcc4aa57c06555ed0ecf164fc112cceb"
+      },
+      {
+        "line": 90,
+        "sha256": "dcf880d7b162d432730ed51376f5474216c43cd017cfccecf1d637daf4984c5d"
+      },
+      {
+        "line": 100,
+        "sha256": "3958a51c8be79c315875db26867accfa8afa4a63e775fe29ff287cdacb937b5e"
+      },
+      {
+        "line": 105,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 107,
+        "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
+      },
+      {
+        "line": 134,
+        "sha256": "93fc81e9f10c55748c94d9dbab13da58a6b5393c7061a2eca09b637e44705f5a"
+      },
+      {
+        "line": 143,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 145,
+        "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
+      },
+      {
+        "line": 158,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 160,
+        "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
+      },
+      {
+        "line": 182,
+        "sha256": "87c9e469bcc566c5374296bb4ab6ca6cca220187f95e07f1b021fee93ec5ce6b"
+      },
+      {
+        "line": 188,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 190,
+        "sha256": "651f122a1b984500eee72f31511166a8ac303335a52fcf6b6c2a024c94374995"
+      },
+      {
+        "line": 194,
+        "sha256": "cdf567cfa8d89112f184e2ddaa0165ebbd4787cdb86247a162bc62d86c3beb36"
+      },
+      {
+        "line": 222,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 240,
+        "sha256": "9210bf2e54b81d68141d403315e877e6a615e1d441dad852861f6183cab50623"
+      },
+      {
+        "line": 285,
+        "sha256": "4a24d7d9f6a2c857b4a1153847f05cff5dc7fac98dca274fe43f33c9f64f8a40"
+      },
+      {
+        "line": 299,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 301,
+        "sha256": "75e400981ec3a19b30b4117faf55c91bc1ffe7d757af122866261694d114f6b0"
+      },
+      {
+        "line": 338,
+        "sha256": "c3279c86a04c48b98deef6ab60f51abc6706263f71ea3c828f9c574d837f160c"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T15-lessons.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 7,
+        "sha256": "cb9fdbdb00578ed2527ce254eae55a65b5eb8c82df18669553643b078fe5cc82"
+      },
+      {
+        "line": 100,
+        "sha256": "2da2c3276d516702c9737472f55509a6078fafa3c119580773b4a30ffde0d875"
+      },
+      {
+        "line": 135,
+        "sha256": "a2496fc0082e0146eb69e29cf09192ff121779bda983d7781ac80a360df22788"
+      },
+      {
+        "line": 364,
+        "sha256": "6ec931d7a70b916d6b2a9c57bd37f3694b80bfb0ab9bdb53c50680f5bb2d7f2b"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T16-truth.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 44,
+        "sha256": "59b0cb28eef6338fc03bd03cfec92857daa3e182c13fde64959379fa37d4be68"
+      },
+      {
+        "line": 71,
+        "sha256": "7543fae477f48ce617565a2fc7083f4d5bc633cfb6b75b887f2fe95b3eb84861"
+      },
+      {
+        "line": 75,
+        "sha256": "ed147cc4874ae015e3f234aee4e52a4fd42a225e0e50516ea681c8f28af21a04"
+      },
+      {
+        "line": 79,
+        "sha256": "cfcb8ec0f6a8d821c39370815aa4af1c1a6a8619ddc6d123fe9c372e42f0fb73"
+      },
+      {
+        "line": 91,
+        "sha256": "9dd983aace01edc2cc7db2a08a98e1f3a5a3261f11bd5029abf193a77a4e3c96"
+      },
+      {
+        "line": 118,
+        "sha256": "8f2df1bc70f48821ec0b91ed94bd061b6dec061b259b8cef6f23018edeea7774"
+      },
+      {
+        "line": 129,
+        "sha256": "6bf071e034b5d391684cdb9cc65af7513961a7b02fd092dd33ebcc23afbef13f"
+      },
+      {
+        "line": 137,
+        "sha256": "655c9f0893dd00016139f03c2fa4f4c6faa97ae1db3985fbac5d0822d70178f0"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T17-semantic-engine.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 29,
+        "sha256": "afbccda2005c7a6c297e7bd36565f14fcda065ba56d21f4361952b36021c776a"
+      },
+      {
+        "line": 42,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 44,
+        "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
+      },
+      {
+        "line": 55,
+        "sha256": "1ff9a18610a4701e813ee2068d5b82a6b00e5ca05d4785788e364e7037764ff8"
+      },
+      {
+        "line": 112,
+        "sha256": "d61bb81cdf0d4b5198987fd719e58ec3c419fbe4be1ca61a678bed85673edf82"
+      },
+      {
+        "line": 149,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 151,
+        "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
+      },
+      {
+        "line": 178,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 180,
+        "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
+      },
+      {
+        "line": 189,
+        "sha256": "fd1afa9b4d5881726aaacac914c83aa001d62fbd7b03d01eb2bcea12ae8df503"
+      },
+      {
+        "line": 233,
+        "sha256": "4031955c8d283e0ff3f2551e360ab8a87b3199fb787c0fe4cbf123d00bc0f910"
+      },
+      {
+        "line": 251,
+        "sha256": "d2638c91e6862c54b75745b678fc46a034fa20f2d3ce42a557a810881d402cb7"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T18-f1-gate-lessons.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 4,
+        "sha256": "46f76d1230a859fdc3f57161e8535e28a60f738cd7009fc3394cc09c0d5d3ea9"
+      },
+      {
+        "line": 47,
+        "sha256": "e2eec2eb1e196b569a603a0df4e7d5de983adba3128dc7262600493968c03b16"
+      },
+      {
+        "line": 61,
+        "sha256": "7a31c3252a3d73a5e05eddda81018ba3243ef3971a376134f82d6e96d901be98"
+      },
+      {
+        "line": 102,
+        "sha256": "9ceee45a1c8bb9346b35b44b194f69a496bb75a99e1027df6703a62b3ea0659c"
+      },
+      {
+        "line": 121,
+        "sha256": "a468e5227486354546ac0055d69754bcfbb14299161b27027ceffa9886877ca8"
+      },
+      {
+        "line": 145,
+        "sha256": "1758df2b1f41228aea80f4d68a4209e557bcaf8d929e0d0c1a806f2511d4f114"
+      },
+      {
+        "line": 155,
+        "sha256": "d3ab741c37c3a966457a206cf8b60fd4de4a5b54f52c11d1f881a204de399b3c"
+      },
+      {
+        "line": 162,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 163,
+        "sha256": "ed33828780fc294a4159a3df0cc59474c59bf91eb92553b96200643076447514"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T19-mounting.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 56,
+        "sha256": "69f8e31f0d2bcdf9148f0fd7500d696df62fc6d4d723f6714ae2b41e8dfa4443"
+      },
+      {
+        "line": 70,
+        "sha256": "17fd6ae3ebcfba7797f45a8688dce5a7184cf5aaa9af7b416ef20981ba57db10"
+      },
+      {
+        "line": 76,
+        "sha256": "c183cda02b7337f7f2a146b3cb79362c9f1c5a730c3f61e520ffb063d5cfe449"
+      },
+      {
+        "line": 86,
+        "sha256": "1ff896c9d57450e66d0d296f78e15e6c2e90fd9d4aae3a8367b9b8577becce2d"
+      },
+      {
+        "line": 131,
+        "sha256": "3e506ded0b314db560e55e3ca9cfa6a008263a08b45b77ecbf9d0cd64f2939ab"
+      },
+      {
+        "line": 152,
+        "sha256": "f1fe7416604e4b23733bcb4f9dce65b57332ebd3f7faa7ac562550fe27097724"
+      },
+      {
+        "line": 158,
+        "sha256": "15e76702926d350e2d646632cbb3e155cf87e0145ef919908962f584b9b8b2b8"
+      },
+      {
+        "line": 165,
+        "sha256": "7599ef99f3561aa20ad5b8dcfb27a1e447d73fafd56a3e408ad3ea63eae6e8ce"
+      },
+      {
+        "line": 172,
+        "sha256": "92fc0797a4451df3cb46d55db9103103ffd198815af6aade32d8a7d5ced91a52"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T20-map-scan.test.sh",
+    "category": "frozen-string",
+    "reason": "Functional fixture data: heredoc plan and whitelist parse inputs quote digit ids by design; pinned as frozen surface.",
+    "lines": [
+      {
+        "line": 98,
+        "sha256": "9ed4ed82125436c4a11b3ac25c931a42f51add7752fd77613976f9ff30b0a10d"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T21-map-closure.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 106,
+        "sha256": "f57302f36727583d849b90e779a5374e087960a43da0e3b135903e2f5c4de55f"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T22-map-gate-impact.test.sh",
+    "category": "frozen-string",
+    "reason": "Plan-format fixture data, contract strings and regex classes quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 26,
+        "sha256": "afbccda2005c7a6c297e7bd36565f14fcda065ba56d21f4361952b36021c776a"
+      },
+      {
+        "line": 39,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 41,
+        "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T23-concerns.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 78,
+        "sha256": "1ca0951d30f9bab01775642d65c75247453584dad155d8d0736d1fb11ef61d6c"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T29-command-registry.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 105,
+        "sha256": "edbc8de6bbfe3856f3fb8e33b093be91bcd3926c446d103cbf3c392d5a04f294"
+      },
+      {
+        "line": 115,
+        "sha256": "1c30c0b08e8802f1a50aa8d117e6600e4e0cd24907ba1b4a3f0b005e288a6fe6"
+      },
+      {
+        "line": 116,
+        "sha256": "32cc95fe561a55dbeeb3cdc1698a9d2ba7ac3a2e65977414e51ac936a2ca9aca"
+      },
+      {
+        "line": 155,
+        "sha256": "d1894cbcea7cb803588092873082558e3cc5e79427a9d1976eca63f08e69f533"
+      },
+      {
+        "line": 247,
+        "sha256": "bf1f4d62becefb709185cf4298f73aedcef6ef6cac49eba1b05192b15d4c9967"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T30-map-edges.test.sh",
+    "category": "frozen-string",
+    "reason": "Functional fixture data: heredoc plan and whitelist parse inputs quote digit ids by design; pinned as frozen surface.",
+    "lines": [
+      {
+        "line": 144,
+        "sha256": "b0f51b7742b34b52984ea31bb171e0951e801d837ec29bc02ab7d4d610419611"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T31-map-gate.test.sh",
+    "category": "frozen-string",
+    "reason": "Plan-format fixture data, contract strings and regex classes quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 123,
+        "sha256": "afbccda2005c7a6c297e7bd36565f14fcda065ba56d21f4361952b36021c776a"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T33-map-manifest.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 3,
+        "sha256": "a73c24297f24fe762b56e3dbbf4c4aec2262e55bd49088cafa1705f919eec112"
+      },
+      {
+        "line": 30,
+        "sha256": "afbccda2005c7a6c297e7bd36565f14fcda065ba56d21f4361952b36021c776a"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T37-phase-ux.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 56,
+        "sha256": "e7cd3bdab3813362e649e736e8f2c3d54ceb3f5fd3471b75d8f0db50d9427fca"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T39-render-park.test.sh",
+    "category": "frozen-string",
+    "reason": "Plan-format fixture data, contract strings and regex classes quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 186,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 188,
+        "sha256": "972c2e565b38141a6853f07e5155fc042175df26714cedeb15552a68e1ebf2b5"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T44-static-splice.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 32,
+        "sha256": "ff3715925e77af8c5cb8bf94d33b58706c2033da6d01e0211b11c3f3c4b0b1d5"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T45-ship-transaction.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 43,
+        "sha256": "fb68bf58b1bec7884fa631737c345e3df2a2b7960d436ca6d9b21ca321269b82"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T46-module-structure.test.sh",
+    "category": "drift-ledger",
+    "reason": "Module-structure drift ledger: the expected-count line quotes process ids by design; listed lines are the sanctioned ledger.",
+    "lines": [
+      50
+    ]
+  },
+  {
+    "path": "test/sections/T5-guard.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 64,
+        "sha256": "28b6c1f6d96ac92d9b780401239cb0b867a86a1be4a7744a22d431eb84b1c045"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T52-gitseed-render.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 58,
+        "sha256": "eeb5a41e7a35c4cb9f137f6e3fcd60e95d573fd772696d86a4212c14de21dfa8"
+      },
+      {
+        "line": 65,
+        "sha256": "04effd1c1966aff26ae2f3afae0a758113f6e0a23daada77f17388bb13a1952f"
+      },
+      {
+        "line": 98,
+        "sha256": "ac69256d7ad7603183f973fd093c42d936f51c04d99f23763ed6e1abf2807881"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T53-changelog-core.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 220,
+        "sha256": "933a27fd36bd0cb7b717347d7cd2835cd1770d017dd0822ab1cd3015586145f3"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T68-section-run.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 102,
+        "sha256": "8d4a7c10e0a3733993feab2e45049305706294d8eeb5ba0e07ed9856082861f7"
+      },
+      {
+        "line": 103,
+        "sha256": "d105a5cc7d57d78c4152e7510352581e3b217a02c173c426a796ff13297e0eca"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T71-phase-amend-reposlug.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 84,
+        "sha256": "37b66347f4db4cee6f957d0212485ee61b976b20cb92805170b512d0b3d78c90"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T72-lessons-json.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 156,
+        "sha256": "ea8ee61be92ab575da8ae9e4ea1991d1589d6e99312a0e3988a76b3e8be8d0aa"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T73-gate-evidence.test.sh",
+    "category": "frozen-string",
+    "reason": "Plan-format fixture data, contract strings and regex classes quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 104,
+        "sha256": "2afd042dababe4a9a05cf7845d2975b7302b3069d6404dbb053c26002c1819c7"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T74-i18n.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 36,
+        "sha256": "af48c591e654a78239e9539a4266c15c1bb74aa0d79903d6252cd42efbc401f4"
+      },
+      {
+        "line": 39,
+        "sha256": "e52b141f7bd250cb772772b148802f3182fc54d075db66432b462e36f4277b19"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T75-blast.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 106,
+        "sha256": "01ab4a878bed6e71fe21366dd408b71079db5e939d3eb977fb258234fec0324f"
+      },
+      {
+        "line": 109,
+        "sha256": "b536eac12f0a9e5b5a1064dffe4ca73479ef982a48da5f1de4c995604377fdf5"
+      },
+      {
+        "line": 124,
+        "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
+      },
+      {
+        "line": 125,
+        "sha256": "75e400981ec3a19b30b4117faf55c91bc1ffe7d757af122866261694d114f6b0"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T78-registry-brownfield.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 42,
+        "sha256": "38cce0e6f0d3aec2a170c78f83b1fd3f3e75309230b8b5b4da4ac48358143e95"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T80-brownfield-adopt.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 217,
+        "sha256": "dbd630ed9bf5c62648c5383bc82a182212a5d4aa72972d43b168ae1c7fc4e3af"
+      },
+      {
+        "line": 361,
+        "sha256": "de07deb14969e0c40d47ed8203a70d57a93492514aa4306197012d977c9f04aa"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T82-brownfield-edges.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 106,
+        "sha256": "556a81259760a4dc036c1baae7c701eabd7741998fda1517d71daa1d467f388b"
+      },
+      {
+        "line": 121,
+        "sha256": "863e4663df7a20c7ec730b722bed2cb3add5e3e675128f14dee39ae83ecdd610"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T85-security-depth.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 9,
+        "sha256": "968200d11d3ba4d4e1f9559e5df1d8e3098ce4fe6897566942cb523d2ebc1379"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T87-config-twolayer.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 12,
+        "sha256": "6ca8ff81457a2de1c8c5e02fc666b80d2d1c66ae7b72958a26e127f8cb8241a0"
+      },
+      {
+        "line": 41,
+        "sha256": "7d1fd66953764127ba40852acc7c104f367f5b3da442c994664a0aca7153084b"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T89-changelog-path.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 30,
+        "sha256": "4bcc95d368ef63114ce31ac8a833d28c84f56fcf8c6d440c86704696ebe57faa"
+      }
+    ]
+  },
+  {
+    "path": "test/sections/T97-gap-migrate.test.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 57,
+        "sha256": "ec85f35393d0031b23761caf9b5e2cd85b2b331b82f1be925fd79f5173b793b3"
+      },
+      {
+        "line": 205,
+        "sha256": "b48c456784e029f450667af4f06b7dbdcc8b3570545834aa6e4bbf5b870bdbe8"
+      }
+    ]
+  },
+  {
+    "path": "test/workflow-lint.sh",
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 25,
+        "sha256": "9cb03a03af5e54c96429cebaf7b949e147eb42d9d39b4c73059486add284fe19"
+      },
+      {
+        "line": 37,
+        "sha256": "9cb03a03af5e54c96429cebaf7b949e147eb42d9d39b4c73059486add284fe19"
+      },
+      {
+        "line": 52,
+        "sha256": "ed12ed6c13dd03d0f7252c8f5009e105015fa16609b0f8f6c17413e71fe72700"
+      },
+      {
+        "line": 117,
+        "sha256": "b1301662f66d319b88f8b6aaca585b358d78a20da682d5a7d6993579f70e8a26"
+      }
+    ]
   }
- },
- {
-  "path": ".gitignore",
-  "category": "meta-doc-quoting",
-  "maxHits": 5,
-  "reason": "Anchor-style history quotes in ignore-rule comments document why machine-local zones are ignored.",
-  "pin": {
-   "type": "region-sha256",
-   "minLine": 75,
-   "regionSha256": "96ff79551bf03345bec55a85e6e0c41ebb0564af485387bbed44a6e89e59e70c"
-  }
- },
- {
-  "path": "AGENTS.md",
-  "category": "meta-doc-quoting",
-  "maxHits": 4,
-  "reason": "Ban-definition quotes: the policy document names the banned forms by example, pinned to the rules section tail.",
-  "pin": {
-   "type": "region-sha256",
-   "minLine": 46,
-   "regionSha256": "8e4c01df79b475fc317a86f16977d7b660b9028e6a45284d7a7ffa3dac920b3c"
-  }
- },
- {
-  "path": "bin/gos.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 75,
-    "sha256": "a6f2fa2b40bacd9821582c02f1960a91c3e6af15f32806eae78feb3bfbfc4dff"
-   },
-   {
-    "line": 85,
-    "sha256": "6d5eac3d3ba023138107a46c9bda2ea7d838825d9bef4cdf9ac0644e359fb19a"
-   },
-   {
-    "line": 87,
-    "sha256": "d08f352ba7edab589c2845bcfad8467a46ff227844f8820bd7d81ab2875ee797"
-   },
-   {
-    "line": 95,
-    "sha256": "53fddf48b760cef83523f3be1dc46598a57ea0bc55c5c2286adbeb4ab6cc0d6d"
-   },
-   {
-    "line": 104,
-    "sha256": "dff0a3f397084b25a0dcd263e1c42f5729315fbfb10f9ed62182d5473143b01d"
-   },
-   {
-    "line": 140,
-    "sha256": "b93988fe86491dbf88c246e2eb795a5ed2f8248632ddc475d7b3c3144aca78f5"
-   },
-   {
-    "line": 228,
-    "sha256": "917879b435bf6edecc0d8608990938fee016405f06b02d829270a25e8efc49b1"
-   }
-  ]
- },
- {
-  "path": "bin/lib/core/fsio.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 62,
-    "sha256": "0573dba3bd383e0a24cc5a12e741c7095a410676fa06a426f198521b97ca0e1f"
-   },
-   {
-    "line": 172,
-    "sha256": "b33262f223f3d6663a997ab673b6f81db8f89259d2b2dec47d064e0ebcbb524e"
-   },
-   {
-    "line": 217,
-    "sha256": "30806c4832294a4f3c5bb73dc7f732390a016e33a02f0bcc1e5c6d66041ffaa1"
-   },
-   {
-    "line": 280,
-    "sha256": "6a5b37d241eef87a36f8333e5055be6560e1aa265415f6cc86c832a47ae69ff6"
-   }
-  ]
- },
- {
-  "path": "bin/lib/core/i18n.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 63,
-    "sha256": "b8d57cca5c353c8284b87dcc3c6f0759162d725085a8490ec0ec24913fd09f83"
-   }
-  ]
- },
- {
-  "path": "bin/lib/core/locales/en.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings in prompts, level labels and error text quote finding ids by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 61,
-    "sha256": "eaab1cd5c1dc4a8379d3564ad0e02e38cc23ef821047e93e2e528de1b4f7338b"
-   },
-   {
-    "line": 161,
-    "sha256": "fa281827af2a018981bf990b310d983e8858b7031e9ef93a031f7de68461541f"
-   }
-  ]
- },
- {
-  "path": "bin/lib/core/locales/zh.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings in prompts, level labels and error text quote finding ids by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 70,
-    "sha256": "2d8302905090989b148140d4754cb05c7bdac2ccd826856d2ca88404cbc1173f"
-   },
-   {
-    "line": 71,
-    "sha256": "085bca11a0ebc8b937fb750a2786b876dd85a7040824244907fcd383dc73819e"
-   },
-   {
-    "line": 155,
-    "sha256": "c622c4c447046aba57ced45acbef918bd94b9e490aafa58f450b053068e9b52c"
-   },
-   {
-    "line": 162,
-    "sha256": "494559409849c5c2685fa26f213780054ae24ac85ebb9f42f5bc41c4dbb65726"
-   }
-  ]
- },
- {
-  "path": "bin/lib/core/lock.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 48,
-    "sha256": "fe7abfc2b2a903501d5eba25253ba35b65b3754f81eab29ec8d3973f62a0bcb7"
-   },
-   {
-    "line": 78,
-    "sha256": "ccf22489afefb7d670dc867998d3e2fb4fed87cf76f38457bfb8597c4456202a"
-   },
-   {
-    "line": 115,
-    "sha256": "ea2ad7db4b016100102a660c16c96d3497a27750e628e09b7860d8991b40f2ac"
-   },
-   {
-    "line": 151,
-    "sha256": "8babfe0d1ec5f029c13db236a208ec128b99f5c917cf1bb0eea43ab27603994b"
-   },
-   {
-    "line": 187,
-    "sha256": "e24c0860b95cc633fe482fc18f674587553b9a350ecdd030357ce7b0ada6d0dc"
-   },
-   {
-    "line": 228,
-    "sha256": "dd2f1c2a6b864313fc5e5b3e887b9f1f21ed7dad532b89d8dd9b77b19b6f5c39"
-   }
-  ]
- },
- {
-  "path": "bin/lib/core/state.cjs",
-  "category": "frozen-string",
-  "reason": "Contract sidecar-hash table: the lessonsAnchor verdict string is a frozen product contract line asserted by suite sections.",
-  "lines": [
-   {
-    "line": 83,
-    "sha256": "20d067efbf754de09b017018edbe514de815453b2177766f9922875420d96652"
-   },
-   {
-    "line": 97,
-    "sha256": "28b61207c1b32a4de3d3bc5238feb070220bf6a4537a0e29b269dbb4674cde65"
-   },
-   {
-    "line": 141,
-    "sha256": "2d2dc804a52f9bd0f1f76cc83821714e6a0d47817463e8898bcd2455a968ac60"
-   },
-   {
-    "line": 230,
-    "sha256": "a2fb225c53471894577b9d0a057b9f7ffc24a017a937e7c77b57e014554c332a"
-   },
-   {
-    "line": 294,
-    "sha256": "dc2ce2b65f74cc6e78b3ba48befd84f8ec6cdae5175c0085214a7eb879dbbc79"
-   },
-   {
-    "line": 354,
-    "sha256": "6ca9501762993358c8e17e5ab61ad9042c1f9af942a5aa20848b3304ffb71d94"
-   },
-   {
-    "line": 384,
-    "sha256": "f723db315b7141b0357bd5561d0119be3a2f496c85a525c6cac71df06e21e31d"
-   },
-   {
-    "line": 508,
-    "sha256": "93b440665f771baf724e60de3b8936c5ce5f2792604b5beb62cae13e3a36b92c"
-   },
-   {
-    "line": 542,
-    "sha256": "15f455b3fddd67d2918917bf292e9d1099953f1830e8240367ac231054343dad"
-   },
-   {
-    "line": 545,
-    "sha256": "a5c88576155b222c784bcb44d393b927646204402537fe833c7b595ed3d33837"
-   },
-   {
-    "line": 554,
-    "sha256": "e954c22361d5f1ca9559c85e4b306ad7530f055d80961381ff1c088929fe1eb9"
-   },
-   {
-    "line": 565,
-    "sha256": "028d4fedf4ca878ee6e429044f6d33a56655a6dae0a2c1ef2e88450aac43370b"
-   },
-   {
-    "line": 583,
-    "sha256": "09e0a31484878828ac752039e7892e788b5ab304861a78edf4133ff9e47f8bcb"
-   },
-   {
-    "line": 585,
-    "sha256": "23838e953fff9008092984c53069b18e7c301a3cdf78cb4893492eccead63000"
-   },
-   {
-    "line": 594,
-    "sha256": "7fcd673dc9ddc9c9c56e250d68b08d2f407dff8f70f2e274d72d520296a99c4e"
-   },
-   {
-    "line": 595,
-    "sha256": "56eeef7fe46d604e2123d79d74b1ea6a3757d20f5463291a6144fc51153539b2"
-   },
-   {
-    "line": 596,
-    "sha256": "0907727304fb24284e10f7143433c1b61a7402a4d7bd9b8b83be59a01f9f488f"
-   },
-   {
-    "line": 597,
-    "sha256": "54bd657d19b9c1ffbb77daef7b7d337e2a450a9ca74d76bf0d7cf32ee26a6dd0"
-   },
-   {
-    "line": 598,
-    "sha256": "77a356385c92d8bb4b20d06daa63e330124291d24c02c8f2e5e2cab9f8cbff27"
-   },
-   {
-    "line": 599,
-    "sha256": "47886b3085bfb9139153a3637c0a4d26ee2a72b07b6aca75f56a9d517e791fb6"
-   },
-   {
-    "line": 600,
-    "sha256": "6da500ccb5ca91af60583218fca55a48547cb70244ffb90ac7ecc958e2af128f"
-   },
-   {
-    "line": 601,
-    "sha256": "fd471eb358fe6f87c9ce0ab4b7642f30177458e0f2a45d04e86972de0aea61fb"
-   },
-   {
-    "line": 602,
-    "sha256": "890473ae82a17ca574b665a6c76238b39535d50b6733dc82196f8065ef3625e2"
-   },
-   {
-    "line": 625,
-    "sha256": "240c812812f58b4809f741c136fa52d8c41c968e82c34a399faf7d361ac12b18"
-   },
-   {
-    "line": 653,
-    "sha256": "0951eb661c86165b2571cc369d10a7ff60c9caf9e59d76a3f6bc08cefba6724e"
-   },
-   {
-    "line": 654,
-    "sha256": "7534bfb1adb03e24ac3349f274b3c9e4d78cca372208083c10d10d2e50b9e1a3"
-   },
-   {
-    "line": 676,
-    "sha256": "fe5c20c078e2b37840e05e8d799175e0a77a46e1629b05ee03b0e335f33d1acf"
-   },
-   {
-    "line": 677,
-    "sha256": "297a8678f34ca3d871efbb7374e5c459608519a709f012e2a17797987175075b"
-   },
-   {
-    "line": 706,
-    "sha256": "a0ff656a387c7c04e75a71d5532b53b2357212b5445457b4ecda155f3cf8ac9e"
-   },
-   {
-    "line": 781,
-    "sha256": "f844494e3ebcc483d9e03525c5fa7e75397862b27fbed6f89e9a0c93541333ce"
-   },
-   {
-    "line": 1283,
-    "sha256": "bdc502fca27a64bba42503b69d9518aa43d98cb47c79a1e9d71c515488c395f5"
-   }
-  ]
- },
- {
-  "path": "bin/lib/knowledge/concerns.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 31,
-    "sha256": "180353a8b50924f37647b288d7bcb3d8cfd5b16cd86f6c817c031ef7fa9f2366"
-   },
-   {
-    "line": 37,
-    "sha256": "e8e58dcd06ea30b4b0118e3f898fec600b1ca746f63b6ef055e1878214d82a28"
-   },
-   {
-    "line": 58,
-    "sha256": "c4a3c31ded1f1d44f9e474eb86977404899202fef0d87d215222e59ce26dc652"
-   },
-   {
-    "line": 99,
-    "sha256": "b18c21f9033d3f99362eb2d4e62f7d9de49fa4a4a90348c19a636280ffe89a67"
-   },
-   {
-    "line": 123,
-    "sha256": "f08b205d377aa6d1a36ecc4fa03fe5c9ab19b05a1d1b3c96585999f732a61f1c"
-   }
-  ]
- },
- {
-  "path": "bin/lib/knowledge/lessons-json.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 77,
-    "sha256": "67750376a4a7aaab8e9319a6355ff79bde57bb360098d91f0816ec1bde7abfdb"
-   }
-  ]
- },
- {
-  "path": "bin/lib/knowledge/lessons.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings in prompts, level labels and error text quote finding ids by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 99,
-    "sha256": "2fb0396d0df1ca4513acf5260b85c1c2d4305c6bf3a2b35c2ce37610518b27bc"
-   },
-   {
-    "line": 102,
-    "sha256": "09ace9da9add63f35757ef737d67b327ded4a1c33ca02a6f7c659ed2c58033ff"
-   },
-   {
-    "line": 137,
-    "sha256": "5bf251f676aa7c5cba75af7040e4e875b5b64714169a64be8c1cecf4df3cc6ef"
-   },
-   {
-    "line": 321,
-    "sha256": "35f2171509778f91f6315449a42d256fa0d943738cdb7a8f31a9c916cf378e2d"
-   }
-  ]
- },
- {
-  "path": "bin/lib/knowledge/phase.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 209,
-    "sha256": "ecb6baa6f011bd679616ca0bf5a11c0b62ac00020fe38d1f3dbcada9cf81c480"
-   }
-  ]
- },
- {
-  "path": "bin/lib/knowledge/truth.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings in prompts, level labels and error text quote finding ids by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 78,
-    "sha256": "3557c0dc2961fd2807a72c6ae7650f213c968d0281ed7b607b1d30f03d3c9975"
-   },
-   {
-    "line": 98,
-    "sha256": "e71ff27d8e918bd4da2a94c6a3541fb6ce096318c8cedcb7a9ffa8c6edfc1679"
-   },
-   {
-    "line": 103,
-    "sha256": "ad8077dd5d13511c62cd13d6879046b16ab247165665d39284fc79f3a5426596"
-   },
-   {
-    "line": 112,
-    "sha256": "24d64081cfd6973d2f70f1eeea16cee66cf0b3638020eff58a782f316cc44f8e"
-   },
-   {
-    "line": 115,
-    "sha256": "711ebc2e880f7e4d08b87ac28ceee74f55a4d3d6777bbadda58bcd8453768658"
-   },
-   {
-    "line": 119,
-    "sha256": "55945c4d5323ac57895accd173fec4dd2873c6d8df0e3c4a6a6ebbb832a8ace1"
-   },
-   {
-    "line": 125,
-    "sha256": "a0734266bbadebd690b1d7067aad2a94cc81f9aadf640b4ccac21ffc9494fb61"
-   }
-  ]
- },
- {
-  "path": "bin/lib/map/allowlist.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 338,
-    "sha256": "90562ffc5b70c8e043af322950cbf8e7717f64f45247b484ea205e815981499a"
-   }
-  ]
- },
- {
-  "path": "bin/lib/map/anchor.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 29,
-    "sha256": "0926d73e954c13ff7fb43c0b8f16c830a3234c0e5643654146273f85a288e519"
-   },
-   {
-    "line": 43,
-    "sha256": "1874cbd7854b180b7aee6d968c39ead30bd423f9e4dcb7b6e53058a48668cb63"
-   },
-   {
-    "line": 94,
-    "sha256": "fc1d3f7306145e0a1e0b32dcfdb28f7ece996e8261e4491228c784ab84bf7bcb"
-   },
-   {
-    "line": 99,
-    "sha256": "f0b9c3cf95a107fe42376cfdc444f39d8620c4c0ec681dde52b6ed0c2f633838"
-   }
-  ]
- },
- {
-  "path": "bin/lib/map/edges.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 56,
-    "sha256": "1aa15befb85f70671a25625c2869aa5fbb174718020ce9e21182c9e232ae9d6f"
-   },
-   {
-    "line": 61,
-    "sha256": "879c30df6c146119db8a9947f119587d7610bd1b07803b90e62a584f3a2672b3"
-   },
-   {
-    "line": 91,
-    "sha256": "9e83f4ffb5ddb750e29dd8088c566e19b71ff202ab69b16938bb8906807390f9"
-   }
-  ]
- },
- {
-  "path": "bin/lib/map/engine.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 70,
-    "sha256": "fb724d72ef2919bdb9c2955bd6893c5680c8f265a9b2f9401732e8429b6f9050"
-   },
-   {
-    "line": 96,
-    "sha256": "5b0eb380be685294bea92c69ebfda51c50acde51f796cf8c7aa1993fd8795184"
-   },
-   {
-    "line": 116,
-    "sha256": "c3583779179c17c595823c36b7d01958699ebd9246f6fb8a1fcd6c751063cef3"
-   },
-   {
-    "line": 240,
-    "sha256": "d7d676bc8674aecf65a479445ed4e5628f1b5e6f98d9c51351d774a9f82b898c"
-   },
-   {
-    "line": 256,
-    "sha256": "85226e70c88dceb050bd2480e349e4148ae5c6949692f79af1ec5498c9ae42b4"
-   },
-   {
-    "line": 585,
-    "sha256": "b4a29488d1862d4a0594392ac58ae8af21707c8cac209865722acee5a8730ceb"
-   },
-   {
-    "line": 650,
-    "sha256": "978d77702cee974a8336f30381ff89bcbc99153319ed61164408397b2befe145"
-   },
-   {
-    "line": 703,
-    "sha256": "5465ad10817e1dfff6020182260d6323fe94285bf9b773de6109c92a268d611e"
-   }
-  ]
- },
- {
-  "path": "bin/lib/map/index.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 93,
-    "sha256": "cff0ea7139e162e8ea736ae08ae600bde059fd83ff5514201d0c2e82276c94f1"
-   },
-   {
-    "line": 95,
-    "sha256": "088341da44d656963d1ba083a90d8cd183786bd48658320e0f92919652c255ff"
-   },
-   {
-    "line": 101,
-    "sha256": "71d0a82de0b14e419be1b0de1cdc4b59cc32d5786de5e8dacd585e7a56bee14d"
-   },
-   {
-    "line": 110,
-    "sha256": "4f768796bdc78b735dfe31cb62edb23dce02c3d40e0b96e493abc5d25ac707f2"
-   },
-   {
-    "line": 205,
-    "sha256": "c0724bd0b99eef4f78629a0c44ba51c42cc1b45ca038cfce57251900494ab113"
-   },
-   {
-    "line": 297,
-    "sha256": "3c737750bfcb91490a00979844837756bf26deac26932c78214a98d3250ad3b2"
-   },
-   {
-    "line": 300,
-    "sha256": "2235d74fb0388c0e77dbbf784337fdfe4d1801e0d27c34d209d492e30f800c56"
-   },
-   {
-    "line": 302,
-    "sha256": "d37d6a038adebbd5cb0419e66f16f00a9001d667f09d8fc276354c0d7d1a747a"
-   },
-   {
-    "line": 326,
-    "sha256": "cf0e4a566c258796a487e62f85647157b08ba1454d42df9d2af53b27c25d42bd"
-   },
-   {
-    "line": 335,
-    "sha256": "c191910788c83dffc5f8a2b2f8bc049d1610151007685becbbc949144f2eab12"
-   },
-   {
-    "line": 363,
-    "sha256": "2362cb69509c9baa6ee6da803e9148d50263e99aa1bf6ba7d6cc577efcf6f028"
-   },
-   {
-    "line": 367,
-    "sha256": "f7b61a4b0e6a69321b1606574b88f3044bdc38167bde7b2e233be22e6b810721"
-   },
-   {
-    "line": 377,
-    "sha256": "7eafe3cd8d1bf6c2cfb5ab8e989e87b6b3512314750dda13df8cba01be2970c1"
-   },
-   {
-    "line": 394,
-    "sha256": "cc02ed0146c52572e607e2b6245dfb2457962e2e60da8bd2f1627830746ec82a"
-   },
-   {
-    "line": 397,
-    "sha256": "9468a2702b569215675da68e050528930541f0f0391d6d39628f3dd97e2eb205"
-   }
-  ]
- },
- {
-  "path": "bin/lib/map/views.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 20,
-    "sha256": "bf84cee091ea5456f4d40b057506130749803f0c6b609e92ff5fbce54cba584e"
-   },
-   {
-    "line": 68,
-    "sha256": "233d1b6676d24f1ccbc6b4289586ed531b4818a880f71839d7ab47b17a28fbdf"
-   },
-   {
-    "line": 270,
-    "sha256": "f9a48baaf31be856504bdc453ca0bf730027ab2fbc6b97c7baa009e8a04cdcb8"
-   },
-   {
-    "line": 282,
-    "sha256": "8c3d4919c8764ebc48c3a8e597ab89fe31673ab45e154e38ff451e72f15323fc"
-   }
-  ]
- },
- {
-  "path": "bin/lib/nav/cmds.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 158,
-    "sha256": "33cedd08736311884abbd57db05446abe6425e1900313b594730d493f6ede948"
-   },
-   {
-    "line": 217,
-    "sha256": "a081128060491ebeb32b696fa4092969fae66f14bb0018a067f463eb724932b7"
-   }
-  ]
- },
- {
-  "path": "bin/lib/nav/status.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 66,
-    "sha256": "3b4fde333e854d915380aa7d4a70fd7fae0607217e33451301e7e28e3cecdcb7"
-   },
-   {
-    "line": 124,
-    "sha256": "6a67d97312325c52956f5739c068c7850229fe9a8e5c4eb5e94cc7a61f165832"
-   },
-   {
-    "line": 259,
-    "sha256": "1963d8ee6d207f0f3a3122d3a3b1a5993b89e058f507ccad54fa770f99b5e8cc"
-   },
-   {
-    "line": 263,
-    "sha256": "b071393ff1e2b7059460a79ad119db4c13b4ebed103ea0607c7a5f0e4e858f65"
-   }
-  ]
- },
- {
-  "path": "bin/lib/ops/changelog-core.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 64,
-    "sha256": "3397302cb4cb8aa305b40ab00acb03c5a64cd090f9f2c65d42a2b4cb02448894"
-   }
-  ]
- },
- {
-  "path": "bin/lib/ops/config.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 22,
-    "sha256": "c67e2beadb88a71f77dedbe618fb4952850c33e9e1db0ff7601aefb9598a13c3"
-   },
-   {
-    "line": 131,
-    "sha256": "3511a9ae6e0a562f6a2c3f8de7e763397a67b2eb24bacada268d912a4c0197c0"
-   },
-   {
-    "line": 140,
-    "sha256": "7f07555f8ccadf61139196b1c32a7a18c6e7bc9f57ac1840a5a7557264d0de4d"
-   },
-   {
-    "line": 290,
-    "sha256": "fd2fa2ca9f3a9db239041e1ee671624d90105a933c7494a2420c6a24bf8c9d59"
-   }
-  ]
- },
- {
-  "path": "bin/lib/ops/doctor.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 137,
-    "sha256": "8fd9b8bfbd2f0524e1b0e5de0fbd20572b19b14ff47b8ca71787826765fefcef"
-   }
-  ]
- },
- {
-  "path": "bin/lib/ops/feedback.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 276,
-    "sha256": "afed28f0218254742154ece5ce7283bf5fb618c239c5d9ba133f79de3a54d6f7"
-   }
-  ]
- },
- {
-  "path": "bin/lib/ops/gate.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 74,
-    "sha256": "c038f141933b6b6f24c031f1914f9c20ccc16fd299c04b0a7a83ac7c9335f81c"
-   },
-   {
-    "line": 170,
-    "sha256": "3fb0dbfda6bab9ba93d53e37ba65c687980e594fddb66f18b12a9a4913f8a00c"
-   },
-   {
-    "line": 190,
-    "sha256": "28776075c6125071b4119585c886163cfe6844f25ca99c471f066a5e20a0b448"
-   },
-   {
-    "line": 197,
-    "sha256": "938ec32285ffcdf6b0a9884742b6d672d442974b400bd0e1722eb26ef7b3a4b7"
-   },
-   {
-    "line": 226,
-    "sha256": "873c71eb3a7dce3239349c9dad4196b00421981a7323892df06d314bd16e1afd"
-   },
-   {
-    "line": 234,
-    "sha256": "ec9638a2f0f2c5e6f1096d7b882bde74979df79912755ed7c2358ecdc1b0003b"
-   },
-   {
-    "line": 324,
-    "sha256": "2aa8581bc82dddb1e77413ade8aaaa4ed625c062b30b0b174d8eddf2add25064"
-   },
-   {
-    "line": 344,
-    "sha256": "dd270527073e472dd3e56dc87d782bbf2dbe804b6ea1fd6dcfcd8c942a490000"
-   },
-   {
-    "line": 354,
-    "sha256": "d1846688e0f770e1fb50772d65c5d3e1b39e328df5415c1b3f8fff99e535f921"
-   },
-   {
-    "line": 548,
-    "sha256": "7fbbd5482f6b6c9e5c52f1a597e72a178604b2c87bda40dbd326854dfac32d90"
-   },
-   {
-    "line": 573,
-    "sha256": "e49968e9ccfbd292bfc7d3c73575e12ff82e1719f00ff52975fc78f4613e6681"
-   },
-   {
-    "line": 672,
-    "sha256": "af52abb2e8bb517c35de7f3eefb9506167750108c4f946e3a1fda9f3f69c6b65"
-   },
-   {
-    "line": 708,
-    "sha256": "a7818a133d907b0b4a888f4b89e2f50e78b46866daf52527d3b2db8a8d26e9c2"
-   },
-   {
-    "line": 713,
-    "sha256": "f69cdae81003f8cdcf1de1b2a11b77fd714f66025a5d8894939329d35669756f"
-   },
-   {
-    "line": 756,
-    "sha256": "9e738a1abff613739e7cd9ddeb2f253493c672c18734ea82afbbb8f788f603f3"
-   },
-   {
-    "line": 761,
-    "sha256": "aa8d30ee0dbf4e2b2bd9f1cb75fc54495b6a76232e236aa8bc43a6079877107a"
-   },
-   {
-    "line": 938,
-    "sha256": "5d6c9768aabde105b966bc8ed23bab733dc648e376e2ba1dc4a9998650ec07cc"
-   },
-   {
-    "line": 948,
-    "sha256": "6d3196b5e6a8ffbffa3a81b00146cbe43f0993099f3a37f75cfcd87e2910a6dc"
-   },
-   {
-    "line": 1243,
-    "sha256": "3471b41ccdef2d24fb7a74200e8483f22be994e0e242eed44e74ee4f33f2a2a5"
-   },
-   {
-    "line": 1259,
-    "sha256": "76b61f6ea9edff48418c510972f1a37168708b30c4ec1969ae883ca70632f7db"
-   }
-  ]
- },
- {
-  "path": "bin/lib/ops/gitseed.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 37,
-    "sha256": "190a6046f22398b810d2dc10446446c2c0ca69dda57614dc0bb779dd1b45c277"
-   },
-   {
-    "line": 41,
-    "sha256": "8f013504a87ecdf6f2b28db349a4ab7eb29ae4a414b7d0f76884e48df0fb3a3d"
-   },
-   {
-    "line": 106,
-    "sha256": "bae8eefdc0ee97d348b9b9a6fc02a119f00006023527d8a57d9832126bc5fce3"
-   },
-   {
-    "line": 188,
-    "sha256": "715fb913aafd9c04abd90d24725a5105ed866d9133c692b82733e1f4f980d16a"
-   }
-  ]
- },
- {
-  "path": "bin/lib/ops/push.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 78,
-    "sha256": "2b0a2dcaf8fb2986725ec7fd5b1805c192029a895e083f107726973987de93d4"
-   }
-  ]
- },
- {
-  "path": "bin/lib/ops/setup.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 301,
-    "sha256": "b3f4eabfdb45ac06d98600a50b133537bf4ac63cd36fe7665d716a7b41d8e4ba"
-   },
-   {
-    "line": 349,
-    "sha256": "df5013ea42c0a0ca7f9deae4c24486d11dd06c8c8c6575d2fc3fd1f2fdb86d53"
-   }
-  ]
- },
- {
-  "path": "bin/lib/render/views.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 29,
-    "sha256": "3bdffb71b4869839186d5d2c73b1cf4a95aa1a0dd997794d049317d57411f1fc"
-   },
-   {
-    "line": 37,
-    "sha256": "f5820d1054035079352a6e055474861d8ba0ee5b6f0316b7d86959edde6e245e"
-   },
-   {
-    "line": 61,
-    "sha256": "8bc23635dc5c2b09931477d2acf670fe6ce1d71e8926d680b19b41429723123f"
-   },
-   {
-    "line": 77,
-    "sha256": "1c477b08d4eb4643002945522cfbdaaa09300d4a8c3e81989890d928494183b7"
-   },
-   {
-    "line": 400,
-    "sha256": "2aed8ced42c1927d2711d60505a10314cff8cf75d7b99765c64432b896b9cd0e"
-   },
-   {
-    "line": 475,
-    "sha256": "ad84bcab2c535c40e8e5cafe299dd27f65cbed1df157f9a3fc2b9ea279d6cdcb"
-   }
-  ]
- },
- {
-  "path": "bin/lib/task/archive.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 262,
-    "sha256": "ba595698c5feccc15e9b3b8fc0a1cff6f2665d21d92f24060ef13949f9e536ad"
-   },
-   {
-    "line": 477,
-    "sha256": "8638628646a84624acfd64faf64766d6f92c2a8ccb2423e483657dbc3afed673"
-   },
-   {
-    "line": 590,
-    "sha256": "829ec48da19a6121f8d61b41da0dae442d73885705855f41cc81f083b6b69ae5"
-   }
-  ]
- },
- {
-  "path": "bin/lib/task/changelog.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 89,
-    "sha256": "c48475dd626dd15e3b041b50d13844f649e7f926c7a2fee4cf81a054fa0617a4"
-   }
-  ]
- },
- {
-  "path": "bin/lib/task/commit.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 28,
-    "sha256": "5d491c14ca7747f5773b35ff1c4bfee13f9d3dc25c3b01e22d45fc3102bd535f"
-   },
-   {
-    "line": 41,
-    "sha256": "c89ead33587de59b009e41bcfe91968b695ba56f791271c08592a75afb24d4b6"
-   },
-   {
-    "line": 89,
-    "sha256": "a064e8412ae3d281e5c96fe898775d078c92db514fc636ddcf350f155ba24c66"
-   },
-   {
-    "line": 351,
-    "sha256": "aa8fe970ed66b9709c6d5d86d529747fc96b06d4e6b4592fe42d0b8bcddc9cc6"
-   },
-   {
-    "line": 367,
-    "sha256": "a4f6de1c08fe635a6d35acbfffbda8d2cf7f66d25d9d6248d5e5649b0c697f4b"
-   },
-   {
-    "line": 413,
-    "sha256": "4db0d21811326a7b3d419cd2248bd3285ce39ba2ad16cec26fec864218a6ca86"
-   },
-   {
-    "line": 466,
-    "sha256": "2cb3e3cdb36470b0e240873a3a0d4e7cbd6f5cf983787c13db2a3ed932220b94"
-   },
-   {
-    "line": 469,
-    "sha256": "a6069318b2995096085266d5104175719d458edc088e727dd37307ec98c61f1b"
-   },
-   {
-    "line": 471,
-    "sha256": "de87e2674cddab5f2dd808fed2d807f9284d03fe53a0cdb8673986b190bf0397"
-   }
-  ]
- },
- {
-  "path": "bin/lib/task/context.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 71,
-    "sha256": "76c80b1496534dac1007fa92e21c2cf96e52cbc1287f1dff7d05a3e764fa8609"
-   }
-  ]
- },
- {
-  "path": "bin/lib/task/init.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 111,
-    "sha256": "367f6ec57c2fb11fa27df4078857209522133f3feed278d86b28ab246337d429"
-   },
-   {
-    "line": 141,
-    "sha256": "4542fe52aeb41510a0d6f5bf99cad0fdd8ecc10e7c7f1ac3a00469c0378c47b1"
-   },
-   {
-    "line": 204,
-    "sha256": "e3ab1267f11cdf86dd0e194d4a44a052dde959fc7bc504e7c80eb5da385e7817"
-   }
-  ]
- },
- {
-  "path": "bin/lib/task/plansnap.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 19,
-    "sha256": "8815a4d2e597b3020e9137c05efd61d1c0209ca65df0d2a956f177795e83a0c0"
-   }
-  ]
- },
- {
-  "path": "bin/lib/task/stage.cjs",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 26,
-    "sha256": "2779b7e742532f5c08386a4732902c01f491d8f2920b4825d9f2eb15fd6e9a0f"
-   }
-  ]
- },
- {
-  "path": "scripts/census-dispose.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 125,
-    "sha256": "2f00ea2ed313d5e6f78099684f81d6e3dee3a18abdccc56cdb7be62a0c098721"
-   },
-   {
-    "line": 138,
-    "sha256": "6edc984051820ed2831017a483eaca511f1fc188128bf70aa3e9623824f0e15f"
-   },
-   {
-    "line": 144,
-    "sha256": "f7b0a39d32451e6d93d41bbab94df437f7bea2a6fbd2b43874afcab78a24c357"
-   },
-   {
-    "line": 172,
-    "sha256": "b62b79672583e73febef85c101f94c07901bca11b049f4500ca871a7ec31b34b"
-   }
-  ]
- },
- {
-  "path": "skills/gos-router/SKILL.md",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 99,
-    "sha256": "d3b957aaea36c815e67149cb59e0eb066e442648095088b382fe99577511376b"
-   }
-  ]
- },
- {
-  "path": "skills/gos-ship/scripts/security.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 8,
-    "sha256": "3d0a7b3535d77faef03146e9dac7b113997f6e7f0ef919450a698b8ce148bd7b"
-   }
-  ]
- },
- {
-  "path": "test/checks/stale-verbs.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 76,
-    "sha256": "ffb16930e35a04596e21c011dc230e98457169cefbd3e922ee7235a5dabbb264"
-   },
-   {
-    "line": 77,
-    "sha256": "e2042baa34d2f9cc8071676837d38962bbcd5c9bb8e0af9040b4af0279f0be2d"
-   }
-  ]
- },
- {
-  "path": "test/fixtures/ai-trace/anchors.json",
-  "category": "lint-fixture",
-  "maxHits": 4,
-  "reason": "Permanent red fixture for the ai-trace lint section; the anchors are the fixture content itself."
- },
- {
-  "path": "test/fixtures/ai-trace/anchors.md",
-  "category": "lint-fixture",
-  "maxHits": 3,
-  "reason": "Permanent red fixture for the ai-trace lint section; the anchors are the fixture content itself."
- },
- {
-  "path": "test/fixtures/ai-trace/anchors.sh",
-  "category": "lint-fixture",
-  "maxHits": 3,
-  "reason": "Permanent red fixture for the ai-trace lint section; the anchors are the fixture content itself."
- },
- {
-  "path": "test/golden/pre-split/contract.txt",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 142,
-    "sha256": "f1e66f95d015b3bb61dbe603451383f3d7934a8f27bd4d960d031cb8245fa042"
-   }
-  ]
- },
- {
-  "path": "test/run-sections.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 64,
-    "sha256": "ce56c664db6abf69430a9850e8078d1151ed3a2e885a99846882000f2a9a2b07"
-   }
-  ]
- },
- {
-  "path": "test/sections/T10-security-e2e.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 140,
-    "sha256": "a2def5f8faf996d600ac5435caccd5fbd8d7ac9b8a4898c329608fa7fdbf7e9a"
-   },
-   {
-    "line": 276,
-    "sha256": "70d8651708941ddfd40596ba17331471e55eabb227571a98607473cc2e4a04f3"
-   }
-  ]
- },
- {
-  "path": "test/sections/T12-wiring.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 119,
-    "sha256": "ac5b54754427d965a1cd77f8eaed6261271ced29a77a637ec9b72ba593ec7246"
-   }
-  ]
- },
- {
-  "path": "test/sections/T13-semantic-contracts.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 20,
-    "sha256": "294cda802cad8dda26c507cb77f0d854b02f49cd5409290ba055e6a0f550211e"
-   },
-   {
-    "line": 43,
-    "sha256": "f73ec6102be439f5077328243d3992b4c280bb3be27211c34d5331e205227539"
-   },
-   {
-    "line": 50,
-    "sha256": "b011f82f8b3785fa0bdfceda9f3d6d2781a50e6d71069433a1f2f0d223c9e873"
-   },
-   {
-    "line": 52,
-    "sha256": "c192c187cdf333a5a91ed235c65644868a153c6bcfc7a1dccb02dd6d472e6276"
-   },
-   {
-    "line": 61,
-    "sha256": "a2def5f8faf996d600ac5435caccd5fbd8d7ac9b8a4898c329608fa7fdbf7e9a"
-   },
-   {
-    "line": 99,
-    "sha256": "131f320587720a074132bb67eb67cd46bff09fd2c05b8433a615231b8c1f3f70"
-   }
-  ]
- },
- {
-  "path": "test/sections/T14-state-b.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 22,
-    "sha256": "955fec64f68b228a52a2a61fdc0ae21fbcc4aa57c06555ed0ecf164fc112cceb"
-   },
-   {
-    "line": 90,
-    "sha256": "dcf880d7b162d432730ed51376f5474216c43cd017cfccecf1d637daf4984c5d"
-   },
-   {
-    "line": 100,
-    "sha256": "3958a51c8be79c315875db26867accfa8afa4a63e775fe29ff287cdacb937b5e"
-   },
-   {
-    "line": 105,
-    "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
-   },
-   {
-    "line": 107,
-    "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
-   },
-   {
-    "line": 134,
-    "sha256": "93fc81e9f10c55748c94d9dbab13da58a6b5393c7061a2eca09b637e44705f5a"
-   },
-   {
-    "line": 143,
-    "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
-   },
-   {
-    "line": 145,
-    "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
-   },
-   {
-    "line": 158,
-    "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
-   },
-   {
-    "line": 160,
-    "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
-   },
-   {
-    "line": 182,
-    "sha256": "87c9e469bcc566c5374296bb4ab6ca6cca220187f95e07f1b021fee93ec5ce6b"
-   },
-   {
-    "line": 188,
-    "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
-   },
-   {
-    "line": 190,
-    "sha256": "651f122a1b984500eee72f31511166a8ac303335a52fcf6b6c2a024c94374995"
-   },
-   {
-    "line": 194,
-    "sha256": "cdf567cfa8d89112f184e2ddaa0165ebbd4787cdb86247a162bc62d86c3beb36"
-   },
-   {
-    "line": 222,
-    "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
-   },
-   {
-    "line": 240,
-    "sha256": "9210bf2e54b81d68141d403315e877e6a615e1d441dad852861f6183cab50623"
-   },
-   {
-    "line": 285,
-    "sha256": "4a24d7d9f6a2c857b4a1153847f05cff5dc7fac98dca274fe43f33c9f64f8a40"
-   },
-   {
-    "line": 299,
-    "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
-   },
-   {
-    "line": 301,
-    "sha256": "75e400981ec3a19b30b4117faf55c91bc1ffe7d757af122866261694d114f6b0"
-   },
-   {
-    "line": 338,
-    "sha256": "c3279c86a04c48b98deef6ab60f51abc6706263f71ea3c828f9c574d837f160c"
-   }
-  ]
- },
- {
-  "path": "test/sections/T15-lessons.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 7,
-    "sha256": "cb9fdbdb00578ed2527ce254eae55a65b5eb8c82df18669553643b078fe5cc82"
-   },
-   {
-    "line": 100,
-    "sha256": "2da2c3276d516702c9737472f55509a6078fafa3c119580773b4a30ffde0d875"
-   },
-   {
-    "line": 135,
-    "sha256": "a2496fc0082e0146eb69e29cf09192ff121779bda983d7781ac80a360df22788"
-   },
-   {
-    "line": 364,
-    "sha256": "6ec931d7a70b916d6b2a9c57bd37f3694b80bfb0ab9bdb53c50680f5bb2d7f2b"
-   }
-  ]
- },
- {
-  "path": "test/sections/T16-truth.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 44,
-    "sha256": "59b0cb28eef6338fc03bd03cfec92857daa3e182c13fde64959379fa37d4be68"
-   },
-   {
-    "line": 71,
-    "sha256": "7543fae477f48ce617565a2fc7083f4d5bc633cfb6b75b887f2fe95b3eb84861"
-   },
-   {
-    "line": 75,
-    "sha256": "ed147cc4874ae015e3f234aee4e52a4fd42a225e0e50516ea681c8f28af21a04"
-   },
-   {
-    "line": 79,
-    "sha256": "cfcb8ec0f6a8d821c39370815aa4af1c1a6a8619ddc6d123fe9c372e42f0fb73"
-   },
-   {
-    "line": 91,
-    "sha256": "9dd983aace01edc2cc7db2a08a98e1f3a5a3261f11bd5029abf193a77a4e3c96"
-   },
-   {
-    "line": 118,
-    "sha256": "8f2df1bc70f48821ec0b91ed94bd061b6dec061b259b8cef6f23018edeea7774"
-   },
-   {
-    "line": 129,
-    "sha256": "6bf071e034b5d391684cdb9cc65af7513961a7b02fd092dd33ebcc23afbef13f"
-   },
-   {
-    "line": 137,
-    "sha256": "655c9f0893dd00016139f03c2fa4f4c6faa97ae1db3985fbac5d0822d70178f0"
-   }
-  ]
- },
- {
-  "path": "test/sections/T17-semantic-engine.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 29,
-    "sha256": "afbccda2005c7a6c297e7bd36565f14fcda065ba56d21f4361952b36021c776a"
-   },
-   {
-    "line": 42,
-    "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
-   },
-   {
-    "line": 44,
-    "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
-   },
-   {
-    "line": 55,
-    "sha256": "1ff9a18610a4701e813ee2068d5b82a6b00e5ca05d4785788e364e7037764ff8"
-   },
-   {
-    "line": 112,
-    "sha256": "d61bb81cdf0d4b5198987fd719e58ec3c419fbe4be1ca61a678bed85673edf82"
-   },
-   {
-    "line": 149,
-    "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
-   },
-   {
-    "line": 151,
-    "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
-   },
-   {
-    "line": 178,
-    "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
-   },
-   {
-    "line": 180,
-    "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
-   },
-   {
-    "line": 189,
-    "sha256": "fd1afa9b4d5881726aaacac914c83aa001d62fbd7b03d01eb2bcea12ae8df503"
-   },
-   {
-    "line": 233,
-    "sha256": "4031955c8d283e0ff3f2551e360ab8a87b3199fb787c0fe4cbf123d00bc0f910"
-   },
-   {
-    "line": 251,
-    "sha256": "d2638c91e6862c54b75745b678fc46a034fa20f2d3ce42a557a810881d402cb7"
-   }
-  ]
- },
- {
-  "path": "test/sections/T18-f1-gate-lessons.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 4,
-    "sha256": "46f76d1230a859fdc3f57161e8535e28a60f738cd7009fc3394cc09c0d5d3ea9"
-   },
-   {
-    "line": 47,
-    "sha256": "e2eec2eb1e196b569a603a0df4e7d5de983adba3128dc7262600493968c03b16"
-   },
-   {
-    "line": 61,
-    "sha256": "7a31c3252a3d73a5e05eddda81018ba3243ef3971a376134f82d6e96d901be98"
-   },
-   {
-    "line": 102,
-    "sha256": "9ceee45a1c8bb9346b35b44b194f69a496bb75a99e1027df6703a62b3ea0659c"
-   },
-   {
-    "line": 121,
-    "sha256": "a468e5227486354546ac0055d69754bcfbb14299161b27027ceffa9886877ca8"
-   },
-   {
-    "line": 145,
-    "sha256": "1758df2b1f41228aea80f4d68a4209e557bcaf8d929e0d0c1a806f2511d4f114"
-   },
-   {
-    "line": 155,
-    "sha256": "d3ab741c37c3a966457a206cf8b60fd4de4a5b54f52c11d1f881a204de399b3c"
-   },
-   {
-    "line": 162,
-    "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
-   },
-   {
-    "line": 163,
-    "sha256": "ed33828780fc294a4159a3df0cc59474c59bf91eb92553b96200643076447514"
-   }
-  ]
- },
- {
-  "path": "test/sections/T19-mounting.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 56,
-    "sha256": "69f8e31f0d2bcdf9148f0fd7500d696df62fc6d4d723f6714ae2b41e8dfa4443"
-   },
-   {
-    "line": 70,
-    "sha256": "17fd6ae3ebcfba7797f45a8688dce5a7184cf5aaa9af7b416ef20981ba57db10"
-   },
-   {
-    "line": 76,
-    "sha256": "c183cda02b7337f7f2a146b3cb79362c9f1c5a730c3f61e520ffb063d5cfe449"
-   },
-   {
-    "line": 86,
-    "sha256": "1ff896c9d57450e66d0d296f78e15e6c2e90fd9d4aae3a8367b9b8577becce2d"
-   },
-   {
-    "line": 131,
-    "sha256": "3e506ded0b314db560e55e3ca9cfa6a008263a08b45b77ecbf9d0cd64f2939ab"
-   },
-   {
-    "line": 152,
-    "sha256": "f1fe7416604e4b23733bcb4f9dce65b57332ebd3f7faa7ac562550fe27097724"
-   },
-   {
-    "line": 158,
-    "sha256": "15e76702926d350e2d646632cbb3e155cf87e0145ef919908962f584b9b8b2b8"
-   },
-   {
-    "line": 165,
-    "sha256": "7599ef99f3561aa20ad5b8dcfb27a1e447d73fafd56a3e408ad3ea63eae6e8ce"
-   },
-   {
-    "line": 172,
-    "sha256": "92fc0797a4451df3cb46d55db9103103ffd198815af6aade32d8a7d5ced91a52"
-   }
-  ]
- },
- {
-  "path": "test/sections/T20-map-scan.test.sh",
-  "category": "frozen-string",
-  "reason": "Functional fixture data: heredoc plan and whitelist parse inputs quote digit ids by design; pinned as frozen surface.",
-  "lines": [
-   {
-    "line": 98,
-    "sha256": "9ed4ed82125436c4a11b3ac25c931a42f51add7752fd77613976f9ff30b0a10d"
-   }
-  ]
- },
- {
-  "path": "test/sections/T21-map-closure.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 106,
-    "sha256": "f57302f36727583d849b90e779a5374e087960a43da0e3b135903e2f5c4de55f"
-   }
-  ]
- },
- {
-  "path": "test/sections/T22-map-gate-impact.test.sh",
-  "category": "frozen-string",
-  "reason": "Plan-format fixture data, contract strings and regex classes quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 26,
-    "sha256": "afbccda2005c7a6c297e7bd36565f14fcda065ba56d21f4361952b36021c776a"
-   },
-   {
-    "line": 39,
-    "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
-   },
-   {
-    "line": 41,
-    "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
-   }
-  ]
- },
- {
-  "path": "test/sections/T23-concerns.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 78,
-    "sha256": "1ca0951d30f9bab01775642d65c75247453584dad155d8d0736d1fb11ef61d6c"
-   }
-  ]
- },
- {
-  "path": "test/sections/T29-command-registry.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 105,
-    "sha256": "edbc8de6bbfe3856f3fb8e33b093be91bcd3926c446d103cbf3c392d5a04f294"
-   },
-   {
-    "line": 115,
-    "sha256": "1c30c0b08e8802f1a50aa8d117e6600e4e0cd24907ba1b4a3f0b005e288a6fe6"
-   },
-   {
-    "line": 116,
-    "sha256": "32cc95fe561a55dbeeb3cdc1698a9d2ba7ac3a2e65977414e51ac936a2ca9aca"
-   },
-   {
-    "line": 155,
-    "sha256": "d1894cbcea7cb803588092873082558e3cc5e79427a9d1976eca63f08e69f533"
-   },
-   {
-    "line": 247,
-    "sha256": "bf1f4d62becefb709185cf4298f73aedcef6ef6cac49eba1b05192b15d4c9967"
-   }
-  ]
- },
- {
-  "path": "test/sections/T30-map-edges.test.sh",
-  "category": "frozen-string",
-  "reason": "Functional fixture data: heredoc plan and whitelist parse inputs quote digit ids by design; pinned as frozen surface.",
-  "lines": [
-   {
-    "line": 144,
-    "sha256": "b0f51b7742b34b52984ea31bb171e0951e801d837ec29bc02ab7d4d610419611"
-   }
-  ]
- },
- {
-  "path": "test/sections/T31-map-gate.test.sh",
-  "category": "frozen-string",
-  "reason": "Plan-format fixture data, contract strings and regex classes quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 123,
-    "sha256": "afbccda2005c7a6c297e7bd36565f14fcda065ba56d21f4361952b36021c776a"
-   }
-  ]
- },
- {
-  "path": "test/sections/T33-map-manifest.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 3,
-    "sha256": "a73c24297f24fe762b56e3dbbf4c4aec2262e55bd49088cafa1705f919eec112"
-   },
-   {
-    "line": 30,
-    "sha256": "afbccda2005c7a6c297e7bd36565f14fcda065ba56d21f4361952b36021c776a"
-   }
-  ]
- },
- {
-  "path": "test/sections/T37-phase-ux.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 56,
-    "sha256": "e7cd3bdab3813362e649e736e8f2c3d54ceb3f5fd3471b75d8f0db50d9427fca"
-   }
-  ]
- },
- {
-  "path": "test/sections/T39-render-park.test.sh",
-  "category": "frozen-string",
-  "reason": "Plan-format fixture data, contract strings and regex classes quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 186,
-    "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
-   },
-   {
-    "line": 188,
-    "sha256": "972c2e565b38141a6853f07e5155fc042175df26714cedeb15552a68e1ebf2b5"
-   }
-  ]
- },
- {
-  "path": "test/sections/T44-static-splice.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 32,
-    "sha256": "ff3715925e77af8c5cb8bf94d33b58706c2033da6d01e0211b11c3f3c4b0b1d5"
-   }
-  ]
- },
- {
-  "path": "test/sections/T45-ship-transaction.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 43,
-    "sha256": "fb68bf58b1bec7884fa631737c345e3df2a2b7960d436ca6d9b21ca321269b82"
-   }
-  ]
- },
- {
-  "path": "test/sections/T46-module-structure.test.sh",
-  "category": "drift-ledger",
-  "reason": "Module-structure drift ledger: the expected-count line quotes process ids by design; listed lines are the sanctioned ledger.",
-  "lines": [
-   50
-  ]
- },
- {
-  "path": "test/sections/T5-guard.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 64,
-    "sha256": "28b6c1f6d96ac92d9b780401239cb0b867a86a1be4a7744a22d431eb84b1c045"
-   }
-  ]
- },
- {
-  "path": "test/sections/T52-gitseed-render.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 58,
-    "sha256": "eeb5a41e7a35c4cb9f137f6e3fcd60e95d573fd772696d86a4212c14de21dfa8"
-   },
-   {
-    "line": 65,
-    "sha256": "04effd1c1966aff26ae2f3afae0a758113f6e0a23daada77f17388bb13a1952f"
-   },
-   {
-    "line": 98,
-    "sha256": "ac69256d7ad7603183f973fd093c42d936f51c04d99f23763ed6e1abf2807881"
-   }
-  ]
- },
- {
-  "path": "test/sections/T53-changelog-core.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 220,
-    "sha256": "933a27fd36bd0cb7b717347d7cd2835cd1770d017dd0822ab1cd3015586145f3"
-   }
-  ]
- },
- {
-  "path": "test/sections/T68-section-run.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 102,
-    "sha256": "8d4a7c10e0a3733993feab2e45049305706294d8eeb5ba0e07ed9856082861f7"
-   },
-   {
-    "line": 103,
-    "sha256": "d105a5cc7d57d78c4152e7510352581e3b217a02c173c426a796ff13297e0eca"
-   }
-  ]
- },
- {
-  "path": "test/sections/T71-phase-amend-reposlug.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 84,
-    "sha256": "37b66347f4db4cee6f957d0212485ee61b976b20cb92805170b512d0b3d78c90"
-   }
-  ]
- },
- {
-  "path": "test/sections/T72-lessons-json.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 156,
-    "sha256": "ea8ee61be92ab575da8ae9e4ea1991d1589d6e99312a0e3988a76b3e8be8d0aa"
-   }
-  ]
- },
- {
-  "path": "test/sections/T73-gate-evidence.test.sh",
-  "category": "frozen-string",
-  "reason": "Plan-format fixture data, contract strings and regex classes quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 104,
-    "sha256": "2afd042dababe4a9a05cf7845d2975b7302b3069d6404dbb053c26002c1819c7"
-   }
-  ]
- },
- {
-  "path": "test/sections/T74-i18n.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 36,
-    "sha256": "af48c591e654a78239e9539a4266c15c1bb74aa0d79903d6252cd42efbc401f4"
-   },
-   {
-    "line": 39,
-    "sha256": "e52b141f7bd250cb772772b148802f3182fc54d075db66432b462e36f4277b19"
-   }
-  ]
- },
- {
-  "path": "test/sections/T75-blast.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 106,
-    "sha256": "01ab4a878bed6e71fe21366dd408b71079db5e939d3eb977fb258234fec0324f"
-   },
-   {
-    "line": 109,
-    "sha256": "b536eac12f0a9e5b5a1064dffe4ca73479ef982a48da5f1de4c995604377fdf5"
-   },
-   {
-    "line": 124,
-    "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
-   },
-   {
-    "line": 125,
-    "sha256": "75e400981ec3a19b30b4117faf55c91bc1ffe7d757af122866261694d114f6b0"
-   }
-  ]
- },
- {
-  "path": "test/sections/T78-registry-brownfield.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 42,
-    "sha256": "38cce0e6f0d3aec2a170c78f83b1fd3f3e75309230b8b5b4da4ac48358143e95"
-   }
-  ]
- },
- {
-  "path": "test/sections/T80-brownfield-adopt.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 217,
-    "sha256": "dbd630ed9bf5c62648c5383bc82a182212a5d4aa72972d43b168ae1c7fc4e3af"
-   },
-   {
-    "line": 361,
-    "sha256": "de07deb14969e0c40d47ed8203a70d57a93492514aa4306197012d977c9f04aa"
-   }
-  ]
- },
- {
-  "path": "test/sections/T82-brownfield-edges.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 106,
-    "sha256": "556a81259760a4dc036c1baae7c701eabd7741998fda1517d71daa1d467f388b"
-   },
-   {
-    "line": 121,
-    "sha256": "863e4663df7a20c7ec730b722bed2cb3add5e3e675128f14dee39ae83ecdd610"
-   }
-  ]
- },
- {
-  "path": "test/sections/T85-security-depth.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 9,
-    "sha256": "968200d11d3ba4d4e1f9559e5df1d8e3098ce4fe6897566942cb523d2ebc1379"
-   }
-  ]
- },
- {
-  "path": "test/sections/T87-config-twolayer.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 12,
-    "sha256": "6ca8ff81457a2de1c8c5e02fc666b80d2d1c66ae7b72958a26e127f8cb8241a0"
-   },
-   {
-    "line": 41,
-    "sha256": "7d1fd66953764127ba40852acc7c104f367f5b3da442c994664a0aca7153084b"
-   }
-  ]
- },
- {
-  "path": "test/sections/T89-changelog-path.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 30,
-    "sha256": "4bcc95d368ef63114ce31ac8a833d28c84f56fcf8c6d440c86704696ebe57faa"
-   }
-  ]
- },
- {
-  "path": "test/sections/T97-gap-migrate.test.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 57,
-    "sha256": "ec85f35393d0031b23761caf9b5e2cd85b2b331b82f1be925fd79f5173b793b3"
-   },
-   {
-    "line": 205,
-    "sha256": "b48c456784e029f450667af4f06b7dbdcc8b3570545834aa6e4bbf5b870bdbe8"
-   }
-  ]
- },
- {
-  "path": "test/workflow-lint.sh",
-  "category": "frozen-string",
-  "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-  "lines": [
-   {
-    "line": 25,
-    "sha256": "9cb03a03af5e54c96429cebaf7b949e147eb42d9d39b4c73059486add284fe19"
-   },
-   {
-    "line": 37,
-    "sha256": "9cb03a03af5e54c96429cebaf7b949e147eb42d9d39b4c73059486add284fe19"
-   },
-   {
-    "line": 52,
-    "sha256": "ed12ed6c13dd03d0f7252c8f5009e105015fa16609b0f8f6c17413e71fe72700"
-   },
-   {
-    "line": 117,
-    "sha256": "b1301662f66d319b88f8b6aaca585b358d78a20da682d5a7d6993579f70e8a26"
-   }
-  ]
- }
 ]
