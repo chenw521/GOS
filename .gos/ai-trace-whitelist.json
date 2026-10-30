@@ -1631,7 +1631,7 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 220,
+        "line": 242,
         "sha256": "933a27fd36bd0cb7b717347d7cd2835cd1770d017dd0822ab1cd3015586145f3"
       }
     ]
