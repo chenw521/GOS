@@ -113,7 +113,29 @@ function probeEngine(opts) {
     try { r = spawnSync(c.name, ['--version'], { env, encoding: 'utf8' }); }
     catch { r = { error: new Error('spawn failed') }; }
     if (r && !r.error && r.status === 0) {
-      return { engine: c.name, tier: c.tier, version: (r.stdout || '').trim() || null, probed };
+      // Version presence is not capability: a binary that cannot map a user
+      // namespace (kernel policy, AppArmor, setuid helpers missing) would
+      // report a bubblewrap tier whose every spawn dies at setup. Probe with
+      // a minimal real sandbox before trusting the engine.
+      let cap = null;
+      try {
+        cap = spawnSync(c.name, [
+          '--ro-bind', '/usr', '/usr',
+          '--ro-bind-try', '/bin', '/bin',
+          '--ro-bind-try', '/lib', '/lib',
+          '--ro-bind-try', '/lib64', '/lib64',
+          '--dev', '/dev', '--proc', '/proc',
+          '--', '/bin/true',
+        ], { env, encoding: 'utf8', timeout: 15000 });
+      } catch { cap = { error: new Error('capability probe failed') }; }
+      if (cap && !cap.error && cap.status === 0) {
+        return { engine: c.name, tier: c.tier, version: (r.stdout || '').trim() || null, probed };
+      }
+      return {
+        engine: null, tier: 'lexical',
+        reason: `${c.name} present but cannot start a sandbox: ${cap && cap.error ? cap.error.message : 'uid map or mount setup refused'}`,
+        probed,
+      };
     }
   }
   return { engine: null, tier: 'lexical', reason: 'no sandbox engine found on PATH', probed };
