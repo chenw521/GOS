@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Fix changelog lint to honor a same-day promote: the today-obligation check also accepts the newest version section when its heading date is today, so folding [Unreleased] on release day no longer trips the gate (R-08) [2026-10-30]
+
 ## [1.0.0] - 2026-10-30
 
 - Change: pin the quick start to a GitHub-first install while the npm registry drop is pending — `npm i -g github:chenw521/GOS` becomes the primary install path with the scoped-package warning kept for the future registry release

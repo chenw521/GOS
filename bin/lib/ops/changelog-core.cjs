@@ -262,8 +262,13 @@ function validateStructure(text, opts) {
 
   const stampedToday = (e) => e.endsWith(`[${today}]`);
   const latest = parsed.versions[0];
+  // The obligation accepts three shapes of "today is recorded": a stamped
+  // [Unreleased] entry, a stamped entry in the newest version section, or a
+  // version section whose heading is dated today — the promote path strips
+  // entry stamps on release day, and the section heading carries that date.
   const met = parsed.unreleased.some(stampedToday)
-    || (latest !== undefined && latest.entries.some(stampedToday));
+    || (latest !== undefined && latest.entries.some(stampedToday))
+    || (latest !== undefined && latest.date === today);
   if (!met) {
     errors.push(`structure: today's obligation unmet — no entry stamped '[${today}]' (UTC) in [Unreleased] or the latest version section`);
   }

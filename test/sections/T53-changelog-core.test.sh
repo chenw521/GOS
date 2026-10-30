@@ -143,6 +143,28 @@ check('V4', () => {
   return r.ok ? true : `obligation via latest version rejected: ${JSON.stringify(r.errors)}`;
 });
 
+const DOC_PROMOTE_TODAY = [
+  '# Changelog',
+  '',
+  'All notable changes to this project are documented in this file.',
+  '',
+  '## [Unreleased]',
+  '',
+  '## [1.2.0] - 2026-09-19',
+  '',
+  '- Add lint command shell (R-06)',
+  '',
+  '## [1.1.0] - 2026-08-15',
+  '',
+  '- Add initial template set (R-02) [2026-08-15]',
+  '',
+].join('\n');
+
+check('V4b', () => {
+  const r = core.validateStructure(DOC_PROMOTE_TODAY, { todayUtc: '2026-09-19' });
+  return r.ok ? true : `same-day promote (empty [Unreleased], stamped entries stripped, section heading dated today) rejected: ${JSON.stringify(r.errors)}`;
+});
+
 const DOC_BAD_DATE = DOC_OK.replace('## [1.2.0] - 2026-09-01', '## [1.2.0] - 20260901');
 structReject('V5', DOC_BAD_DATE, { todayUtc: '2026-09-19' }, 'valid date');
 
@@ -258,7 +280,7 @@ EOF
 
 set +e; HOUT="$(node harness.cjs 2>&1)"; HRC=$?; set -e
 
-ALL_CASES="A0 A1 A2 A3 A4 A5 A6a A6b A6c A6d A7 SA SB SC SD SE SF V0 V1 V2 V3 V4 V5 V6 P1 P2 P3a P3b P4a P4b P4c P4d P4e Q1 Q2 M1 M2 Z1"
+ALL_CASES="A0 A1 A2 A3 A4 A5 A6a A6b A6c A6d A7 SA SB SC SD SE SF V0 V1 V2 V3 V4 V4b V5 V6 P1 P2 P3a P3b P4a P4b P4c P4d P4e Q1 Q2 M1 M2 Z1"
 for c in $ALL_CASES; do
   assert_contains "case $c" "CASE $c: OK" "$HOUT"
 done
