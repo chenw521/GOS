@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Change the READMEs around an SVG hero banner and a lean two-audience CLI shortlist: the full command surface now delegates to gos help and the COMMANDS registry, milestones carry dates reconstructed from the development ledger, and the positioning states GOS runs standalone with no interop with the tools it distilled from (R-01) [2026-10-30]
+
 - Document the shipped v1.0.0 reality across the public docs: drop the stale pre-release notice and GitHub Packages plan from both READMEs, pin the evidence numbers — 106 sections, 3300+ live assertions, 70+ lessons — mark v1.0 shipped and the npm drop pending in the milestone tables, repair a truncated sentence in the release guide, and align the CI job roster in the contributor guide (R-01) [2026-10-30]
 
 - Fix changelog lint to honor a same-day promote: the today-obligation check also accepts the newest version section when its heading date is today, so folding [Unreleased] on release day no longer trips the gate (R-08) [2026-10-30]

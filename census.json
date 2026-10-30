@@ -257,6 +257,11 @@
       "git": false,
       "npm": false,
       "note": "gate codemap byproduct — regenerable, first line carries generated-at + HEAD provenance (renamed from untested-fns.txt, D-20)"
+    },
+    "assets": {
+      "git": true,
+      "npm": false,
+      "note": "README hero banner (not shipped in the npm tarball)"
     }
   },
   "dispositions": []
