@@ -90,7 +90,7 @@ function acquireLockAt(lockPath, breakIt) {   // [R2-C2] path-parameterized lock
       // keeps requiring --break-lock.
       console.error(`⚠ stale GOS lock (pid ${info && info.pid} not running) — auto-recovered`);
     } else if (!breakIt || !stale) {
-      if (mtimeStale) console.error(`${state.CONTRACTS.state_semantics.lockBlocked} (pid ${info && info.pid}) — heartbeat stale >120s: re-run with --break-lock`);
+      if (mtimeStale) console.error(`${state.CONTRACTS.state_semantics.lockBlocked} (pid ${info && info.pid}) — heartbeat stale >120s but the pid is ALIVE: verify with \`ps -p ${info && info.pid}\` before any action; --break-lock is only safe once the pid is confirmed dead`);
       else console.error(`${state.CONTRACTS.state_semantics.lockBlocked} (pid ${info && info.pid} is ALIVE): wait, or last resort rm ${lockPath}`);
       process.exit(1);
     }
@@ -125,8 +125,8 @@ function acquireLock(breakLock) {
       console.error(`⚠ stale GOS lock (pid ${info && info.pid} not running) — auto-recovered`);
     } else if (!breakLock || !stale) {
       if (mtimeStale) {
-        console.error(`${state.CONTRACTS.state_semantics.lockBlocked} (pid ${info && info.pid}, since ${info && info.started_at}) — lock heartbeat stale >120s:`);
-        console.error('  re-run with --break-lock to clear it (pid may be recycled — container PID reuse).');
+        console.error(`${state.CONTRACTS.state_semantics.lockBlocked} (pid ${info && info.pid}, since ${info && info.started_at}) — lock heartbeat stale >120s but the pid is ALIVE:`);
+        console.error(`  verify with \`ps -p ${info && info.pid}\` first; --break-lock is only safe once the pid is confirmed dead (container PID reuse can fake liveness).`);
       } else {
         console.error(`${state.CONTRACTS.state_semantics.lockBlocked} (pid ${info && info.pid} is ALIVE, since ${info && info.started_at}):`);
         console.error('  wait for it to finish, or run from another directory.');

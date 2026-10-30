@@ -154,21 +154,66 @@ function defaultStateReader(rootDir) {
   catch (e) { return { corrupt: true, error: e && e.message }; }
 }
 
-// Real spawn: runs the composed argv to completion under the wall timeout.
-// Returns the spawnSync shape the loop scores.
+// Real spawn: an event-loop-alive child process. The loop's own timers keep
+// firing during the wait — run-lock heartbeats stay fresh, and the idle
+// timeout (reset on every stream chunk) kills a stalled stream live instead
+// of being classified after the fact. Resolves the spawnSync shape the
+// scorer consumes; kill reasons ride on the error object.
 function loopSpawnRunner(spec, ctx) {
-  try {
-    return spawnSync(spec.argv[0], spec.argv.slice(1), {
-      cwd: spec.cwd,
-      env: spec.env,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-      timeout: ctx.wallMs,
-      maxBuffer: SPAWN_MAX_BUFFER,
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = spawnChild(spec.argv[0], spec.argv.slice(1), {
+        cwd: spec.cwd,
+        env: spec.env,
+        detached: true,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+    } catch (e) {
+      resolve({ status: null, stdout: '', stderr: '', error: e && e.message ? e : new Error(e && e.message || 'spawn failed') });
+      return;
+    }
+    const cap = SPAWN_MAX_BUFFER;
+    let out = '';
+    let err = '';
+    let idleTimer = null;
+    let wallTimer = null;
+    let killed = null;
+    let settled = false;
+    const finish = (payload) => {
+      if (settled) return;
+      settled = true;
+      if (idleTimer) clearTimeout(idleTimer);
+      if (wallTimer) clearTimeout(wallTimer);
+      resolve(payload);
+    };
+    const kill = (why) => {
+      if (killed) return;
+      killed = why;
+      try { process.kill(-child.pid, 'SIGKILL'); } catch { /* group gone */ try { child.kill('SIGKILL'); } catch { /* already gone */ } }
+    };
+    const armIdle = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      const ms = Number(ctx && ctx.idleMs);
+      if (!(ms > 0)) return;
+      idleTimer = setTimeout(() => kill('idle'), ms);
+      if (typeof idleTimer.unref === 'function') idleTimer.unref();
+    };
+    child.stdout.on('data', (d) => { out += d; if (out.length > cap) out = out.slice(out.length - cap); armIdle(); });
+    child.stderr.on('data', (d) => { err += d; if (err.length > cap) err = err.slice(err.length - cap); armIdle(); });
+    const wallMs = Number(ctx && ctx.wallMs);
+    if (wallMs > 0) {
+      wallTimer = setTimeout(() => kill('wall'), wallMs);
+      if (typeof wallTimer.unref === 'function') wallTimer.unref();
+    }
+    armIdle();
+    child.on('error', (e) => finish({ status: null, stdout: out, stderr: err, error: e }));
+    child.on('close', (code) => {
+      if (killed === 'idle') finish({ status: null, stdout: out, stderr: err, error: Object.assign(new Error('spawn idle timeout'), { idle: true, killed: true }) });
+      else if (killed === 'wall') finish({ status: null, stdout: out, stderr: err, error: Object.assign(new Error('spawn wall timeout'), { killed: true }) });
+      else finish({ status: code, stdout: out, stderr: err });
     });
-  } catch (e) {
-    return { status: null, stdout: '', stderr: '', error: e && e.message ? e : new Error(e && e.message || 'spawn failed') };
-  }
+  });
 }
 
 // Real detach: spawns the CLI run command detached from this parent. The
@@ -441,10 +486,16 @@ async function drive(ctx) {
   }
 
   // Heartbeat during spawn waits so a long-running spawn never makes the
-  // runner's lock look stale.
+  // runner's lock look stale. The run lock lives in the store; the repo-root
+  // .gos/.lock this CLI process holds gets its mtime refreshed too, so a
+  // long-lived runner never looks abandoned to a concurrent reader.
   const withHeartbeat = async (fn) => {
     if (!(heartbeatIntervalMs > 0)) return fn();
-    const iv = setInterval(() => { store.heartbeatRunLock(rootDir); }, heartbeatIntervalMs);
+    const rootLock = path.join(rootDir, '.gos', '.lock');
+    const iv = setInterval(() => {
+      store.heartbeatRunLock(rootDir);
+      try { fs.utimesSync(rootLock, new Date(), new Date()); } catch { /* not held / gone */ }
+    }, heartbeatIntervalMs);
     if (typeof iv.unref === 'function') iv.unref();
     try { return await fn(); } finally { clearInterval(iv); }
   };
@@ -596,6 +647,24 @@ async function drive(ctx) {
       return endWith({ ok: false, status: 'paused', paused: true, reason: 'no-head', guidance: store.guidanceFor('auto.breaker.advanceCheckFailed') });
     }
 
+    // Dirty-file baseline: whatever was already uncommitted belongs to
+    // someone outside this loop (a supervising human, another terminal).
+    // The spawn carries the list so its in-spawn stage commit can refuse to
+    // sweep those files into the advance commit. Bounded: pathological
+    // working trees degrade to no baseline (guard off) rather than a
+    // multi-megabyte env.
+    let dirtyBaseline = null;
+    try {
+      const st = gitRunner(['status', '--porcelain', '-uall'], rootDir);
+      if (st && st.status === 0) {
+        const paths = String(st.stdout || '').split('\n').map((l) => l.slice(3).trim())
+          .filter(Boolean).map((p) => p.replace(/^"|"$/g, ''))
+          .slice(0, 400);
+        if (paths.length) dirtyBaseline = JSON.stringify(paths);
+      }
+    } catch { /* status unreadable: guard off */ }
+    if (dirtyBaseline) spec.env.GOS_AUTO_DIRTY_BASELINE = dirtyBaseline;
+
     // ---- spawn under heartbeat + wall clock ----
     store.heartbeatRunLock(rootDir);
     const startedAtMs = now();
@@ -676,6 +745,7 @@ async function score(ctx) {
   const { iter, spec, result, streamText, b, stage, gitRunner, rootDir, endedAtMs, idleMs, adapter, baseline, postIdentity, mutation } = ctx;
 
   const runnerError = result && result.error;
+  const idleKilled = !!(runnerError && runnerError.idle === true);
   const timedOut = !!(runnerError && (runnerError.code === 'ETIMEDOUT' || runnerError.killed === true || /timed?out/i.test(String(runnerError.message || ''))));
   const spawnBroke = !!runnerError;
 
@@ -689,7 +759,8 @@ async function score(ctx) {
 
   let signal = null;
   let detail = null;
-  if (timedOut) { signal = 'wall-timeout'; detail = 'spawn exceeded the wall clock'; }
+  if (idleKilled) { signal = 'idle-timeout'; detail = 'stream stalled: no output chunk for the idle limit (killed live)'; }
+  else if (timedOut) { signal = 'wall-timeout'; detail = 'spawn exceeded the wall clock'; }
   else if (spawnBroke) { signal = 'spawn-error'; detail = String(runnerError.message || 'spawn error'); }
   else if (hits.length) {
     signal = 'task-failed';
@@ -926,6 +997,7 @@ module.exports = {
   WORK_BRANCH_PREFIX,
   DEFAULT_HEARTBEAT_INTERVAL_MS,
   spawnEnvTemplate,
+  loopSpawnRunner,
   workBranchName,
   identityOf,
   identityDiff,
