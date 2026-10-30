@@ -3,11 +3,8 @@
 [English](README.md) | [简体中文](README.zh-CN.md)
 
 [![CI](https://github.com/chenw521/GOS/actions/workflows/ci.yml/badge.svg)](https://github.com/chenw521/GOS/actions/workflows/ci.yml)
-> [!NOTE]
-> Not yet published — GOS is being polished before its first release
-> (private beta on GitHub Packages or a direct public-npm launch; the
-> decision comes after polishing). The public-npm name is reserved.
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Release](https://img.shields.io/badge/release-v1.0.0-blue.svg)](https://github.com/chenw521/GOS/releases/tag/v1.0.0)
 
 > **A deterministic execution layer and adaptive workflow for AI coding agents.**
 > Small tasks pass free; big projects get full governance with adversarial challenge.
@@ -37,9 +34,10 @@ zero-configuration workflow with a deterministic CLI underneath.
 
 - **Self-hosting**: GOS is developed *with* GOS. The repo itself runs as a Lv4
   project — 20+ tasks/phases shipped through the full pipeline
-  (THINK → PLAN → BUILD → REVIEW → VERIFY → SHIP), 30 project lessons accumulated,
-  every release since v0.11 traceable to its decisions and verified truths. The
-  regression suite — 64 section suites, 1500+ live assertions — is the CI spine.
+  (THINK → PLAN → BUILD → REVIEW → VERIFY → SHIP), 70+ project lessons
+  accumulated, every release traceable to its decisions and verified truths.
+  The regression suite — 106 section suites, 3300+ live assertions — is the
+  CI spine.
 - **Benchmark in progress**: an external task-suite benchmark is being rebuilt
   against current versions; earlier runs were retired with the versions they
   measured. Numbers will be published when a defensible methodology holds.
@@ -315,7 +313,7 @@ GOS runs standalone.
 GOS/
 ├── bin/gos.cjs          # zero-dep* CLI: hard gates, semantic layer, atomic commits
 │                        #   (*single dependency: acorn, for the AST call-graph)
-├── skills/              # 8 thin skills (<55 lines: routing table + HARD-GATE) + lazy refs
+├── skills/              # 8 thin skills (routing table + HARD-GATE) + lazy refs
 │   ├── gos-router/      # entry: assess → recommend level → chain stages
 │   ├── gos-project/     # Lv4 chief designer: PROJECT/ROADMAP/DECISIONS lifecycle
 │   ├── gos-think/       # per-gray-area dialogue + D-NN decisions + Red Team
@@ -341,9 +339,10 @@ three-layer architecture rather than carried over wholesale.
 | v0.1–v0.2 skills + templates + adapters | ✅ |
 | Deterministic CLI layer (gates, semantic checks, truth evidence) | ✅ |
 | Edge-network codemap 2.0 (fn-level call graph, impact closure) | ✅ |
-| Lv4 phase lifecycle, dogfooded through v0.11→v0.15 | ✅ |
-| npm distribution (GitHub Packages beta → public npm at launch) + CI | ongoing |
-| v1.0 public release | 📋 |
+| Lv4 phase lifecycle, dogfooded through the self-hosted project | ✅ |
+| v1.0 public release (GitHub, 2026-10-30) | ✅ |
+| public npm registry drop (`@chenw521/gos`) | 📋 pending |
+| External task-suite benchmark (rebuild in progress) | 📋 |
 
 ## CLI reference
 

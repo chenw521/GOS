@@ -54,9 +54,11 @@ missing it prints a notice and exits 0. Remove it anytime with
 
 ## Local Green = CI Green
 
-CI (`.github/workflows/ci.yml`) runs five jobs: `gate`, `sections`, `pack`,
-`masters`, and `commitlint` (pull requests only). Everything except the last
-two is reproducible with four local commands — run them before every PR:
+CI (`.github/workflows/ci.yml`) runs: `gate` (audit mode), `sections`
+(Node 20 + Node 22 matrix), `pack` (npm pack manifest), `masters`
+(template consistency), `commitlint` (pull requests only) and a
+direct-push guard (main pushes only). Everything except the last two is
+reproducible with four local commands — run them before every PR:
 
 ```bash
 node bin/gos.cjs gate all --audit   # gate job: hard gates in audit mode

@@ -41,9 +41,9 @@ the commit SHA, so a stage cannot silently run against a moving ref.
 ## npm publish
 
 - Publishes to **registry.npmjs.org** as the scoped package
- `@chenw521/gos` (name ruling ; the registry itself moved from the
- GitHub Packages private beta to npmjs per — `publishConfig`
-  points at npmjs and `.npmrc` is deliberately not tracked).
+  `@chenw521/gos` — the registry itself moved from the GitHub
+  Packages private beta to npmjs; `publishConfig`
+  points at npmjs and `.npmrc` is deliberately not tracked.
 - Credentials come from the `NPM_TOKEN` secret; validate runs a real
   credential check (`npm whoami` class) before anything irreversible.
 - Scoped packages default to restricted access; public visibility is an
