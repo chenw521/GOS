@@ -15,7 +15,9 @@
       "ts": "2026-10-30T05:45:10.957Z"
     }
   },
-  "approvals": {},
+  "approvals": {
+    "ARCHIVE": "2026-10-30T06:09:58.813Z"
+  },
   "spec_path": ".gos/task/03a3ab58/spec.md",
   "plan_path": ".gos/task/03a3ab58/plan.md",
   "project": false,
@@ -73,5 +75,6 @@
       "what": "lazy-freeze:spec"
     }
   ],
-  "spec_gate_version": 3
+  "spec_gate_version": 3,
+  "changelog_user_summary": "Harden auto supervision: spawned stage commits exclude the supervisor's pre-existing uncommitted files via a spawn-time dirty baseline, and the spawn runners go async with process-group kills — run-lock heartbeats stay live during waits, stalled streams die at the idle limit, and lock advice never suggests break-lock against a live pid"
 }
