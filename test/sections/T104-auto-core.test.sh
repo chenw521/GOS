@@ -1224,5 +1224,81 @@ EOF
 C19_OUT="$(node run-c19.cjs 2>&1 | tail -n 1)"
 t104_eq "workspace-writing profiles grant the repo root; restricted never does" "OK" "$C19_OUT"
 
+# Spawn baseline guard: files already uncommitted when the spawn started are
+# never swept into the advance commit, with a loud exclusion line; the
+# session's own new files still land.
+t104_case c20
+mkdir -p .gos/task/p0 .gos/logs test
+printf '# Spec\n\np0 auto spec\n' > .gos/task/p0/spec.md
+t104_state THINK 3 ',"spec_path":".gos/task/p0/spec.md"' > .gos/state.json
+cat > run-c20.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const problems = [];
+const world = process.cwd();
+store.create({ mode: 'on', rootDir: world, limits: { N: 3, K: 9, B: 9 } });
+// supervisor dirt: written after the case world settled, before the loop
+fs.writeFileSync(path.join(world, 'test', 'supervisor-scratch.txt'), 'supervisor scratch\n');
+const spawnRunner = (spec) => {
+  if (spec.roWorkspace) return { status: 0, stdout: 'REDTEAM-FINDINGS: 0\n', stderr: '' };
+  if (!spec.env || !spec.env.GOS_AUTO_DIRTY_BASELINE) problems.push('spawn env lacks the dirty baseline');
+  else if (!JSON.parse(spec.env.GOS_AUTO_DIRTY_BASELINE).includes('test/supervisor-scratch.txt')) problems.push('baseline missing the supervisor file');
+  fs.writeFileSync(path.join(world, 'test', 'session-work.txt'), 'session output\n');
+  const r = spawnSync(process.execPath, [path.join(GR, 'bin', 'gos.cjs'), 'commit', 'think'], {
+    cwd: world, env: { ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_DIRTY_BASELINE: spec.env.GOS_AUTO_DIRTY_BASELINE }, encoding: 'utf8',
+  });
+  const childAll = String(r.stdout || '').concat(r.stderr || '');
+  if (!(childAll.includes('spawn baseline guard') && childAll.includes('test/supervisor-scratch.txt'))) problems.push('exclusion warning missing');
+  return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
+};
+const stateReader = () => { try { return JSON.parse(fs.readFileSync(path.join(world, '.gos', 'state.json'), 'utf8')); } catch { return null; } };
+(async () => {
+  await loop.createLoop({ rootDir: world, host: 'gos-fixture-host', env: { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' }, maxIterations: 1, spawnRunner, stateReader }).loop.run();
+  const show = spawnSync('git', ['show', '--name-only', '--format=', 'HEAD'], { cwd: world, encoding: 'utf8' });
+  const committed = String(show.stdout || '');
+  if (committed.includes('supervisor-scratch.txt')) problems.push('supervisor file swept into the advance commit');
+  if (!committed.includes('test/session-work.txt')) problems.push('session file missing from the advance commit');
+  const still = fs.existsSync(path.join(world, 'test', 'supervisor-scratch.txt'));
+  if (!still) problems.push('supervisor file vanished');
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+C20_OUT="$(node run-c20.cjs 2>&1 | tail -n 1)"
+t104_eq "spawn baseline guard excludes supervisor dirt from advance commits" "OK" "$C20_OUT"
+
+# Async spawn runner: idle kills a silent stream live, the wall clock kills a
+# chatty one, and a healthy command resolves rc 0 — all with the event loop
+# (and therefore the runner's heartbeats) alive.
+t104_case c21
+mkdir -p .gos/logs
+cat > run-c21.cjs <<'EOF'
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const problems = [];
+(async () => {
+  const t0 = Date.now();
+  const idle = await loop.loopSpawnRunner({ argv: ['/bin/sh', '-c', 'sleep 30'], env: process.env, cwd: process.cwd() }, { wallMs: 25000, idleMs: 1000 });
+  const idleMs = Date.now() - t0;
+  if (!(idle.error && idle.error.idle === true && idle.error.killed === true)) problems.push('silent stream not idle-killed: ' + JSON.stringify(idle.error && idle.error.message));
+  if (idleMs > 5000) problems.push('idle kill arrived late: ' + idleMs + 'ms');
+  const t1 = Date.now();
+  const wall = await loop.loopSpawnRunner({ argv: ['/bin/sh', '-c', 'while :; do echo tick; sleep 0.2; done'], env: process.env, cwd: process.cwd() }, { wallMs: 1500, idleMs: 10000 });
+  const wallMs = Date.now() - t1;
+  if (!(wall.error && wall.error.killed === true)) problems.push('chatty stream not wall-killed');
+  if (wallMs > 4000) problems.push('wall kill arrived late: ' + wallMs + 'ms');
+  if (!/tick/.test(String(wall.stdout || ''))) problems.push('stream chunks not captured');
+  const okRun = await loop.loopSpawnRunner({ argv: ['/bin/sh', '-c', 'echo healthy'], env: process.env, cwd: process.cwd() }, { wallMs: 5000, idleMs: 2000 });
+  if (okRun.status !== 0 || !String(okRun.stdout || '').includes('healthy')) problems.push('healthy run misresolved: ' + JSON.stringify(okRun.status));
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+C21_OUT="$(node run-c21.cjs 2>&1 | tail -n 1)"
+t104_eq "async spawn runner: live idle kill, live wall kill, healthy resolution" "OK" "$C21_OUT"
+
 echo "--- T104 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]

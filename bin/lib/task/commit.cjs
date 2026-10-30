@@ -475,6 +475,23 @@ function cmdCommit(argv) {
         '.github/', 'CHANGELOG.md', '.changes.md', 'hooks/', 'scripts/', 'commitlint.config.yaml',
         'census.json'];
       for (const p of ADD_PATHS) { try { execFileSync('git', ['add', p], { stdio: 'pipe' }); } catch { /* tolerant */ } }
+      // Spawned-session hygiene: files already uncommitted when this spawn
+      // started belong to someone outside the loop; the advance commit must
+      // not sweep them in. The baseline rides the spawn env; the state file
+      // itself stays stageable (the advance is meaningless without it).
+      if (process.env.GOS_AUTO_DIRTY_BASELINE && process.env.GOS_AUTO_SPAWNED) {
+        try {
+          const baseline = JSON.parse(process.env.GOS_AUTO_DIRTY_BASELINE);
+          const staged = execFileSync('git', ['diff', '--cached', '--name-only'], { stdio: ['ignore','pipe','pipe'] })
+            .toString().split('\n').map((s) => s.trim()).filter(Boolean);
+          const CRITICAL = new Set(['.gos/state.json']);
+          const excluded = staged.filter((p) => baseline.includes(p) && !CRITICAL.has(p));
+          if (excluded.length) {
+            execFileSync('git', ['reset', 'HEAD', '--', ...excluded], { stdio: 'pipe' });
+            console.warn(`⚠ excluded ${excluded.length} pre-existing dirty path(s) from the advance commit (spawn baseline guard): ${excluded.slice(0, 5).join(', ')}${excluded.length > 5 ? ' …' : ''}`);
+          }
+        } catch { /* baseline unusable: normal staging stands */ }
+      }
       execFileSync('git', ['commit', ...(allowEmptyAdvance ? ['--allow-empty'] : []), '-m', msg], { stdio: 'pipe' });
       const sha = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { stdio: 'pipe' }).toString().trim();
       console.log(`${core.CONTRACTS.state_semantics.committed} ${stage}: ${sha}`);

@@ -15,7 +15,7 @@
 
 const crypto = require('node:crypto');
 const path = require('node:path');
-const { spawnSync } = require('node:child_process');
+const { spawn: spawnChild, spawnSync } = require('node:child_process');
 
 const store = require('./store.cjs');
 const launcher = require('./launcher.cjs');
@@ -143,24 +143,54 @@ function evaluateClearance(rounds) {
   };
 }
 
-// Real spawn: runs the composed argv to completion under the wall timeout.
-// Returns the spawnSync shape runRound scores.
+// Event-loop-alive review spawn (same contract as the working spawn): the
+// wall clock kills live and the runner's own timers keep firing while the
+// round runs. Returns the spawnSync shape runRound scores.
 function redteamSpawnRunner(spec, ctx) {
   if (!Array.isArray(spec.argv) || spec.argv.length === 0) {
-    return { status: null, stdout: '', stderr: '', error: new Error('no spawn argv composed (lexical tier without a host command)') };
+    return Promise.resolve({ status: null, stdout: '', stderr: '', error: new Error('no spawn argv composed (lexical tier without a host command)') });
   }
-  try {
-    return spawnSync(spec.argv[0], spec.argv.slice(1), {
-      cwd: spec.cwd,
-      env: spec.env,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-      timeout: ctx.wallMs,
-      maxBuffer: SPAWN_MAX_BUFFER,
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = spawnChild(spec.argv[0], spec.argv.slice(1), {
+        cwd: spec.cwd,
+        env: spec.env,
+        detached: true,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+    } catch (e) {
+      resolve({ status: null, stdout: '', stderr: '', error: e instanceof Error ? e : new Error(String(e)) });
+      return;
+    }
+    const cap = SPAWN_MAX_BUFFER;
+    let out = '';
+    let err = '';
+    let wallTimer = null;
+    let killed = false;
+    let settled = false;
+    const finish = (payload) => {
+      if (settled) return;
+      settled = true;
+      if (wallTimer) clearTimeout(wallTimer);
+      resolve(payload);
+    };
+    const wallMs = Number(ctx && ctx.wallMs);
+    if (wallMs > 0) {
+      wallTimer = setTimeout(() => {
+        killed = true;
+        try { process.kill(-child.pid, 'SIGKILL'); } catch { /* group gone */ try { child.kill('SIGKILL'); } catch { /* already gone */ } }
+      }, wallMs);
+      if (typeof wallTimer.unref === 'function') wallTimer.unref();
+    }
+    child.stdout.on('data', (d) => { out += d; if (out.length > cap) out = out.slice(out.length - cap); });
+    child.stderr.on('data', (d) => { err += d; if (err.length > cap) err = err.slice(err.length - cap); });
+    child.on('error', (e) => finish({ status: null, stdout: out, stderr: err, error: e }));
+    child.on('close', (code) => {
+      if (killed) finish({ status: null, stdout: out, stderr: err, error: Object.assign(new Error('review round exceeded the wall clock'), { killed: true }) });
+      else finish({ status: code, stdout: out, stderr: err });
     });
-  } catch (e) {
-    return { status: null, stdout: '', stderr: '', error: e instanceof Error ? e : new Error(String(e)) };
-  }
+  });
 }
 
 // Wall-clock ceiling for one round: explicit ctx.wallMs, else the shared

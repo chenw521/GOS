@@ -1,77 +1,82 @@
 {
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
-  "level": 2,
+  "level": 1,
   "current_stage": "DONE",
   "completed_stages": [
-    "INTENT",
-    "THINK",
     "BUILD",
     "VERIFY"
   ],
   "intent": {
-    "summary": "Cure between-tasks false reds: with a DONE-state task left in state.json, gos gate all downgrades coverage/diff-hit/manifest-stale checks to advisory lines with an init hint instead of hard-failing (twice-lived: P0 closeout manifest-stale 2026-10-29, dffa50f0 2026-09-23)",
+    "summary": "Harden auto supervision per user rulings 2026-10-30: (1) dirty-snapshot guard — the loop passes the pre-spawn dirty-file baseline into the spawn env and in-spawn stage commits exclude those paths with a loud warning, so a runner session can never sweep the supervisor's uncommitted edits into an advance commit (live incident: VERIFY advance swept a half-written cli.cjs); (2) async spawn execution — replace the synchronous spawn runner with an event-loop-alive child process so run-lock heartbeats fire during spawn waits and the idle timeout kills a stalled stream live instead of classifying after the fact (also cures status being blocked by a stale-heartbeat concurrency guard and its dangerous break-lock advice against a live runner)",
     "confirmed": true,
     "confirmation": {
       "mode": "headless-auto",
-      "ts": "2026-10-29T14:18:41.344Z"
+      "ts": "2026-10-30T05:45:10.957Z"
     }
   },
   "approvals": {
-    "THINK": "2026-10-30T01:46:59.243Z",
-    "ARCHIVE": "2026-10-30T03:28:50.814Z"
+    "ARCHIVE": "2026-10-30T06:09:58.813Z"
   },
-  "spec_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-cure-between-tasks-false-reds-/task/4860b9f0/spec.md",
-  "plan_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-cure-between-tasks-false-reds-/task/4860b9f0/plan.md",
+  "spec_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-harden-auto-supervision-per-us/task/03a3ab58/spec.md",
+  "plan_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-harden-auto-supervision-per-us/task/03a3ab58/plan.md",
   "project": false,
   "requirements": [
     {
       "id": "R-01",
-      "text": "Cure between-tasks false reds: with a DONE-state task left in state.json, gos gate all downgrades coverage/diff-hit/m...",
+      "text": "Harden auto supervision per user rulings 2026-10-30: (1) dirty-snapshot guard — the loop passes the pre-spawn dirty-f...",
       "phase": null,
-      "level": 2
+      "level": 1
     }
   ],
   "decisions": [],
   "observable_truths": [
     {
       "id": "T1",
-      "description": "With a DONE+completed_at (archived) task left in state.json, node bin/gos.cjs gate all exits 0 and prints one coverage idle advisory and one semantic idle advisory, each carrying the gos init hint; standalone gate coverage and gate semantic behave the same; --json reports verdict pass with the idle lines in advisories",
+      "description": "spawn baseline guard: files already uncommitted at spawn time are excluded from the in-spawn advance commit with a loud line; the session's own files still land",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\"test/run-sections.sh\",\"T33\"]",
-        "output_excerpt": "✓ T33.3a stale manifest → gate all non-zero (exit 1)",
-        "artifact_path": ".gos/cache/section-runs/20261030T024631Z-full4587.log",
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
+        "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
+        "artifact_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-harden-auto-supervision-per-us/task/03a3ab58/evidence-t104.md",
         "replay": true
       }
     },
     {
       "id": "T2",
-      "description": "A live task with a stale run-manifest still fails gate all (exit 1, manifest-stale), and a bare-DONE state without completed_at keeps task-level checks live - the downgrade is exclusive to the archived window",
+      "description": "async spawn runner: a silent stream is killed at the idle limit within a second of the last chunk, a chatty stream at the wall limit, and a healthy command resolves rc 0",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\"test/run-sections.sh\",\"T33\"]",
-        "output_excerpt": "✓ T33.3a stale manifest → gate all non-zero (exit 1)",
-        "artifact_path": ".gos/cache/section-runs/20261030T024631Z-full4587.log",
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
+        "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
+        "artifact_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-harden-auto-supervision-per-us/task/03a3ab58/evidence-t104.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T3",
+      "description": "lock advice: a stale-heartbeat lock whose pid is alive never suggests --break-lock — it tells the user to verify the pid first",
+      "verified": true,
+      "evidence": {
+        "command": "[\"node\",\".gos/task/03a3ab58/evidence-lock-advice.cjs\"]",
+        "output_excerpt": "aliveBranch=1 breakLockAdvice=0 exit=1 OK",
+        "artifact_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-harden-auto-supervision-per-us/task/03a3ab58/evidence-lock-advice.cjs",
         "replay": true
       }
     }
   ],
-  "gaps": [
+  "gaps": [],
+  "activation_source": "headless",
+  "task_head": "03a3ab58044fc5e715869839dc41785fdf8db087",
+  "spec_sha256": "38b3dd848ec093e73a7c06090cc7d8d992a3df9a6948d71b45883d80a7256ea8",
+  "lazy_freeze_audit": [
     {
-      "id": "G-1793288731499",
-      "type": "major",
-      "description": "Fluid back to INTENT: sandbox git-config mask broke the advance commit; re-running commit with GIT_CONFIG_GLOBAL override",
-      "status": "fixed",
-      "resolution": "advance commit retried and landed as ea462f5 with GIT_CONFIG_GLOBAL override after the sandbox git-config mask and cold npx cache broke the first attempt; stage re-advanced cleanly",
-      "resolved_at": "2026-10-29T15:50:25.463Z"
+      "at": "2026-10-30T06:09:44.571Z",
+      "what": "lazy-freeze:spec"
     }
   ],
-  "activation_source": "headless",
-  "task_head": "4860b9f07a5b41e0728ae6f999ad5b4825ff763c",
   "spec_gate_version": 3,
-  "spec_sha256": "5ab61b44dc4ade9a8b68676b3b0b2b484901929fadacc5c96bcd66ffab40de27",
-  "changelog_user_summary": "Cure between-tasks gate false reds: with an archived task marked DONE plus completed_at left in state.json, gate all/coverage/semantic downgrade the coverage and diff-hit/manifest checks to advisory lines carrying the gos init hint instead of hard-failing on dead-task state, while bare DONE keeps task-level checks live and --audit output is unchanged",
+  "changelog_user_summary": "Harden auto supervision: spawned stage commits exclude the supervisor's pre-existing uncommitted files via a spawn-time dirty baseline, and the spawn runners go async with process-group kills — run-lock heartbeats stay live during waits, stalled streams die at the idle limit, and lock advice never suggests break-lock against a live pid",
   "checkpoints": [],
-  "completed_at": "2026-10-30T03:29:08.056Z"
+  "completed_at": "2026-10-30T06:57:36.542Z"
 }
