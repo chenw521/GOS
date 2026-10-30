@@ -117,4 +117,62 @@ else echo "  ✗ T33.7 mixed diff wrongly downgraded (rc=$GRC)"; printf '%s\n' "
 git checkout -q -- bin/gos.cjs 2>/dev/null || true
 git checkout -q -- .changes.md 2>/dev/null || true
 
+# --- .8 archived-idle window: DONE + completed_at (the archive transaction's
+# marker, retained in state.json until the next init) downgrades the coverage
+# and semantic branches to advisory lines carrying the init hint; bare DONE
+# (no completed_at) keeps every task-level check live. Stale manifest + clean
+# tree is the between-tasks false-red shape (deadbeef hashes can never match).
+printf '{"schema_version":2,"sections_run":[],"head_tree":"deadbeef","patch_sha":"deadbeef","finished_at":"z"}' > .gos/cache/run-manifest.json
+node -e "
+const fs=require('fs');
+const s=JSON.parse(fs.readFileSync('.gos/state.json','utf8'));
+s.current_stage='DONE'; s.checkpoints=[]; s.completed_at='2026-10-30T00:00:00.000Z';
+fs.writeFileSync('.gos/state.json', JSON.stringify(s,null,2)+'\n');
+"
+set +e; G=$(node "$GOS" gate all 2>&1); GRC=$?; set +e
+assert_exit "T33.8a archived-idle gate all exit 0" 0 "$GRC"
+assert_contains "T33.8b coverage idle advisory" "coverage idle" "$G"
+assert_contains "T33.8c semantic idle advisory" "semantic idle" "$G"
+assert_contains "T33.8d idle lines carry the init hint" "gos init" "$G"
+set +e; C=$(node "$GOS" gate coverage 2>&1); CRC=$?; set +e
+assert_exit "T33.8e gate coverage standalone idle exit 0" 0 "$CRC"
+assert_contains "T33.8f coverage idle line present" "coverage idle" "$C"
+if printf '%s\n' "$C" | grep -q "semantic idle"; then echo "  ✗ T33.8g coverage run leaked the semantic idle line"; FAIL=$((FAIL+1)); else echo "  ✓ T33.8g coverage run has no semantic idle line"; PASS=$((PASS+1)); fi
+set +e; S=$(node "$GOS" gate semantic 2>&1); SRC=$?; set +e
+assert_exit "T33.8h gate semantic standalone idle exit 0" 0 "$SRC"
+assert_contains "T33.8i semantic idle line present" "semantic idle" "$S"
+set +e; J=$(node "$GOS" gate all --json 2>&1); JRC=$?; set +e
+assert_exit "T33.8j gate all --json idle exit 0" 0 "$JRC"
+VD=$(printf '%s\n' "$J" | sed -n '/^{/,$p' | python3 -c '
+import json,sys
+d=json.load(sys.stdin)
+cov=any("coverage idle" in a for a in d.get("advisories",[]))
+sem=any("semantic idle" in a for a in d.get("advisories",[]))
+print("{}|{}|{}".format(d.get("verdict"), int(cov), int(sem)))
+' 2>/dev/null)
+assert_contains "T33.8k json verdict pass with both idle advisories" "pass|1|1" "$VD"
+set +e; A=$(node "$GOS" gate all --audit 2>&1); set +e
+assert_contains "T33.8l audit skip line unchanged" "no active task" "$A"
+if printf '%s\n' "$A" | grep -q "idle"; then echo "  ✗ T33.8m audit output picked up idle lines"; FAIL=$((FAIL+1)); else echo "  ✓ T33.8m audit output unchanged (no idle lines)"; PASS=$((PASS+1)); fi
+node -e "
+const fs=require('fs');
+const s=JSON.parse(fs.readFileSync('.gos/state.json','utf8'));
+delete s.completed_at;
+fs.writeFileSync('.gos/state.json', JSON.stringify(s,null,2)+'\n');
+"
+set +e; B=$(node "$GOS" gate all 2>&1); BRC=$?; set +e
+assert_exit "T33.8n bare-DONE keeps task-level checks live (exit 1)" 1 "$BRC"
+assert_contains "T33.8o bare-DONE still fails manifest stale" "manifest stale" "$B"
+node -e "
+const fs=require('fs');
+const s=JSON.parse(fs.readFileSync('.gos/state.json','utf8'));
+s.completed_at='2026-10-30T00:00:00.000Z';
+fs.writeFileSync('.gos/state.json', JSON.stringify(s,null,2)+'\n');
+"
+printf 'post-archive touch\n' >> docs/plain.md
+git add -A && git commit -q -m "post-archive docs touch"
+set +e; P=$(node "$GOS" gate all 2>&1); PRC=$?; set +e
+assert_exit "T33.8p post-archive docs commit stays green (idle window)" 0 "$PRC"
+assert_contains "T33.8q idle advisories present on post-archive commit" "coverage idle" "$P"
+
 t33_teardown

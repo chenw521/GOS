@@ -705,6 +705,15 @@ function cmdGate(args) {
   // gone from .gos/task/, so task-level checks cannot run against it.
   const auditNoState = !state || (state.current_stage === 'DONE' && process.argv.includes('--audit'));
   if (auditNoState) console.log('⚠ gate audit: no active task — task-level checks skipped, structural layer only');
+  // Between-tasks idle: DONE + completed_at is the archive transaction's
+  // "this task WAS archived" marker (the same discriminator the archive
+  // idempotency path trusts), retained in state.json until the next init.
+  // In that window the coverage and semantic branches downgrade to loud
+  // advisory lines carrying the init hint — dead-task state must not feed
+  // live-task checks. Bare DONE (no completed_at) keeps every task-level
+  // check live.
+  const doneIdle = !!(state && state.current_stage === 'DONE' && state.completed_at);
+  const idleAdvisories = [];
   // B-19 [R3-F4] lock reordering: builtin layer (incl. semantic engine + anchor
   // verification, which read project files) holds the lock; the gates.json lint and
   // custom-script layers run UNLOCKED (long user scripts must not block GOS).
@@ -717,24 +726,29 @@ function cmdGate(args) {
   // ---- builtin layer (upgraded: check file contents, not just booleans) ----
   if (!auditNoState && (which === 'all' || which === 'coverage')) {
     checked++;
-    // First check state.json booleans (quick)
-    const uncoveredState = state.decisions.filter(d => !d.covered);
-    // Then cross-check plan.md actual content (deep)
-    const planTasks = task.parsePlanMd();
-    let coveredInPlan = new Set();
-    if (planTasks) {
-      for (const t of planTasks) for (const c of t.covers) coveredInPlan.add(c);
-    }
-    const uncoveredDeep = state.decisions.filter(d =>
-      !d.covered && !coveredInPlan.has(d.id)
-    );
-    const uncovered = (planTasks && planTasks.length) ? uncoveredDeep : uncoveredState;
-    if (uncovered.length) {
-      failures.push(core.gateFail('coverage-uncovered', { verdict: 'decisions not covered by any task', evidence: uncovered.map((d) => `${d.id} (${d.title})`), fix: core.gateCmd('node bin/gos.cjs stage back', 'plan') + ' — add a covering task or drop the decision' }));
+    if (doneIdle) {
+      console.log(`⚠ ${sibConfig.SEMANTIC_RUNTIME.doneIdleCoverage}`);
+      idleAdvisories.push(sibConfig.SEMANTIC_RUNTIME.doneIdleCoverage);
     } else {
-      const viaPlan = planTasks ? ` (${coveredInPlan.size} via plan.md scan)` : '';
-      console.log(`✓ coverage: ${state.decisions.length}/${state.decisions.length} decisions covered${viaPlan}`);
-      semanticPass++;
+      // First check state.json booleans (quick)
+      const uncoveredState = state.decisions.filter(d => !d.covered);
+      // Then cross-check plan.md actual content (deep)
+      const planTasks = task.parsePlanMd();
+      let coveredInPlan = new Set();
+      if (planTasks) {
+        for (const t of planTasks) for (const c of t.covers) coveredInPlan.add(c);
+      }
+      const uncoveredDeep = state.decisions.filter(d =>
+        !d.covered && !coveredInPlan.has(d.id)
+      );
+      const uncovered = (planTasks && planTasks.length) ? uncoveredDeep : uncoveredState;
+      if (uncovered.length) {
+        failures.push(core.gateFail('coverage-uncovered', { verdict: 'decisions not covered by any task', evidence: uncovered.map((d) => `${d.id} (${d.title})`), fix: core.gateCmd('node bin/gos.cjs stage back', 'plan') + ' — add a covering task or drop the decision' }));
+      } else {
+        const viaPlan = planTasks ? ` (${coveredInPlan.size} via plan.md scan)` : '';
+        console.log(`✓ coverage: ${state.decisions.length}/${state.decisions.length} decisions covered${viaPlan}`);
+        semanticPass++;
+      }
     }
   }
   if (!auditNoState && (which === 'all' || which === 'truths')) {
@@ -761,9 +775,14 @@ function cmdGate(args) {
     // T5+T7 [D-33] three-layer mount layer 2: gate all chains the semantic engine
     // (same semanticChecks(), never a copy). ✓ lines count toward the downgrade banner.
     checked++;
-    const res = semanticChecks({ state });
-    if (res.failures.length) failures.push(...res.failures);
-    semanticPass += res.passes;
+    if (doneIdle) {
+      console.log(`⚠ ${sibConfig.SEMANTIC_RUNTIME.doneIdleSemantic}`);
+      idleAdvisories.push(sibConfig.SEMANTIC_RUNTIME.doneIdleSemantic);
+    } else {
+      const res = semanticChecks({ state });
+      if (res.failures.length) failures.push(...res.failures);
+      semanticPass += res.passes;
+    }
   }
   if (!auditNoState && (which === 'all' || which === 'requirements')) {
     const Lv4 = state.level >= 4;
@@ -1236,7 +1255,7 @@ function cmdGate(args) {
     for (const f of failures) {
       if (typeof f === 'string') throw new Error(`gate --json: raw string failure post-switch (D-66): "${String(f).slice(0, 80)}" — wrap it with core.gateFail()`);
     }
-    console.log(JSON.stringify({ verdict: failures.length ? 'fail' : 'pass', failures, advisories: bareNameAdvisories, checked }, null, 2));
+    console.log(JSON.stringify({ verdict: failures.length ? 'fail' : 'pass', failures, advisories: [...idleAdvisories, ...bareNameAdvisories], checked }, null, 2));
     process.exit(failures.length ? 1 : 0);
   }
   for (const a of bareNameAdvisories) console.log(`⚠ DI-10 bare-name annotation: ${a}`);

@@ -1,9 +1,9 @@
 {
   "current": {
-    "total": 1185,
-    "callgraph": 678,
+    "total": 1190,
+    "callgraph": 680,
     "testof_fn": 107,
-    "fn_count": 697,
+    "fn_count": 699,
     "fns": [
       "absTaskPath",
       "acornCtx",
@@ -31,6 +31,7 @@
       "assertTruthWritable",
       "auditEdge",
       "auditSelfHash",
+      "authFilePath",
       "autoDisposition",
       "autoHostLine",
       "autoOff",
@@ -492,6 +493,7 @@
       "recordDenyBaseline",
       "recordDisposition",
       "recordPending",
+      "recordReviewRound",
       "recordTrip",
       "redteamPasses",
       "redteamSpawnRunner",
@@ -998,6 +1000,7 @@
       "parseEventStream": "bin/lib/ops/auto/adapters/opencode.cjs",
       "buildSpawnSpec": "bin/lib/ops/auto/adapters/opencode.cjs",
       "spawnLive": "bin/lib/ops/auto/adapters/opencode.cjs",
+      "authFilePath": "bin/lib/ops/auto/adapters/opencode.cjs",
       "fixtureEnvActive": "bin/lib/ops/auto/adapters/registry.cjs",
       "loadRegistryFile": "bin/lib/ops/auto/adapters/registry.cjs",
       "activeMatrix": "bin/lib/ops/auto/adapters/registry.cjs",
@@ -1152,6 +1155,7 @@
       "trimArray": "bin/lib/ops/auto/store.cjs",
       "mirrorsOf": "bin/lib/ops/auto/store.cjs",
       "stampStream": "bin/lib/ops/auto/store.cjs",
+      "recordReviewRound": "bin/lib/ops/auto/store.cjs",
       "recordDisposition": "bin/lib/ops/auto/store.cjs",
       "saveSnapshot": "bin/lib/ops/auto/store.cjs",
       "saveProbeResult": "bin/lib/ops/auto/store.cjs",
@@ -1402,8 +1406,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "4a7dea15272d5fbf",
-    "at": "2026-10-29T11:45:20.368Z"
+    "fp": "fcf40926b5357f3b",
+    "at": "2026-10-30T02:22:24.780Z"
   },
   "peak": {
     "total": 1206,

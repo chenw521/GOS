@@ -129,6 +129,8 @@ const SEMANTIC_RUNTIME_BASE = {
   noFilesWarn: 'no Files declared — diff-hit check skipped for this task (warn only)',
   tooBroad: 'pattern too broad',
   untrustedNote: 'untrusted historical notes — verify before acting', // B-16 header line [R1-F8]
+  doneIdleCoverage: 'coverage idle: task archived (DONE + completed_at) — decision coverage is a live-task check, nothing to cover between tasks — start the next task: gos init <level> "<intent>"',
+  doneIdleSemantic: 'semantic idle: task archived (DONE + completed_at) — diff-hit / manifest freshness are live-task checks, skipped between tasks — start the next task: gos init <level> "<intent>"',
 };
 
 // Runtime strings merge into the frozen CONTRACTS.semantic_checks table at require time.
