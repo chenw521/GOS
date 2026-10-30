@@ -706,6 +706,24 @@ async function score(ctx) {
   }
 
   if (signal != null) {
+    // A stage-labeled advance commit reachable from the post-spawn head is
+    // the attribution of record: the work landed even when the process then
+    // exited dirty, so the advance outranks the failure signal (the dirty
+    // exit rides along as a note instead of burning the retry budget).
+    // Escape-detector hits are the exception — a deny violation outranks
+    // any progress the same session made.
+    const escapeDriven = hits.length > 0;
+    const advEarly = breakerMod.detectAdvance({ preSpawnHead: iter.preSpawnHead, cwd: rootDir, gitRunner, stage: iter.stage });
+    if (!escapeDriven && advEarly.ok && advEarly.advanced === true) {
+      iter.head = advEarly.head;
+      iter.advanced = true;
+      iter.dirtyExit = signal;
+      iter.signal = 'advanced';
+      iter.counted = false;
+      const res = b.recordSuccess(stage);
+      if (res.tripped) return { tripped: true };
+      return {};
+    }
     iter.signal = signal;
     const tax = breakerMod.classify(signal);
     iter.counted = !!(tax.ok && tax.countsTowardN);
