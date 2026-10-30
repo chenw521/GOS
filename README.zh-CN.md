@@ -3,9 +3,8 @@
 [English](README.md) | [简体中文](README.zh-CN.md)
 
 [![CI](https://github.com/chenw521/GOS/actions/workflows/ci.yml/badge.svg)](https://github.com/chenw521/GOS/actions/workflows/ci.yml)
-> [!NOTE]
-> 尚未发布——GOS 正在打磨中，首个版本（GitHub Packages 内测或直接上公共 npm）将在打磨完成后发布。公共 npm 包名已预留。
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Release](https://img.shields.io/badge/release-v1.0.0-blue.svg)](https://github.com/chenw521/GOS/releases/tag/v1.0.0)
 
 > **AI 编程代理的确定性执行层 + 自适应工作流。**
 > 小任务零负担直过；大项目全治理 + 对抗验证。
@@ -23,7 +22,7 @@ GOS 用一套系统同时处理这三件事——它把 [Superpowers](https://gi
 
 ## 证据
 
-- **自举**：GOS 用 GOS 开发。本仓库自身就是一个 Lv4 项目——20+ 任务/phase 走完整管线（THINK → PLAN → BUILD → REVIEW → VERIFY → SHIP）交付，积累 30 条项目教训，v0.11 以来每个发版都能追溯到它的决策与已验证真值。回归套件——64 个 section、1500+ 条活断言——就是 CI 主干。
+- **自举**：GOS 用 GOS 开发。本仓库自身就是一个 Lv4 项目——20+ 任务/phase 走完整管线（THINK → PLAN → BUILD → REVIEW → VERIFY → SHIP）交付，积累 70+ 条项目教训，每个发版都能追溯到它的决策与已验证真值。回归套件——106 个 section、3300+ 条活断言——就是 CI 主干。
 - **Benchmark 进行中**：外部任务套件基准正在针对当前版本重建；早期 runs 已随其测量的旧版本一并退役。方法论站得住时再公布数字。
 
 ## 工作原理
@@ -239,7 +238,7 @@ GOS 是融合层不是替代品：装了 Superpowers 的话，`gos-build` 自动
 GOS/
 ├── bin/gos.cjs          # 零依赖* CLI：硬门、语义层、原子提交
 │                        #   （*仅一个依赖：acorn，供 AST 调用图）
-├── skills/              # 8 个薄 skill（<55 行：路由表 + HARD-GATE）+ 懒加载参考
+├── skills/              # 8 个薄 skill（路由表 + HARD-GATE）+ 懒加载参考
 │   ├── gos-router/      # 入口：评估 → 推荐级别 → 串联阶段
 │   ├── gos-project/     # Lv4 总设计师：PROJECT/ROADMAP/DECISIONS 生命周期
 │   ├── gos-think/       # 逐灰区对话 + D-NN 决策 + Red Team
@@ -263,9 +262,10 @@ GOS/
 | v0.1–v0.2 skills + 模板 + 平台适配 | ✅ |
 | 确定性 CLI 层（硬门、语义检查、真值证据） | ✅ |
 | 边网 codemap 2.0（fn 级调用图、影响闭合） | ✅ |
-| Lv4 phase 生命周期，v0.11→v0.15 全程自举 | ✅ |
-| npm 分发（GitHub Packages 内测 → 开源日上公共 npm）+ CI | 进行中 |
-| v1.0 正式发布 | 📋 |
+| Lv4 phase 生命周期，全程自举 | ✅ |
+| v1.0 公开发布（GitHub，2026-10-30） | ✅ |
+| 公共 npm 上架（`@chenw521/gos`） | 📋 待定 |
+| 外部任务套件基准测试（重建中） | 📋 |
 
 ## CLI 速查
 
