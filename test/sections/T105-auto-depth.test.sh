@@ -660,7 +660,12 @@ if (real.tier === 'bubblewrap') {
 for (const d of [richHome, bareHome, linkHome, outsideAws, fxRoot, xdg]) { try { fs.rmSync(d, { recursive: true, force: true }); } catch {} }
 console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
 EOF
-D7_OUT="$(node run-d7.cjs 2>&1 | tail -n 1)"
+D7_RAW="$(node run-d7.cjs 2>&1)"
+D7_OUT="$(printf '%s\n' "$D7_RAW" | tail -n 1)"
+case "$D7_OUT" in
+  OK|BAD\ *) ;;
+  *) printf 'D7 raw output (%d chars): %s\n' "${#D7_RAW}" "$(printf '%s' "$D7_RAW" | head -c 400)" ;;
+esac
 t105_eq "credential masks: existing paths masked in every profile, absent paths skipped+recorded; repo .git rw-bound at kernel tier; ordering intact; credential-free home enters the sandbox" "OK" "$D7_OUT"
 
 # ---------------------------------------------------------------- D8 --
