@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 - Document the shipped v1.0.0 reality across the public docs: drop the stale pre-release notice and GitHub Packages plan from both READMEs, pin the evidence numbers — 106 sections, 3300+ live assertions, 70+ lessons — mark v1.0 shipped and the npm drop pending in the milestone tables, repair a truncated sentence in the release guide, and align the CI job roster in the contributor guide (R-01) [2026-10-30]
-- Add spawned-session stage advances through a registered write channel: the auto runner registers each spawn with a window budget and a command whitelist (assigned commit, truth verify, gate, section), holder identity binds by boot_id and /proc starttime, human gates refuse inside spawns, crashed advances roll back from a pre-advance snapshot, the sandbox seeds a sanitized host opencode config, and deny detection runs pre-truncation (R-01) [2026-10-30]
+- Add spawned-session stage advances through a registered write channel: the auto runner registers each spawn with a window budget and a command whitelist covering the assigned commit plus verification verbs, holder identity binds by boot_id and /proc starttime, human gates refuse inside spawns, crashed advances roll back from a pre-advance snapshot, the sandbox seeds a sanitized host opencode config, and deny detection runs pre-truncation (R-01) [2026-10-30]
 
 - Fix changelog lint to honor a same-day promote: the today-obligation check also accepts the newest version section when its heading date is today, so folding [Unreleased] on release day no longer trips the gate (R-08) [2026-10-30]
 
