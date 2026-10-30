@@ -180,11 +180,15 @@ function loopSpawnRunner(spec, ctx) {
     let wallTimer = null;
     let killed = null;
     let settled = false;
+    // Deny lines are detected as they stream in — before the capture window
+    // can truncate them away — and ride on the result for the scorer.
+    const denyScanner = launcher.makeStreamDenyScanner({ deny: Array.isArray(spec.deny) ? spec.deny : undefined });
     const finish = (payload) => {
       if (settled) return;
       settled = true;
       if (idleTimer) clearTimeout(idleTimer);
       if (wallTimer) clearTimeout(wallTimer);
+      payload.preTruncationDenyHits = denyScanner.hits.slice();
       resolve(payload);
     };
     const kill = (why) => {
@@ -199,8 +203,8 @@ function loopSpawnRunner(spec, ctx) {
       idleTimer = setTimeout(() => kill('idle'), ms);
       if (typeof idleTimer.unref === 'function') idleTimer.unref();
     };
-    child.stdout.on('data', (d) => { out += d; if (out.length > cap) out = out.slice(out.length - cap); armIdle(); });
-    child.stderr.on('data', (d) => { err += d; if (err.length > cap) err = err.slice(err.length - cap); armIdle(); });
+    child.stdout.on('data', (d) => { out += d; if (out.length > cap) out = out.slice(out.length - cap); denyScanner.feed(d); armIdle(); });
+    child.stderr.on('data', (d) => { err += d; if (err.length > cap) err = err.slice(err.length - cap); denyScanner.feed(d); armIdle(); });
     const wallMs = Number(ctx && ctx.wallMs);
     if (wallMs > 0) {
       wallTimer = setTimeout(() => kill('wall'), wallMs);
@@ -334,9 +338,36 @@ async function runLoop(opts) {
   const spawnRunner = opts.spawnRunner || loopSpawnRunner;
   const heartbeatIntervalMs = Number.isInteger(opts.heartbeatIntervalMs) ? opts.heartbeatIntervalMs : DEFAULT_HEARTBEAT_INTERVAL_MS;
 
+  // Sanitized host-config seed: materialized once per RUN (before the loop
+  // starts), consumed by every spawn's compose, cleaned in the finally.
+  const seedState = (() => {
+    const cacheDir = path.join(rootDir, '.gos', 'cache');
+    try { fs.mkdirSync(cacheDir, { recursive: true }); } catch { /* unwritable — skip seeding */ }
+    const sanitized = launcher.sanitizeHostConfig(env === process.env ? process.env : env);
+    if (!sanitized.ok) {
+      if (sanitized.reason === 'absent') console.error('⚠ auto seed: no host opencode config found — spawns run unseeded (today\'s masked behavior)');
+      return { seedRoots: {}, cleanup: null };
+    }
+    if (sanitized.reason === 'unreadable' || sanitized.reason === 'not-a-dir') {
+      console.error(`⚠ auto seed: host opencode config ${sanitized.reason} (${sanitized.dir}) — spawns run unseeded`);
+      return { seedRoots: {}, cleanup: null };
+    }
+    if (sanitized.stripped.length) {
+      console.error(`⚠ auto seed: stripped ${sanitized.stripped.length} secret/permission/expansion entr(y|ies) from the host opencode config: ${sanitized.stripped.slice(0, 6).join(', ')}${sanitized.stripped.length > 6 ? ' …' : ''}`);
+    }
+    try {
+      const dir = launcher.materializeSeedDir(sanitized.files, cacheDir, 'auto-seed');
+      return { seedRoots: { 'host-config': dir }, cleanup: dir };
+    } catch (e) {
+      console.error(`⚠ auto seed: materialization failed (${e.message}) — spawns run unseeded`);
+      return { seedRoots: {}, cleanup: null };
+    }
+  })();
+
   try {
-    return await drive({ opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs, loaded });
+    return await drive({ opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs, loaded, seedRoots: seedState.seedRoots });
   } finally {
+    if (seedState.cleanup) { try { fs.rmSync(seedState.cleanup, { recursive: true, force: true }); } catch { /* best effort */ } }
     store.releaseRunLock(rootDir);
   }
 }
@@ -381,7 +412,7 @@ function ensureWorkBranch(gitRunner, rootDir, taskId) {
 // ---------- the iteration engine ----------
 
 async function drive(ctx) {
-  const { opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs, loaded } = ctx;
+  const { opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs, loaded, seedRoots } = ctx;
 
   const iterations = [];
   const readTaskState = () => {
@@ -459,8 +490,25 @@ async function drive(ctx) {
   // Crash-safe delegation: a previous runner may have died between a
   // delegated advance and its ratification, leaving a PENDING approval no
   // in-memory leg will ever clear. The store stamps carry the pairing —
-  // recover the leg from the latest stamp of that stage and run the full
-  // delegation sequence now, before any new spawn extends the task.
+  // Heartbeat during spawn waits so a long-running spawn never makes the
+  // runner's lock look stale. The run lock lives in the store; the repo-root
+  // .gos/.lock this CLI process holds gets its mtime refreshed too, so a
+  // long-lived runner never looks abandoned to a concurrent reader. Every
+  // long wait in the loop — main spawns, delegated legs, red-team rounds —
+  // runs under it.
+  const withHeartbeat = async (fn) => {
+    if (!(heartbeatIntervalMs > 0)) return fn();
+    const rootLock = path.join(rootDir, '.gos', '.lock');
+    const iv = setInterval(() => {
+      store.heartbeatRunLock(rootDir);
+      try { fs.utimesSync(rootLock, new Date(), new Date()); } catch { /* not held / gone */ }
+    }, heartbeatIntervalMs);
+    if (typeof iv.unref === 'function') iv.unref();
+    try { return await fn(); } finally { clearInterval(iv); }
+  };
+
+   // recover the leg from the latest stamp of that stage and run the full
+   // delegation sequence now, before any new spawn extends the task.
   {
     const modRatify = require('./ratify.cjs');
     const orphan = modRatify.advanceBlocker(taskState.approvals);
@@ -478,26 +526,50 @@ async function drive(ctx) {
           guidance: store.guidanceFor('auto.ratify.stampMissing', { spawnId: '(previous run)' }),
         });
       }
-      const orphanLeg = { stage: String(orphan.stage).toUpperCase(), spawnId: best.sid, streamSha256: best.st.streamSha256, advanced: true, orphan: true };
-      const legRes = await delegatedLegs({ leg: orphanLeg, opts, env, rootDir, spawnRunner, tp, now, runTag });
-      if (legRes.err) return report(legRes.err, { iterations, breaker: breakerView() });
-      iterations.push({ spawnId: orphanLeg.spawnId, stage: orphanLeg.stage, signal: 'orphan-legs', delegation: legRes.summary });
-    }
-  }
+       const orphanLeg = { stage: String(orphan.stage).toUpperCase(), spawnId: best.sid, streamSha256: best.st.streamSha256, advanced: true, orphan: true };
+       const legRes = await withHeartbeat(() => delegatedLegs({ leg: orphanLeg, opts, env, rootDir, spawnRunner, tp, now, runTag }));
+       if (legRes.err) return report(legRes.err, { iterations, breaker: breakerView() });
+       iterations.push({ spawnId: orphanLeg.spawnId, stage: orphanLeg.stage, signal: 'orphan-legs', delegation: legRes.summary });
+     }
+   }
 
   // Heartbeat during spawn waits so a long-running spawn never makes the
   // runner's lock look stale. The run lock lives in the store; the repo-root
   // .gos/.lock this CLI process holds gets its mtime refreshed too, so a
   // long-lived runner never looks abandoned to a concurrent reader.
-  const withHeartbeat = async (fn) => {
-    if (!(heartbeatIntervalMs > 0)) return fn();
-    const rootLock = path.join(rootDir, '.gos', '.lock');
-    const iv = setInterval(() => {
-      store.heartbeatRunLock(rootDir);
-      try { fs.utimesSync(rootLock, new Date(), new Date()); } catch { /* not held / gone */ }
-    }, heartbeatIntervalMs);
-    if (typeof iv.unref === 'function') iv.unref();
-    try { return await fn(); } finally { clearInterval(iv); }
+  // (withHeartbeat lives above the orphan-leg recovery — every long wait in
+  // the loop shares it.)
+
+  // seedRoots was materialized once per RUN in runLoop (sanitized host
+  // config); the compose below consumes it for every spawn.
+
+  // Crashed-advance recovery: a group-kill landed between the in-spawn state
+  // write and its git commit — the stage moved forward in state.json but no
+  // stage-labeled advance commit exists at HEAD. The pre-advance snapshot
+  // (written by the commit path) rolls the state back; the loop re-drives
+  // the stage instead of pausing as external-mutation. Shared by the
+  // post-spawn mutation check and the top-of-loop identity revalidation.
+  const recoverCrashedAdvance = (baseIdentity, observedIdentity, stateObj) => {
+    try {
+      if (!baseIdentity || !observedIdentity || !stateObj) return false;
+      const forward = Array.isArray(stateObj.completed_stages)
+        && stateObj.completed_stages.map(String).includes(String(baseIdentity.stage));
+      if (!forward) return false;
+      if (String(baseIdentity.stage) === String(observedIdentity.stage)) return false;
+      const logR = gitRunner(['log', '-1', '--format=%s', 'HEAD'], rootDir);
+      const subj = String((logR && logR.stdout) || '');
+      const hasAdvanceCommit = new RegExp(`chore\\(task\\): advance ${String(baseIdentity.stage).toLowerCase()}\\b`, 'i').test(subj);
+      if (hasAdvanceCommit) return false;
+      const snapPath = path.join(rootDir, '.gos', 'cache', 'state.snapshot');
+      const snapRaw = fs.readFileSync(snapPath, 'utf8');
+      const snap = JSON.parse(snapRaw);
+      if (String(snap.current_stage || '').toUpperCase() !== String(baseIdentity.stage).toUpperCase()) return false;
+      const tmp = `${snapPath}.rollback-tmp-${process.pid}`;
+      fs.writeFileSync(tmp, snapRaw);
+      fs.renameSync(tmp, path.join(rootDir, '.gos', 'state.json'));
+      console.error(`⚠ crashed advance recovered: stage ${baseIdentity.stage} moved in state but its labeled commit never landed — state rolled back from the pre-advance snapshot; the stage will be re-driven`);
+      return true;
+    } catch { return false; }
   };
 
   for (;;) {
@@ -524,12 +596,17 @@ async function drive(ctx) {
         && fields.length === 1 && fields[0].startsWith('stage: ')
         && String(baseline.stage) !== String(observed.stage)
         && forward;
+      // Crashed-advance window at the top-of-loop revalidation: the snapshot
+      // rollback (recoverCrashedAdvance above) re-drives instead of pausing.
       if (!lateAdvance) {
-        return endWith({
-          ok: false, status: 'paused', paused: true, reason: 'external-mutation',
-          expected: baseline, observed, detail: fields.join('; '),
-          guidance: store.guidanceFor('auto.loop.externalMutation', { detail: fields.join('; ') }),
-        });
+        const crashedTop = recoverCrashedAdvance(baseline, observed, taskState);
+        if (!crashedTop) {
+          return endWith({
+            ok: false, status: 'paused', paused: true, reason: 'external-mutation',
+            expected: baseline, observed, detail: fields.join('; '),
+            guidance: store.guidanceFor('auto.loop.externalMutation', { detail: fields.join('; ') }),
+          });
+        }
       }
     }
     baseline = observed;
@@ -544,7 +621,7 @@ async function drive(ctx) {
       pendingLeg = null;
       const modRatify = require('./ratify.cjs');
       if (leg.advanced && modRatify.isDelegatedStage(leg.stage)) {
-        const legRes = await delegatedLegs({ leg, opts, env, rootDir, spawnRunner, tp, now, runTag });
+        const legRes = await withHeartbeat(() => delegatedLegs({ leg, opts, env, rootDir, spawnRunner, tp, now, runTag }));
         if (legRes.err) return report(legRes.err, { iterations, breaker: breakerView() });
         const legIter = iterations.find((i) => i.spawnId === leg.spawnId);
         if (legIter) legIter.delegation = legRes.summary;
@@ -598,6 +675,7 @@ async function drive(ctx) {
       env,
       engineProbe: opts.engineProbe,
       store,
+      seedRoots: seedRoots || {},
       roBinds: hostStatus.probe && hostStatus.probe.execRoot ? [hostStatus.probe.execRoot] : [],
       authFiles: adapter.authFilePath ? [adapter.authFilePath(env)] : [],
       // Workspace-writing profiles grant the repo root (the profile data
@@ -724,17 +802,26 @@ async function drive(ctx) {
       // loop-owned inconsistency, paused rather than retried blind.
       return endWith({ ok: false, status: 'paused', paused: true, reason: 'advance-state-mismatch', expectedStage: stage, guidance: store.guidanceFor('auto.loop.externalMutation', { detail: `stage still ${stage} after an advance commit` }) });
     }
+    let recoveredCrash = false;
     if (!iter.advanced && mutation && iter.signal !== 'rc0-no-advance') {
-      // A failed-signal spawn alongside a concurrent external mutation: the
-      // spawn's own failure is already scored; the mutation still pauses
-      // with a report instead of retrying blind into a moved world.
-      return endWith({
-        ok: false, status: 'paused', paused: true, reason: 'external-mutation',
-        expected: baseline, observed: postIdentity, detail: mutation.detail,
-        guidance: store.guidanceFor('auto.loop.externalMutation', { detail: mutation.detail }),
-      });
+      // A failed-signal spawn alongside a stage-only forward delta with no
+      // labeled commit is the crashed-advance window, not an external
+      // mutation: recover from the snapshot and keep driving.
+      recoveredCrash = recoverCrashedAdvance(baseline, postIdentity, after.state);
+      if (!recoveredCrash) {
+        // A failed-signal spawn alongside a concurrent external mutation: the
+        // spawn's own failure is already scored; the mutation still pauses
+        // with a report instead of retrying blind into a moved world.
+        return endWith({
+          ok: false, status: 'paused', paused: true, reason: 'external-mutation',
+          expected: baseline, observed: postIdentity, detail: mutation.detail,
+          guidance: store.guidanceFor('auto.loop.externalMutation', { detail: mutation.detail }),
+        });
+      }
     }
-    baseline = postIdentity;
+    if (!recoveredCrash) baseline = postIdentity;
+    // Recovered: the state file is the pre-advance world again — keep the
+    // pre-spawn baseline so the next revalidation sees a stable identity.
   }
 }
 
@@ -749,10 +836,13 @@ async function score(ctx) {
   const timedOut = !!(runnerError && (runnerError.code === 'ETIMEDOUT' || runnerError.killed === true || /timed?out/i.test(String(runnerError.message || ''))));
   const spawnBroke = !!runnerError;
 
-  // Escape detector: deny hits in the captured stream are failures whatever
-  // the exit code says.
+  // Escape detector: pre-truncation streaming hits win (a huge benign tail
+  // cannot push deny lines out of the captured window); the post-hoc scan
+  // stays as the floor for runners that captured without a scanner.
   const denyForScan = Array.isArray(spec.deny) ? spec.deny : undefined;
-  const hits = launcher.scanSpawnOutput(streamText, { deny: denyForScan });
+  const hits = (result && Array.isArray(result.preTruncationDenyHits) && result.preTruncationDenyHits.length)
+    ? result.preTruncationDenyHits
+    : launcher.scanSpawnOutput(streamText, { deny: denyForScan });
   iter.escapeHits = hits.length;
 
   const outcome = adapter.parseEventStream(streamText);

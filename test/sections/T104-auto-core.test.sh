@@ -198,7 +198,16 @@ mkdir -p .gos/task/x
 printf '# Spec\n\nminimal t3 spec\n' > .gos/task/x/spec.md
 t104_state THINK 2 ',"spec_path":".gos/task/x/spec.md"' > .gos/state.json
 # in-spawn delegated commit: structural checks only -> PENDING, no evidence
-GOS_AUTO_SPAWNED=1 node "$GOS" commit think > t3-pending.txt 2>&1; T3_PRC=$?
+# Channel setup mirrors the real runner: this bash process holds the lock
+# (the CLI child descends from it) and the spawn is registered for THINK.
+node -e "
+const sr = require(process.env.GOS_ROOT + '/bin/lib/core/spawnreg.cjs');
+const fs = require('fs');
+fs.writeFileSync('.gos/.lock', JSON.stringify({pid: process.ppid, started_at: new Date().toISOString(), boot_id: null, starttime: sr.procStartTime(process.ppid)}));
+sr.writeEntry(process.cwd(), {spawnId: 't3', kind: 'work', stage: 'THINK', pid: process.ppid, wallMs: 600000});
+"
+GOS_AUTO_SPAWNED=1 GOS_AUTO_SPAWN_ID=t3 node "$GOS" commit think > t3-pending.txt 2>&1; T3_PRC=$?
+rm -f .gos/.lock   # the runner releases between spawns — later probes must meet the PENDING boundary, not the lock
 t104_exit "T3: in-spawn commit on a delegated stage succeeds structurally" 0 "$T3_PRC"
 t104_contains "T3: in-spawn commit records a PENDING auto-approval (no evidence claim)" "approval recorded as PENDING" "$(cat t3-pending.txt)"
 T3_APPT="$(python3 -c "import json;a=json.load(open('.gos/state.json'))['approvals']['THINK'];print(a['status'],a['mode'],('evidence' in a))")"
@@ -715,9 +724,18 @@ function setStage(s) {
   st.current_stage = s;
   fs.writeFileSync(stateFile, JSON.stringify(st, null, 2));
 }
-const gosCommit = (stage) => spawnSync(process.execPath, [path.join(GR, 'bin', 'gos.cjs'), 'commit', stage], {
-  cwd: rootDir, env: { ...process.env, GOS_AUTO_SPAWNED: '1' }, encoding: 'utf8',
-});
+const gosCommit = (stage) => {
+  // Channel setup per assigned advance: the harness process holds the lock
+  // and registers a fresh spawn entry for this stage.
+  const sr = require(path.join(GR, 'bin/lib/core/spawnreg.cjs'));
+  const fs = require('fs');
+  fs.writeFileSync(path.join(rootDir, '.gos', '.lock'), JSON.stringify({ pid: process.pid, started_at: new Date().toISOString(), boot_id: null, starttime: sr.procStartTime(process.pid) }));
+  const sid = 'leg-' + stage.toLowerCase();
+  sr.writeEntry(rootDir, { spawnId: sid, kind: 'work', stage, pid: process.pid, wallMs: 600000 });
+  return spawnSync(process.execPath, [path.join(GR, 'bin', 'gos.cjs'), 'commit', stage.toLowerCase()], {
+    cwd: rootDir, env: { ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: sid }, encoding: 'utf8',
+  });
+};
 const spawnRunner = (spec) => {
   if (spec.roWorkspace) return { status: 0, stdout: 'independent review\nREDTEAM-FINDINGS: 0\n', stderr: '' };
   if (spec.stage === 'THINK' || spec.stage === 'PLAN') {
@@ -790,9 +808,13 @@ function mkWorld(name, verdictFor) {
   const spawnRunner = (spec) => {
     if (spec.roWorkspace) return { status: 0, stdout: verdictFor(spec.spawnId), stderr: '' };
     if (spec.stage !== 'THINK') throw new Error('unexpected stage ' + spec.stage);
+    const sr = require(path.join(GR, 'bin/lib/core/spawnreg.cjs'));
+    fs.writeFileSync(path.join(dir, '.gos', '.lock'), JSON.stringify({ pid: process.pid, started_at: new Date().toISOString(), boot_id: null, starttime: sr.procStartTime(process.pid) }));
+    sr.writeEntry(dir, { spawnId: spec.spawnId, kind: 'work', stage: 'THINK', pid: process.pid, wallMs: 600000 });
     const r = spawnSync(process.execPath, [path.join(GR, 'bin', 'gos.cjs'), 'commit', 'think'], {
-      cwd: dir, env: { ...process.env, GOS_AUTO_SPAWNED: '1' }, encoding: 'utf8',
+      cwd: dir, env: { ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: spec.spawnId }, encoding: 'utf8',
     });
+    try { fs.unlinkSync(path.join(dir, '.gos', '.lock')); } catch { /* gone */ }
     if (r.status !== 0) problems.push(`in-spawn commit rc=${r.status}: ${String(r.stderr || r.stdout).slice(0, 200)}`);
     return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
   };
@@ -1130,8 +1152,11 @@ function snapshotState() {
   };
   const spawnRunner = (spec) => {
     if (spec.roWorkspace) return { status: 0, stdout: 'REDTEAM-FINDINGS: 0\n', stderr: '' };
+    const sr = require(path.join(GR, 'bin/lib/core/spawnreg.cjs'));
+    fs.writeFileSync(path.join(world, '.gos', '.lock'), JSON.stringify({ pid: process.pid, started_at: new Date().toISOString(), boot_id: null, starttime: sr.procStartTime(process.pid) }));
+    sr.writeEntry(world, { spawnId: spec.spawnId, kind: 'work', stage: 'THINK', pid: process.pid, wallMs: 600000 });
     spawnSync(process.execPath, [path.join(GR, 'bin', 'gos.cjs'), 'commit', 'think'], {
-      cwd: world, env: { ...process.env, GOS_AUTO_SPAWNED: '1' }, encoding: 'utf8',
+      cwd: world, env: { ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: spec.spawnId }, encoding: 'utf8',
     });
     return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
   };
@@ -1243,13 +1268,18 @@ const world = process.cwd();
 store.create({ mode: 'on', rootDir: world, limits: { N: 3, K: 9, B: 9 } });
 // supervisor dirt: written after the case world settled, before the loop
 fs.writeFileSync(path.join(world, 'test', 'supervisor-scratch.txt'), 'supervisor scratch\n');
+const spawnreg = require(path.join(GR, 'bin', 'lib', 'core', 'spawnreg.cjs'));
 const spawnRunner = (spec) => {
   if (spec.roWorkspace) return { status: 0, stdout: 'REDTEAM-FINDINGS: 0\n', stderr: '' };
   if (!spec.env || !spec.env.GOS_AUTO_DIRTY_BASELINE) problems.push('spawn env lacks the dirty baseline');
   else if (!JSON.parse(spec.env.GOS_AUTO_DIRTY_BASELINE).includes('test/supervisor-scratch.txt')) problems.push('baseline missing the supervisor file');
+  // Runner-side channel setup: the holder lock (this harness process) and
+  // the registered spawn entry admit exactly one assigned advance.
+  fs.writeFileSync(path.join(world, '.gos', '.lock'), JSON.stringify({ pid: process.pid, started_at: new Date().toISOString(), boot_id: null, starttime: spawnreg.procStartTime(process.pid) }));
+  spawnreg.writeEntry(world, { spawnId: 'c20', kind: 'work', stage: 'THINK', pid: process.pid, wallMs: 600000 });
   fs.writeFileSync(path.join(world, 'test', 'session-work.txt'), 'session output\n');
   const r = spawnSync(process.execPath, [path.join(GR, 'bin', 'gos.cjs'), 'commit', 'think'], {
-    cwd: world, env: { ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_DIRTY_BASELINE: spec.env.GOS_AUTO_DIRTY_BASELINE }, encoding: 'utf8',
+    cwd: world, env: { ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: 'c20', GOS_AUTO_DIRTY_BASELINE: spec.env.GOS_AUTO_DIRTY_BASELINE }, encoding: 'utf8',
   });
   const childAll = String(r.stdout || '').concat(r.stderr || '');
   if (!(childAll.includes('spawn baseline guard') && childAll.includes('test/supervisor-scratch.txt'))) problems.push('exclusion warning missing');

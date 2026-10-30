@@ -2,10 +2,11 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 2,
-  "current_stage": "BUILD",
+  "current_stage": "VERIFY",
   "completed_stages": [
     "INTENT",
-    "THINK"
+    "THINK",
+    "BUILD"
   ],
   "intent": {
     "summary": "Repair the auto spawn pipeline after the feral-session incident (breaker tripped 2026-10-30): three INTENT spawns ignored the one-shot stage assignment and escalated instead (sudo/su, git push, gh pr merge, gos approve archive - all denied by gates); diagnose the spawn environment (runner-held .gos/.lock versus spawned gos commands, opencode config masked by the sandbox tmpfs leaving sessions under-configured) and cure the root cause so a spawned session reliably completes its assigned stage advance",
@@ -30,10 +31,42 @@
     }
   ],
   "decisions": [],
-  "observable_truths": [],
+  "observable_truths": [
+    {
+      "id": "T1",
+      "description": "Registered channel admits the assigned stage advance from a real descendant process under a live runner lock: banner printed, no lock ownership acquired (T106 C1)",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T2",
+      "description": "Negative space: forged marker (pid-1 holder), missing/wrong spawn entry, second concurrent claim, non-whitelisted command, redteam write, and approve/archive/push under the marker are each refused with classified messages (T106 C2-C4)",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T3",
+      "description": "Sanitized seed: compose emits seed ro-binds after the mask with maskOverBindHolds intact; apiKey/mcp/permission stripped; executable trees skipped; absent host config skips with an advisory (T106 C5)",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T4",
+      "description": "Crashed advance: state written with no labeled commit rolls back from the pre-advance snapshot and the stage is re-driven, not paused as external-mutation (T106 C6)",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T5",
+      "description": "Dogfood: after explicit breaker re-enable, gos auto run advances the task one stage via a spawned session with zero dangerous-command denials (evidence teed under .gos/cache/section-runs/)",
+      "verified": false,
+      "evidence": null
+    }
+  ],
   "gaps": [],
   "activation_source": "headless",
   "task_head": "340de31773001537aeaa7b301af8155b075fc0b9",
   "spec_gate_version": 3,
-  "spec_sha256": "e82e4615d5cad362de903261598c116a4e8178d471cb9590b0b17a34a58fdb8e"
+  "spec_sha256": "e82e4615d5cad362de903261598c116a4e8178d471cb9590b0b17a34a58fdb8e",
+  "changelog_user_summary": "Spawned auto sessions now complete exactly their assigned stage advance through a registered one-shot write channel under the runner live lock with human gates failing closed, a sanitized host-config seed free of secrets and permission expansions, pre-truncation deny detection, and snapshot rollback for crashed advances (R-01)"
 }

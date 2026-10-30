@@ -14,6 +14,10 @@ const GOS_DIR = path.resolve('.gos');
 
 const STATE_PATH = path.join(GOS_DIR, 'state.json');
 
+// Crash-window rollback copy of state.json (machine-local cache area —
+// orphan scans and adoption never touch it).
+const SNAPSHOT_PATH = path.join(GOS_DIR, 'cache', 'state.snapshot');
+
 const PROJECT_DIR = path.join(GOS_DIR, 'project');
 
 const ARCHIVE_DIR = path.join(GOS_DIR, 'archive');
@@ -393,6 +397,7 @@ module.exports = {
   nulNames,
   GOS_DIR,
   STATE_PATH,
+  SNAPSHOT_PATH,
   PROJECT_DIR,
   ARCHIVE_DIR,
   SKILLS_DIR,

@@ -82,6 +82,7 @@ function shipLedgerLines(state) {
 
 function cmdArchive(opts = {}) {
  const fromCommit = !!opts.fromCommit; // invoked from cmdCommit — gates degrade to warn+skip (never kill the commit mid-flow)
+ if (!fromCommit) core.humanGateGuard('archive'); // direct invocation is the human act; the commit-chain call is not
   // Registry-driven walker: one traversal for direct + nested fields (single-source consumption —
   // newly registered fields are picked up by the rewrite/normalization automatically)
   const walkPaths = (obj, fn) => {

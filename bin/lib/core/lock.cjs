@@ -10,6 +10,21 @@ const { execFileSync } = require('node:child_process');
 const fsio = require('./fsio.cjs');
 const state = require('./state.cjs');
 const gitprobe = require('./gitprobe.cjs');
+const spawnreg = require('./spawnreg.cjs');
+
+// Lock record identity fields: boot_id and /proc starttime bind the pid to
+// one process lifetime, so a recycled pid can never satisfy the spawn
+// channel (or fake liveness for it).
+function holderIdentity() {
+  let boot = null;
+  try { boot = fs.readFileSync('/proc/sys/kernel/random/boot_id', 'utf8').trim(); } catch { /* unavailable */ }
+  return { boot_id: boot, starttime: spawnreg.procStartTime(process.pid) };
+}
+
+function writeLockRecord(fd) {
+  const id = holderIdentity();
+  fs.writeSync(fd, JSON.stringify({ pid: process.pid, started_at: new Date().toISOString(), ...id }));
+}
 
 function withGlobalAnchorsLock(fn) {
   const lockPath = state.lessonsPaths('model').lock;
@@ -76,6 +91,12 @@ const LOCK_PATH = path.join(fsio.GOS_DIR, '.lock');
 let _lockHeld = false;
 
 function acquireLockAt(lockPath, breakIt) {   // [R2-C2] path-parameterized lock (ROOT-anchored callers)
+  // Map/gate entry points share this lock file with the main guard; runner-
+  // spawned sessions get their one write through the main-guard channel only.
+  if (process.env.GOS_AUTO_SPAWNED) {
+    console.error(`${state.CONTRACTS.state_semantics.spawnChannelRefused}: map/gate lock acquisitions are outside the spawn channel (only the assigned commit is admitted)`);
+    process.exit(1);
+  }
   if (fs.existsSync(lockPath)) {
     let info = null;
     try { info = JSON.parse(fs.readFileSync(lockPath, 'utf8')); } catch { /* corrupt */ }
@@ -97,7 +118,7 @@ function acquireLockAt(lockPath, breakIt) {   // [R2-C2] path-parameterized lock
     try { fs.unlinkSync(lockPath); } catch { /* racing */ }
   }
   const fd = fs.openSync(lockPath, 'wx');
-  try { fs.writeSync(fd, JSON.stringify({ pid: process.pid, started_at: new Date().toISOString() })); } finally { fs.closeSync(fd); }
+  try { writeLockRecord(fd); } finally { try { fs.closeSync(fd); } catch { /* closed */ } }
   _edgeRootLockPath = lockPath;
   process.on('exit', () => { try { if (_edgeRootLockPath === lockPath) fs.unlinkSync(lockPath); } catch { /* gone */ } });
 }
@@ -106,9 +127,53 @@ let _edgeRootLockPath = null;
 
 let CLI_BREAK_LOCK = false;
 
-function acquireLock(breakLock) {
+// The stage word a `gos commit <stage> [--subject "…"]` call names, with the
+// --subject value excluded so it is never mistaken for the stage.
+function commitStageArg(args) {
+  const rest = [...(args || [])];
+  const i = rest.indexOf('--subject');
+  if (i !== -1) rest.splice(i, 2);
+  const cand = rest.find((a) => typeof a === 'string' && a.length > 0 && !a.startsWith('--'));
+  return cand || null;
+}
+
+// Runner-spawned session: the one write-class command the spawn channel
+// admits is the assigned stage advance. Everything else keeps the
+// live-holder block; the admitted command passes WITHOUT acquiring the
+// lock (no ownership — releaseLock stays a no-op for it).
+function admitThroughSpawnChannel(cmdName, args) {
+  const root = state.currentRootRealpath() || mapRootDir();
+  let holder = null;
+  try { holder = JSON.parse(fs.readFileSync(LOCK_PATH, 'utf8')); } catch { /* absent or corrupt */ }
+  const verdict = spawnreg.admitSpawnWrite(root, {
+    cmdName,
+    argvStage: commitStageArg(args),
+    spawnId: process.env.GOS_AUTO_SPAWN_ID,
+    holder,
+    lockPath: LOCK_PATH,
+  });
+  if (verdict.passthrough) return; // auto family: own marker boundary downstream
+  if (!verdict.ok) {
+    const prefix = verdict.reason === 'human-gate'
+      ? state.CONTRACTS.state_semantics.humanGateRefused
+      : state.CONTRACTS.state_semantics.spawnChannelRefused;
+    console.error(`${prefix} (${verdict.reason}):`);
+    console.error(`  ${verdict.detail}`);
+    if (verdict.reason !== 'human-gate') {
+      console.error('  spawned sessions may run only their assigned stage advance; everything else waits for the runner.');
+    }
+    process.exit(1);
+  }
+  console.error(`${state.CONTRACTS.state_semantics.lockSpawnChannel} (pid ${holder.pid}, stage ${verdict.entry.stage}, spawn ${verdict.entry.spawn_id}) — no lock ownership acquired`);
+}
+
+function acquireLock(breakLock, cmdName, args) {
   fs.mkdirSync(fsio.GOS_DIR, { recursive: true });
   if (_lockHeld) return;
+  if (process.env.GOS_AUTO_SPAWNED && cmdName !== undefined) {
+    admitThroughSpawnChannel(cmdName, args);
+    return;
+  }
   if (fs.existsSync(LOCK_PATH)) {
     let info = null;
     try { info = JSON.parse(fs.readFileSync(LOCK_PATH, 'utf8')); } catch { /* corrupt */ }
@@ -137,8 +202,7 @@ function acquireLock(breakLock) {
     try { fs.unlinkSync(LOCK_PATH); } catch { /* racing */ }
   }
   const fd = fs.openSync(LOCK_PATH, 'wx'); // O_CREAT|O_EXCL
-  fs.writeSync(fd, JSON.stringify({ pid: process.pid, started_at: new Date().toISOString() }));
-  fs.closeSync(fd);
+  try { writeLockRecord(fd); } finally { try { fs.closeSync(fd); } catch { /* closed */ } }
   _lockHeld = true;
 }
 
@@ -181,7 +245,7 @@ function remoteRepoIds(rootDir) {
   return [...ids];
 }
 
-function guardCwd(cls, cmdName, breakLock) {
+function guardCwd(cls, cmdName, breakLock, args) {
   if (cls === 'global') return;
   const here = fs.realpathSync('.');
   // [T4a/T-03] linked worktree ∧ tracked state.json → die (every class):
@@ -196,7 +260,7 @@ function guardCwd(cls, cmdName, breakLock) {
     return;
   }
   // write/exec: lock first (any cwd), then anchor check
-  acquireLock(breakLock);
+  acquireLock(breakLock, cmdName, args);
   if (cmdName === 'init') {
     const top = state.currentRootRealpath();
     if (top && here !== top) {
