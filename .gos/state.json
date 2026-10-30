@@ -2,10 +2,11 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 2,
-  "current_stage": "BUILD",
+  "current_stage": "VERIFY",
   "completed_stages": [
     "INTENT",
-    "THINK"
+    "THINK",
+    "BUILD"
   ],
   "intent": {
     "summary": "Repair the auto spawn pipeline after the feral-session incident (breaker tripped 2026-10-30): three INTENT spawns ignored the one-shot stage assignment and escalated instead (sudo/su, git push, gh pr merge, gos approve archive - all denied by gates); diagnose the spawn environment (runner-held .gos/.lock versus spawned gos commands, opencode config masked by the sandbox tmpfs leaving sessions under-configured) and cure the root cause so a spawned session reliably completes its assigned stage advance",
