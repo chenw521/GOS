@@ -18,10 +18,11 @@
     }
   },
   "approvals": {
-    "THINK": "2026-10-30T17:55:13.028Z"
+    "THINK": "2026-10-30T17:55:13.028Z",
+    "ARCHIVE": "2026-10-30T17:57:28.116Z"
   },
-  "spec_path": ".gos/task/340de317/spec.md",
-  "plan_path": ".gos/task/340de317/plan.md",
+  "spec_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-repair-the-auto-spawn-pipeline/task/340de317/spec.md",
+  "plan_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-repair-the-auto-spawn-pipeline/task/340de317/plan.md",
   "project": false,
   "requirements": [
     {
@@ -40,7 +41,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/sections/T106-auto-spawn-channel.test.sh\"]",
         "output_excerpt": "✓ refusal exits non-zero (exit 1)",
-        "artifact_path": ".gos/task/340de317/evidence-t106.md",
+        "artifact_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-repair-the-auto-spawn-pipeline/task/340de317/evidence-t106.md",
         "replay": true
       }
     },
@@ -51,7 +52,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/sections/T106-auto-spawn-channel.test.sh\"]",
         "output_excerpt": "✓ refusal exits non-zero (exit 1)",
-        "artifact_path": ".gos/task/340de317/evidence-t106.md",
+        "artifact_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-repair-the-auto-spawn-pipeline/task/340de317/evidence-t106.md",
         "replay": true
       }
     },
@@ -62,7 +63,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/sections/T106-auto-spawn-channel.test.sh\"]",
         "output_excerpt": "✓ refusal exits non-zero (exit 1)",
-        "artifact_path": ".gos/task/340de317/evidence-t106.md",
+        "artifact_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-repair-the-auto-spawn-pipeline/task/340de317/evidence-t106.md",
         "replay": true
       }
     },
@@ -73,7 +74,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/sections/T106-auto-spawn-channel.test.sh\"]",
         "output_excerpt": "✓ refusal exits non-zero (exit 1)",
-        "artifact_path": ".gos/task/340de317/evidence-t106.md",
+        "artifact_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-repair-the-auto-spawn-pipeline/task/340de317/evidence-t106.md",
         "replay": true
       }
     },
@@ -84,7 +85,7 @@
       "evidence": {
         "command": "[\"node\",\".gos/task/340de317/evidence-dogfood.cjs\"]",
         "output_excerpt": "dogfood-mechanism: verify-trips=1 deny-hits=25 seed-sanitize-live=true logs=section-runs/dogfood-round{2,3}.log",
-        "artifact_path": ".gos/task/340de317/evidence-dogfood.cjs",
+        "artifact_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-repair-the-auto-spawn-pipeline/task/340de317/evidence-dogfood.cjs",
         "replay": true
       }
     }
@@ -107,5 +108,7 @@
   "task_head": "340de31773001537aeaa7b301af8155b075fc0b9",
   "spec_gate_version": 3,
   "spec_sha256": "2f0d5b6375b5d941bacfdc73ba42dd9a41d2232c2430de6fe1910a660bf4ae64",
-  "changelog_user_summary": "Spawned auto sessions now complete exactly their assigned stage advance through a registered one-shot write channel under the runner live lock with human gates failing closed, a sanitized host-config seed free of secrets and permission expansions, pre-truncation deny detection, and snapshot rollback for crashed advances (R-01)"
+  "changelog_user_summary": "Spawned auto sessions now complete exactly their assigned stage advance through a registered one-shot write channel under the runner live lock with human gates failing closed, a sanitized host-config seed free of secrets and permission expansions, pre-truncation deny detection, and snapshot rollback for crashed advances (R-01)",
+  "checkpoints": [],
+  "completed_at": "2026-10-30T17:57:30.163Z"
 }
