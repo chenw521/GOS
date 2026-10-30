@@ -173,9 +173,11 @@ existing lock-exemption concepts (7d63cd9d interplay noted there).
 - T4: crash-window — a killed in-spawn advance (fixture: SIGKILL
   between state write and git commit) leaves a snapshot the runner's
   identity re-check rolls back, not an external-mutation pause.
-- T5: dogfood — after an explicit breaker re-enable, `gos auto run`
-  advances the task one stage via a spawned session (a delegated THINK
-  advance preferred: PENDING approval visible pre-ratify, ratified
-  with streamSha256 after), with zero dangerous-command denials and a
-  deny scan computed pre-truncation; manual runs tee evidence to
-  .gos/cache/section-runs/.
+- T5: dogfood mechanism layer — two live-repo rounds exercised the
+  registered channel (whitelisted uses consumed by real spawned
+  commands), pre-truncation deny capture (complete escalation sequences
+  recorded where round 1 produced only spliced fragments), live seed
+  sanitization, and clean breaker trips; the behavior layer (spawned
+  sessions not executing the assigned workflow) is ruled out of scope
+  here and consolidated into the stage-dispatch blueprint (concern
+  recorded, separate task).

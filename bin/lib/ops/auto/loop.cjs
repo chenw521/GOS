@@ -58,6 +58,11 @@ const DEFAULT_HEARTBEAT_INTERVAL_MS = 60 * 1000;
 
 const SPAWN_MAX_BUFFER = 64 * 1024 * 1024;
 
+// Registered spawn write channel: the runner registers each spawn before
+// launch and removes the entry at exit — the in-spawn gos commands carry
+// the spawnId so the lock layer can admit the whitelisted stage verbs.
+const spawnreg = require('../../core/spawnreg.cjs');
+
 
 
 // ---------- pure helpers ----------
@@ -719,6 +724,15 @@ async function drive(ctx) {
       profile: opts.profile,
       deny: composed.deny.slice(),
     };
+    // Registered write channel for this spawn: work spawns carry the
+    // whitelisted stage verbs (assigned commit, truth verify, gate,
+    // section); redteam spawns register without write authorization. The
+    // spawnId rides the env so in-spawn commands present it to the lock.
+    const spawnIdEnv = spec.spawnId;
+    spec.env = { ...spec.env, GOS_AUTO_SPAWN_ID: spawnIdEnv };
+    try {
+      spawnreg.writeEntry(rootDir, { spawnId: spec.spawnId, kind: spec.roWorkspace ? 'redteam' : 'work', stage, pid: process.pid, wallMs: tp.wallSec * 1000 });
+    } catch { /* registry unwritable — the spawn loses its channel and fails visibly at the first write */ }
 
     const preSpawnHead = readHead(gitRunner, rootDir);
     if (!preSpawnHead) {
@@ -749,6 +763,7 @@ async function drive(ctx) {
     let result;
     try {
       result = await withHeartbeat(() => spawnRunner(spec, { wallMs: tp.wallSec * 1000, idleMs: tp.idleSec * 1000 }));
+      try { spawnreg.removeEntry(rootDir, spec.spawnId); } catch { /* already gone */ }
     } catch (e) {
       result = { status: null, stdout: '', stderr: '', error: e };
     }

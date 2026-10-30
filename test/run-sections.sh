@@ -76,6 +76,11 @@ export GOS_HEADLESS=1
 # P15 /F10: sections pin en — locale-dependent output stays deterministic
 # regardless of the developer's environment (goldens live in section ).
 export GOS_LANG=en
+# Runner-session spawn markers never cross into sections: fixtures drive the
+# loop through module APIs and would refuse (marker-active) if the env of a
+# spawned `gos section` call leaked through. Sections testing marker behavior
+# set GOS_AUTO_SPAWNED / GOS_AUTO_SPAWN_ID explicitly per case.
+unset GOS_AUTO_SPAWNED GOS_AUTO_SPAWN_ID
 
 assert_contains() {
   local label="$1" expected="$2" actual="$3"

@@ -165,7 +165,14 @@ function makeTestbase(cacheDir) {
 }
 
 function sectionChildEnv(base) {
-  return Object.assign({}, process.env, {
+  // Spawn markers are runner-session context, not fixture context: sections
+  // drive the auto loop through module APIs and would refuse (marker-active)
+  // if a spawned `gos section` call leaked its own marker into them. Sections
+  // testing marker behavior set the vars explicitly per case.
+  const parent = { ...process.env };
+  delete parent.GOS_AUTO_SPAWNED;
+  delete parent.GOS_AUTO_SPAWN_ID;
+  return Object.assign(parent, {
     HOME: path.join(base, 'home'),
     GIT_AUTHOR_NAME: 'gos-test',
     GIT_AUTHOR_EMAIL: 'gos-test@test.invalid',
