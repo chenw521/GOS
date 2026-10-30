@@ -505,6 +505,9 @@ const CONTRACTS = {
     cwdBanner: '📍 ',                              // stderr read-class banner prefix
     lockBlocked: '✗ concurrent GOS invocation detected',
     staleLock: '✗ stale GOS lock',
+    lockSpawnChannel: '⚠ lock held by live runner ancestor — spawn channel admitted',
+    spawnChannelRefused: '✗ spawn channel refused',
+    humanGateRefused: '✗ human gate refused inside a spawned session',
     // Phase B (T2) state-schema evolution fail-closed messages [D-30/D-31/B-15/B-21/B-22]:
     evidenceLegacy: 'legacy string evidence rejected (fail-closed) — re-record via `gos truth verify`',
     evidenceMissing: 'verified truth missing evidence object — record via `gos truth verify`',
@@ -1321,8 +1324,18 @@ const STATE_PATH_FIELDS = {
   nested: [['observable_truths', 'evidence', 'artifact_path']],        // paths nested inside array elements
 };
 
+// Human gates (approve/archive/push/disposition) never execute inside a
+// runner-spawned session: the marker is the boundary, the refusal is the
+// second layer behind the lock channel's whitelist.
+function humanGateGuard(cmdName) {
+  if (!process.env.GOS_AUTO_SPAWNED) return;
+  console.error(`${CONTRACTS.state_semantics.humanGateRefused}: \`gos ${cmdName}\` requires a human at the terminal — the spawned session may only run its assigned stage advance`);
+  process.exit(1);
+}
+
 module.exports = {
   STATE_PATH_FIELDS,
+  humanGateGuard,
   NO_CMD_KEY,
   COMMANDS,
   validateDecision,

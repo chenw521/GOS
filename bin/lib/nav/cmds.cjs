@@ -88,6 +88,7 @@ function cmdResume() {
 }
 
 function cmdApprove(args) {
+  core.humanGateGuard('approve');
   const state = core.readState();
   if (!state) core.die(core.CONTRACTS.state_semantics.noActiveTask);
   const what = (args[0] || '').toLowerCase();

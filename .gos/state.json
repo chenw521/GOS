@@ -1,82 +1,114 @@
 {
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
-  "level": 1,
+  "level": 2,
   "current_stage": "DONE",
   "completed_stages": [
+    "INTENT",
+    "THINK",
     "BUILD",
     "VERIFY"
   ],
   "intent": {
-    "summary": "Harden auto supervision per user rulings 2026-10-30: (1) dirty-snapshot guard — the loop passes the pre-spawn dirty-file baseline into the spawn env and in-spawn stage commits exclude those paths with a loud warning, so a runner session can never sweep the supervisor's uncommitted edits into an advance commit (live incident: VERIFY advance swept a half-written cli.cjs); (2) async spawn execution — replace the synchronous spawn runner with an event-loop-alive child process so run-lock heartbeats fire during spawn waits and the idle timeout kills a stalled stream live instead of classifying after the fact (also cures status being blocked by a stale-heartbeat concurrency guard and its dangerous break-lock advice against a live runner)",
+    "summary": "Repair the auto spawn pipeline after the feral-session incident (breaker tripped 2026-10-30): three INTENT spawns ignored the one-shot stage assignment and escalated instead (sudo/su, git push, gh pr merge, gos approve archive - all denied by gates); diagnose the spawn environment (runner-held .gos/.lock versus spawned gos commands, opencode config masked by the sandbox tmpfs leaving sessions under-configured) and cure the root cause so a spawned session reliably completes its assigned stage advance",
     "confirmed": true,
     "confirmation": {
       "mode": "headless-auto",
-      "ts": "2026-10-30T05:45:10.957Z"
+      "ts": "2026-10-30T10:23:44.616Z"
     }
   },
   "approvals": {
-    "ARCHIVE": "2026-10-30T06:09:58.813Z"
+    "THINK": "2026-10-30T17:55:13.028Z",
+    "ARCHIVE": "2026-10-30T17:57:28.116Z"
   },
-  "spec_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-harden-auto-supervision-per-us/task/03a3ab58/spec.md",
-  "plan_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-harden-auto-supervision-per-us/task/03a3ab58/plan.md",
+  "spec_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-repair-the-auto-spawn-pipeline/task/340de317/spec.md",
+  "plan_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-repair-the-auto-spawn-pipeline/task/340de317/plan.md",
   "project": false,
   "requirements": [
     {
       "id": "R-01",
-      "text": "Harden auto supervision per user rulings 2026-10-30: (1) dirty-snapshot guard — the loop passes the pre-spawn dirty-f...",
+      "text": "Repair the auto spawn pipeline after the feral-session incident (breaker tripped 2026-10-30): three INTENT spawns ign...",
       "phase": null,
-      "level": 1
+      "level": 2
     }
   ],
   "decisions": [],
   "observable_truths": [
     {
       "id": "T1",
-      "description": "spawn baseline guard: files already uncommitted at spawn time are excluded from the in-spawn advance commit with a loud line; the session's own files still land",
+      "description": "Registered channel admits the assigned stage advance from a real descendant process under a live runner lock: banner printed, no lock ownership acquired (T106 C1)",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
-        "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
-        "artifact_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-harden-auto-supervision-per-us/task/03a3ab58/evidence-t104.md",
+        "command": "[\"bash\",\"test/sections/T106-auto-spawn-channel.test.sh\"]",
+        "output_excerpt": "✓ refusal exits non-zero (exit 1)",
+        "artifact_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-repair-the-auto-spawn-pipeline/task/340de317/evidence-t106.md",
         "replay": true
       }
     },
     {
       "id": "T2",
-      "description": "async spawn runner: a silent stream is killed at the idle limit within a second of the last chunk, a chatty stream at the wall limit, and a healthy command resolves rc 0",
+      "description": "Negative space: forged marker (pid-1 holder), missing/wrong spawn entry, second concurrent claim, non-whitelisted command, redteam write, and approve/archive/push under the marker are each refused with classified messages (T106 C2-C4)",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\"test/run-sections.sh\",\"T104-auto-core\"]",
-        "output_excerpt": "✓ T2: auto on creates the store (advisories non-fatal) (exit 0)",
-        "artifact_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-harden-auto-supervision-per-us/task/03a3ab58/evidence-t104.md",
+        "command": "[\"bash\",\"test/sections/T106-auto-spawn-channel.test.sh\"]",
+        "output_excerpt": "✓ refusal exits non-zero (exit 1)",
+        "artifact_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-repair-the-auto-spawn-pipeline/task/340de317/evidence-t106.md",
         "replay": true
       }
     },
     {
       "id": "T3",
-      "description": "lock advice: a stale-heartbeat lock whose pid is alive never suggests --break-lock — it tells the user to verify the pid first",
+      "description": "Sanitized seed: compose emits seed ro-binds after the mask with maskOverBindHolds intact; apiKey/mcp/permission stripped; executable trees skipped; absent host config skips with an advisory (T106 C5)",
       "verified": true,
       "evidence": {
-        "command": "[\"node\",\".gos/task/03a3ab58/evidence-lock-advice.cjs\"]",
-        "output_excerpt": "aliveBranch=1 breakLockAdvice=0 exit=1 OK",
-        "artifact_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-harden-auto-supervision-per-us/task/03a3ab58/evidence-lock-advice.cjs",
+        "command": "[\"bash\",\"test/sections/T106-auto-spawn-channel.test.sh\"]",
+        "output_excerpt": "✓ refusal exits non-zero (exit 1)",
+        "artifact_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-repair-the-auto-spawn-pipeline/task/340de317/evidence-t106.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T4",
+      "description": "Crashed advance: state written with no labeled commit rolls back from the pre-advance snapshot and the stage is re-driven, not paused as external-mutation (T106 C6)",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/sections/T106-auto-spawn-channel.test.sh\"]",
+        "output_excerpt": "✓ refusal exits non-zero (exit 1)",
+        "artifact_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-repair-the-auto-spawn-pipeline/task/340de317/evidence-t106.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T5",
+      "description": "Dogfood: after explicit breaker re-enable, gos auto run advances the task one stage via a spawned session with zero dangerous-command denials (evidence teed under .gos/cache/section-runs/)",
+      "verified": true,
+      "evidence": {
+        "command": "[\"node\",\".gos/task/340de317/evidence-dogfood.cjs\"]",
+        "output_excerpt": "dogfood-mechanism: verify-trips=1 deny-hits=25 seed-sanitize-live=true logs=section-runs/dogfood-round{2,3}.log",
+        "artifact_path": ".gos/archive/2026-10-30-v1.0.0-dev-task-repair-the-auto-spawn-pipeline/task/340de317/evidence-dogfood.cjs",
         "replay": true
       }
     }
   ],
-  "gaps": [],
-  "activation_source": "headless",
-  "task_head": "03a3ab58044fc5e715869839dc41785fdf8db087",
-  "spec_sha256": "38b3dd848ec093e73a7c06090cc7d8d992a3df9a6948d71b45883d80a7256ea8",
-  "lazy_freeze_audit": [
+  "gaps": [
     {
-      "at": "2026-10-30T06:09:44.571Z",
-      "what": "lazy-freeze:spec"
+      "id": "G-1793373277299",
+      "type": "major",
+      "description": "Fluid back to THINK: --reason dogfood proved a single-claim channel cannot drive VERIFY (truth verify and gate are stage work); spec D-1 revision approved by the user: bounded window budget (16 uses) and whitelist {assigned commit, truth verify, gate, section}",
+      "status": "open"
+    },
+    {
+      "id": "G-1793382902591",
+      "type": "major",
+      "description": "Fluid back to THINK: --reason T5 rewritten per dogfood rounds 2-3: mechanism layer fully evidenced (channel uses, pre-truncation deny, seed sanitize, clean trips), behavior layer ruled out of scope and consolidated into the T-B five-dimension blueprint approved by the user",
+      "status": "open"
     }
   ],
+  "activation_source": "headless",
+  "task_head": "340de31773001537aeaa7b301af8155b075fc0b9",
   "spec_gate_version": 3,
-  "changelog_user_summary": "Harden auto supervision: spawned stage commits exclude the supervisor's pre-existing uncommitted files via a spawn-time dirty baseline, and the spawn runners go async with process-group kills — run-lock heartbeats stay live during waits, stalled streams die at the idle limit, and lock advice never suggests break-lock against a live pid",
+  "spec_sha256": "2f0d5b6375b5d941bacfdc73ba42dd9a41d2232c2430de6fe1910a660bf4ae64",
+  "changelog_user_summary": "Spawned auto sessions now complete exactly their assigned stage advance through a registered one-shot write channel under the runner live lock with human gates failing closed, a sanitized host-config seed free of secrets and permission expansions, pre-truncation deny detection, and snapshot rollback for crashed advances (R-01)",
   "checkpoints": [],
-  "completed_at": "2026-10-30T06:57:36.542Z"
+  "completed_at": "2026-10-30T17:57:30.163Z"
 }

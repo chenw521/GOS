@@ -464,6 +464,107 @@ function scanSpawnOutput(text, opts) {
   return hits;
 }
 
+// Streaming form of the escape detector: deny patterns match against every
+// line AS IT ARRIVES, so a large benign tail can never push early deny
+// lines out of the captured window before the post-hoc scan runs. Line
+// fragments carry across feed() calls.
+function makeStreamDenyScanner(opts) {
+  const o = opts || {};
+  let deny;
+  if (Array.isArray(o.deny)) deny = o.deny.map(String);
+  else {
+    const lp = loadProfile(DEFAULT_PROFILE);
+    deny = lp.ok ? lp.profile.deny.map(String) : DETECTOR_FLOOR_DENY.slice();
+  }
+  const seen = [];
+  let buf = '';
+  const scanBuffer = (flush) => {
+    const lines = buf.split(/\r?\n/);
+    buf = flush ? '' : lines.pop(); // keep the trailing fragment for the next chunk
+    for (const line of lines) {
+      if (!line) continue;
+      for (const pat of deny) {
+        const m = globToRegExp(pat).exec(line);
+        if (m) seen.push({ pattern: pat, match: m[0], line: line.slice(0, 240), preTruncation: true });
+      }
+    }
+  };
+  return {
+    feed(chunk) { buf += String(chunk); scanBuffer(false); },
+    flush() { scanBuffer(true); },
+    hits: seen,
+  };
+}
+
+// Sanitized host-config seed: the runner is the gatekeeper of what a spawn
+// sees of the host's opencode config. Provider API keys, mcp server
+// definitions (env/headers carry credentials), and permission expansions
+// are stripped — the spawn gets the model/provider shape, never the keys,
+// never a second permission source competing with the injected deny.
+// Executable-ish trees (agents/commands/plugins) are skipped wholesale:
+// their frontmatter can widen tools beyond the profile's intent.
+const SEED_SKIP_ENTRIES = new Set(['agent', 'agents', 'command', 'commands', 'plugin', 'plugins', 'node_modules', 'log', 'cache', 'storage']);
+const SANITIZE_STRIP_KEYS = new Set(['apikey', 'api_key', 'mcp', 'permission']);
+
+function stripSecretsDeep(v, stripped, trail) {
+  if (Array.isArray(v)) { for (const x of v) stripSecretsDeep(x, stripped, trail); return v; }
+  if (v && typeof v === 'object') {
+    for (const k of Object.keys(v)) {
+      const kk = String(k).toLowerCase();
+      if (SANITIZE_STRIP_KEYS.has(kk)) {
+        delete v[k];
+        stripped.push(`${trail}${k}`);
+      } else {
+        stripSecretsDeep(v[k], stripped, `${trail}${k}.`);
+      }
+    }
+  }
+  return v;
+}
+
+function sanitizeHostConfig(env) {
+  const dirRaw = resolveTokenPath('$HOME/.config/opencode', env);
+  let dir;
+  try { dir = fs.realpathSync(dirRaw); } catch { return { ok: false, reason: 'absent', dir: dirRaw }; }
+  let st;
+  try { st = fs.statSync(dir); } catch { return { ok: false, reason: 'absent', dir }; }
+  if (!st.isDirectory()) return { ok: false, reason: 'not-a-dir', dir };
+  const files = {};
+  const stripped = [];
+  let entries;
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); }
+  catch (e) { return { ok: false, reason: 'unreadable', dir, detail: e.message }; }
+  for (const e of entries) {
+    if (SEED_SKIP_ENTRIES.has(e.name.toLowerCase())) { stripped.push(`${e.name}/ (executable tree skipped)`); continue; }
+    if (!e.isFile()) { stripped.push(`${e.name} (non-file skipped)`); continue; }
+    if (/\.(json|jsonc|toml|ya?ml|txt|md)$/i.test(e.name) === false) { stripped.push(`${e.name} (non-config skipped)`); continue; }
+    const p = path.join(dir, e.name);
+    let text;
+    try { text = fs.readFileSync(p, 'utf8'); } catch { stripped.push(`${e.name} (unreadable skipped)`); continue; }
+    if (text.length > 1024 * 1024) { stripped.push(`${e.name} (oversized skipped)`); continue; }
+    if (/\.jsonc?$/i.test(e.name)) {
+      try {
+        const obj = JSON.parse(text);
+        stripSecretsDeep(obj, stripped, `${e.name}:`);
+        files[e.name] = JSON.stringify(obj, null, 2);
+        continue;
+      } catch { /* not valid JSON — seed as opaque text */ }
+    }
+    files[e.name] = text;
+  }
+  return { ok: true, dir, files, stripped };
+}
+
+// Materialize a sanitized snapshot dir for seedRoots consumption; the caller
+// owns cleanup of the returned directory.
+function materializeSeedDir(files, baseDir, prefix) {
+  const dir = fs.mkdtempSync(path.join(baseDir, `${prefix}-`));
+  for (const [name, content] of Object.entries(files || {})) {
+    fs.writeFileSync(path.join(dir, name), content);
+  }
+  return dir;
+}
+
 // ---- compose ---------------------------------------------------------------
 
 // compose(profileName, opts) -> { ok, profile, tier, engine, argv, env, deny,
@@ -630,4 +731,7 @@ module.exports = {
   seedSnapshots,
   recordDenyBaseline,
   scanSpawnOutput,
+  makeStreamDenyScanner,
+  sanitizeHostConfig,
+  materializeSeedDir,
 };

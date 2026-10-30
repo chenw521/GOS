@@ -158,6 +158,7 @@ function printPrGuidance(errText) {
 }
 
 function cmdPush(args) {
+  core.humanGateGuard('push');
   const { message } = parsePushArgs(args);
   if (!gitTry(['rev-parse', '--is-inside-work-tree']).ok) core.die('push: not a git work tree — run from inside the repository you want to publish');
   if (!gitTry(['remote', 'get-url', 'origin']).ok) core.die('push: no origin remote configured — gos push publishes the aggregate to origin');
