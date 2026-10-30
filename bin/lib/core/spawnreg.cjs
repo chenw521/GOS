@@ -54,12 +54,17 @@ function readEntry(root, spawnId) {
   return doc;
 }
 
-// One-shot gate: the first caller claims the channel for this spawn,
-// any concurrent second caller fails.
+// Window budget gate: each use appends one line to the claim file; the
+// cap-th refusal stops runaway sessions. Returns true when admitted.
 function claimChannel(root, spawnId) {
   try {
-    const fd = fs.openSync(claimPath(root, spawnId), 'wx');
-    fs.writeSync(fd, JSON.stringify({ pid: process.pid, at: new Date().toISOString() }));
+    const p = claimPath(root, spawnId);
+    let uses = 0;
+    try { uses = fs.readFileSync(p, 'utf8').split('\n').filter((l) => l.trim()).length; }
+    catch { /* first use */ }
+    if (uses >= CHANNEL_USE_CAP) return false;
+    const fd = fs.openSync(p, 'a');
+    fs.writeSync(fd, JSON.stringify({ pid: process.pid, at: new Date().toISOString() }) + '\n');
     fs.closeSync(fd);
     return true;
   } catch (e) {
@@ -100,6 +105,16 @@ function ancestryPids() {
 // about WHAT the command is, not whether the spawn is registered.
 const HUMAN_GATE_CMDS = new Set(['approve', 'archive', 'push', 'disposition']);
 
+// Stage-driving commands a work spawn may run inside its window: the
+// assigned advance plus the verification verbs that produce its evidence.
+// Truth is whitelisted for `verify` only — recording evidence with a real
+// replay, never free-text assertion.
+const WINDOW_WRITE_CMDS = new Set(['commit', 'gate', 'section']);
+
+// One window, bounded write budget: the claim file counts uses; the
+// CHANNEL_USE_CAP-th attempt is refused (a runaway session cannot flood).
+const CHANNEL_USE_CAP = 16;
+
 // The verdict consumed by guardCwd: does THIS command, in THIS process,
 // get the runner's spawn channel? holder is the parsed .gos/.lock record
 // ({pid, boot_id, starttime}); argvStage is the stage word of a commit
@@ -118,10 +133,16 @@ function admitSpawnWrite(root, opts) {
   const entry = readEntry(root, spawnId);
   if (!entry) return { ok: false, reason: 'no-entry', detail: `no live registry entry for spawn ${spawnId || '(unset)'}` };
   if (entry.kind === 'redteam') return { ok: false, reason: 'redteam-no-write', detail: 'redteam spawns never carry write authorization' };
-  if (cmdName !== 'commit') return { ok: false, reason: 'not-whitelisted', detail: `command "${cmdName}" is outside the spawn channel (only the assigned commit is admitted)` };
-  const want = String(entry.stage || '').toUpperCase();
-  if (String(argvStage || '').toUpperCase() !== want) {
-    return { ok: false, reason: 'stage-mismatch', detail: `spawn ${spawnId} is assigned stage ${want}, not "${argvStage}"` };
+  // Whitelist: the assigned advance, the verification verbs, and truth
+  // verification (evidence replay only — `truth add` stays outside).
+  const cmdOk = cmdName === 'commit' || WINDOW_WRITE_CMDS.has(cmdName)
+    || (cmdName === 'truth' && String(argvStage || '').toLowerCase() === 'verify');
+  if (!cmdOk) return { ok: false, reason: 'not-whitelisted', detail: `command "${cmdName}${cmdName === 'truth' ? ' ' + (argvStage || '') : ''}" is outside the spawn channel (assigned commit, truth verify, gate, section)` };
+  if (cmdName === 'commit') {
+    const want = String(entry.stage || '').toUpperCase();
+    if (String(argvStage || '').toUpperCase() !== want) {
+      return { ok: false, reason: 'stage-mismatch', detail: `spawn ${spawnId} is assigned stage ${want}, not "${argvStage}"` };
+    }
   }
   if (!holder || typeof holder.pid !== 'number') {
     return { ok: false, reason: 'holder-unknown', detail: 'lock record unreadable or missing holder identity' };
@@ -149,7 +170,7 @@ function admitSpawnWrite(root, opts) {
     return { ok: false, reason: 'not-ancestor', detail: `lock holder pid ${holder.pid} is not in this process's ancestry (marker alone never admits)` };
   }
   if (!claimChannel(root, spawnId)) {
-    return { ok: false, reason: 'already-claimed', detail: `spawn ${spawnId} already used its one write` };
+    return { ok: false, reason: 'budget-exhausted', detail: `spawn ${spawnId} exhausted its window write budget (${CHANNEL_USE_CAP})` };
   }
   return { ok: true, entry };
 }

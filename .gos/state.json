@@ -2,11 +2,10 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 2,
-  "current_stage": "VERIFY",
+  "current_stage": "BUILD",
   "completed_stages": [
     "INTENT",
-    "THINK",
-    "BUILD"
+    "THINK"
   ],
   "intent": {
     "summary": "Repair the auto spawn pipeline after the feral-session incident (breaker tripped 2026-10-30): three INTENT spawns ignored the one-shot stage assignment and escalated instead (sudo/su, git push, gh pr merge, gos approve archive - all denied by gates); diagnose the spawn environment (runner-held .gos/.lock versus spawned gos commands, opencode config masked by the sandbox tmpfs leaving sessions under-configured) and cure the root cause so a spawned session reliably completes its assigned stage advance",
@@ -17,7 +16,7 @@
     }
   },
   "approvals": {
-    "THINK": "2026-10-30T14:10:06.106Z"
+    "THINK": "2026-10-30T15:15:08.338Z"
   },
   "spec_path": ".gos/task/340de317/spec.md",
   "plan_path": ".gos/task/340de317/plan.md",
@@ -63,10 +62,17 @@
       "evidence": null
     }
   ],
-  "gaps": [],
+  "gaps": [
+    {
+      "id": "G-1793373277299",
+      "type": "major",
+      "description": "Fluid back to THINK: --reason dogfood proved a single-claim channel cannot drive VERIFY (truth verify and gate are stage work); spec D-1 revision approved by the user: bounded window budget (16 uses) and whitelist {assigned commit, truth verify, gate, section}",
+      "status": "open"
+    }
+  ],
   "activation_source": "headless",
   "task_head": "340de31773001537aeaa7b301af8155b075fc0b9",
   "spec_gate_version": 3,
-  "spec_sha256": "e82e4615d5cad362de903261598c116a4e8178d471cb9590b0b17a34a58fdb8e",
+  "spec_sha256": "ee81c3e7ea60acf3839585c64683ec6523f58bcc3404596854bbfe0f771323f8",
   "changelog_user_summary": "Spawned auto sessions now complete exactly their assigned stage advance through a registered one-shot write channel under the runner live lock with human gates failing closed, a sanitized host-config seed free of secrets and permission expansions, pre-truncation deny detection, and snapshot rollback for crashed advances (R-01)"
 }

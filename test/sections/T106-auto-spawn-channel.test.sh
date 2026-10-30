@@ -113,7 +113,16 @@ EOF
 echo "C1: channel-admit (real descendant, registered, live fresh holder)"
 OUT="$(node "$ADMIT" "$CHAN_ROOT" commit THINK sp-work - - 2>&1)"
 t106_contains "real descendant admitted" "ADMITTED stage=THINK" "$OUT"
-t106_exit "second claim refused (one write per spawn)" "REFUSED already-claimed" "$(node "$ADMIT" "$CHAN_ROOT" commit THINK sp-work - - 2>&1)"
+OUT2="$(node "$ADMIT" "$CHAN_ROOT" gate all sp-work - - 2>&1)"
+t106_contains "window admits multiple whitelisted commands" "ADMITTED stage=THINK" "$OUT2"
+OUT3="$(node "$ADMIT" "$CHAN_ROOT" truth verify sp-work - - 2>&1)"
+t106_contains "truth verify admitted" "ADMITTED stage=THINK" "$OUT3"
+printf '%s\n' $(seq 16) > "$CHAN_ROOT/.gos/cache/auto-spawn/sp-budget.claim" 2>/dev/null
+node -e "
+const sr = require(process.env.GOS_ROOT + '/bin/lib/core/spawnreg.cjs');
+sr.writeEntry('$CHAN_ROOT', { spawnId: 'sp-budget', kind: 'work', stage: 'THINK', pid: 1, wallMs: 600000 });
+" 2>/dev/null
+t106_exit "exhausted window budget refused" "REFUSED budget-exhausted" "$(node "$ADMIT" "$CHAN_ROOT" commit THINK sp-budget - - 2>&1)"
 
 # ---------------------------------------------------------------- C2 --
 echo "C2: channel-negative (refusal matrix)"
@@ -121,6 +130,7 @@ t106_exit "missing entry refused" "REFUSED no-entry" "$(node "$ADMIT" "$CHAN_ROO
 t106_exit "unset spawn id refused" "REFUSED no-entry" "$(node "$ADMIT" "$CHAN_ROOT" commit THINK - - 2>&1)"
 t106_exit "redteam entry never writes" "REFUSED redteam-no-write" "$(node "$ADMIT" "$CHAN_ROOT" commit THINK sp-red - - 2>&1)"
 t106_exit "non-whitelisted command refused" "REFUSED not-whitelisted" "$(node "$ADMIT" "$CHAN_ROOT" decision add sp-work - - 2>&1)"
+t106_exit "truth add refused (verify only)" "REFUSED not-whitelisted" "$(node "$ADMIT" "$CHAN_ROOT" truth add sp-work - - 2>&1)"
 t106_exit "stage mismatch refused" "REFUSED stage-mismatch" "$(node "$ADMIT" "$CHAN_ROOT" commit BUILD sp-work - - 2>&1)"
 
 node -e "

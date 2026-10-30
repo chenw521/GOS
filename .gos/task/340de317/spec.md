@@ -25,7 +25,7 @@ untrusted session itself.
 
 | Option | Premise | Pros | Cons | Activates |
 |:--|:--|:--|:--|:--|
-| A registered write channel | the runner already serializes writes; a spawn needs exactly ONE write (its assigned advance) — model that one write, not the whole lock | minimal blast radius: one command, one claim, one window; untrusted session trees never gain a general write pass | three new mechanisms (registry, claim, whitelist) instead of one branch | spawn registry + single-claim + command whitelist in the lock layer |
+| A registered write channel | the runner already serializes writes; a spawn needs a bounded set of stage-driving writes — model that window, not the whole lock | bounded blast radius: four whitelisted verbs, a 16-use budget, one window; untrusted session trees never gain a general write pass | three new mechanisms (registry, budget, whitelist) instead of one branch | spawn registry + window budget + command whitelist in the lock layer |
 | A0 bare ancestry-chain exemption | marker + holder pid in /proc ancestry | smallest diff | grants every descendant of the runner a concurrent write pass — rejected by red team R1-F1/R3-F4 (the feral session's own children are the threat model) | none (rejected) |
 | B release for the spawn window | lock window covers runner ops only | no exemption | reverts the just-landed heartbeat design; external writers slip in | none (rejected) |
 | C spawns run zero gos writes | sessions produce files, runner commits | lock untouched | per-stage protocol rewrite out of proportion | none (rejected) |
@@ -42,15 +42,16 @@ Semantics:
   `.gos/auto-spawn/<spawnId>.json` (bwrap pid, assigned stage, spawn
   kind work|redteam, window expiry = spawn wall timeout). The registry
   entry is removed at spawn exit; entries past expiry never validate.
-- **Single claim**: the exempted write must first create
-  `.gos/auto-spawn/<spawnId>.claim` with O_EXCL — a second concurrent
-  exempted write in the same window fails the normal live-holder block.
-  Registry and claim live under the machine-local .gos/ runtime area
-  (never tracked).
-- **Command whitelist**: the exemption validates only
-  `gos commit <assigned stage>` for work spawns. Redteam spawns get NO
-  write authorization (read-class only). Everything else write-class
-  keeps the live-holder refusal.
+- **Window budget**: each admitted use appends one line to the spawn's
+  claim file; the budget cap is 16 uses per window — a runaway session
+  cannot flood, and legitimate stage work (multiple truth verifications,
+  a gate run, the advance) fits. The registry entry is removed at spawn
+  exit; entries past expiry never validate.
+- **Command whitelist**: the window validates only stage-driving verbs for
+  work spawns — the assigned `gos commit <assigned stage>`, `gos truth
+  verify` (evidence replay, never free-text `truth add`), `gos gate`, and
+  `gos section`. Redteam spawns get NO write authorization (read-class
+  only). Everything else write-class keeps the live-holder refusal.
 - **Human gates stay hard**: `approve`, `archive`, `push`,
   `disposition` refuse whenever `spawnMarkerActive()` — the lock was
   previously their accidental backstop; the refusal becomes explicit
@@ -160,11 +161,11 @@ existing lock-exemption concepts (7d63cd9d interplay noted there).
   assigned `gos commit <stage>` from a real descendant process
   completes with the spawn-channel banner (real pid ancestry, section
   fixture).
-- T2: negative space — a forged marker with holder pid 1, a marked
-  process outside the registry window (wrong/missing spawnId), a
-  second concurrent claim, a non-whitelisted write command, a redteam
-  spawn's write attempt, and approve/archive/push/disposition under
-  the marker: each is refused, each with its classified message.
+- T2: negative space — a forged marker with holder pid 1, a marked process
+  outside the registry window (wrong/missing spawnId), an exhausted window
+  budget, a non-whitelisted write command (incl. `truth add`), a redteam
+  spawn's write attempt, and approve/archive/push/disposition under the
+  marker: each is refused, each with its classified message.
 - T3: seed form — with a host config dir present, compose() emits the
   seed ro-binds after the mask and maskOverBindHolds still passes
   (T105); absent host dir skips the seed with an advisory; host config
