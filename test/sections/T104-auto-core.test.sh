@@ -1210,8 +1210,12 @@ const spawnRunner = (spec) => { seen.push(spec); return { status: 0, stdout: '{"
     const r = await loop.createLoop({ rootDir: world, host: 'gos-fixture-host', env: { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' }, profile, maxIterations: 1, spawnRunner, stateReader, ...(profile === 'full' ? { allowFull: true } : {}) }).loop.run();
     const spec = seen.find((s) => s && Array.isArray(s.argv));
     if (!spec) { problems.push(profile + ': no spawn spec captured'); continue; }
+    // Mount tables exist only at the kernel tier: a lexical degrade carries
+    // the adapter command line, so the bind assertions gate on the tier.
     const rw = spec.argv.some((_, i) => spec.argv[i] === '--bind' && spec.argv[i + 1] === world && spec.argv[i + 2] === world);
-    if (profile === 'workspace' && !rw) problems.push('workspace profile did not bind the repo root read-write');
+    if (spec.tier === 'bubblewrap') {
+      if (profile === 'workspace' && !rw) problems.push('workspace profile did not bind the repo root read-write');
+    }
     if (profile === 'restricted' && rw) problems.push('restricted profile bound the repo root writable');
   }
   console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
