@@ -3,7 +3,7 @@
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },
-  "version": "1.0.0-dev",
+  "version": "1.0.0",
   "description": "GOS — Get Organized System: adaptive workflow plugin combining GSD's project governance, OpenSpec's phase lifecycle, and Superpowers' execution discipline",
   "license": "MIT",
   "author": "chenw521",

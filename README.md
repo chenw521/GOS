@@ -210,9 +210,8 @@ loop ends cleanly at SHIP and delivery stays fully manual.
 ### Greenfield — three steps from zero
 
 ```bash
-npm i -g @chenw521/gos        # from the public npm registry
-# pre-publish alternative (works today, tracks main):
-# npm i -g github:chenw521/GOS
+npm i -g github:chenw521/GOS   # straight from GitHub, tracks main
+# npm i -g @chenw521/gos       # registry drop pending — not live yet
 gos setup
 ```
 

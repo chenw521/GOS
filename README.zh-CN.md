@@ -152,9 +152,8 @@ remote 在探测时固定（pin），且在每次特权 git 调用前重新校�
 ### 绿地——三步从零开始
 
 ```bash
-npm i -g @chenw521/gos        # 公网 npm 安装
-# 发布前的替代方式（现在即可用，跟随 main）：
-# npm i -g github:chenw521/GOS
+npm i -g github:chenw521/GOS   # 直接从 GitHub 安装，跟随 main
+# npm i -g @chenw521/gos       # npm 公网发布待定——暂不可用
 gos setup
 ```
 
