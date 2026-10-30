@@ -150,30 +150,42 @@ gos brownfield          # 接入报告（--json 给机器）
 
 ## 真正常用的 CLI
 
-两类受众、两份小清单。完整命令面——50+ 条——在 `gos help` 里（由
+十条命令覆盖日常流量；两张小表覆盖各受众在核心之外的重点。完整命令面——50+ 条——在 `gos help` 里（由
 [`bin/gos.cjs`](bin/gos.cjs) 的 COMMANDS registry 渲染，单一事实源；机器用 `gos help --json`）。
 
-### 给人用的
+### 核心十连
+
+<!-- gos:core-shortlist begin -->
+- `gos`（无参数）— 状态 + 下一步（零记忆入口）
+- `gos init <level> "<intent>"` — 开始任务
+- `gos commit <stage>` — 原子提交 + 阶段推进
+- `gos gate all` — 硬门（失败 exit 1）
+- `gos context <stage>` — 预计算上下文 JSON
+- `gos resume` — 跨会话恢复摘要
+- `gos instructions <stage>` — 阶段指引
+- `gos phase <sub>` — Lv4 phase 生命周期
+- `gos decision <sub>` — 记录/修订决策
+- `gos help [--json]` — 全量能力发现
+
+全量能力: `gos help [--json]`
+<!-- gos:core-shortlist end -->
+
+### 给人用的——核心之外
 
 | 命令 | 作用 |
 |:--|:--|
-| `gos` | 状态 + 下一步——零记忆入口 |
-| `gos init <level> "<intent>"` | 按推荐级别起任务 |
-| `gos resume` | 跨会话续接摘要 |
 | `gos auto on / run / status` | 全自动循环控制 |
 | `gos brownfield` | 把 GOS 接入既有仓库 |
 | `gos setup` / `gos doctor` | 安装 skills / 诊断安装 |
 
-### 给机器用的
+### 给机器用的——核心之外
 
 | 命令 | 作用 |
 |:--|:--|
-| `gos context <stage>` | 预计算上下文 JSON（文件、决策、真值、门） |
-| `gos instructions <stage>` | 当前任务逐阶段指引 |
 | `gos next` | 现在该做什么 |
-| `gos commit <stage>` | 阶段产物原子提交 + 推进 |
-| `gos gate all [--json]` | 硬门；机器可读失败 `{code, verdict, evidence, fix}` |
-| `gos help --json` | 全能力发现 |
+| `gos map closure <file> --semantic` | 这次改动连带决定了什么（fn 级调用图） |
+| `gos logs` | 运行时审计台账（回执 / 豁免 / 审计） |
+| `gos trace` | 需求 → 决策 → 任务 → 真值 追溯链 |
 
 ## 何时用 GOS / 何时不用
 

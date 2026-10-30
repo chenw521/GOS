@@ -219,32 +219,45 @@ gos brownfield          # adoption report (--json for machine output)
 
 ## The CLI surface that matters
 
-Two audiences, two small sets. The full command surface — 50+ commands —
-lives in `gos help` (rendered from the COMMANDS registry in
+Ten commands cover daily traffic; two small tables cover the rest that
+matters per audience. The full command surface — 50+ commands — lives in
+`gos help` (rendered from the COMMANDS registry in
 [`bin/gos.cjs`](bin/gos.cjs), the single source of truth; `gos help --json`
 for machines).
 
-### For humans
+### The core ten
+
+<!-- gos:core-shortlist begin -->
+- `gos` (no args) — status + what's next (zero-memorization entry)
+- `gos init <level> "<intent>"` — start task
+- `gos commit <stage>` — atomic commit + stage advance
+- `gos gate all` — hard gates (exit 1 on failure)
+- `gos context <stage>` — pre-computed context JSON
+- `gos resume` — cross-session resume summary
+- `gos instructions <stage>` — stage-by-step guidance
+- `gos phase <sub>` — Lv4 phase lifecycle
+- `gos decision <sub>` — record/amend decisions
+- `gos help [--json]` — full capability discovery
+
+Full capability: `gos help [--json]`
+<!-- gos:core-shortlist end -->
+
+### For humans — beyond the core
 
 | Command | What it does |
 |:--|:--|
-| `gos` | status + what's next — the zero-memorization entry |
-| `gos init <level> "<intent>"` | start a task at the recommended level |
-| `gos resume` | cross-session resume summary |
 | `gos auto on / run / status` | full-auto loop control |
 | `gos brownfield` | adopt GOS into an existing repo |
 | `gos setup` / `gos doctor` | install skills / diagnose the installation |
 
-### For agents
+### For agents — beyond the core
 
 | Command | What it does |
 |:--|:--|
-| `gos context <stage>` | pre-computed context JSON (files, decisions, truths, gates) |
-| `gos instructions <stage>` | stage-by-stage guidance for the current task |
 | `gos next` | what to do right now |
-| `gos commit <stage>` | atomic commit of stage artifacts + advance |
-| `gos gate all [--json]` | hard gates; machine-readable failures `{code, verdict, evidence, fix}` |
-| `gos help --json` | full capability discovery |
+| `gos map closure <file> --semantic` | what your change co-determines (fn call-graph) |
+| `gos logs` | runtime audit ledgers (receipts / exemptions / audit) |
+| `gos trace` | requirements → decisions → tasks → truths |
 
 ## When to use GOS / when not
 
