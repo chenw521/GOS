@@ -2,9 +2,10 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "THINK",
+  "current_stage": "PLAN",
   "completed_stages": [
-    "INTENT"
+    "INTENT",
+    "THINK"
   ],
   "intent": {
     "summary": "Ship the stage-dispatch blueprint for the auto loop: per-stage worker forms (script workers for mechanical stages like VERIFY, equipped agent workers for BUILD), a three-contract system for BUILD spawns (input skill-contract prompt, process behavioral assertions, output artifacts), wave-granularity dispatch for BUILD, trust-semantics separation (mechanical clearance vs progress release vs human approval - ratify renamed to mechanical clearance), and spawn telemetry (model pin, command counts, head+tail dual-window stream capture)",
@@ -14,7 +15,14 @@
       "ts": "2026-10-30T18:13:39.090Z"
     }
   },
-  "approvals": {},
+  "approvals": {
+    "THINK": {
+      "status": "PENDING",
+      "ts": "2026-10-31T11:49:47.525Z",
+      "mode": "auto",
+      "stage": "THINK"
+    }
+  },
   "spec_path": ".gos/task/feffe37d/spec.md",
   "plan_path": ".gos/task/feffe37d/plan.md",
   "project": false,
@@ -26,9 +34,22 @@
       "level": 3
     }
   ],
-  "decisions": [],
+  "decisions": [
+    {
+      "id": "D-49",
+      "title": "Scope bundles: auto-family spawn DRY, store.mutate serialization, odd-path fixtures",
+      "rationale": "2026-10-31 concerns: bundle 3bfa5fb4/39219bc9/577f0bfb (triggers fire on this task); a6fbd2db/0f528c0e/3c36cb07 subsumed by intent. Out: 559a4cc8 54561541 f8352d9b 7d63cd9d 8630eee9.",
+      "birth_phase": "P0",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    }
+  ],
   "observable_truths": [],
   "gaps": [],
   "activation_source": "headless",
-  "task_head": "feffe37d5753571bec6ce5c329c8bee8a7670571"
+  "task_head": "feffe37d5753571bec6ce5c329c8bee8a7670571",
+  "spec_gate_version": 3,
+  "spec_sha256": "809cc9bd1997326d4c843a7b52a25cef7ad23d4b66d888cc8c9bd38c7a2687f3"
 }
