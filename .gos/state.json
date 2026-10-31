@@ -2,10 +2,11 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "PLAN",
+  "current_stage": "BUILD",
   "completed_stages": [
     "INTENT",
-    "THINK"
+    "THINK",
+    "PLAN"
   ],
   "intent": {
     "summary": "Ship the stage-dispatch blueprint for the auto loop: per-stage worker forms (script workers for mechanical stages like VERIFY, equipped agent workers for BUILD), a three-contract system for BUILD spawns (input skill-contract prompt, process behavioral assertions, output artifacts), wave-granularity dispatch for BUILD, trust-semantics separation (mechanical clearance vs progress release vs human approval - ratify renamed to mechanical clearance), and spawn telemetry (model pin, command counts, head+tail dual-window stream capture)",
@@ -16,12 +17,8 @@
     }
   },
   "approvals": {
-    "THINK": {
-      "status": "PENDING",
-      "ts": "2026-10-31T11:49:47.525Z",
-      "mode": "auto",
-      "stage": "THINK"
-    }
+    "THINK": "2026-10-31T14:43:12.245Z",
+    "PLAN": "2026-10-31T15:55:45.661Z"
   },
   "spec_path": ".gos/task/feffe37d/spec.md",
   "plan_path": ".gos/task/feffe37d/plan.md",
@@ -51,5 +48,254 @@
   "activation_source": "headless",
   "task_head": "feffe37d5753571bec6ce5c329c8bee8a7670571",
   "spec_gate_version": 3,
-  "spec_sha256": "809cc9bd1997326d4c843a7b52a25cef7ad23d4b66d888cc8c9bd38c7a2687f3"
+  "spec_sha256": "809cc9bd1997326d4c843a7b52a25cef7ad23d4b66d888cc8c9bd38c7a2687f3",
+  "plan_snapshot": {
+    "tasks": [
+      {
+        "id": "T1",
+        "covers": [
+          "R-01"
+        ],
+        "files": [
+          ".gos/state.json"
+        ]
+      },
+      {
+        "id": "T2",
+        "covers": [
+          "D-8",
+          "D-49"
+        ],
+        "files": [
+          "bin/lib/ops/auto/limits.cjs",
+          "bin/lib/ops/auto/loop.cjs",
+          "bin/lib/ops/auto/redteam.cjs",
+          "bin/lib/ops/auto/store.cjs",
+          "bin/lib/ops/auto/breaker.cjs",
+          "bin/lib/ops/auto/adapters/opencode.cjs"
+        ]
+      },
+      {
+        "id": "T3",
+        "covers": [
+          "D-8",
+          "D-5"
+        ],
+        "files": [
+          "bin/lib/ops/auto/spawnrun.cjs",
+          "bin/lib/ops/auto/loop.cjs",
+          "bin/lib/ops/auto/redteam.cjs",
+          "test/sections/T105-auto-depth.test.sh"
+        ]
+      },
+      {
+        "id": "T4",
+        "covers": [
+          "D-8",
+          "D-49"
+        ],
+        "files": [
+          "bin/lib/ops/auto/store.cjs",
+          "test/sections/T105-auto-depth.test.sh"
+        ]
+      },
+      {
+        "id": "T5",
+        "covers": [
+          "D-5"
+        ],
+        "files": [
+          "bin/lib/core/sanitize.cjs",
+          "test/sections/T107-auto-dispatch.test.sh"
+        ]
+      },
+      {
+        "id": "T6",
+        "covers": [
+          "D-4"
+        ],
+        "files": [
+          "bin/lib/core/state.cjs",
+          "test/sections/T105-auto-depth.test.sh"
+        ]
+      },
+      {
+        "id": "T7",
+        "covers": [
+          "D-1",
+          "R-01"
+        ],
+        "files": [
+          "templates/auto-dispatch.json",
+          "bin/lib/ops/auto/workers.cjs",
+          "census.json",
+          "test/sections/T107-auto-dispatch.test.sh"
+        ]
+      },
+      {
+        "id": "T8",
+        "covers": [
+          "D-5"
+        ],
+        "files": [
+          "bin/lib/ops/auto/store.cjs",
+          "test/sections/T105-auto-depth.test.sh"
+        ]
+      },
+      {
+        "id": "T9",
+        "covers": [
+          "D-6",
+          "D-49"
+        ],
+        "files": [
+          "bin/lib/core/spawnreg.cjs",
+          "bin/lib/ops/auto/store.cjs",
+          "test/sections/T106-auto-spawn-channel.test.sh"
+        ]
+      },
+      {
+        "id": "T10",
+        "covers": [
+          "D-2",
+          "D-3",
+          "D-6"
+        ],
+        "files": [
+          "bin/lib/ops/auto/launcher.cjs",
+          "test/sections/T107-auto-dispatch.test.sh"
+        ]
+      },
+      {
+        "id": "T11",
+        "covers": [
+          "D-5"
+        ],
+        "files": [
+          "bin/lib/ops/auto/adapters/opencode.cjs",
+          "bin/lib/ops/auto/adapters/codex.cjs",
+          "test/sections/T105-auto-depth.test.sh"
+        ]
+      },
+      {
+        "id": "T12",
+        "covers": [
+          "D-2"
+        ],
+        "files": [
+          "bin/lib/ops/gate.cjs",
+          "test/run-sections.sh",
+          "test/sections/T107-auto-dispatch.test.sh"
+        ]
+      },
+      {
+        "id": "T13",
+        "covers": [
+          "D-2",
+          "D-1"
+        ],
+        "files": [
+          "bin/lib/ops/auto/workers.cjs",
+          "bin/lib/ops/auto/store.cjs",
+          "test/sections/T107-auto-dispatch.test.sh"
+        ]
+      },
+      {
+        "id": "T14",
+        "covers": [
+          "D-3"
+        ],
+        "files": [
+          "bin/lib/task/plansnap.cjs",
+          "bin/lib/task/commit.cjs",
+          "test/sections/T105-auto-depth.test.sh"
+        ]
+      },
+      {
+        "id": "T15",
+        "covers": [
+          "D-3",
+          "R-01"
+        ],
+        "files": [
+          "bin/lib/ops/auto/workers.cjs",
+          "bin/lib/ops/auto/breaker.cjs",
+          "bin/lib/ops/auto/store.cjs",
+          "test/sections/T108-auto-wave-contracts.test.sh"
+        ]
+      },
+      {
+        "id": "T16",
+        "covers": [
+          "D-1",
+          "D-2",
+          "D-3",
+          "D-5",
+          "R-01"
+        ],
+        "files": [
+          "bin/lib/ops/auto/loop.cjs",
+          "test/sections/T108-auto-wave-contracts.test.sh",
+          "test/sections/T104-auto-core.test.sh"
+        ]
+      },
+      {
+        "id": "T17",
+        "covers": [
+          "D-4",
+          "R-01"
+        ],
+        "files": [
+          "bin/lib/ops/auto/ratify.cjs",
+          "bin/lib/task/commit.cjs",
+          "test/sections/T105-auto-depth.test.sh"
+        ]
+      },
+      {
+        "id": "T18",
+        "covers": [
+          "D-4",
+          "D-7"
+        ],
+        "files": [
+          "bin/lib/ops/auto/cli.cjs",
+          "bin/lib/task/archive.cjs",
+          "README.md",
+          "skills/gos-verify/SKILL.md",
+          "test/sections/T104-auto-core.test.sh"
+        ]
+      },
+      {
+        "id": "T19",
+        "covers": [
+          "D-7",
+          "D-5"
+        ],
+        "files": [
+          "bin/lib/nav/status.cjs",
+          "bin/lib/task/index.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs",
+          ".gos/codebase/require-allowlist.json",
+          "test/sections/T26-nav-hints.test.sh"
+        ]
+      },
+      {
+        "id": "T20",
+        "covers": [
+          "D-49",
+          "R-01"
+        ],
+        "files": [
+          "test/sections/T46-module-structure.test.sh",
+          "test/sections/T25-map-selfcheck.test.sh",
+          ".gos/codebase/structure.md",
+          "census.json",
+          "test/sections/T106-auto-spawn-channel.test.sh",
+          "test/sections/T107-auto-dispatch.test.sh"
+        ]
+      }
+    ],
+    "audit": []
+  }
 }
