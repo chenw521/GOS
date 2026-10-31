@@ -536,6 +536,11 @@ In scope:
   drift declarations for the new modules, T25 frozen-set update, and the
   require-allowlist entry for task→ops/auto if the facade needs one
   (R3-F6)
+- census.json reconciliation for every new tracked file
+  (templates/auto-dispatch.json, bin/lib/ops/auto/workers.cjs,
+  limits.cjs, spawnrun.cjs, bin/lib/core/sanitize.cjs) plus the
+  pack-check pass and cjk-lint boundary on the same PR — the census
+  ledger is the file-disposition truth, not the codemap ledger
 - test/sections: T107 (dispatch + worker forms + execution classes,
   kernel-tier refusals, loader/value-bound negatives), T108 (contracts +
   wave dispatch + recovery + BREAKER WAVE ACCOUNTING: BUILD/W<n> labels
