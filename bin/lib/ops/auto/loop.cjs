@@ -30,13 +30,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const crypto = require('node:crypto');
-const { spawn: spawnChild, spawnSync } = require('node:child_process');
+const { spawnSync } = require('node:child_process');
 
 const store = require('./store.cjs');
 const registry = require('./adapters/registry.cjs');
 const launcher = require('./launcher.cjs');
 const breakerMod = require('./breaker.cjs');
-const limits = require('./limits.cjs');
+const spawnrun = require('./spawnrun.cjs');
 const core = require('../../core/index.cjs');
 
 // Environment marker identifying a runner-spawned session: in-spawn commands
@@ -158,69 +158,17 @@ function defaultStateReader(rootDir) {
   catch (e) { return { corrupt: true, error: e && e.message }; }
 }
 
-// Real spawn: an event-loop-alive child process. The loop's own timers keep
-// firing during the wait — run-lock heartbeats stay fresh, and the idle
-// timeout (reset on every stream chunk) kills a stalled stream live instead
-// of being classified after the fact. Resolves the spawnSync shape the
-// scorer consumes; kill reasons ride on the error object.
+// Real spawn: composes the shared spawn runner — an event-loop-alive child
+// process whose stream is supervised live (idle killer reset on every chunk,
+// wall killer, streaming pre-truncation deny scan, head/tail dual-window
+// capture). The loop's own timers keep firing during the wait — run-lock
+// heartbeats stay fresh. Resolves the spawnSync shape the scorer consumes;
+// kill reasons ride on the error object.
 function loopSpawnRunner(spec, ctx) {
-  return new Promise((resolve) => {
-    let child;
-    try {
-      child = spawnChild(spec.argv[0], spec.argv.slice(1), {
-        cwd: spec.cwd,
-        env: spec.env,
-        detached: true,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
-    } catch (e) {
-      resolve({ status: null, stdout: '', stderr: '', error: e && e.message ? e : new Error(e && e.message || 'spawn failed') });
-      return;
-    }
-    const cap = limits.SPAWN_MAX_BUFFER;
-    let out = '';
-    let err = '';
-    let idleTimer = null;
-    let wallTimer = null;
-    let killed = null;
-    let settled = false;
-    // Deny lines are detected as they stream in — before the capture window
-    // can truncate them away — and ride on the result for the scorer.
-    const denyScanner = launcher.makeStreamDenyScanner({ deny: Array.isArray(spec.deny) ? spec.deny : undefined });
-    const finish = (payload) => {
-      if (settled) return;
-      settled = true;
-      if (idleTimer) clearTimeout(idleTimer);
-      if (wallTimer) clearTimeout(wallTimer);
-      payload.preTruncationDenyHits = denyScanner.hits.slice();
-      resolve(payload);
-    };
-    const kill = (why) => {
-      if (killed) return;
-      killed = why;
-      try { process.kill(-child.pid, 'SIGKILL'); } catch { /* group gone */ try { child.kill('SIGKILL'); } catch { /* already gone */ } }
-    };
-    const armIdle = () => {
-      if (idleTimer) clearTimeout(idleTimer);
-      const ms = Number(ctx && ctx.idleMs);
-      if (!(ms > 0)) return;
-      idleTimer = setTimeout(() => kill('idle'), ms);
-      if (typeof idleTimer.unref === 'function') idleTimer.unref();
-    };
-    child.stdout.on('data', (d) => { out += d; if (out.length > cap) out = out.slice(out.length - cap); denyScanner.feed(d); armIdle(); });
-    child.stderr.on('data', (d) => { err += d; if (err.length > cap) err = err.slice(err.length - cap); denyScanner.feed(d); armIdle(); });
-    const wallMs = Number(ctx && ctx.wallMs);
-    if (wallMs > 0) {
-      wallTimer = setTimeout(() => kill('wall'), wallMs);
-      if (typeof wallTimer.unref === 'function') wallTimer.unref();
-    }
-    armIdle();
-    child.on('error', (e) => finish({ status: null, stdout: out, stderr: err, error: e }));
-    child.on('close', (code) => {
-      if (killed === 'idle') finish({ status: null, stdout: out, stderr: err, error: Object.assign(new Error('spawn idle timeout'), { idle: true, killed: true }) });
-      else if (killed === 'wall') finish({ status: null, stdout: out, stderr: err, error: Object.assign(new Error('spawn wall timeout'), { killed: true }) });
-      else finish({ status: code, stdout: out, stderr: err });
-    });
+  return spawnrun.spawnRun(spec, {
+    idleMs: ctx && ctx.idleMs,
+    wallMs: ctx && ctx.wallMs,
+    deny: Array.isArray(spec.deny) ? spec.deny : undefined,
   });
 }
 
@@ -237,8 +185,7 @@ function defaultDetacher(command, args, opts) {
     const fd = fs.openSync(logPath, 'a');
     stdio = ['ignore', fd, fd];
   } catch { logPath = null; }
-  const child = spawnChild(command, args, { detached: true, stdio, env: opts.env });
-  child.unref();
+  const child = spawnrun.spawnDetached(command, args, { stdio, env: opts.env });
   return { pid: child.pid, log: logPath };
 }
 
@@ -263,7 +210,7 @@ function defaultCliEntryArgs() {
 //   maxIterations      safety ceiling on iterations (default: none)
 //   breakLock          pass-through to the store run-lock acquisition
 //   detach             run as a detached child instead of in-process
-//   detacher           (command, args, {detached, env}) -> {pid}
+//   detacher           (command, args, {rootDir, env}) -> {pid}
 //   gitRunner          (args, cwd) -> spawnSync shape
 //   stateReader        () -> GOS state object | null | {corrupt}
 //   spawnRunner        (spec, {wallMs}) -> spawnSync shape (sync or promise)
@@ -274,6 +221,7 @@ function defaultCliEntryArgs() {
 //   engineProbe        () -> {engine, version?} launcher probe stub
 //   probeRunner        (command, args) -> {ok, out, err} host probe stub
 //   heartbeatIntervalMs run-lock heartbeat cadence during spawn waits
+//   mountsFile/readMounts mount-table override for the network-store refusal
 //   now                () -> epoch ms clock
 function createLoop(opts = {}) {
   const profile = typeof opts.profile === 'string' && opts.profile ? opts.profile : launcher.DEFAULT_PROFILE;
@@ -318,7 +266,7 @@ async function runLoop(opts) {
     const detacher = typeof opts.detacher === 'function' ? opts.detacher : defaultDetacher;
     const command = defaultCliEntry();
     const args = [...defaultCliEntryArgs(), 'auto', 'run'];
-    const res = await detacher(command, args, { detached: true, rootDir, env: { ...env } });
+    const res = await detacher(command, args, { rootDir, env: { ...env } });
     return report({ ok: true, status: 'detached', pid: res && res.pid, log: res && res.log, argv: [command, ...args] });
   }
 
@@ -330,6 +278,16 @@ async function runLoop(opts) {
   }
   if (loaded.store.mode !== 'on') {
     return report({ ok: false, status: 'refused', reason: 'mode-off', guidance: store.guidanceFor('auto.loop.modeOff') });
+  }
+
+  // Machine-local store only: a network filesystem under the store path
+  // means two machines can share one remote store, and the mutation mutex
+  // cannot serialize writers across hosts — the run refuses hard.
+  const netFs = store.refuseNetworkStore(rootDir, { mountsFile: opts.mountsFile, readMounts: opts.readMounts });
+  if (!netFs.ok) {
+    return report({
+      ok: false, status: 'refused', reason: netFs.reason, mount: netFs.mount, fstype: netFs.fstype, path: netFs.path, guidance: netFs.guidance,
+    });
   }
 
   // Exclusive run lock: a second instance is refused and the holder named.
@@ -973,6 +931,7 @@ async function redteamPasses({ leg, opts, env, rootDir, spawnRunner, tp, now, ru
       spawnRunner,
       engineProbe: opts.engineProbe,
       wallMs: tp.wallSec * 1000,
+      idleMs: tp.idleSec * 1000,
       now,
     });
     if (!round.ok) {

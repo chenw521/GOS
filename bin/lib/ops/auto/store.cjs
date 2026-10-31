@@ -16,6 +16,7 @@ const path = require('node:path');
 const os = require('node:os');
 const crypto = require('node:crypto');
 const core = require('../../core/index.cjs');
+const spawnreg = require('../../core/spawnreg.cjs');
 const limits = require('./limits.cjs');
 
 const STORE_SCHEMA_VERSION = 1;
@@ -37,6 +38,19 @@ const LOCK_HEARTBEAT_MARGIN_MS = 15 * 60 * 1000;
 // Network filesystem types whose presence under the store path warns about
 // shared-home double-runner hazards at `auto on`.
 const NETWORK_FS_TYPES = new Set(['nfs', 'nfs4', 'cifs', '9p', 'lustre', 'lustre2', 'gpfs', 'beegfs']);
+
+// Hard-refusal superset for `auto run`: types whose store would be shared
+// across machines (two runners, one remote). A local-pid mutation mutex
+// cannot serialize writers across hosts, so the run refuses instead.
+const REFUSE_NETWORK_FS_TYPES = new Set([...NETWORK_FS_TYPES, 'ceph', 'fuse.sshfs']);
+
+// Cross-process mutation mutex (store.mutate): bounded spin before the
+// fail-closed store-busy refusal, retry cadence, and the mtime-age staleness
+// threshold for locks whose holder identity this machine cannot verify.
+const MUTATE_LOCK_FILE = 'mutate.lock';
+const MUTATE_WAIT_MS = 5 * 1000;
+const MUTATE_RETRY_MS = 20;
+const MUTATE_MTIME_STALE_MS = 30 * 1000;
 
 // Failure-class taxonomy for breaker records. Takeover is a lock-family
 // event class, not a loop failure class — it appends records but never
@@ -293,21 +307,267 @@ function networkFsUnderStore(rootDir) {
   return best != null && NETWORK_FS_TYPES.has(best.fstype) ? best : null;
 }
 
+// ---- store mutation mutex ----
+
+function mutateLockPath(rootDir) {
+  const root = storeRoot(rootDir);
+  return root == null ? null : path.join(root, MUTATE_LOCK_FILE);
+}
+
+// Identity written by every mutex holder: the pid bound to one process
+// lifetime (boot_id + /proc starttime, the same binding the spawn channel
+// uses), so a recycled pid can never fake the original holder's liveness.
+function mutateHolderRecord() {
+  return {
+    hostname: os.hostname(),
+    pid: process.pid,
+    boot_id: readBootId(),
+    starttime: spawnreg.procStartTime(process.pid),
+    created_at: new Date().toISOString(),
+  };
+}
+
+function readMutateLock(lp) {
+  if (!fs.existsSync(lp)) return null;
+  try { return JSON.parse(fs.readFileSync(lp, 'utf8')); }
+  catch { return null; } // unreadable record = unproven ownership
+}
+
+let _mutateLockPath = null;
+let _mutateDepth = 0;
+let _mutateExitHook = false;
+
+// Crash cleanup: a process dying mid-mutation must not strand its mutex
+// (a live-pid lock blocks every other writer until the pid dies). Installed
+// once; only ever removes OUR lock.
+function installMutateExitHook() {
+  if (_mutateExitHook) return;
+  _mutateExitHook = true;
+  process.on('exit', () => {
+    if (_mutateLockPath == null) return;
+    const rec = readMutateLock(_mutateLockPath);
+    if (rec && rec.pid === process.pid && rec.hostname === os.hostname()) {
+      try { fs.unlinkSync(_mutateLockPath); } catch { /* gone */ }
+    }
+  });
+}
+
+// Synchronous bounded sleep for the spin loop (blocks without burning CPU;
+// mutate is deliberately synchronous).
+function sleepSpinMs(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+// Exclusive creation of the mutex file: O_EXCL directly, hard-link fallback
+// for filesystems without exclusive create (link fails with EEXIST exactly
+// when the lock is already held). Returns false when the lock is held.
+function createMutateLockFile(lp, rec) {
+  let fd;
+  try { fd = fs.openSync(lp, 'wx'); }
+  catch (e) {
+    if (e.code === 'EEXIST') return false;
+    if (['ENOSYS', 'EOPNOTSUPP', 'EINVAL', 'EPERM'].includes(e.code)) {
+      const tmp = `${lp}.tmp-${process.pid}-${Date.now()}`;
+      try {
+        fs.writeFileSync(tmp, JSON.stringify(rec));
+        fs.linkSync(tmp, lp);
+        return true;
+      } catch { return false; }
+      finally {
+        try { fs.unlinkSync(tmp); } catch { /* gone */ }
+      }
+    }
+    throw e;
+  }
+  try { fs.writeSync(fd, JSON.stringify(rec)); } finally { fs.closeSync(fd); }
+  return true;
+}
+
+// Staleness verdict for an existing mutex. A readable same-host record is
+// judged by full holder identity: a dead pid, a changed boot_id, or a
+// starttime mismatch (the pid was recycled by an unrelated process) each
+// prove the recorded holder gone and make the lock reclaimable. Records
+// whose identity this machine cannot verify (unreadable, cross-host, no
+// readable /proc starttime) fall back to lock mtime age.
+function mutateLockStale(lp, staleMs) {
+  const rec = readMutateLock(lp);
+  const identityFallback = (why) => {
+    let ageMs = NaN;
+    try { ageMs = Date.now() - fs.statSync(lp).mtimeMs; } catch { ageMs = NaN; }
+    if (Number.isFinite(ageMs) && ageMs > staleMs) {
+      return { stale: true, holder: rec, detail: `holder identity unreadable (${why}); lock mtime ${Math.round(ageMs / 1000)}s old past the ${Math.round(staleMs / 1000)}s threshold` };
+    }
+    return { stale: false, holder: rec, identityUnreadable: true };
+  };
+  if (rec == null) return identityFallback('record unreadable');
+  if (!Number.isInteger(rec.pid)) return identityFallback('record has no pid');
+  if (rec.hostname !== os.hostname()) return identityFallback('holder is on another host');
+  const myBoot = readBootId();
+  if (myBoot != null && rec.boot_id != null && rec.boot_id !== myBoot) {
+    return { stale: true, holder: rec, detail: `holder pid ${rec.pid} is from a previous boot (boot_id changed)` };
+  }
+  if (!livePid(rec.pid)) {
+    return { stale: true, holder: rec, detail: `holder pid ${rec.pid} is not running` };
+  }
+  const st = spawnreg.procStartTime(rec.pid);
+  if (rec.starttime == null || st == null) return identityFallback('holder starttime unverifiable');
+  if (Number(rec.starttime) !== st) {
+    return { stale: true, holder: rec, detail: `pid ${rec.pid} was recycled (starttime mismatch) — the recorded holder is gone` };
+  }
+  return { stale: false, holder: rec };
+}
+
+// Acquire the mutation mutex with a bounded spin. Returns { ok, takeover }
+// (takeover carries the reclaim audit detail when a stale lock was broken)
+// or the fail-closed store-busy refusal — contention is never resolved by
+// last-writer-wins.
+function acquireMutateLock(rootDir, opts = {}) {
+  const lp = mutateLockPath(rootDir);
+  if (lp == null) return paused('unwritable', null, 'no XDG data home resolvable', 'auto.store.unwritable');
+  const waitMs = Number.isFinite(opts.waitMs) && opts.waitMs >= 0 ? opts.waitMs : MUTATE_WAIT_MS;
+  const staleMs = Number.isFinite(opts.staleMs) && opts.staleMs > 0 ? opts.staleMs : MUTATE_MTIME_STALE_MS;
+  try { fs.mkdirSync(path.dirname(lp), { recursive: true }); }
+  catch (e) { return { ok: false, status: 'error', reason: 'unwritable', path: lp, detail: e.message, guidance: guidanceFor('auto.store.unwritable', { path: lp }) }; }
+  const deadline = Date.now() + waitMs;
+  let takeoverDetail = null;
+  for (;;) {
+    if (!fs.existsSync(lp)) {
+      let created;
+      try { created = createMutateLockFile(lp, mutateHolderRecord()); }
+      catch (e) {
+        return { ok: false, status: 'error', reason: 'mutex-create-failed', path: lp, detail: e.message, guidance: guidanceFor('auto.store.unwritable', { path: lp }) };
+      }
+      if (created) {
+        _mutateLockPath = lp;
+        installMutateExitHook();
+        return { ok: true, path: lp, takeover: takeoverDetail };
+      }
+    }
+    const verdict = mutateLockStale(lp, staleMs);
+    if (verdict.stale) {
+      takeoverDetail = takeoverDetail || verdict.detail;
+      try { fs.unlinkSync(lp); } catch { /* racing writer — re-evaluate */ }
+      continue;
+    }
+    if (Date.now() >= deadline) {
+      const holderPid = verdict.holder && verdict.holder.pid;
+      return {
+        ok: false, status: 'error', reason: 'store-busy', path: lp, holder: verdict.holder || null,
+        detail: `store mutation mutex held${holderPid != null ? ` by pid ${holderPid}` : ''} past the ${Math.round(waitMs / 1000)}s wait`,
+        guidance: guidanceFor('auto.store.mutateBusy', { pid: holderPid }),
+      };
+    }
+    sleepSpinMs(MUTATE_RETRY_MS);
+  }
+}
+
+// Release OUR mutex (the outermost mutate releases; nested mutates join the
+// outer critical section). Foreign locks are never touched.
+function releaseMutateLock() {
+  const lp = _mutateLockPath;
+  if (lp == null) return;
+  const rec = readMutateLock(lp);
+  if (rec && rec.pid === process.pid && rec.hostname === os.hostname()) {
+    try { fs.unlinkSync(lp); } catch { /* gone */ }
+  }
+  _mutateLockPath = null;
+}
+
+// Hard network-filesystem refusal for the auto run entry: resolves the
+// store directory against the mount table (longest covering mount wins) and
+// refuses when that mount is network-shaped. The mount table is injectable
+// (tests feed a fixture table); an unreadable table passes — the advisory
+// probe at `auto on` still warns there.
+function refuseNetworkStore(rootDir, opts = {}) {
+  const read = typeof opts.readMounts === 'function'
+    ? opts.readMounts
+    : () => fs.readFileSync(opts.mountsFile || '/proc/mounts', 'utf8');
+  const root = storeRoot(rootDir);
+  if (root == null) return { ok: true };
+  let target;
+  try { target = fs.realpathSync(root); } catch { target = path.resolve(root); }
+  let lines;
+  try { lines = String(read()).split('\n'); } catch { return { ok: true }; }
+  let best = null;
+  for (const line of lines) {
+    const parts = line.trim().split(/\s+/);
+    if (parts.length < 3) continue;
+    const mp = parts[1].replace(/\\([0-7]{3})/g, (m, oct) => String.fromCharCode(parseInt(oct, 8)));
+    const fstype = parts[2];
+    let cmp;
+    try { cmp = fs.realpathSync(mp); } catch { cmp = mp; }
+    if (target === cmp || target.startsWith(cmp + path.sep)) {
+      if (!best || cmp.length > best.mount.length) best = { mount: cmp, fstype };
+    }
+  }
+  if (best != null && REFUSE_NETWORK_FS_TYPES.has(best.fstype)) {
+    return {
+      ok: false, status: 'refused', reason: 'network-store', mount: best.mount, fstype: best.fstype, path: target,
+      guidance: guidanceFor('auto.cli.on.nfsAdvisory', { fstype: best.fstype, mount: best.mount }),
+    };
+  }
+  return { ok: true };
+}
+
 // ---- shared writer plumbing ----
 
-// Mutate the loaded store under fn, persist atomically. Writers are safe
-// from the single runner process (the run lock enforces that) and from
-// short CLI commands; there is deliberately no cross-process merge.
-function mutate(rootDir, fn) {
-  const cur = load(rootDir);
-  if (!cur.ok) return cur;
-  const next = fn(cur.store);
-  if (next == null) return { ok: false, status: 'error', reason: 'rejected', path: cur.path };
-  try { core.writeAtomicJson(cur.path, next); }
-  catch (e) {
-    return { ok: false, status: 'error', reason: 'write-failed', path: cur.path, detail: e.message, guidance: guidanceFor('auto.store.unwritable', { path: cur.path }) };
+// Mutate the loaded store under fn, persist atomically. The whole
+// read-modify-write runs under the cross-process mutation mutex: concurrent
+// writers serialize (no lost update), and a mutex held past the bounded
+// spin fails closed as store-busy instead of resolving by last-writer-wins.
+// Reentrant within one process — nested mutates join the outer critical
+// section. A stale mutex is reclaimed only on provable holder identity
+// (dead pid, changed boot_id, or a recycled pid caught by starttime); the
+// reclaim is audited as a takeover breaker record.
+function mutate(rootDir, fn, opts = {}) {
+  const file = storeFile(rootDir);
+  if (file == null) return paused('unwritable', null, 'no XDG data home resolvable', 'auto.store.unwritable');
+  if (!fs.existsSync(file)) return load(rootDir);
+  const nested = _mutateDepth > 0;
+  let acquired = null;
+  if (!nested) {
+    acquired = acquireMutateLock(rootDir, opts);
+    if (!acquired.ok) return acquired;
+    _mutateDepth += 1;
   }
-  return { ok: true, path: cur.path, store: next };
+  try {
+    const cur = load(rootDir);
+    if (!cur.ok) return cur;
+    // Pre-fn snapshot on the reclaim path only: a refused mutation must
+    // never persist caller changes made before the null return.
+    const auditText = acquired && acquired.takeover ? JSON.stringify(cur.store) : null;
+    let next = fn(cur.store);
+    if (next == null) {
+      if (auditText != null) persistTakeoverAudit(cur.path, auditText, acquired.takeover);
+      return { ok: false, status: 'error', reason: 'rejected', path: cur.path };
+    }
+    if (auditText != null) {
+      const records = isPlainObject(next.breaker) && Array.isArray(next.breaker.records) ? next.breaker.records : null;
+      if (records) next.breaker.records = trimArray([...records, { cls: 'takeover', ts: new Date().toISOString(), detail: acquired.takeover }], CAPS.breakerRecords);
+    }
+    try { core.writeAtomicJson(cur.path, next); }
+    catch (e) {
+      return { ok: false, status: 'error', reason: 'write-failed', path: cur.path, detail: e.message, guidance: guidanceFor('auto.store.unwritable', { path: cur.path }) };
+    }
+    return { ok: true, path: cur.path, store: next };
+  } finally {
+    if (!nested) {
+      _mutateDepth -= 1;
+      releaseMutateLock();
+    }
+  }
+}
+
+// Persist the takeover audit alone when the caller's mutation was refused —
+// the reclaim is an audit fact independent of the refused change.
+function persistTakeoverAudit(storeFilePath, auditText, detail) {
+  try {
+    const st = JSON.parse(auditText);
+    if (isPlainObject(st.breaker) && Array.isArray(st.breaker.records)) {
+      st.breaker.records = trimArray([...st.breaker.records, { cls: 'takeover', ts: new Date().toISOString(), detail }], CAPS.breakerRecords);
+      core.writeAtomicJson(storeFilePath, st);
+    }
+  } catch { /* audit best-effort */ }
 }
 
 function trimArray(arr, cap) {
@@ -415,11 +675,11 @@ function saveProbeResult(p, rootDir) {
 
 // Cumulative spawn counter; the returned mirrors are what the caller
 // persists into tracked repo state (counts are clone-safe, detail is not).
-function bumpSpawn(rootDir) {
+function bumpSpawn(rootDir, opts) {
   const r = mutate(rootDir, (st) => {
     st.counters.spawnCount += 1;
     return st;
-  });
+  }, opts);
   return r.ok ? { ok: true, path: r.path, mirrors: mirrorsOf(r.store) } : r;
 }
 
@@ -699,6 +959,10 @@ module.exports = {
   create,
   probeWritable,
   networkFsUnderStore,
+  refuseNetworkStore,
+  mutateLockPath,
+  acquireMutateLock,
+  releaseMutateLock,
   heartbeatStaleThresholdMs,
   stampStream,
   recordReviewRound,

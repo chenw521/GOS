@@ -26,6 +26,15 @@
 #           at the kernel tier; mask-over-bind ordering intact
 #   D8  registry rows without version_command classify a probe failure via
 #           the --version fallback instead of crashing
+#   spawnrun  one async spawn runner: idle killer kills a stalled stream
+#           live, wall killer bounds the run, deny lines are caught as they
+#           stream in, and the head/tail dual-window capture keeps both ends
+#           of a long stream with sha256 + total byte counts
+#   store-mutex  store.mutate serializes under a cross-process mutex: no
+#           lost counter update, held-past-wait fails closed as store-busy,
+#           stale reclaim needs full holder identity (boot_id + starttime,
+#           mtime fallback for cross-host), and a network-filesystem store
+#           refuses at auto run
 # Fake host: GOS_AUTO_TEST_FIXTURE=1 activates the registry fixture row;
 # loop spawns run through injected spawnRunner harnesses only. HOME and
 # XDG_DATA_HOME are pinned per case under TESTBASE;
@@ -728,6 +737,242 @@ console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
 EOF
 D9_OUT="$(node run-d9.cjs 2>&1 | tail -n 1)"
 t105_eq "approvals schema: 'cleared' round-trips write+read; legacy 'ratified' and bare-string approvals still parse" "OK" "$D9_OUT"
+
+# ---------------------------------------------------------------- SR --
+t105_case sr
+cat > run-sr.cjs <<'EOF'
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const spawnrun = require(path.join(GR, 'bin/lib/ops/auto/spawnrun.cjs'));
+const problems = [];
+const run = (script, opts) => spawnrun.spawnRun({
+  argv: [process.execPath, '-e', script],
+  cwd: process.cwd(),
+  env: { ...process.env },
+}, opts);
+(async () => {
+  // stalled stream: one chunk then silence — the idle killer fires live
+  const stalled = await run('process.stdout.write("first-chunk\\n"); setInterval(() => {}, 1000);', { idleMs: 400, wallMs: 10000 });
+  if (!stalled.error || stalled.error.idle !== true || stalled.error.killed !== true) problems.push('stalled stream not idle-killed');
+  if (stalled.status !== null) problems.push('idle kill must resolve status null');
+  if (!String(stalled.stdout).includes('first-chunk')) problems.push('idle kill lost the captured chunk');
+  // wall killer: a chatty forever-child is killed at the wall clock
+  const walled = await run('setInterval(() => process.stdout.write("tick\\n"), 20);', { idleMs: 10000, wallMs: 400 });
+  if (!walled.error || walled.error.killed !== true || walled.error.idle === true) problems.push('wall kill missing or misclassified');
+  if (walled.status !== null) problems.push('wall kill must resolve status null');
+  // streaming deny scan: the hit rides the payload even under tiny windows
+  const denied = await run('process.stdout.write("running forbidden-cmd now\\n"); for (let i = 0; i < 40; i++) process.stdout.write("pad" + i + "\\n");', { idleMs: 5000, wallMs: 10000, deny: ['forbidden-cmd'], windows: { headBytes: 32, tailBytes: 32 } });
+  if (denied.status !== 0 || denied.error) problems.push('deny-scan child exited dirty: ' + JSON.stringify(denied.status));
+  if (!(denied.preTruncationDenyHits || []).some((h) => h.pattern === 'forbidden-cmd')) problems.push('streaming deny scan missed the hit');
+  if (denied.windowHead.stdout.length !== 32) problems.push('head window not bounded to headBytes');
+  // dual-window capture: head keeps the start, tail keeps the end
+  const long = await run('for (let i = 0; i < 100; i++) process.stdout.write("L" + String(i).padStart(4, "0") + "\\n");', { windows: { headBytes: 16, tailBytes: 24 } });
+  if (long.status !== 0 || long.error) problems.push('normal exit mangled');
+  if (long.totalBytes.stdout !== long.stdout.length && long.totalBytes.stdout < 100 * 6) problems.push('totalBytes.stdout undercounts');
+  if (!long.windowHead.stdout.toString().startsWith('L0000')) problems.push('head window lost the stream start');
+  if (!long.windowTail.stdout.toString().includes('L0099')) problems.push('tail window lost the stream end');
+  if (long.windowTail.stdout.length !== 24) problems.push('tail window not bounded to tailBytes');
+  for (const side of ['stdout', 'stderr']) {
+    for (const w of ['head', 'tail']) {
+      if (!/^[0-9a-f]{64}$/.test((long.windowSha256s || {})[side][w])) problems.push('window sha256 missing for ' + side + '/' + w);
+    }
+  }
+  // empty argv resolves the error shape instead of throwing
+  const empty = await spawnrun.spawnRun({ argv: [] }, {});
+  if (!empty.error || empty.status !== null) problems.push('empty argv not an error result');
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+SR_OUT="$(node run-sr.cjs 2>&1 | tail -n 1)"
+t105_eq "spawnrun: idle killer kills a stalled stream live; wall killer bounds the run; deny hits stream-sampled; dual-window capture bounded with sha256 + totalBytes" "OK" "$SR_OUT"
+
+# ---------------------------------------------------------------- MU1 --
+t105_case mu1
+cat > mu-worker.cjs <<'EOF'
+const path = require('path');
+const store = require(path.join(process.env.GOS_ROOT, 'bin/lib/ops/auto/store.cjs'));
+const rootDir = process.argv[2];
+for (let i = 0; i < 50; i += 1) {
+  const r = store.bumpSpawn(rootDir);
+  if (!r.ok) { console.error('worker bump failed: ' + JSON.stringify(r.reason)); process.exit(1); }
+}
+console.log('WORKER-DONE');
+EOF
+cat > run-mu1.cjs <<'EOF'
+const { spawn } = require('child_process');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const rootDir = process.cwd();
+const problems = [];
+store.create({ mode: 'on', rootDir });
+const worker = () => new Promise((resolve) => {
+  const c = spawn(process.execPath, [path.join(rootDir, 'mu-worker.cjs'), rootDir], { env: { ...process.env } });
+  let out = '';
+  c.stdout.on('data', (d) => { out += d; });
+  c.on('exit', (code) => resolve({ code, out }));
+});
+(async () => {
+  const results = await Promise.all([worker(), worker()]);
+  for (const r of results) {
+    if (r.code !== 0) problems.push('a worker failed: ' + r.out.trim());
+  }
+  const m = store.mirrors(rootDir);
+  if (!m.ok || m.spawnCount !== 100) problems.push('lost update under concurrency: spawnCount=' + (m.ok ? m.spawnCount : m.reason));
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+MU1_OUT="$(node run-mu1.cjs 2>&1 | tail -n 1)"
+t105_eq "store mutex: two concurrent mutators (50 bumps each) serialize — no lost counter update" "OK" "$MU1_OUT"
+
+# ---------------------------------------------------------------- MU2 --
+t105_case mu2
+cat > mu-holder.cjs <<'EOF'
+const path = require('path');
+const store = require(path.join(process.env.GOS_ROOT, 'bin/lib/ops/auto/store.cjs'));
+const r = store.acquireMutateLock(process.argv[2], { waitMs: 3000 });
+if (!r.ok) { console.error('holder acquire failed: ' + r.reason); process.exit(1); }
+console.log('HELD');
+setTimeout(() => process.exit(0), 3500);
+EOF
+cat > run-mu2.cjs <<'EOF'
+const { spawn } = require('child_process');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const rootDir = process.cwd();
+const problems = [];
+store.create({ mode: 'on', rootDir });
+const hold = spawn(process.execPath, [path.join(rootDir, 'mu-holder.cjs'), rootDir], { env: { ...process.env } });
+hold.stdout.on('data', (d) => { if (String(d).includes('HELD')) held = true; });
+let held = false;
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+(async () => {
+  const deadline = Date.now() + 5000;
+  while (!held && Date.now() < deadline) await sleep(20);
+  if (!held) problems.push('holder child never acquired the mutex');
+  const busy = store.bumpSpawn(rootDir, { waitMs: 600 });
+  if (busy.ok || busy.reason !== 'store-busy') problems.push('held mutex past the wait did not fail closed: ' + JSON.stringify(busy.reason));
+  if (!busy.holder || busy.holder.pid !== hold.pid) problems.push('store-busy refusal does not name the live holder');
+  const done = new Promise((res) => hold.on('exit', res));
+  await done;
+  const after = store.bumpSpawn(rootDir, { waitMs: 3000 });
+  if (!after.ok) problems.push('mutex not recoverable after the holder exits: ' + JSON.stringify(after.reason));
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+MU2_OUT="$(node run-mu2.cjs 2>&1 | tail -n 1)"
+t105_eq "store mutex: held mutex past the bounded wait reports store-busy (fail closed, holder named); releases recover" "OK" "$MU2_OUT"
+
+# ---------------------------------------------------------------- MU3 --
+t105_case mu3
+cat > run-mu3.cjs <<'EOF'
+const { spawn } = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const rootDir = process.cwd();
+const problems = [];
+// /proc/<pid>/stat field 22 (starttime), parsed after the last ')'
+function starttimeOf(pid) {
+  const stat = fs.readFileSync(`/proc/${pid}/stat`, 'utf8');
+  return Number(stat.slice(stat.lastIndexOf(')') + 2).split(' ')[19]);
+}
+store.create({ mode: 'on', rootDir });
+// recycled-pid holder: the pid IS alive (a live sleeper) but the recorded
+// starttime belongs to a previous process — bare pid-liveness must not
+// satisfy the reclaim check's block; full identity proves the holder gone
+const sleeper = spawn(process.execPath, ['-e', 'setInterval(() => {}, 5000)'], { stdio: 'ignore' });
+const bootId = fs.readFileSync('/proc/sys/kernel/random/boot_id', 'utf8').trim();
+const lockPath = store.mutateLockPath(rootDir);
+fs.writeFileSync(lockPath, JSON.stringify({
+  hostname: os.hostname(), pid: sleeper.pid, boot_id: bootId,
+  starttime: starttimeOf(sleeper.pid) + 7, created_at: new Date().toISOString(),
+}));
+const r = store.bumpSpawn(rootDir, { waitMs: 800 });
+if (!r.ok) problems.push('recycled-pid holder blocked the mutation: ' + JSON.stringify(r.reason));
+if (r.ok && r.mirrors.spawnCount !== 1) problems.push('reclaim mutation lost the counter bump');
+const st = store.load(rootDir);
+const records = st.ok ? st.store.breaker.records : [];
+if (!records.some((x) => x.cls === 'takeover' && /recycled/.test(String(x.detail)))) problems.push('recycled-pid reclaim not audited as a takeover record');
+sleeper.kill();
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+MU3_OUT="$(node run-mu3.cjs 2>&1 | tail -n 1)"
+t105_eq "store mutex: recycled-pid holder (live pid, wrong starttime) reclaims with a takeover record — pid liveness alone cannot hold the lock" "OK" "$MU3_OUT"
+
+# ---------------------------------------------------------------- MU4 --
+t105_case mu4
+cat > run-mu4.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const rootDir = process.cwd();
+const problems = [];
+store.create({ mode: 'on', rootDir });
+const lockPath = store.mutateLockPath(rootDir);
+const crossHost = () => fs.writeFileSync(lockPath, JSON.stringify({
+  hostname: 'other-machine.example', pid: 424242, boot_id: 'b'.repeat(36),
+  starttime: 1, created_at: new Date().toISOString(),
+}));
+// fresh cross-host holder: identity unreadable from this machine and the
+// lock is not aged — fail closed as store-busy, never a blind reclaim
+crossHost();
+const busy = store.bumpSpawn(rootDir, { waitMs: 400 });
+if (busy.ok || busy.reason !== 'store-busy') problems.push('fresh identity-unreadable holder was not store-busy: ' + JSON.stringify(busy.reason));
+// aged past the threshold: the mtime fallback reclaims and audits it
+crossHost();
+const aged = new Date(Date.now() - 120000);
+fs.utimesSync(lockPath, aged, aged);
+const r = store.bumpSpawn(rootDir, { waitMs: 400, staleMs: 30000 });
+if (!r.ok) problems.push('aged identity-unreadable holder was not reclaimed: ' + JSON.stringify(r.reason));
+const st = store.load(rootDir);
+const records = st.ok ? st.store.breaker.records : [];
+if (!records.some((x) => x.cls === 'takeover' && /unreadable/.test(String(x.detail)))) problems.push('mtime-fallback reclaim missing its takeover record');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+MU4_OUT="$(node run-mu4.cjs 2>&1 | tail -n 1)"
+t105_eq "store mutex: identity-unreadable holder fails closed while fresh, reclaims with a takeover record past the mtime threshold" "OK" "$MU4_OUT"
+
+# ---------------------------------------------------------------- MU5 --
+t105_case mu5
+t105_state THINK > .gos/state.json
+cat > run-mu5.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const rootDir = process.cwd();
+const problems = [];
+store.create({ mode: 'on', rootDir });
+const sr = store.storeRoot(rootDir);
+fs.mkdirSync(sr, { recursive: true });
+const nfsTable = `tmpfs / tmpfs rw 0 0\nsrv:/export ${sr} nfs4 rw 0 0\n`;
+const localTable = `tmpfs / tmpfs rw 0 0\n/dev/sda1 ${sr} ext4 rw 0 0\n`;
+const refused = store.refuseNetworkStore(rootDir, { readMounts: () => nfsTable });
+if (refused.ok || refused.reason !== 'network-store' || refused.fstype !== 'nfs4') problems.push('network store not refused: ' + JSON.stringify(refused.reason));
+if (!store.refuseNetworkStore(rootDir, { readMounts: () => localTable }).ok) problems.push('local-disk store wrongly refused');
+for (const fstype of ['nfs', 'cifs', '9p', 'ceph', 'lustre', 'fuse.sshfs']) {
+  const t = `tmpfs / tmpfs rw 0 0\nsrv ${sr} ${fstype} rw 0 0\n`;
+  if (store.refuseNetworkStore(rootDir, { readMounts: () => t }).ok) problems.push(fstype + ' not refused');
+}
+(async () => {
+  const r = await loop.createLoop({
+    rootDir, host: 'gos-fixture-host',
+    env: { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' },
+    readMounts: () => nfsTable,
+  }).loop.run();
+  if (r.status !== 'refused' || r.reason !== 'network-store') problems.push('auto run did not refuse the network store: ' + r.status + '/' + r.reason);
+  if (!r.guidance || !String(r.guidance.what || r.guidance).includes('XDG_DATA_HOME')) problems.push('refusal guidance does not point XDG_DATA_HOME at local disk');
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+MU5_OUT="$(node run-mu5.cjs 2>&1 | tail -n 1)"
+t105_eq "network-FS store: mount-table fixture refuses hard at auto run with XDG_DATA_HOME-local-disk guidance; local fstypes pass" "OK" "$MU5_OUT"
 
 echo "--- T105 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]
