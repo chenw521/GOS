@@ -16,6 +16,7 @@ const path = require('node:path');
 const os = require('node:os');
 const crypto = require('node:crypto');
 const core = require('../../core/index.cjs');
+const limits = require('./limits.cjs');
 
 const STORE_SCHEMA_VERSION = 1;
 
@@ -51,8 +52,6 @@ const SNAPSHOT_KINDS = new Set(['denyBaseline', 'hostSeed', 'redteamPrompt', 'pr
 const CAPS = { breakerRecords: 100, dispositions: 200, probeResults: 50, stamps: 1000 };
 
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
-
-const DEFAULT_LIMITS = { N: 3, K: 5, B: 30 };
 
 // ---- locale surfaces ----
 // All user-facing failure text resolves through locale keys; the catalogs
@@ -192,7 +191,7 @@ function freshStore(opts) {
     store_schema_version: STORE_SCHEMA_VERSION,
     mode: opts.mode === 'on' ? 'on' : 'off',
     profile: typeof opts.profile === 'string' && opts.profile.length ? opts.profile : 'restricted',
-    limits: { ...DEFAULT_LIMITS },
+    limits: { ...limits.DEFAULT_LIMITS },
     counters: { spawnCount: 0, tripCount: 0 },
     breaker: { records: [] },
     stamps: {},
@@ -690,7 +689,7 @@ function purgeStore(rootDir) {
 
 module.exports = {
   STORE_SCHEMA_VERSION,
-  DEFAULT_LIMITS,
+  DEFAULT_LIMITS: limits.DEFAULT_LIMITS,
   storeRoot,
   repoKey,
   guidanceFor,

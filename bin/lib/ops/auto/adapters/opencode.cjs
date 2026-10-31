@@ -17,11 +17,11 @@
 
 const { spawnSync } = require('child_process');
 const registryMod = require('./registry.cjs');
+const limits = require('../limits.cjs');
 
 const NAME = 'opencode';
 const SPAWN_MODE = 'opencode-run-json';
 const DEFAULT_SPAWN_TIMEOUT_MS = 60 * 60 * 1000;
-const SPAWN_MAX_BUFFER = 64 * 1024 * 1024;
 
 // Terminal event shapes: an event whose `type` is listed here, or one that
 // carries `terminal: true`, closes the stream successfully.
@@ -128,7 +128,7 @@ function spawnLive(opts) {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
     timeout: o.timeoutMs || DEFAULT_SPAWN_TIMEOUT_MS,
-    maxBuffer: SPAWN_MAX_BUFFER,
+    maxBuffer: limits.SPAWN_MAX_BUFFER,
   };
   let r;
   try {

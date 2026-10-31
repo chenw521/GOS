@@ -43,7 +43,80 @@
       "covered_by": null
     }
   ],
-  "observable_truths": [],
+  "observable_truths": [
+    {
+      "id": "T1",
+      "description": "VERIFY under auto completes with zero host/LLM spawns when no host adapter is selectable; iteration names script-spawn steps and pinned Class-P legs with verdicts",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T2",
+      "description": "Two-wave fixture plan drives two equipped spawns with pointer-only prompts; each wave releases on one commit touching only its declared files",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T3",
+      "description": "Undeclared path, frozen-artifact edit, second commit, or foreign ref move classifies contract-violation and holds the wave with the named violation",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T4",
+      "description": "PENDING THINK approval converts to status cleared; legacy ratified records read as cleared; forged post-loop-start bare-string approval holds the stage",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T5",
+      "description": "Stamp telemetry fields render advisory and never produce a breaker signal; the channel use budget stays the hard refusal",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T6",
+      "description": "BUILD wave checkpoint-save and section verbs admit through the request/ack channel; the same verbs from THINK spawn refused; forged cache entries inert",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T7",
+      "description": "Red gate holds VERIFY with findings surfaced and no breaker count; tampered pinned-worktree hash refuses the leg; lexical tier refuses BUILD fail-closed",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T8",
+      "description": "SPAWN_MAX_BUFFER, DEFAULT_LIMITS, DEFAULT_WALL_SEC defined exactly once under ops/auto; a stalled red-team stream dies at the idle limit",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T9",
+      "description": "Concurrent store mutators serialize with no lost update; held mutex past the wait fails store-busy; recycled-pid reclaim refused; network-FS store refuses",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T10",
+      "description": "Registry entry, seed materialization, and dispatch resolution succeed under clone roots with spaces, unicode, and a symlinked root",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T11",
+      "description": "Marker-env status names the stage artifact, advance verb, and human-gate refusal; no store prints nothing new and creates nothing; spawn bytes sanitized",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T12",
+      "description": "BUILD/W<n> unit labels trip K per label while three failed waves trip N; loader bounds refuse unknown stages, workers, verbs, and units with named errors",
+      "verified": false,
+      "evidence": null
+    }
+  ],
   "gaps": [],
   "activation_source": "headless",
   "task_head": "feffe37d5753571bec6ce5c329c8bee8a7670571",

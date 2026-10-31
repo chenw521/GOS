@@ -21,6 +21,7 @@ const store = require('./store.cjs');
 const launcher = require('./launcher.cjs');
 const loop = require('./loop.cjs');
 const registry = require('./adapters/registry.cjs');
+const limits = require('./limits.cjs');
 const core = require('../../core/index.cjs');
 
 // Stamp stage label and prompt snapshot kind in the trust store.
@@ -33,11 +34,10 @@ const REQUIRED_ZEROS = 2;
 
 const DEFAULT_PROFILE = 'restricted';
 // Wall clock per review round: the runner's GOS_AUTO_TIMEOUT_WALL_SEC
-// override wins over the 60-minute default, with the same strict positive
-// integer grammar (a malformed override fails closed, never falls back).
+// override wins over the 60-minute default in limits.cjs, with the same
+// strict positive integer grammar (a malformed override fails closed,
+// never falls back).
 const WALL_ENV = 'GOS_AUTO_TIMEOUT_WALL_SEC';
-const DEFAULT_WALL_SEC = 60 * 60;
-const SPAWN_MAX_BUFFER = 64 * 1024 * 1024;
 
 // Runner-held prompt template. The sha256 of this exact constant is the
 // prompt source hash recorded in the store; the worker session receives an
@@ -163,7 +163,7 @@ function redteamSpawnRunner(spec, ctx) {
       resolve({ status: null, stdout: '', stderr: '', error: e instanceof Error ? e : new Error(String(e)) });
       return;
     }
-    const cap = SPAWN_MAX_BUFFER;
+    const cap = limits.SPAWN_MAX_BUFFER;
     let out = '';
     let err = '';
     let wallTimer = null;
@@ -198,7 +198,7 @@ function redteamSpawnRunner(spec, ctx) {
 function resolveWallMs(ctx) {
   if (Number.isInteger(ctx.wallMs) && ctx.wallMs > 0) return { ok: true, wallMs: ctx.wallMs };
   const raw = (ctx.env || process.env)[WALL_ENV];
-  if (raw == null) return { ok: true, wallMs: DEFAULT_WALL_SEC * 1000 };
+  if (raw == null) return { ok: true, wallMs: limits.DEFAULT_WALL_SEC * 1000 };
   const text = String(raw).trim();
   if (!/^[1-9][0-9]*$/.test(text)) {
     return {

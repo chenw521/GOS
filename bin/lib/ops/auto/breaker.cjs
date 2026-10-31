@@ -17,13 +17,12 @@
 
 const { spawnSync } = require('node:child_process');
 const store = require('./store.cjs');
+const limits = require('./limits.cjs');
 const core = require('../../core/index.cjs');
 
-const DEFAULT_LIMITS = { N: 3, K: 5, B: 30 };
-
-// Per-spawn timeout defaults: 60 minutes wall clock, 10 minutes since the
-// last stream event. Overridable through the two env vars below.
-const DEFAULT_WALL_SEC = 60 * 60;
+// Per-spawn timeout default: 10 minutes since the last stream event. The
+// wall-clock default lives in limits.cjs. Both are overridable through the
+// two env vars below.
 const DEFAULT_IDLE_SEC = 10 * 60;
 const WALL_ENV = 'GOS_AUTO_TIMEOUT_WALL_SEC';
 const IDLE_ENV = 'GOS_AUTO_TIMEOUT_IDLE_SEC';
@@ -111,7 +110,7 @@ function timeoutPolicy(env, defaults) {
     }
     return { ok: true, value: Number(String(raw).trim()) };
   };
-  const wall = read(WALL_ENV, Number.isInteger(d.wallSec) && d.wallSec >= 1 ? d.wallSec : DEFAULT_WALL_SEC);
+  const wall = read(WALL_ENV, Number.isInteger(d.wallSec) && d.wallSec >= 1 ? d.wallSec : limits.DEFAULT_WALL_SEC);
   if (!wall.ok) return wall;
   const idle = read(IDLE_ENV, Number.isInteger(d.idleSec) && d.idleSec >= 1 ? d.idleSec : DEFAULT_IDLE_SEC);
   if (!idle.ok) return idle;
@@ -401,8 +400,8 @@ function createBreaker(opts = {}) {
 }
 
 module.exports = {
-  DEFAULT_LIMITS,
-  DEFAULT_WALL_SEC,
+  DEFAULT_LIMITS: limits.DEFAULT_LIMITS,
+  DEFAULT_WALL_SEC: limits.DEFAULT_WALL_SEC,
   DEFAULT_IDLE_SEC,
   FAILURE_CLASSES,
   validateLimits,

@@ -36,6 +36,7 @@ const store = require('./store.cjs');
 const registry = require('./adapters/registry.cjs');
 const launcher = require('./launcher.cjs');
 const breakerMod = require('./breaker.cjs');
+const limits = require('./limits.cjs');
 const core = require('../../core/index.cjs');
 
 // Environment marker identifying a runner-spawned session: in-spawn commands
@@ -55,8 +56,6 @@ const WORK_BRANCH_PREFIX = 'auto/';
 // Run-lock heartbeat cadence during spawn waits. A healthy runner must never
 // look stale while a long spawn blocks.
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 60 * 1000;
-
-const SPAWN_MAX_BUFFER = 64 * 1024 * 1024;
 
 // Registered spawn write channel: the runner registers each spawn before
 // launch and removes the entry at exit — the in-spawn gos commands carry
@@ -178,7 +177,7 @@ function loopSpawnRunner(spec, ctx) {
       resolve({ status: null, stdout: '', stderr: '', error: e && e.message ? e : new Error(e && e.message || 'spawn failed') });
       return;
     }
-    const cap = SPAWN_MAX_BUFFER;
+    const cap = limits.SPAWN_MAX_BUFFER;
     let out = '';
     let err = '';
     let idleTimer = null;

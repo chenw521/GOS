@@ -692,5 +692,42 @@ EOF
 D8_OUT="$(node run-d8.cjs 2>&1 | tail -n 1)"
 t105_eq "registry: row without version_command classifies a probe failure (fallback --version), never crashes" "OK" "$D8_OUT"
 
+# ---------------------------------------------------------------- D9 --
+t105_case d9
+t105_state THINK > .gos/state.json
+cat > run-d9.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const stateMod = require(path.join(GR, 'bin/lib/core/state.cjs'));
+const problems = [];
+const hex64 = 'a'.repeat(64);
+// writer+reader pair: the canonical auto spelling 'cleared' must survive the
+// fail-closed write path, while legacy 'ratified' objects and bare ts-string
+// approvals (human `gos approve`) still parse untouched
+const st = JSON.parse(fs.readFileSync('.gos/state.json', 'utf8'));
+st.approvals.THINK = {
+  status: 'cleared', ts: '2026-10-31T00:00:00.000Z', mode: 'auto', stage: 'THINK',
+  evidence: { spawnId: 'x', streamSha256: hex64, stampCount: 1 },
+};
+st.approvals.PLAN = { status: 'ratified', ts: '2026-10-31T00:00:00.000Z', mode: 'auto', stage: 'PLAN' };
+st.approvals.INTENT = '2026-10-30T00:00:00.000Z';
+stateMod.writeState(st);
+const back = stateMod.readState();
+if (!back || !back.approvals) problems.push('read-back missing approvals');
+else {
+  const think = back.approvals.THINK || {};
+  if (think.status !== 'cleared') problems.push('cleared not preserved: ' + think.status);
+  if (!think.evidence || think.evidence.streamSha256 !== hex64 || think.evidence.stampCount !== 1) problems.push('cleared evidence mangled');
+  if ((back.approvals.PLAN || {}).status !== 'ratified') problems.push('legacy ratified not preserved');
+  if (back.approvals.INTENT !== '2026-10-30T00:00:00.000Z') problems.push('bare-string approval not preserved');
+}
+const raw = fs.readFileSync('.gos/state.json', 'utf8');
+if (!raw.includes('"cleared"') || !raw.includes(hex64)) problems.push('tracked bytes lost cleared status or evidence');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+D9_OUT="$(node run-d9.cjs 2>&1 | tail -n 1)"
+t105_eq "approvals schema: 'cleared' round-trips write+read; legacy 'ratified' and bare-string approvals still parse" "OK" "$D9_OUT"
+
 echo "--- T105 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]

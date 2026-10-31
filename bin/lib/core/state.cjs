@@ -283,8 +283,8 @@ function validateState(s, mode) {
     } else {
       for (const [k, v] of Object.entries(s.approvals)) {
         if (v == null || typeof v !== 'object' || Array.isArray(v) || v.status === undefined) continue;
-        if (v.status !== 'PENDING' && v.status !== 'ratified') {
-          errs.push(`state.json:approvals.${k}: status must be PENDING|ratified (got ${JSON.stringify(v.status)})`);
+        if (v.status !== 'PENDING' && v.status !== 'ratified' && v.status !== 'cleared') {
+          errs.push(`state.json:approvals.${k}: status must be PENDING|ratified|cleared (got ${JSON.stringify(v.status)})`);
         }
         if (typeof v.ts !== 'string' || v.ts.length === 0) errs.push(`state.json:approvals.${k}: ts string required`);
         if (v.mode !== undefined && v.mode !== 'auto') errs.push(`state.json:approvals.${k}: mode must be 'auto' when present`);
@@ -902,7 +902,7 @@ function defaultState(level, intentText) {
     current_stage: 'INTENT',
     completed_stages: [],
     intent: { summary: intentText || '', confirmed: false },
-    approvals: {},  // stage-gate approvals — value per stage: legacy = bare ts string (gos approve), auto-routed = {status:'PENDING'|'ratified', ts, mode:'auto', stage, evidence?}; BASELINE_RESET keeps {ts, reason}
+    approvals: {},  // stage-gate approvals — value per stage: legacy = bare ts string (gos approve), auto-routed = {status:'PENDING'|'ratified'|'cleared', ts, mode:'auto', stage, evidence?} ('ratified' is a legacy reader tolerance; 'cleared' is the canonical writer spelling); BASELINE_RESET keeps {ts, reason}
     spec_path: null,   // T5: backfilled below via ensureTaskDir resolution
     plan_path: null,
     project: false,          // true when init --project (Lv4 truth-source mode)
