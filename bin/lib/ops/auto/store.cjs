@@ -1,14 +1,17 @@
 // ops/auto/store — machine-local runner trust store, external to every
 // spawned sandbox: schema-versioned records for the auto loop (mode/profile/
-// limits, cumulative counters, breaker records, stream stamps, dispositions,
-// runner-held snapshots, probe results) plus the exclusive run-lock family.
+// limits, cumulative counters, breaker records, stream stamps with their
+// window sidecars, dispositions, runner-held snapshots, probe results) plus
+// the exclusive run-lock family.
 //
 // Load semantics are fail-closed by construction: a missing, corrupt, or
 // future-versioned store NEVER yields a fresh writable store — the loader
 // returns a paused result with guidance, and only `create` (the `auto on`
 // path) may lay down a fresh store, warning when tracked mirror counters
 // imply prior history. The repo-local ledger mirror is never a read source
-// here; this store is the single trust input.
+// here; this store is the single trust input. Older on-disk schemas load
+// with an in-memory migration (never written by a pure read; the next
+// mutate persists the migrated shape).
 'use strict';
 
 const fs = require('node:fs');
@@ -19,9 +22,24 @@ const core = require('../../core/index.cjs');
 const spawnreg = require('../../core/spawnreg.cjs');
 const limits = require('./limits.cjs');
 
-const STORE_SCHEMA_VERSION = 1;
+const STORE_SCHEMA_VERSION = 2;
 
 const STORE_FILE = 'store.json';
+
+// Stamp telemetry fields: self-reported model fields and runner counts are
+// advisory by contract (stored verbatim, never used to gate a disposition);
+// the window hashes and byte totals describe the retained sidecar pair.
+const STAMP_TEXT_FIELDS = ['modelPinned', 'modelObserved'];
+const STAMP_HASH_FIELDS = ['headSha256', 'tailSha256'];
+const STAMP_COUNT_FIELDS = ['commandCount', 'totalBytes', 'denyHits'];
+const HEX64_RE = /^[0-9a-f]{64}$/;
+
+// Window sidecars: one directory under the store dir holding a head/tail
+// text pair per stamped spawn, named by spawnId. The pair count is bounded
+// by the stamp cap — pruned with its stamp, orphans swept at every prune.
+const WINDOWS_DIR = 'windows';
+const SPAWN_ID_FILE_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const SIDECAR_RE = /^([A-Za-z0-9][A-Za-z0-9._-]*)\.(head|tail)\.txt$/;
 
 const RUN_LOCK_FILE = 'run.lock';
 
@@ -127,6 +145,15 @@ function nonNegInt(v) {
   return Number.isInteger(v) && v >= 0;
 }
 
+// Optional stamp telemetry: absent or well-typed. A wrong-typed count or a
+// malformed hash is structural damage, so the store reads as corrupt.
+function stampTelemetryWellTyped(s) {
+  for (const f of STAMP_TEXT_FIELDS) if (s[f] != null && typeof s[f] !== 'string') return false;
+  for (const f of STAMP_HASH_FIELDS) if (s[f] != null && (typeof s[f] !== 'string' || !HEX64_RE.test(s[f]))) return false;
+  for (const f of STAMP_COUNT_FIELDS) if (s[f] != null && !nonNegInt(s[f])) return false;
+  return true;
+}
+
 function validateStoreShape(st) {
   const errs = [];
   if (!isPlainObject(st)) return ['store: not an object'];
@@ -152,8 +179,11 @@ function validateStoreShape(st) {
     errs.push('breaker.records: entries need string cls+ts');
   }
   if (!isPlainObject(st.stamps)) errs.push('stamps: object required');
-  else if (!Object.values(st.stamps).every((v) => isPlainObject(v) && typeof v.streamSha256 === 'string' && /^[0-9a-f]{64}$/.test(v.streamSha256))) {
+  else if (!Object.values(st.stamps).every((v) => isPlainObject(v) && typeof v.streamSha256 === 'string' && HEX64_RE.test(v.streamSha256))) {
     errs.push('stamps: values need hex64 streamSha256');
+  }
+  else if (!Object.values(st.stamps).every(stampTelemetryWellTyped)) {
+    errs.push('stamps: telemetry fields must be absent or well-typed (string, hex64, integer >= 0)');
   }
   if (!Array.isArray(st.dispositions)) errs.push('dispositions: array required');
   else if (!st.dispositions.every((d) => isPlainObject(d) && typeof d.runId === 'string')) {
@@ -178,6 +208,18 @@ function paused(reason, file, detail, localeKey, params) {
   return out;
 }
 
+// In-memory v1 -> v2 migration: every stamp gains the telemetry fields at
+// their absent-value defaults and the version bumps to the known schema.
+// Pure — load never writes; the migrated shape persists lazily on the next
+// mutate (which loads through this same normalization before its fn runs).
+function normalizeStampsToV2(st) {
+  for (const s of Object.values(st.stamps)) {
+    for (const f of [...STAMP_TEXT_FIELDS, ...STAMP_HASH_FIELDS]) if (s[f] == null) s[f] = null;
+    for (const f of STAMP_COUNT_FIELDS) if (s[f] == null) s[f] = 0;
+  }
+  st.store_schema_version = STORE_SCHEMA_VERSION;
+}
+
 // Fail-closed read. Never throws, never creates directories, never repairs.
 function load(rootDir) {
   const file = storeFile(rootDir);
@@ -194,8 +236,12 @@ function load(rootDir) {
   if (st.store_schema_version > STORE_SCHEMA_VERSION) {
     return paused('version-mismatch', file, `store at schema v${st.store_schema_version}, this CLI knows v${STORE_SCHEMA_VERSION}`, 'auto.store.versionMismatch', { found: st.store_schema_version, known: STORE_SCHEMA_VERSION });
   }
-  if (st.store_schema_version < STORE_SCHEMA_VERSION) {
+  if (st.store_schema_version < 1) {
     return paused('version-mismatch', file, `store at older schema v${st.store_schema_version}`, 'auto.store.versionMismatch', { found: st.store_schema_version, known: STORE_SCHEMA_VERSION });
+  }
+  if (st.store_schema_version === 1) {
+    normalizeStampsToV2(st);
+    return { ok: true, status: 'ok', path: file, store: st, migrated: true };
   }
   return { ok: true, status: 'ok', path: file, store: st };
 }
@@ -580,28 +626,118 @@ function mirrorsOf(st) {
 
 // ---- record API ----
 
-// Stamp the captured-stream hash for one spawn. One spawnId stamps once:
-// an identical re-stamp is idempotent, a conflicting one is refused (the
-// pairing between spawn and stream hash must not be rewritable).
-function stampStream(spawnId, stage, streamSha256, spawnedAtIso, rootDir) {
+// Stamp the captured-stream hash for one spawn, optionally with runner
+// telemetry (self-reported model fields, command count, deny hits, window
+// hashes, byte totals — all advisory). One spawnId stamps once: an
+// identical re-stamp refreshes, a conflicting one is refused (the pairing
+// between spawn and stream hash must not be rewritable).
+function stampStream(spawnId, stage, streamSha256, spawnedAtIso, rootDir, telemetry) {
   if (typeof spawnId !== 'string' || !spawnId) return { ok: false, status: 'error', reason: 'invalid-spawn-id' };
   if (typeof stage !== 'string' || !stage) return { ok: false, status: 'error', reason: 'invalid-stage' };
-  if (typeof streamSha256 !== 'string' || !/^[0-9a-f]{64}$/.test(streamSha256)) return { ok: false, status: 'error', reason: 'invalid-stream-sha256' };
+  if (typeof streamSha256 !== 'string' || !HEX64_RE.test(streamSha256)) return { ok: false, status: 'error', reason: 'invalid-stream-sha256' };
   if (typeof spawnedAtIso !== 'string' || !ISO_RE.test(spawnedAtIso)) return { ok: false, status: 'error', reason: 'invalid-spawned-at' };
+  const tel = telemetry == null ? {} : telemetry;
+  if (!isPlainObject(tel)) return { ok: false, status: 'error', reason: 'invalid-telemetry', detail: 'telemetry must be an object' };
+  if (!stampTelemetryWellTyped(tel)) {
+    return { ok: false, status: 'error', reason: 'invalid-telemetry', detail: 'fields must be string, hex64, or integer >= 0' };
+  }
   let conflict = false;
   const r = mutate(rootDir, (st) => {
     const prev = st.stamps[spawnId];
     if (prev && prev.streamSha256 !== streamSha256) { conflict = true; return null; }
-    st.stamps[spawnId] = { stage, streamSha256, spawnedAtIso, stampedAtIso: new Date().toISOString() };
-    const keys = Object.keys(st.stamps);
-    if (keys.length > CAPS.stamps) {
-      keys.sort((a, b) => st.stamps[a].stampedAtIso.localeCompare(st.stamps[b].stampedAtIso));
-      for (const k of keys.slice(0, keys.length - CAPS.stamps)) delete st.stamps[k];
-    }
+    st.stamps[spawnId] = stampEntry(stage, streamSha256, spawnedAtIso, tel, prev);
+    pruneStamps(st, rootDir);
     return st;
   });
   if (conflict) return { ok: false, status: 'error', reason: 'stamp-conflict', path: r.path };
   return r.ok ? { ok: true, path: r.path, stamp: r.store.stamps[spawnId] } : r;
+}
+
+// Full v2 stamp: legacy fields plus telemetry, absent telemetry normalized
+// to null/0 so every consumer reads one shape. An identical re-stamp keeps
+// the prior telemetry values it is not re-handed (window hashes survive a
+// saveWindows-then-restamp sequence instead of resetting).
+function stampEntry(stage, streamSha256, spawnedAtIso, tel, prev) {
+  const src = prev != null ? prev : {};
+  const s = { stage, streamSha256, spawnedAtIso, stampedAtIso: new Date().toISOString() };
+  for (const f of [...STAMP_TEXT_FIELDS, ...STAMP_HASH_FIELDS]) s[f] = tel[f] != null ? tel[f] : (src[f] != null ? src[f] : null);
+  for (const f of STAMP_COUNT_FIELDS) s[f] = tel[f] != null ? tel[f] : (src[f] != null ? src[f] : 0);
+  return s;
+}
+
+// Stamp-cap pruning: oldest stamps drop past the cap, their window sidecar
+// files die with them, and a sweep removes sidecars whose stamp no longer
+// exists (crash leftovers, restored stores). File hygiene is best-effort —
+// a failed unlink never fails the mutation.
+function pruneStamps(st, rootDir) {
+  const keys = Object.keys(st.stamps);
+  if (keys.length <= CAPS.stamps) return;
+  keys.sort((a, b) => st.stamps[a].stampedAtIso.localeCompare(st.stamps[b].stampedAtIso));
+  const dropped = keys.slice(0, keys.length - CAPS.stamps);
+  for (const k of dropped) delete st.stamps[k];
+  const dir = windowsDirOf(rootDir);
+  if (dir == null) return;
+  for (const k of dropped) unlinkSidecarPair(dir, k);
+  sweepOrphanSidecars(dir, st.stamps);
+}
+
+// ---- window sidecars ----
+
+function windowsDirOf(rootDir) {
+  const root = storeRoot(rootDir);
+  return root == null ? null : path.join(root, WINDOWS_DIR);
+}
+
+function unlinkSidecarPair(dir, spawnId) {
+  for (const suffix of ['head', 'tail']) {
+    try { fs.unlinkSync(path.join(dir, `${spawnId}.${suffix}.txt`)); } catch { /* gone */ }
+  }
+}
+
+function sweepOrphanSidecars(dir, stamps) {
+  let names;
+  try { names = fs.readdirSync(dir); } catch { return; }
+  for (const name of names) {
+    const m = SIDECAR_RE.exec(name);
+    if (m && !Object.prototype.hasOwnProperty.call(stamps, m[1])) {
+      try { fs.unlinkSync(path.join(dir, name)); } catch { /* gone */ }
+    }
+  }
+}
+
+// Persist the retained dual-window capture for one stamped spawn: a head
+// and a tail sidecar file under the store dir, plus the stamp's window
+// hashes and the retained byte total (exactly the sidecar bytes, so a
+// later reader verifies the files against the stamp without the loop).
+// Advisory stamp fields are never read or touched here.
+function saveWindows(spawnId, windows, rootDir) {
+  if (typeof spawnId !== 'string' || !SPAWN_ID_FILE_RE.test(spawnId)) {
+    return { ok: false, status: 'error', reason: 'invalid-spawn-id', detail: 'spawnId must be filename-safe (letters, digits, dot, dash, underscore)' };
+  }
+  const w = windows == null ? {} : windows;
+  if (!isPlainObject(w)) return { ok: false, status: 'error', reason: 'invalid-windows', detail: 'windows must be an object' };
+  const head = w.head == null ? '' : w.head;
+  const tail = w.tail == null ? '' : w.tail;
+  if (typeof head !== 'string' && !Buffer.isBuffer(head)) return { ok: false, status: 'error', reason: 'invalid-windows', detail: 'head must be a string or Buffer' };
+  if (typeof tail !== 'string' && !Buffer.isBuffer(tail)) return { ok: false, status: 'error', reason: 'invalid-windows', detail: 'tail must be a string or Buffer' };
+  const headBuf = Buffer.isBuffer(head) ? head : Buffer.from(head, 'utf8');
+  const tailBuf = Buffer.isBuffer(tail) ? tail : Buffer.from(tail, 'utf8');
+  const dir = windowsDirOf(rootDir);
+  if (dir == null) return paused('unwritable', null, 'no XDG data home resolvable', 'auto.store.unwritable');
+  let missing = false;
+  const r = mutate(rootDir, (st) => {
+    const stamp = st.stamps[spawnId];
+    if (!stamp) { missing = true; return null; }
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, `${spawnId}.head.txt`), headBuf);
+    fs.writeFileSync(path.join(dir, `${spawnId}.tail.txt`), tailBuf);
+    stamp.headSha256 = crypto.createHash('sha256').update(headBuf).digest('hex');
+    stamp.tailSha256 = crypto.createHash('sha256').update(tailBuf).digest('hex');
+    stamp.totalBytes = headBuf.length + tailBuf.length;
+    return st;
+  });
+  if (missing) return { ok: false, status: 'refused', reason: 'stamp-missing', spawnId, path: r.path };
+  return r.ok ? { ok: true, path: r.path, windowsDir: dir, stamp: r.store.stamps[spawnId] } : r;
 }
 
 // Human dispositions (red runs, unknown-state CI) live here — the repo
@@ -965,6 +1101,7 @@ module.exports = {
   releaseMutateLock,
   heartbeatStaleThresholdMs,
   stampStream,
+  saveWindows,
   recordReviewRound,
   recordDisposition,
   saveSnapshot,

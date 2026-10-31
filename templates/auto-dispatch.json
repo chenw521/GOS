@@ -1,0 +1,77 @@
+{
+  "dispatch_schema_version": 1,
+  "description": "Stage-dispatch table for the auto loop: one entry per GOS stage declaring worker form, capability profile, model slot, verb set, use cap, dispatch unit, contracts, and telemetry caps. Pure data — every value bound (profile pinning per stage, use-cap ceiling, worker/verb/unit vocabularies, stage-set membership) is enforced fail-closed by ops/auto/workers.cjs, so edits here can never widen capability.",
+  "stages": {
+    "INTENT": {
+      "worker": "agent",
+      "profile": "restricted",
+      "model_slot": "default",
+      "verbs": ["commit", "gate", "section", "truth"],
+      "use_cap": 16,
+      "unit": "stage",
+      "contracts": { "prompt": "INTENT-contract" },
+      "telemetry": { "commandCount": 200, "streamBytes": 67108864 }
+    },
+    "THINK": {
+      "worker": "agent",
+      "profile": "restricted",
+      "model_slot": "default",
+      "verbs": ["commit", "gate", "section", "truth"],
+      "use_cap": 16,
+      "unit": "stage",
+      "contracts": { "prompt": "THINK-contract" },
+      "telemetry": { "commandCount": 200, "streamBytes": 67108864 }
+    },
+    "PLAN": {
+      "worker": "agent",
+      "profile": "restricted",
+      "model_slot": "default",
+      "verbs": ["commit", "gate", "section", "truth"],
+      "use_cap": 16,
+      "unit": "stage",
+      "contracts": { "prompt": "PLAN-contract" },
+      "telemetry": { "commandCount": 200, "streamBytes": 67108864 }
+    },
+    "BUILD": {
+      "worker": "agent",
+      "profile": "workspace",
+      "model_slot": "implementer",
+      "verbs": ["commit", "gate", "section", "truth", "checkpoint"],
+      "use_cap": 64,
+      "unit": "stage-wave",
+      "wave_dispatch": true,
+      "contracts": { "prompt": "BUILD-contract" },
+      "telemetry": { "commandCount": 200, "streamBytes": 67108864 }
+    },
+    "REVIEW": {
+      "worker": "agent",
+      "profile": "restricted",
+      "model_slot": "default",
+      "verbs": ["commit", "gate", "section", "truth"],
+      "use_cap": 16,
+      "unit": "stage",
+      "contracts": { "prompt": "REVIEW-contract" },
+      "telemetry": { "commandCount": 200, "streamBytes": 67108864 }
+    },
+    "VERIFY": {
+      "worker": "script",
+      "profile": "restricted",
+      "model_slot": "default",
+      "verbs": ["commit", "gate", "section", "truth"],
+      "use_cap": 16,
+      "unit": "stage",
+      "contracts": { "steps": [] },
+      "telemetry": { "commandCount": 200, "streamBytes": 67108864 }
+    },
+    "SHIP": {
+      "worker": "script",
+      "profile": "restricted",
+      "model_slot": "default",
+      "verbs": ["commit", "gate", "section", "truth"],
+      "use_cap": 16,
+      "unit": "stage",
+      "contracts": { "steps": [] },
+      "telemetry": { "commandCount": 200, "streamBytes": 67108864 }
+    }
+  }
+}

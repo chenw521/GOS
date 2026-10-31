@@ -35,6 +35,14 @@
 #           stale reclaim needs full holder identity (boot_id + starttime,
 #           mtime fallback for cross-host), and a network-filesystem store
 #           refuses at auto run
+#   store-v2  telemetry stamps + window sidecars: v1 stores migrate in
+#           memory (additive fields, lazy write-back on the next mutate,
+#           pure reads never write), future schema versions still refuse,
+#           saveWindows persists a bounded head/tail sidecar pair whose
+#           hashes and retained byte total ride the stamp, cap pruning
+#           drops sidecars with their stamps and sweeps orphans, and
+#           self-reported telemetry is advisory — stored verbatim, never
+#           branched on
 # Fake host: GOS_AUTO_TEST_FIXTURE=1 activates the registry fixture row;
 # loop spawns run through injected spawnRunner harnesses only. HOME and
 # XDG_DATA_HOME are pinned per case under TESTBASE;
@@ -973,6 +981,143 @@ for (const fstype of ['nfs', 'cifs', '9p', 'ceph', 'lustre', 'fuse.sshfs']) {
 EOF
 MU5_OUT="$(node run-mu5.cjs 2>&1 | tail -n 1)"
 t105_eq "network-FS store: mount-table fixture refuses hard at auto run with XDG_DATA_HOME-local-disk guidance; local fstypes pass" "OK" "$MU5_OUT"
+
+# ---------------------------------------------------------------- SV1 --
+t105_case sv1
+cat > run-sv1.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const rootDir = process.cwd();
+const problems = [];
+const hex = (t) => crypto.createHash('sha256').update(t).digest('hex');
+const storeFile = path.join(store.storeRoot(rootDir), 'store.json');
+const made = store.create({ mode: 'on', rootDir });
+if (!made.ok) problems.push('store create failed');
+// v1 fixture: schema-1 store whose stamps predate every telemetry field
+const v1 = JSON.parse(JSON.stringify(made.store));
+v1.store_schema_version = 1;
+v1.stamps = {
+  'sv-legacy-1': { stage: 'THINK', streamSha256: hex('s1'), spawnedAtIso: '2026-01-01T00:00:00.000Z', stampedAtIso: '2026-01-01T00:00:01.000Z' },
+  'sv-legacy-2': { stage: 'PLAN', streamSha256: hex('s2'), spawnedAtIso: '2026-01-02T00:00:00.000Z', stampedAtIso: '2026-01-02T00:00:01.000Z' },
+};
+fs.writeFileSync(storeFile, JSON.stringify(v1, null, 2));
+const m = store.load(rootDir);
+if (!m.ok) problems.push('v1 store did not load: ' + m.reason);
+else {
+  if (m.store.store_schema_version !== 2) problems.push('v1 store not schema 2 in memory');
+  if (m.migrated !== true) problems.push('load does not report the migration');
+  for (const id of Object.keys(v1.stamps)) {
+    const s = m.store.stamps[id] || {};
+    if (s.stage !== v1.stamps[id].stage || s.streamSha256 !== v1.stamps[id].streamSha256) problems.push(id + ': legacy fields lost');
+    if (s.modelPinned !== null || s.modelObserved !== null || s.headSha256 !== null || s.tailSha256 !== null) problems.push(id + ': nullable fields not normalized to null');
+    if (s.commandCount !== 0 || s.totalBytes !== 0 || s.denyHits !== 0) problems.push(id + ': count fields not normalized to 0');
+  }
+}
+// pure read never writes back: disk stays v1 until the next mutate
+if (JSON.parse(fs.readFileSync(storeFile, 'utf8')).store_schema_version !== 1) problems.push('pure read rewrote the v1 store');
+const bump = store.bumpSpawn(rootDir);
+if (!bump.ok) problems.push('mutate over a migrated store failed: ' + bump.reason);
+const afterBump = JSON.parse(fs.readFileSync(storeFile, 'utf8'));
+if (afterBump.store_schema_version !== 2) problems.push('lazy write-back did not persist schema 2');
+if ((afterBump.stamps['sv-legacy-1'] || {}).commandCount !== 0) problems.push('normalized stamp not persisted by write-back');
+// advisory contract: self-reported values ride the stamp verbatim — the
+// write path stores them, never branches on them
+const tel = { modelPinned: 'pinned-model-x', modelObserved: 'whatever', commandCount: 999999, denyHits: 7, totalBytes: 424242, headSha256: hex('hh'), tailSha256: hex('tt') };
+const adv = store.stampStream('sv-adv-1', 'SHIP', hex('adv'), new Date().toISOString(), rootDir, tel);
+if (!adv.ok) problems.push('telemetry stamp failed: ' + adv.reason);
+for (const [k, v] of Object.entries(tel)) {
+  if ((adv.stamp || {})[k] !== v) problems.push('advisory field ' + k + ' not stored verbatim');
+}
+const reread = store.load(rootDir);
+if (!reread.ok || JSON.stringify(reread.store.stamps['sv-adv-1']) !== JSON.stringify(adv.stamp)) problems.push('advisory stamp round-trip mismatch');
+// malformed telemetry types refuse with a named error
+if (store.stampStream('sv-bad-1', 'SHIP', hex('bad'), new Date().toISOString(), rootDir, { commandCount: 'lots' }).reason !== 'invalid-telemetry') problems.push('non-integer commandCount accepted');
+if (store.stampStream('sv-bad-2', 'SHIP', hex('bad'), new Date().toISOString(), rootDir, { headSha256: 'not-hex' }).reason !== 'invalid-telemetry') problems.push('malformed window hash accepted');
+// future schema still refuses with the existing refusal
+const v3 = JSON.parse(fs.readFileSync(storeFile, 'utf8'));
+v3.store_schema_version = 3;
+fs.writeFileSync(storeFile, JSON.stringify(v3));
+const f = store.load(rootDir);
+if (f.status !== 'paused' || f.reason !== 'version-mismatch') problems.push('schema 3 not refused: ' + f.reason);
+if (!(f.guidance && String(f.guidance.what).includes('v3'))) problems.push('refusal does not name v3');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+SV1_OUT="$(node run-sv1.cjs 2>&1 | tail -n 1)"
+t105_eq "store v2: v1 stores migrate in memory (lazy write-back, pure reads never write); advisory telemetry stored verbatim; schema 3 refuses" "OK" "$SV1_OUT"
+
+# ---------------------------------------------------------------- SV2 --
+t105_case sv2
+cat > run-sv2.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const rootDir = process.cwd();
+const problems = [];
+const hex = (t) => crypto.createHash('sha256').update(t).digest('hex');
+const storeFile = path.join(store.storeRoot(rootDir), 'store.json');
+const winDir = path.join(store.storeRoot(rootDir), 'windows');
+const iso = () => new Date().toISOString();
+store.create({ mode: 'on', rootDir });
+// saveWindows: two sidecars under the store dir + window hashes and the
+// retained byte total stamped
+store.stampStream('sv-win-1', 'THINK', hex('w1'), iso(), rootDir, { denyHits: 1 });
+const sw = store.saveWindows('sv-win-1', { head: 'HEAD-ONE\nline2\n', tail: 'TAIL-ONE\n' }, rootDir);
+if (!sw.ok) problems.push('saveWindows failed: ' + sw.reason);
+if (fs.readFileSync(path.join(winDir, 'sv-win-1.head.txt'), 'utf8') !== 'HEAD-ONE\nline2\n') problems.push('head sidecar content wrong');
+if (fs.readFileSync(path.join(winDir, 'sv-win-1.tail.txt'), 'utf8') !== 'TAIL-ONE\n') problems.push('tail sidecar content wrong');
+let s = store.load(rootDir).store.stamps['sv-win-1'];
+if (s.headSha256 !== hex('HEAD-ONE\nline2\n')) problems.push('head window hash not stamped');
+if (s.tailSha256 !== hex('TAIL-ONE\n')) problems.push('tail window hash not stamped');
+if (s.totalBytes !== 'HEAD-ONE\nline2\n'.length + 'TAIL-ONE\n'.length) problems.push('retained byte total not stamped');
+if (s.denyHits !== 1) problems.push('earlier advisory fields clobbered by saveWindows');
+// binary windows hash their exact bytes
+store.stampStream('sv-win-2', 'THINK', hex('w2'), iso(), rootDir);
+store.saveWindows('sv-win-2', { head: Buffer.from([0, 1, 2, 255]), tail: '' }, rootDir);
+s = store.load(rootDir).store.stamps['sv-win-2'];
+if (s.headSha256 !== crypto.createHash('sha256').update(Buffer.from([0, 1, 2, 255])).digest('hex')) problems.push('binary head window hash wrong');
+if (s.totalBytes !== 4) problems.push('binary retained byte total wrong');
+// refusals: unstamped spawn, path-hostile spawnId, malformed windows
+if (store.saveWindows('sv-ghost', { head: 'x', tail: 'y' }, rootDir).reason !== 'stamp-missing') problems.push('unstamped saveWindows not refused');
+if (store.saveWindows('sv/../evil', { head: 'x', tail: 'y' }, rootDir).reason !== 'invalid-spawn-id') problems.push('path-hostile spawnId accepted');
+if (store.saveWindows('sv-win-1', { head: 7, tail: 'y' }, rootDir).reason !== 'invalid-windows') problems.push('non-string window accepted');
+// pruning at the stamp cap: sidecars die with their stamps, orphans swept
+const CAP = 1000; // stamp cap (CAPS.stamps in store.cjs)
+const disk = JSON.parse(fs.readFileSync(storeFile, 'utf8'));
+disk.stamps = {};
+const base = Date.UTC(2026, 0, 1);
+for (let i = 0; i < CAP; i++) {
+  disk.stamps['sv-seed-' + i] = { stage: 'THINK', streamSha256: hex('seed' + i), spawnedAtIso: new Date(base + i * 1000).toISOString(), stampedAtIso: new Date(base + i * 1000).toISOString() };
+}
+fs.writeFileSync(storeFile, JSON.stringify(disk));
+for (const id of ['sv-seed-0', 'sv-seed-1', 'sv-seed-500']) {
+  fs.writeFileSync(path.join(winDir, id + '.head.txt'), 'H' + id);
+  fs.writeFileSync(path.join(winDir, id + '.tail.txt'), 'T' + id);
+}
+fs.writeFileSync(path.join(winDir, 'sv-orphan.head.txt'), 'ORPHAN');
+// one stamp past the cap prunes the oldest (sv-seed-0) and sweeps orphans
+store.stampStream('sv-fresh-1', 'SHIP', hex('f1'), iso(), rootDir);
+store.saveWindows('sv-fresh-1', { head: 'FH', tail: 'FT' }, rootDir);
+const after = store.load(rootDir).store;
+if (Object.keys(after.stamps).length !== CAP) problems.push('stamp count not capped: ' + Object.keys(after.stamps).length);
+if (after.stamps['sv-seed-0']) problems.push('oldest stamp not pruned');
+if (!after.stamps['sv-seed-1'] || !after.stamps['sv-seed-500'] || !after.stamps['sv-fresh-1']) problems.push('surviving stamps lost');
+const files = fs.readdirSync(winDir).sort();
+const want = ['sv-fresh-1.head.txt', 'sv-fresh-1.tail.txt', 'sv-seed-1.head.txt', 'sv-seed-1.tail.txt', 'sv-seed-500.head.txt', 'sv-seed-500.tail.txt'].sort();
+if (JSON.stringify(files) !== JSON.stringify(want)) problems.push('sidecar set after prune wrong: ' + files.join(','));
+// the next prune drops the next oldest with its sidecars
+store.stampStream('sv-fresh-2', 'SHIP', hex('f2'), iso(), rootDir);
+const after2 = store.load(rootDir).store;
+if (after2.stamps['sv-seed-1']) problems.push('second prune did not drop the next oldest');
+if (fs.existsSync(path.join(winDir, 'sv-seed-1.head.txt')) || fs.existsSync(path.join(winDir, 'sv-seed-1.tail.txt'))) problems.push('pruned stamp sidecar survived');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+SV2_OUT="$(node run-sv2.cjs 2>&1 | tail -n 1)"
+t105_eq "store v2: saveWindows persists hashed sidecars; cap pruning drops sidecars with stamps and sweeps orphans" "OK" "$SV2_OUT"
 
 echo "--- T105 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]
