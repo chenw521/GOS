@@ -375,6 +375,53 @@ function sanitizedSpawnEnv(baseEnv) {
   return out;
 }
 
+// ---------- host self-report telemetry (advisory) ----------
+
+// Generic extraction core shared by the host adapters: scans parsed events
+// for (1) the latest non-empty string `model` field — the host's own
+// self-report of the model it ran on — and (2) tool executions, counted by
+// the host-supplied predicate. Absent evidence maps to null for both: a
+// stream with no model field and no tool-execution marker reports
+// { modelObserved: null, commandCount: null } — unobserved, never zero
+// (batched calls undercount; the value stays advisory). Data only: the
+// result feeds advisory rendering and stamp storage, never a
+// classification or breaker signal — the runner-side channel-use budget is
+// the hard counter. Total function: never throws.
+function extractSelfReport(events, isToolExecution) {
+  const out = { modelObserved: null, commandCount: null };
+  try {
+    if (!Array.isArray(events)) return out;
+    let count = 0;
+    for (const ev of events) {
+      if (!ev || typeof ev !== 'object' || Array.isArray(ev)) continue;
+      if (typeof ev.model === 'string' && ev.model.trim() !== '') out.modelObserved = ev.model;
+      try {
+        if (isToolExecution(ev)) count += 1;
+      } catch { /* hostile event shape: contributes nothing */ }
+    }
+    if (count > 0) out.commandCount = count;
+  } catch { /* never throw: absent evidence stays null */ }
+  return out;
+}
+
+// Advisory renderer for host self-report telemetry: one display line, or
+// null when every self-reported field is absent (a lone cap is runner-side
+// context, not a self-report). Mismatches (pin ≠ observed) and
+// over-ceiling counts render verbatim — output is text only and never
+// implies a breaker signal.
+function advisoryLine(fields) {
+  const f = fields && typeof fields === 'object' ? fields : {};
+  const str = (v) => (typeof v === 'string' && v.trim() !== '' ? v : null);
+  const pin = str(f.modelPinned);
+  const obs = str(f.modelObserved);
+  const count = Number.isInteger(f.commandCount) ? f.commandCount : null;
+  const cap = typeof f.cap === 'number' && Number.isFinite(f.cap) ? f.cap : null;
+  if (pin === null && obs === null && count === null) return null;
+  const parts = [`model ${obs === null ? 'unobserved' : obs} (pinned ${pin === null ? 'none' : pin})`];
+  if (count !== null) parts.push(`commands ${count}${cap === null ? '' : ` (cap ${cap})`}`);
+  return `self-report: ${parts.join(', ')} — advisory only`;
+}
+
 module.exports = {
   hostStatus,
   probeHost,
@@ -388,6 +435,8 @@ module.exports = {
   entryLabel,
   fixtureEnvActive,
   sanitizedSpawnEnv,
+  extractSelfReport,
+  advisoryLine,
   STRIP_SPAWN_ENV_EXACT,
   FAKE_HOST: 'gos-fixture-host',
   FIXTURE_ENV,

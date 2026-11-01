@@ -13,6 +13,13 @@
 // 3. probe inputs — the registry owns capability negotiation; this module
 //    contributes the spawn surface (argv shape, flags, config env) the
 //    matrix row's probe steps verify.
+//
+// Advisory telemetry rides the same streams: extractTelemetry(outcome)
+// reads the host's own self-report (model field, tool-execution count) —
+// tolerant, null on absent evidence, data only, never a breaker signal;
+// pinnedModelArgs(model) argv-pins the runner-resolved model; advisoryLine
+// renders the self-report for display. The runner-side channel-use budget
+// stays the hard per-spawn counter.
 'use strict';
 
 const { spawnSync } = require('child_process');
@@ -165,6 +172,34 @@ function authFilePath(env) {
   return require('path').join(dataDir, 'auth.json');
 }
 
+// ---------- host self-report telemetry (advisory) ----------
+
+// Counted tool-execution event type: `tool_use` — the recorded opencode
+// run-json execution marker whose part.tool names the invoked tool (e.g.
+// {"type":"tool_use","part":{"tool":"bash",...}}). Completion echoes
+// (tool_result-ish shapes) are deliberately NOT counted: one marker per
+// execution keeps the count honest even when the host batches calls
+// (batching undercounts — acceptable, the value is advisory).
+function isToolUseEvent(ev) {
+  return ev.type === 'tool_use';
+}
+
+// Tolerant telemetry extractor over a parsed outcome ({ events, ... } from
+// parseEventStream/spawnLive): latest string `model` field →
+// modelObserved; counted tool_use events → commandCount; absent evidence →
+// null for both. Never throws; returns data only — the payload carries no
+// classification and never feeds a breaker signal.
+function extractTelemetry(outcome) {
+  return registryMod.extractSelfReport(outcome && outcome.events, isToolUseEvent);
+}
+
+// Model pin argv: the runner-resolved model (resolve-model output per
+// dispatch slot) pinned into the spawn argv — ['--model', <id>] verbatim
+// for a non-empty string, [] otherwise.
+function pinnedModelArgs(model) {
+  return typeof model === 'string' && model.trim() !== '' ? ['--model', model] : [];
+}
+
 module.exports = {
   NAME,
   SPAWN_MODE,
@@ -174,4 +209,7 @@ module.exports = {
   parseEventStream,
   spawnLive,
   authFilePath,
+  extractTelemetry,
+  pinnedModelArgs,
+  advisoryLine: registryMod.advisoryLine,
 };

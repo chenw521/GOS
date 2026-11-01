@@ -43,6 +43,12 @@
 #           drops sidecars with their stamps and sweeps orphans, and
 #           self-reported telemetry is advisory — stored verbatim, never
 #           branched on
+#   telemetry  adapter self-report extraction: model field + tool-execution
+#           count read from a parsed outcome stream (tolerant, null on
+#           absent evidence, data only — never a breaker signal); the
+#           runner-resolved model pin lands verbatim in the spawn argv;
+#           advisoryLine renders the self-report (mismatch and over-ceiling
+#           included) as one text line
 # Fake host: GOS_AUTO_TEST_FIXTURE=1 activates the registry fixture row;
 # loop spawns run through injected spawnRunner harnesses only. HOME and
 # XDG_DATA_HOME are pinned per case under TESTBASE;
@@ -1118,6 +1124,111 @@ console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
 EOF
 SV2_OUT="$(node run-sv2.cjs 2>&1 | tail -n 1)"
 t105_eq "store v2: saveWindows persists hashed sidecars; cap pruning drops sidecars with stamps and sweeps orphans" "OK" "$SV2_OUT"
+
+# ---------------------------------------------------------------- TL --
+t105_case tl
+cat > run-tl.cjs <<'EOF'
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const opencode = require(path.join(GR, 'bin/lib/ops/auto/adapters/opencode.cjs'));
+const codex = require(path.join(GR, 'bin/lib/ops/auto/adapters/codex.cjs'));
+const problems = [];
+// (a) opencode stream WITH a model field and three tool_use events — model
+// text inside a message body is content, not a model field
+const rich = opencode.parseEventStream([
+  '{"type":"message","text":"session started on model fake-in-text"}',
+  '{"type":"tool_use","part":{"tool":"bash","command":"ls -la"}}',
+  '{"type":"tool_use","part":{"tool":"edit"}}',
+  '{"type":"tool_use","part":{"tool":"bash"}}',
+  '{"type":"result","model":"glm-9.9"}',
+].join('\n') + '\n');
+const richTel = opencode.extractTelemetry(rich);
+if (richTel.modelObserved !== 'glm-9.9' || richTel.commandCount !== 3) problems.push('rich telemetry wrong: ' + JSON.stringify(richTel));
+// several model fields: the latest self-report wins
+const multi = opencode.parseEventStream('{"type":"message","model":"early-m"}\n{"type":"result","model":"late-m"}\n');
+if (opencode.extractTelemetry(multi).modelObserved !== 'late-m') problems.push('latest model self-report not kept');
+// (b) stream without model/tool events → null/null (unobserved, not zero)
+const bare = opencode.parseEventStream('{"type":"message","text":"no telemetry"}\n{"type":"result"}\n');
+const bareTel = opencode.extractTelemetry(bare);
+if (bareTel.modelObserved !== null || bareTel.commandCount !== null) problems.push('absent telemetry not null: ' + JSON.stringify(bareTel));
+// (c) malformed and non-object events never throw, contribute nothing
+const messy = opencode.parseEventStream([
+  '[1,2,3]',
+  '"bare string"',
+  '42',
+  '{"type":"tool_use"',
+  '{"type":"tool_use","part":{"tool":"bash"}}',
+  '{"type":"result","model":"messy-m"}',
+].join('\n') + '\n');
+let messyTel = null;
+try { messyTel = opencode.extractTelemetry(messy); } catch (e) { problems.push('extractTelemetry threw on messy events: ' + e.message); }
+if (messyTel && (messyTel.modelObserved !== 'messy-m' || messyTel.commandCount !== 1)) problems.push('messy telemetry wrong: ' + JSON.stringify(messyTel));
+for (const absent of [null, undefined, {}, { events: null }, { events: 'nope' }]) {
+  try {
+    const t = opencode.extractTelemetry(absent);
+    if (t.modelObserved !== null || t.commandCount !== null) problems.push('absent outcome not null/null: ' + JSON.stringify(t));
+  } catch (e) { problems.push('extractTelemetry threw on ' + JSON.stringify(absent)); }
+}
+// (d) codex recorded fixtures carry no model field and no command-execution
+// item type (agentMessage items + turn.completed usage only) — null/null,
+// nothing invented. The synthetic model-bearing line only exercises the
+// tolerant generic scan, not a claimed host shape.
+for (const f of codex.validateFixture()) {
+  const t = codex.extractTelemetry(f);
+  if (t.modelObserved !== null || t.commandCount !== null) problems.push('codex fixture telemetry not null/null: ' + f.name);
+}
+const cx = codex.validateFixture('{"type":"item.completed","item":{"type":"agentMessage","text":"hi"},"model":"m-x"}\n{"type":"turn.completed"}\n');
+const cxTel = codex.extractTelemetry(cx);
+if (cxTel.modelObserved !== 'm-x' || cxTel.commandCount !== null) problems.push('codex tolerant model scan wrong: ' + JSON.stringify(cxTel));
+// (e) advisoryLine: all three shapes
+const a1 = opencode.advisoryLine({ modelPinned: 'pinned-m', modelObserved: 'other-m', commandCount: 3, cap: 5 });
+if (a1 !== 'self-report: model other-m (pinned pinned-m), commands 3 (cap 5) — advisory only') problems.push('mismatch line wrong: ' + a1);
+const a2 = codex.advisoryLine({ modelPinned: 'm', modelObserved: 'm', commandCount: 9, cap: 5 });
+if (a2 !== 'self-report: model m (pinned m), commands 9 (cap 5) — advisory only') problems.push('over-ceiling line wrong: ' + a2);
+if (opencode.advisoryLine({}) !== null) problems.push('all-absent not null');
+if (codex.advisoryLine({ cap: 5 }) !== null) problems.push('cap-only not null');
+const a3 = opencode.advisoryLine({ modelPinned: 'm' });
+if (a3 !== 'self-report: model unobserved (pinned m) — advisory only') problems.push('pin-only line wrong: ' + a3);
+// (f) breaker-guard: the extract path returns data only — whatever the
+// values say, no classification key ever rides the payload
+const hostileLines = [];
+for (let i = 0; i < 500; i++) hostileLines.push('{"type":"tool_use","part":{"tool":"bash"}}');
+hostileLines.push('{"type":"result","model":"hostile-m"}');
+const hostile = opencode.extractTelemetry(opencode.parseEventStream(hostileLines.join('\n') + '\n'));
+const keys = Object.keys(hostile).sort();
+if (JSON.stringify(keys) !== JSON.stringify(['commandCount', 'modelObserved'])) problems.push('extract output carries foreign keys: ' + keys.join(','));
+if (keys.some((k) => /signal|breaker|trip|abort|fail|class/i.test(k))) problems.push('extract output carries a classification key');
+if (hostile.commandCount !== 500) problems.push('hostile count wrong');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+TL_OUT="$(node run-tl.cjs 2>&1 | tail -n 1)"
+t105_eq "T11: telemetry extractor tolerant over parsed events (null on absent, never throws) + advisoryLine renders mismatch/over-ceiling/absent — data only, no breaker signal" "OK" "$TL_OUT"
+
+# ---------------------------------------------------------------- TL2 --
+t105_case tl2
+cat > run-tl2.cjs <<'EOF'
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const opencode = require(path.join(GR, 'bin/lib/ops/auto/adapters/opencode.cjs'));
+const codex = require(path.join(GR, 'bin/lib/ops/auto/adapters/codex.cjs'));
+const problems = [];
+// opencode pin: non-empty string → ['--model', <id>] verbatim; else []
+if (JSON.stringify(opencode.pinnedModelArgs('glm-9.9')) !== JSON.stringify(['--model', 'glm-9.9'])) problems.push('opencode pin argv wrong');
+for (const empty of ['', '   ', null, undefined, 42, {}]) {
+  if (opencode.pinnedModelArgs(empty).length) problems.push('opencode pin accepted absent model: ' + JSON.stringify(empty));
+}
+// the pin lands between the flags and the prompt — argv the spawn cannot alter
+const spec = opencode.buildSpawnSpec({ prompt: 'stage work', args: opencode.pinnedModelArgs('glm-9.9') });
+if (JSON.stringify(spec.argv) !== JSON.stringify(['opencode', 'run', '--format', 'json', '--model', 'glm-9.9', 'stage work'])) problems.push('pin argv not verbatim in spec: ' + spec.argv.join(' '));
+const plain = opencode.buildSpawnSpec({ prompt: 'stage work', args: opencode.pinnedModelArgs(null) });
+if (JSON.stringify(plain.argv) !== JSON.stringify(['opencode', 'run', '--format', 'json', 'stage work'])) problems.push('empty pin changed the spec argv');
+// codex: the exec model flag shape is unrecorded (adapter, fixtures and the
+// registry matrix carry no model flag) — no flag invented
+if (codex.pinnedModelArgs('glm-9.9').length) problems.push('codex pin argv invented a flag');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+TL2_OUT="$(node run-tl2.cjs 2>&1 | tail -n 1)"
+t105_eq "T11: pinnedModelArgs — opencode pins --model verbatim into the spawn argv; codex flag unrecorded → no flag invented" "OK" "$TL2_OUT"
 
 echo "--- T105 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]

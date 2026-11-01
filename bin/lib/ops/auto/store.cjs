@@ -21,6 +21,7 @@ const crypto = require('node:crypto');
 const core = require('../../core/index.cjs');
 const spawnreg = require('../../core/spawnreg.cjs');
 const limits = require('./limits.cjs');
+const workers = require('./workers.cjs');
 
 const STORE_SCHEMA_VERSION = 2;
 
@@ -1063,6 +1064,153 @@ function breakRunLock(rootDir) {
   return { ok: true, broke: why };
 }
 
+// ---- spawn registry (runner side) ----
+// Authoritative spawn entries live in <storeRoot>/spawnreg/<spawnId>.json as
+// separate files, not a store.json key: every request the loop's wait loop
+// acks settles a claim (entry uses++ rewrite + claims.ndjson append), and
+// routing that through store.json's cross-process mutate mutex would churn
+// the shared store per ack and contend with breaker/stamp mutations. Entries
+// are ephemeral per spawn and die with removeSpawn; the directory sits inside
+// the store root (machine-local, masked from every sandbox) and dies with
+// purgeStore. Policy bounds live HERE — the verb vocabulary from the
+// dispatch table and the use-cap hard ceiling — because core may not require
+// ops; core/spawnreg only compares against what an entry records.
+
+// Register one spawn before launching it. Grants and the use cap default
+// from the dispatch table's stage entry (BUILD carries the checkpoint verb
+// and the raised 64 cap; THINK/PLAN/VERIFY stay at 16); explicit values are
+// validated fail-closed — vocabulary closed set, cap never past the hard
+// ceiling. Redteam spawns register without any write authorization.
+function registerSpawn(rec, rootDir) {
+  if (!isPlainObject(rec) || typeof rec.spawnId !== 'string' || !SPAWN_ID_FILE_RE.test(rec.spawnId)) {
+    return { ok: false, status: 'error', reason: 'invalid-spawn-id', detail: 'spawnId must be filename-safe (letters, digits, dot, dash, underscore)' };
+  }
+  const kind = rec.kind === 'redteam' ? 'redteam' : 'work';
+  const stage = String(rec.stage || '').toUpperCase();
+  if (!stage) return { ok: false, status: 'error', reason: 'invalid-stage', detail: 'stage required' };
+  const table = workers.loadDispatchTable();
+  if (!table.ok) {
+    return { ok: false, status: 'error', reason: 'dispatch-table-unavailable', detail: table.detail, file: table.file };
+  }
+  const stageEntry = table.table.stages[stage];
+  if (!stageEntry) return { ok: false, status: 'error', reason: 'invalid-stage', detail: `unknown stage ${stage}` };
+  let grants = Array.isArray(rec.grants) ? [...new Set(rec.grants.map(String))] : [...stageEntry.verbs];
+  if (kind === 'redteam') grants = [];
+  const badVerbs = grants.filter((v) => !workers.VERBS.includes(v));
+  if (badVerbs.length) {
+    return { ok: false, status: 'error', reason: 'invalid-grants', detail: `verbs outside the dispatch vocabulary (${workers.VERBS.join('|')}): ${badVerbs.join(', ')}` };
+  }
+  let useCap = rec.useCap == null ? stageEntry.use_cap : rec.useCap;
+  if (!Number.isInteger(useCap) || useCap < 1) {
+    return { ok: false, status: 'error', reason: 'invalid-use-cap', detail: 'useCap must be an integer >= 1' };
+  }
+  if (useCap > limits.HARD_USE_CAP_CEILING) {
+    return { ok: false, status: 'error', reason: 'use-cap-over-ceiling', detail: `useCap ${useCap} exceeds the hard ceiling ${limits.HARD_USE_CAP_CEILING}` };
+  }
+  const scratch = spawnreg.scratchPath(rootDir, rec.spawnId);
+  if (scratch == null) return paused('unwritable', null, 'no XDG data home resolvable', 'auto.store.unwritable');
+  const doc = spawnreg.saveEntryDoc(rootDir, {
+    spawn_id: rec.spawnId,
+    kind,
+    stage,
+    grants,
+    use_cap: useCap,
+    uses: 0,
+    window_expiry: Date.now() + (rec.wallMs || 3600000),
+    pid: rec.pid,
+  });
+  try { fs.mkdirSync(scratch, { recursive: true }); } catch (e) {
+    return { ok: false, status: 'error', reason: 'unwritable', path: scratch, detail: e.message, guidance: guidanceFor('auto.store.unwritable', { path: scratch }) };
+  }
+  return { ok: true, path: spawnreg.entryPath(rootDir, rec.spawnId), scratch, entry: doc };
+}
+
+// Drop the entry, its manifest, and its scratch when the spawn exits.
+function removeSpawn(spawnId, rootDir) {
+  spawnreg.removeEntry(rootDir, spawnId);
+  return { ok: true };
+}
+
+// Write this spawn's immutable grant manifest for ro-binding into its
+// sandbox: grants, cap, and stage ONLY — no use counter, no other spawn's
+// data, nothing the sandbox could replay against another entry.
+function writeGrantManifest(rootDir, spawnId) {
+  const entry = spawnreg.readEntry(rootDir, spawnId);
+  if (!entry) return { ok: false, status: 'refused', reason: 'no-entry', spawnId };
+  const manifest = {
+    spawn_id: entry.spawn_id,
+    stage: entry.stage,
+    grants: [...spawnreg.resolvedGrantsOf(entry)],
+    use_cap: entry.use_cap,
+  };
+  const file = spawnreg.manifestPath(rootDir, spawnId);
+  if (file == null) return paused('unwritable', null, 'no XDG data home resolvable', 'auto.store.unwritable');
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(manifest));
+  } catch (e) {
+    return { ok: false, status: 'error', reason: 'write-failed', path: file, detail: e.message };
+  }
+  return { ok: true, path: file, manifest };
+}
+
+// Ack-file helper: the verdict payload lands beside its request as
+// <requestId>.ack.json inside the spawn's scratch dir. Best-effort — a
+// missing scratch just means the spawned side will time out closed.
+const writeAckFile = (scratch, requestId, payload) => {
+  try {
+    fs.mkdirSync(scratch, { recursive: true });
+    fs.writeFileSync(path.join(scratch, `${requestId}.ack.json`), JSON.stringify(payload));
+    return true;
+  } catch { return false; }
+};
+
+// One-shot runner-side admission: judge the request against the STORE entry
+// (never the request's self-declared identity), burn one use for every
+// judged verdict, append the claim ledger line, and answer the ack. Grants,
+// stage, and budget all come from the entry — a forged request can only
+// burn its own spawn's budget. Re-acking the same requestId replays the
+// ledger-recorded verdict without a second burn: the spawned side deletes
+// its ack file after consuming it, so the ack file cannot be the replay
+// anchor — only the store-side ledger can.
+function admitAndAck(rootDir, spawnId, cmdName, argvStage, opts = {}) {
+  const requestId = typeof opts.requestId === 'string' && opts.requestId ? opts.requestId : null;
+  const scratch = spawnreg.scratchPath(rootDir, spawnId);
+  const ackFile = requestId && scratch != null ? path.join(scratch, `${requestId}.ack.json`) : null;
+  if (requestId) {
+    const prior = spawnreg.findClaimByRequestId(rootDir, requestId);
+    if (prior) {
+      const out = {
+        admitted: prior.admitted === true,
+        reason: prior.reason || undefined,
+        remaining: prior.remaining == null ? null : Number(prior.remaining),
+        replay: true,
+      };
+      if (ackFile) writeAckFile(scratch, requestId, { request_id: requestId, ...out, stage: prior.stage || null, ts: new Date().toISOString() });
+      return out;
+    }
+  }
+  const entry = spawnreg.readEntry(rootDir, spawnId);
+  if (!entry) {
+    spawnreg.appendClaim(rootDir, { request_id: requestId, spawnId, cmd: cmdName, admitted: false, reason: 'no-entry', remaining: null, stage: null, ts: new Date().toISOString() });
+    const refused = { admitted: false, reason: 'no-entry', detail: `no live registry entry for spawn ${spawnId || '(unset)'}`, remaining: null };
+    if (ackFile) writeAckFile(scratch, requestId, { request_id: requestId, ...refused, stage: null, ts: new Date().toISOString() });
+    return refused;
+  }
+  const verdict = spawnreg.judgeClaim(entry, cmdName, argvStage);
+  const settled = spawnreg.settleClaim(rootDir, spawnId, entry, cmdName, verdict, requestId);
+  let out;
+  if (verdict.admitted && !settled.persisted) {
+    out = { admitted: false, reason: 'claim-write-failed', detail: 'the claim could not be recorded — an uncountable admission is refused', remaining: settled.remaining };
+  } else {
+    out = { admitted: verdict.admitted === true, reason: verdict.admitted ? undefined : verdict.reason, detail: verdict.admitted ? undefined : verdict.detail, remaining: settled.remaining };
+  }
+  if (ackFile) {
+    writeAckFile(scratch, requestId, { request_id: requestId, ...out, stage: entry.stage, ts: new Date().toISOString() });
+  }
+  return out;
+}
+
 // ---- teardown ----
 
 // Remove this repo's store (`auto off --purge`). Only the per-repo directory
@@ -1115,5 +1263,9 @@ module.exports = {
   releaseRunLock,
   readRunLock,
   breakRunLock,
+  registerSpawn,
+  removeSpawn,
+  writeGrantManifest,
+  admitAndAck,
   purgeStore,
 };
