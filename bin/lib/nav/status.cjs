@@ -278,7 +278,7 @@ function cmdStatus() {
   const eff = core.effectiveLocale();
   console.log(core.t('status.localeLine', { locale: eff.locale, source: eff.source }));
  // /F16: lessons attribution on the human terminal surface — the FB-3
-  // complainant is the human, not just the model (display-load: never bricks)
+ // complainant is the human, not just the model (display-load: never bricks)
   {
     const attr = knowledge.lessonsAttribution();
     if (!attr.project.ok) {
@@ -303,6 +303,23 @@ function cmdStatus() {
   const skipCount = (state.semantic_skips || []).length; // visible skip accounting
   if (skipCount > 0) console.log(`⚠ semantic skips recorded: ${skipCount} time(s) via GOS_TEST_SANDBOX escape — review if unexpected`);
   console.log(`\nNext:\n${nextHint(state)}`);
+  renderAutoHints();
+}
+
+// Auto-loop orientation block: one read-only glance borrowed from the
+// ops/auto hint provider through the task facade. Inside a runner-spawned
+// session it carries the worker orientation (tracked artifact, advance
+// verb, human-only gates); outside with auto mode on it names the loop
+// state; otherwise nothing renders. The lazy facade require keeps the
+// nav→task→ops/auto chain out of module load order; provider lines are
+// rendered verbatim (the provider sanitizes any spawn-derived bytes).
+function renderAutoHints() {
+  let hint;
+  try { hint = require('../task/index.cjs').autoHints({ rootDir: process.cwd() }); }
+  catch { return; }
+  if (!hint || !Array.isArray(hint.lines) || !hint.lines.length) return;
+  console.log('');
+  for (const line of hint.lines) console.log(line);
 }
 
 function cmdNext() {
@@ -317,6 +334,7 @@ function cmdNext() {
   console.log('');
   for (const line of structuredNextActions(state)) console.log(line);
   for (const line of handoffBlock(state)) console.log(line);   // gap-C: `gos next` tail gets the same handoff
+  renderAutoHints();
   console.log('');
   console.log(core.t('status.aiChatContinue'));
 }

@@ -76,7 +76,7 @@
     {
       "from": "bin/lib/nav",
       "to": "bin/lib/task",
-      "edges": 2
+      "edges": 3
     },
     {
       "from": "bin/lib/ops",
@@ -141,7 +141,7 @@
     {
       "from": "bin/lib/task",
       "to": "bin/lib/ops",
-      "edges": 8
+      "edges": 10
     },
     {
       "from": "bin/lib/task",
