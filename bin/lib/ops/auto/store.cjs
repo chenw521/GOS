@@ -78,7 +78,7 @@ const BREAKER_CLASSES = new Set(['task', 'env', 'auth', 'timeout', 'takeover']);
 const TRIP_CLASSES = new Set(['task', 'env', 'auth', 'timeout']);
 const TRIP_LAYERS = new Set(['N', 'K', 'B']);
 
-const SNAPSHOT_KINDS = new Set(['denyBaseline', 'hostSeed', 'redteamPrompt', 'prTemplate']);
+const SNAPSHOT_KINDS = new Set(['denyBaseline', 'hostSeed', 'redteamPrompt', 'prTemplate', 'wavePrompt']);
 
 // Pinned worktrees (Class P legs): run tags and record bounds. Records map
 // a filename-safe run tag to the worktree's absolute path, its tree hash,
@@ -87,6 +87,12 @@ const SNAPSHOT_KINDS = new Set(['denyBaseline', 'hostSeed', 'redteamPrompt', 'pr
 const PIN_RUN_TAG_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const GIT_SHA_RE = /^[0-9a-f]{7,64}$/;
 const PIN_DIR_NAME = 'pin-worktrees';
+
+// Wave completion records: one key per task wave ('<task>/W<n>', task id
+// filename-safe, wave digits only from 1). Values carry the wave's commit
+// head, the sha256 of the post-wave refs snapshot (for-each-ref + reflog
+// head text), release time, and the optional no-op / table-roll markers.
+const WAVE_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*\/W[1-9][0-9]*$/;
 
 // Append caps: oldest entries drop beyond the cap so a long-lived store
 // stays bounded. In-flight entries are always the newest, never trimmed.
@@ -222,6 +228,36 @@ function validateStoreShape(st) {
           break;
         }
       }
+    }
+  }
+  // Optional wave completion records (additive): absent on older stores,
+  // present-but-malformed is structural damage.
+  if (st.waves != null) {
+    if (!isPlainObject(st.waves)) errs.push('waves: object required');
+    else {
+      for (const k of Object.keys(st.waves)) {
+        const v = st.waves[k];
+        if (!WAVE_KEY_RE.test(k) || !isPlainObject(v)
+          || typeof v.head !== 'string' || !GIT_SHA_RE.test(v.head)
+          || typeof v.refsPointer !== 'string' || !HEX64_RE.test(v.refsPointer)
+          || typeof v.releasedAtIso !== 'string' || !ISO_RE.test(v.releasedAtIso)
+          || (v.noop != null && typeof v.noop !== 'boolean')
+          || (v.noopReason != null && typeof v.noopReason !== 'string')
+          || (v.rolledTable != null && typeof v.rolledTable !== 'boolean')) {
+          errs.push(`waves: entry ${k} needs git head, hex64 refsPointer, ISO releasedAtIso, boolean noop/rolledTable`);
+          break;
+        }
+      }
+    }
+  }
+  // Optional dispatch-table stamp (additive): the sha256 of the dispatch
+  // table file as of the last runner-released edit, plus when/by-whom.
+  if (st.dispatchTable != null) {
+    if (!isPlainObject(st.dispatchTable)
+      || typeof st.dispatchTable.sha256 !== 'string' || !HEX64_RE.test(st.dispatchTable.sha256)
+      || typeof st.dispatchTable.rolledAtIso !== 'string' || !ISO_RE.test(st.dispatchTable.rolledAtIso)
+      || typeof st.dispatchTable.rolledByWave !== 'string' || !st.dispatchTable.rolledByWave) {
+      errs.push('dispatchTable: hex64 sha256 + ISO rolledAtIso + non-empty rolledByWave required');
     }
   }
   return errs;
@@ -1327,6 +1363,86 @@ function prunePins(rootDir, opts = {}) {
   return r.ok ? { ok: true, path: r.path, dropped } : r;
 }
 
+// ---- wave completion records + dispatch-table stamp ----
+
+// Record (or idempotently re-affirm) one released wave. Keyed
+// '<task>/W<n>'. An identical re-record refreshes the timestamp-free
+// fields; a conflicting re-record refuses — a released wave's head and
+// refs pointer are history, never rewritable.
+function recordWaveCompletion(rootDir, rec) {
+  if (!isPlainObject(rec)) return { ok: false, status: 'error', reason: 'invalid-wave-record' };
+  if (typeof rec.task !== 'string' || !rec.task) return { ok: false, status: 'error', reason: 'invalid-wave-record', detail: 'task required' };
+  if (!Number.isInteger(rec.wave) || rec.wave < 1) return { ok: false, status: 'error', reason: 'invalid-wave-record', detail: 'wave must be an integer >= 1' };
+  if (typeof rec.head !== 'string' || !GIT_SHA_RE.test(rec.head)) {
+    return { ok: false, status: 'error', reason: 'invalid-wave-record', detail: 'head must be a git commit hash' };
+  }
+  if (typeof rec.refsPointer !== 'string' || !HEX64_RE.test(rec.refsPointer)) {
+    return { ok: false, status: 'error', reason: 'invalid-wave-record', detail: 'refsPointer must be the hex64 sha256 of the post-wave refs snapshot' };
+  }
+  const key = `${rec.task}/W${rec.wave}`;
+  if (!WAVE_KEY_RE.test(key)) {
+    return { ok: false, status: 'error', reason: 'invalid-wave-record', detail: `task id must be filename-safe (got '${rec.task}')` };
+  }
+  let conflict = null;
+  const r = mutate(rootDir, (st) => {
+    if (!isPlainObject(st.waves)) st.waves = {};
+    const prev = st.waves[key];
+    const next = { head: rec.head, refsPointer: rec.refsPointer, releasedAtIso: new Date().toISOString() };
+    if (rec.noop === true) {
+      next.noop = true;
+      if (typeof rec.noopReason === 'string' && rec.noopReason) next.noopReason = rec.noopReason;
+    }
+    if (rec.rolledTable === true) next.rolledTable = true;
+    if (prev) {
+      const held = (o) => [o.head, o.refsPointer, o.noop === true, o.rolledTable === true];
+      if (JSON.stringify(held(prev)) !== JSON.stringify(held(next))) {
+        conflict = { key, prev };
+        return null;
+      }
+      return st; // identical re-affirmation: keep the original record
+    }
+    st.waves[key] = next;
+    return st;
+  });
+  if (conflict) {
+    return { ok: false, status: 'error', reason: 'wave-record-conflict', path: r.path, detail: `wave ${conflict.key} already recorded with a different outcome` };
+  }
+  return r.ok ? { ok: true, path: r.path, record: r.store.waves[key] } : r;
+}
+
+// Read-only view of every wave completion record.
+function readWaveRecords(rootDir) {
+  const cur = load(rootDir);
+  if (!cur.ok) return cur;
+  return { ok: true, path: cur.path, waves: isPlainObject(cur.store.waves) ? cur.store.waves : {} };
+}
+
+// Roll the dispatch-table stamp: called only after a red-team-passed,
+// runner-released edit of the table. The stamp is the sha256 of the table
+// file as of that release; every later wave re-verifies the live table
+// against it.
+function rollDispatchTableStamp(rootDir, rec) {
+  if (!isPlainObject(rec)) return { ok: false, status: 'error', reason: 'invalid-table-stamp' };
+  if (typeof rec.sha256 !== 'string' || !HEX64_RE.test(rec.sha256)) {
+    return { ok: false, status: 'error', reason: 'invalid-table-stamp', detail: 'sha256 must be the hex64 hash of the dispatch table file' };
+  }
+  if (typeof rec.rolledByWave !== 'string' || !WAVE_KEY_RE.test(rec.rolledByWave)) {
+    return { ok: false, status: 'error', reason: 'invalid-table-stamp', detail: `rolledByWave must be a wave key '<task>/W<n>' (got '${rec.rolledByWave}')` };
+  }
+  const r = mutate(rootDir, (st) => {
+    st.dispatchTable = { sha256: rec.sha256, rolledAtIso: new Date().toISOString(), rolledByWave: rec.rolledByWave };
+    return st;
+  });
+  return r.ok ? { ok: true, path: r.path, stamp: r.store.dispatchTable } : r;
+}
+
+// Read-only view of the current dispatch-table stamp (null when never rolled).
+function readDispatchTableStamp(rootDir) {
+  const cur = load(rootDir);
+  if (!cur.ok) return cur;
+  return { ok: true, path: cur.path, stamp: isPlainObject(cur.store.dispatchTable) ? cur.store.dispatchTable : null };
+}
+
 // ---- teardown ----
 
 // Remove this repo's store (`auto off --purge`). Only the per-repo directory
@@ -1388,5 +1504,9 @@ module.exports = {
   readPins,
   dropPin,
   prunePins,
+  recordWaveCompletion,
+  readWaveRecords,
+  rollDispatchTableStamp,
+  readDispatchTableStamp,
   purgeStore,
 };

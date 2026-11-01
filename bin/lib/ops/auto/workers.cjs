@@ -20,6 +20,22 @@
 // before every leg load, so a pinned leg can only ever execute recorded
 // code analyzing the live tree as data. Verdicts are return values, never
 // parsed prose.
+//
+// Wave dispatch (BUILD): a sequential iterator over the frozen
+// plan_snapshot's waves — never live plan.md — with one equipped spawn per
+// wave under three contracts. Input: the runner-held, store-stamped prompt
+// template interpolates only the wave number and the wave's task ids from
+// the snapshot (scope pointers; repo prose never rides in). Process: deny
+// hits stay zero, and the frozen world (spec sha, plan snapshot, dispatch
+// table stamp, pinned worktree) is re-verified after every wave. Output:
+// exactly one new commit on the work branch touching only the wave's
+// declared files, no ref moving besides the work-branch tip, and no
+// uncommitted drift beyond machine-local paths — or the wave holds with a
+// named violation. Waves touching runner-critical paths release only after
+// a one-round red-team pass over the wave diff; a released edit of the
+// dispatch table rolls the store stamp. Crash recovery (reconcileWaves)
+// adopts a commit uniquely attributable to the half-run wave and re-runs
+// only the release check.
 'use strict';
 
 const fs = require('fs');
@@ -28,6 +44,7 @@ const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const limits = require('./limits.cjs');
 const launcher = require('./launcher.cjs');
+const registry = require('./adapters/registry.cjs');
 
 const DISPATCH_TABLE_NAME = 'auto-dispatch.json';
 const DISPATCH_SCHEMA_VERSION = 1;
@@ -532,6 +549,895 @@ function lazyRecyclePins(rootDir, opts = {}) {
   return { ok: failures.length === 0, recycled, failures };
 }
 
+// ---- wave dispatch (BUILD) --------------------------------------------------
+//
+// The wave driver iterates the frozen plan_snapshot (never live plan.md),
+// strictly sequentially, one equipped spawn per wave. Modules with a
+// store-side cycle (store requires this module at load) resolve lazily.
+
+const WAVE_PROMPT_KIND = 'wavePrompt';
+const WAVE_MARKER_NAME = 'wave.json';
+const WAVE_NOOP_NAME = 'noop';
+const DISPATCH_TABLE_REL = 'templates/' + DISPATCH_TABLE_NAME;
+
+// Runner-critical paths: a wave declaring (or a diff touching) any of
+// these releases only after a one-round red-team pass over the wave diff.
+const RUNNER_CRITICAL_FILES = Object.freeze(new Set([
+  'bin/lib/core/spawnreg.cjs',
+  'bin/lib/core/lock.cjs',
+  'bin/lib/ops/gate.cjs',
+  DISPATCH_TABLE_REL,
+]));
+const RUNNER_CRITICAL_PREFIXES = Object.freeze(['bin/lib/ops/auto/', 'hooks/']);
+
+function isRunnerCriticalPath(p) {
+  return RUNNER_CRITICAL_FILES.has(p) || RUNNER_CRITICAL_PREFIXES.some((pre) => p.startsWith(pre));
+}
+
+// Runner-held wave prompt template. The only interpolation tokens are the
+// two scope pointers {wave} and {taskIds}; everything else is the distilled
+// hard-gate text. The sha256 of this exact constant is stamped into the
+// trust store (snapshot kind 'wavePrompt') and any later drift fails closed
+// — exactly the redteam prompt pattern.
+const WAVE_PROMPT_TEMPLATE = [
+  'GOS auto BUILD wave {wave} — tasks {taskIds}.',
+  'Work only the files the frozen plan snapshot declares for these tasks.',
+  'Land exactly one commit on the work branch for this wave before you exit.',
+  'Never touch the dispatch table, runner-critical paths, the plan snapshot, the spec, or any ref besides the work branch tip.',
+  'When the wave genuinely needs no change, write a file named "noop" holding one reason line into your scratch directory, then exit.',
+  'This session is one-shot: finish the wave or fail with a clear error; never loop.',
+].join('\n');
+const WAVE_PROMPT_TOKENS = Object.freeze(['wave', 'taskIds']);
+
+function getBreaker() {
+  try { return require('./breaker.cjs'); } catch { return null; }
+}
+
+function getLoop() {
+  try { return require('./loop.cjs'); } catch { return null; }
+}
+
+function sha256Text(text) {
+  return crypto.createHash('sha256').update(String(text), 'utf8').digest('hex');
+}
+
+function sha256FileSyncSafe(p) {
+  try { return crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex'); }
+  catch { return null; }
+}
+
+function wavePromptSourceHash() {
+  return sha256Text(WAVE_PROMPT_TEMPLATE);
+}
+
+// Interpolate the runner template for one wave. A template carrying any
+// brace token besides the two sanctioned pointers refuses — repo prose can
+// never ride into the prompt through the template.
+function renderWavePrompt(ctx, template) {
+  const tpl = typeof template === 'string' ? template : WAVE_PROMPT_TEMPLATE;
+  for (const m of tpl.matchAll(/\{([A-Za-z][A-Za-z0-9]*)\}/g)) {
+    if (!WAVE_PROMPT_TOKENS.includes(m[1])) {
+      return fail('prompt-token-refused', `template carries unsanctioned token '{${m[1]}}' — only {wave} and {taskIds} may appear`);
+    }
+  }
+  if (!ctx || !Number.isInteger(ctx.wave) || ctx.wave < 1) {
+    return fail('invalid-wave', 'wave must be an integer >= 1');
+  }
+  if (!Array.isArray(ctx.taskIds) || !ctx.taskIds.length
+    || !ctx.taskIds.every((id) => typeof id === 'string' && id)) {
+    return fail('invalid-task-ids', 'taskIds must be a non-empty array of task id strings');
+  }
+  const prompt = tpl.replaceAll('{wave}', String(ctx.wave)).replaceAll('{taskIds}', ctx.taskIds.join(','));
+  return { ok: true, prompt };
+}
+
+// Record the runner template in the trust store: save when absent,
+// verify-equal when present (a drifted hash means earlier waves ran under a
+// different prompt than the current template — fail closed).
+function ensureWavePromptRecorded(rootDir) {
+  const store = getStore();
+  if (!store) return fail('store-unavailable', 'the trust store module could not be loaded');
+  const loaded = store.load(rootDir);
+  if (!loaded.ok) return loaded;
+  const cur = loaded.store.snapshots[WAVE_PROMPT_KIND];
+  const want = wavePromptSourceHash();
+  if (cur) {
+    if (cur.sha256 !== want) {
+      return {
+        ok: false, status: 'error', reason: 'prompt-template-drift',
+        detail: `stored ${cur.sha256.slice(0, 12)} != template ${want.slice(0, 12)}`,
+        guidance: store.guidanceFor('auto.redteam.promptDrift'),
+      };
+    }
+    return { ok: true, sha256: cur.sha256 };
+  }
+  const saved = store.saveSnapshot(WAVE_PROMPT_KIND, WAVE_PROMPT_TEMPLATE, rootDir);
+  if (!saved.ok) return saved;
+  return { ok: true, sha256: saved.snapshot.sha256 };
+}
+
+// ---- wave snapshot helpers ----
+
+// Deterministic JSON for snapshot comparison (key order normalized).
+function stableStringify(v) {
+  if (v == null || typeof v !== 'object') return JSON.stringify(v);
+  if (Array.isArray(v)) return '[' + v.map(stableStringify).join(',') + ']';
+  return '{' + Object.keys(v).sort()
+    .map((k) => JSON.stringify(k) + ':' + stableStringify(v[k])).join(',') + '}';
+}
+
+function readStateJson(rootDir) {
+  try { return JSON.parse(fs.readFileSync(path.join(rootDir, '.gos', 'state.json'), 'utf8')); }
+  catch { return null; }
+}
+
+// Spec file path anchored at this repo root (state.spec_path override wins,
+// else the task/<id>/spec.md convention).
+function specPathIn(rootDir, state) {
+  if (!state) return null;
+  if (typeof state.spec_path === 'string' && state.spec_path) {
+    return path.isAbsolute(state.spec_path) ? state.spec_path : path.join(rootDir, state.spec_path);
+  }
+  const tid = state.task_id || (state.task && state.task.id);
+  if (typeof tid !== 'string' || !tid) return null;
+  return path.join(rootDir, 'task', tid, 'spec.md');
+}
+
+// Group the frozen snapshot's tasks by wave, ascending. A snapshot whose
+// wave structure could not be derived refuses BUILD entry with guidance
+// back to PLAN — the same verdict task/plansnap.cjs#buildEntryCheck hands
+// the stage loop, mirrored here so the wave iterator never grows an
+// ops→task require edge.
+function waveGroupsOf(snapshot) {
+  if (!snapshot || !Array.isArray(snapshot.tasks) || !snapshot.tasks.length) {
+    return fail('snapshot-empty', 'the frozen plan snapshot carries no tasks');
+  }
+  const v = snapshot && snapshot.meta && snapshot.meta.waveValidation;
+  if (v && !v.ok) {
+    return {
+      ok: false, reason: v.reason, detail: v.detail,
+      guidance: {
+        what: 'BUILD entry refused: the frozen plan carries no wave structure',
+        fix: 'return to PLAN — re-freeze plan.md with "### Wave N" headings (gos commit plan), then re-enter BUILD',
+      },
+    };
+  }
+  const groups = new Map();
+  for (const t of snapshot.tasks) {
+    if (!t || typeof t.id !== 'string' || !t.id || !Number.isInteger(t.wave) || t.wave < 1) {
+      return fail('snapshot-task-invalid', `snapshot task ${JSON.stringify(t && t.id)} carries no usable wave assignment`);
+    }
+    if (!Array.isArray(t.files)) {
+      return fail('snapshot-task-invalid', `snapshot task ${t.id} carries no declared files array`);
+    }
+    if (!groups.has(t.wave)) groups.set(t.wave, []);
+    groups.get(t.wave).push(t);
+  }
+  return { ok: true, groups: [...groups.keys()].sort((a, b) => a - b).map((w) => ({ wave: w, tasks: groups.get(w) })) };
+}
+
+// ---- wave evidence helpers ----
+
+// Refs snapshot: for-each-ref lines plus the HEAD reflog head, as one text
+// (hash-stamped into completion records) and one map (drift checking).
+function refsSnapshotOf(git, rootDir) {
+  let fer;
+  try { fer = git(['for-each-ref', '--format=%(refname) %(objectname)'], rootDir); }
+  catch { return null; }
+  if (!fer || fer.status !== 0) return null;
+  let reflogHead = '';
+  try {
+    const rl = git(['reflog', 'show', '-n', '1', '--format=%H %gs', 'HEAD'], rootDir);
+    if (rl && rl.status === 0) reflogHead = String(rl.stdout || '').trim();
+  } catch { /* reflog absent on fresh heads — evidence degrades, not fails */ }
+  const text = String(fer.stdout || '').trim() + '\n--reflog--\n' + reflogHead;
+  return { text, map: refsMapFromText(text) };
+}
+
+function refsMapFromText(text) {
+  const map = {};
+  for (const line of String(text || '').split('--reflog--')[0].split('\n')) {
+    const t = line.trim();
+    if (!t) continue;
+    const sp = t.indexOf(' ');
+    if (sp > 0) map[t.slice(0, sp)] = t.slice(sp + 1).trim();
+  }
+  return map;
+}
+
+// Refs other than the exempted one (the work-branch tip) that moved,
+// appeared, or vanished between two snapshots.
+function refsDrift(preMap, postMap, exemptRef) {
+  const moved = [];
+  for (const ref of Object.keys(preMap)) {
+    if (postMap[ref] == null) moved.push(`${ref} deleted`);
+    else if (postMap[ref] !== preMap[ref] && ref !== exemptRef) {
+      moved.push(`${ref}: ${preMap[ref].slice(0, 10)} -> ${postMap[ref].slice(0, 10)}`);
+    }
+  }
+  for (const ref of Object.keys(postMap)) {
+    if (preMap[ref] == null) moved.push(`${ref} created`);
+  }
+  return moved;
+}
+
+function statusPathsOf(git, rootDir) {
+  let st;
+  try { st = git(['status', '--porcelain', '-uall'], rootDir); }
+  catch { return null; }
+  if (!st || st.status !== 0) return null;
+  return new Set(String(st.stdout || '').split('\n')
+    .map((l) => l.slice(3).trim()).filter(Boolean).map((p) => p.replace(/^"|"$/g, '')));
+}
+
+// Uncommitted drift beyond machine-local paths: paths that appeared after
+// the wave and live outside .gos/ (state checkpoints, logs, cache).
+function dirtyDriftPaths(preSet, postSet) {
+  const out = [];
+  for (const p of postSet || []) {
+    if (preSet && preSet.has(p)) continue;
+    if (p === '.gos' || p.startsWith('.gos/')) continue;
+    out.push(p);
+  }
+  return out;
+}
+
+function readHeadOf(git, rootDir) {
+  let r;
+  try { r = git(['rev-parse', 'HEAD'], rootDir); }
+  catch { return null; }
+  const out = r && r.status === 0 ? String(r.stdout || '').trim() : '';
+  return out && GIT_SHA_RE.test(out) ? out : null;
+}
+
+function currentBranchOf(git, rootDir) {
+  try {
+    const r = git(['rev-parse', '--abbrev-ref', 'HEAD'], rootDir);
+    return r && r.status === 0 ? String(r.stdout || '').trim() : null;
+  } catch { return null; }
+}
+
+// The in-flight wave marker: crash-safety evidence the runner drops into
+// the spawn's scratch BEFORE spawning, so a resumed iterator can reconcile
+// the last pre-crash refs range without trusting anything inside the repo.
+function writeWaveMarker(scratch, data) {
+  fs.writeFileSync(path.join(scratch, WAVE_MARKER_NAME), JSON.stringify(data));
+}
+
+function readNoopSignal(scratch) {
+  try {
+    const line = fs.readFileSync(path.join(scratch, WAVE_NOOP_NAME), 'utf8').split('\n')[0].trim();
+    return line || 'no-op';
+  } catch { return null; }
+}
+
+// Latest in-flight marker for one task wave across the spawn registry's
+// scratch dirs (only crashed/interrupted waves keep theirs — released waves
+// remove their spawn).
+function latestWaveMarker(rootDir, task, wave) {
+  const spawnreg = require('../../core/spawnreg.cjs');
+  const dir = spawnreg.spawnregDir(rootDir);
+  if (dir == null) return null;
+  let names;
+  try { names = fs.readdirSync(dir); } catch { return null; }
+  let best = null;
+  for (const name of names) {
+    if (!name.endsWith('.scratch')) continue;
+    const scratch = path.join(dir, name);
+    let doc;
+    try { doc = JSON.parse(fs.readFileSync(path.join(scratch, WAVE_MARKER_NAME), 'utf8')); }
+    catch { continue; }
+    if (!doc || typeof doc !== 'object' || doc.task !== task || doc.wave !== wave) continue;
+    if (!best || String(doc.startedAtIso || '') > String(best.doc.startedAtIso || '')) {
+      best = { doc, scratch };
+    }
+  }
+  return best ? { ...best.doc, scratch: best.scratch } : null;
+}
+
+// Frozen-world drift: the live task state's plan snapshot must equal the
+// frozen snapshot this driver iterates, and a frozen spec_sha256 must still
+// hash the spec file. Returns null while frozen.
+function frozenDrift(snapshot, rootDir, stateNow) {
+  const frozenTasks = stableStringify(snapshot.tasks);
+  const liveTasks = stableStringify(stateNow && stateNow.plan_snapshot ? stateNow.plan_snapshot.tasks : null);
+  if (frozenTasks !== liveTasks) {
+    return 'the live plan snapshot drifted from the frozen snapshot this wave iterates';
+  }
+  if (stateNow && typeof stateNow.spec_sha256 === 'string' && stateNow.spec_sha256) {
+    const sp = specPathIn(rootDir, stateNow);
+    const cur = sp == null ? null : sha256FileSyncSafe(sp);
+    if (cur == null || cur !== stateNow.spec_sha256) {
+      return 'spec sha mismatch — the spec file changed under the frozen spec_sha256';
+    }
+  }
+  return null;
+}
+
+// Verify a pinned worktree still sits at its recorded tree hash (the same
+// check loadPinnedModule performs, without loading any module).
+function verifyPin(pin, opts = {}) {
+  const r = pinnedRecordFor(pin, opts);
+  if (!r.ok) return r;
+  const rec = r.record;
+  const git = gitRunnerOf(opts, rec.path);
+  let v;
+  try { v = git(['rev-parse', 'HEAD^{tree}'], rec.path); }
+  catch (e) { return fail('pin-tampered', e.message); }
+  if (!v || v.status !== 0) {
+    return fail('pin-tampered', 'pinned worktree HEAD unresolvable');
+  }
+  const cur = String(v.stdout || '').trim();
+  if (cur !== rec.treeSha) {
+    return fail('pin-tampered', `pinned worktree tree ${cur} does not match the recorded ${rec.treeSha}`);
+  }
+  return { ok: true, treeSha: cur, runTag: r.runTag };
+}
+
+// ---- wave release check (shared by the driver and crash reconciliation) ----
+
+// One red-team round over the wave diff: reuse the redteam round machinery
+// unchanged; findings hold the wave, a zero round clears the release gate.
+async function redteamWaveRound({ ctx, spawnId, wave }) {
+  const redteam = require('./redteam.cjs');
+  return redteam.runRound({ stage: `BUILD-W${wave}`, spawnId: `${spawnId}-rt` }, {
+    rootDir: ctx.rootDir,
+    env: ctx.env || process.env,
+    host: ctx.host,
+    profile: 'restricted',
+    spawnRunner: ctx.spawnRunner,
+    engineProbe: ctx.engineProbe,
+    wallMs: ctx.wallMs,
+    idleMs: ctx.idleMs,
+    now: ctx.now,
+  });
+}
+
+// Judge one wave's output contract against the pre/post evidence. Returns
+//   { action: 'release', head, rolledTable }        — the wave may be recorded
+//   { action: 'release-noop', noopReason }          — evidenced no-op
+//   { action: 'hold', violation, detail }           — contract violation
+//   { action: 'pause', reason, detail, ... }        — runner-side failure
+async function evaluateWaveOutput(a) {
+  const hold = (violation, detail) => ({ action: 'hold', violation, detail });
+  const gitFail = (what, r) => ({
+    action: 'pause', reason: 'git-failed',
+    detail: `git ${what} rc=${r && r.status}${r && String(r.stderr || '').trim() ? ': ' + String(r.stderr).trim().slice(0, 200) : ''}`,
+  });
+  let rl;
+  try { rl = gitRunnerOf({ gitRunner: a.gitRunner }, a.rootDir)(['rev-list', `${a.preHead}..${a.postHead}`], a.rootDir); }
+  catch (e) { return { action: 'pause', reason: 'git-failed', detail: e.message }; }
+  if (!rl || rl.status !== 0) return gitFail('rev-list', rl);
+  const commits = String(rl.stdout || '').split('\n').map((s) => s.trim()).filter(Boolean);
+  const noopReason = readNoopSignal(a.scratch);
+  if (noopReason != null && commits.length === 0) {
+    // Evidenced no-op: no ref may move at all (not even the tip) and no
+    // drift may appear beyond machine-local paths.
+    const moved = refsDrift(a.preRefsMap, a.postRefs.map, null);
+    if (moved.length) return hold('ref-move', `no-op wave moved refs: ${moved.join('; ')}`);
+    const drift = dirtyDriftPaths(a.preDirtySet, a.postDirtySet);
+    if (drift.length) return hold('dirty-drift', drift.join(', '));
+    return { action: 'release-noop', noopReason };
+  }
+  if (commits.length === 0) {
+    return hold('no-commit', 'the wave spawn exited without a commit and without no-op evidence — silence is never no-op');
+  }
+  if (commits.length > 1) {
+    return hold('second-commit', `${commits.length} commits in the wave range (${commits.join(', ')})`);
+  }
+  const head = commits[0];
+  let df;
+  try { df = a.gitRunner(['diff', '--name-only', `${a.preHead}..${head}`], a.rootDir); }
+  catch (e) { return { action: 'pause', reason: 'git-failed', detail: e.message }; }
+  if (!df || df.status !== 0) return gitFail('diff --name-only', df);
+  const changed = String(df.stdout || '').split('\n').map((s) => s.trim()).filter(Boolean);
+  const undeclared = changed.filter((p) => !a.declaredSet.has(p));
+  if (undeclared.length) {
+    return hold('undeclared-path', `changed paths outside the wave's declared files: ${undeclared.join(', ')}`);
+  }
+  // frozen world: plan snapshot + spec sha + pinned worktree
+  const stateNow = readStateJson(a.rootDir);
+  const fr = frozenDrift(a.snapshot, a.rootDir, stateNow);
+  if (fr) return hold('frozen-edit', fr);
+  if (a.ctx.pin) {
+    const pv = verifyPin(a.ctx.pin, { rootDir: a.rootDir, gitRunner: a.gitRunner });
+    if (!pv.ok) return hold('frozen-edit', `pinned worktree drifted: ${pv.detail || pv.reason}`);
+  }
+  // dispatch-table stamp + runner-critical release gate
+  const store = getStore();
+  const stampRead = store.readDispatchTableStamp(a.rootDir);
+  if (!stampRead.ok) return { action: 'pause', reason: stampRead.reason, detail: stampRead.detail, path: stampRead.path };
+  const tableSha = sha256FileSyncSafe(a.tableFile);
+  const tableChanged = changed.includes(DISPATCH_TABLE_REL);
+  const stamped = stampRead.stamp;
+  let rolledTable = false;
+  if (tableChanged || (stamped != null && tableSha !== stamped.sha256)) {
+    if (!tableChanged) {
+      return {
+        action: 'pause', reason: 'external-mutation',
+        detail: `dispatch table drifted outside the wave (stamp ${stamped.sha256.slice(0, 10)} != live ${String(tableSha).slice(0, 10)})`,
+      };
+    }
+    // every dispatch-table edit routes through one red-team round; a pass
+    // rolls the store stamp, findings hold the wave
+    const rt = await redteamWaveRound({ ctx: a.ctx, spawnId: a.spawnId, wave: a.wave });
+    if (!rt.ok) return hold('redteam-failed', `red-team round refused: ${rt.reason}${rt.detail ? ' — ' + rt.detail : ''}`);
+    if (rt.round.classified !== 'zero' || !(rt.round.findings === 0)) {
+      return hold('redteam-findings', `red-team round over the wave diff reported findings ${rt.round.findings} (${rt.round.classified})`);
+    }
+    const roll = store.rollDispatchTableStamp(a.rootDir, { sha256: tableSha, rolledByWave: `${a.task}/W${a.wave}` });
+    if (!roll.ok) return { action: 'pause', reason: roll.reason, detail: roll.detail, path: roll.path };
+    rolledTable = true;
+  } else if (changed.some(isRunnerCriticalPath)) {
+    // non-table runner-critical waves still clear one red-team round
+    const rt = await redteamWaveRound({ ctx: a.ctx, spawnId: a.spawnId, wave: a.wave });
+    if (!rt.ok) return hold('redteam-failed', `red-team round refused: ${rt.reason}${rt.detail ? ' — ' + rt.detail : ''}`);
+    if (rt.round.classified !== 'zero' || !(rt.round.findings === 0)) {
+      return hold('redteam-findings', `red-team round over the wave diff reported findings ${rt.round.findings} (${rt.round.classified})`);
+    }
+  }
+  // refs: only the work-branch tip may move, and it must be the wave commit
+  const moved = refsDrift(a.preRefsMap, a.postRefs.map, `refs/heads/${a.workBranch}`);
+  if (moved.length) return hold('ref-move', moved.join('; '));
+  const tip = a.postRefs.map[`refs/heads/${a.workBranch}`];
+  if (tip !== head) {
+    return hold('ref-move', `work branch tip is ${tip ? tip.slice(0, 10) : 'absent'}, expected the wave commit ${head.slice(0, 10)}`);
+  }
+  const drift = dirtyDriftPaths(a.preDirtySet, a.postDirtySet);
+  if (drift.length) return hold('dirty-drift', drift.join(', '));
+  return { action: 'release', head, rolledTable };
+}
+
+// ---- the wave driver ----
+
+function defaultWaveSpawnRunner(spec, ctx) {
+  const spawnrun = require('./spawnrun.cjs');
+  if (!Array.isArray(spec.argv) || spec.argv.length === 0) {
+    return Promise.resolve({ status: null, stdout: '', stderr: '', error: new Error('no spawn argv composed') });
+  }
+  return spawnrun.spawnRun(spec, {
+    idleMs: ctx && ctx.idleMs,
+    wallMs: ctx && ctx.wallMs,
+    deny: Array.isArray(spec.deny) ? spec.deny : undefined,
+  });
+}
+
+function validateWaveCtx(snapshot, ctx) {
+  const groups = waveGroupsOf(snapshot);
+  if (!groups.ok) return { ok: false, status: 'refused', reason: groups.reason, detail: groups.detail, guidance: groups.guidance, waves: [] };
+  if (!ctx || typeof ctx.rootDir !== 'string' || !ctx.rootDir) {
+    return { ok: false, status: 'refused', reason: 'invalid-root', detail: 'ctx.rootDir required', waves: [] };
+  }
+  if (typeof ctx.taskId !== 'string' || !ID_RE.test(ctx.taskId)) {
+    return { ok: false, status: 'refused', reason: 'invalid-task-id', detail: 'ctx.taskId must be filename-safe', waves: [] };
+  }
+  if (typeof ctx.workBranch !== 'string' || !ctx.workBranch || /\s/.test(ctx.workBranch)) {
+    return { ok: false, status: 'refused', reason: 'invalid-branch', detail: 'ctx.workBranch must be a branch name without whitespace', waves: [] };
+  }
+  return { ok: true, groups: groups.groups };
+}
+
+// Entry-time frozen verification: the world the driver is about to iterate
+// must already match the frozen snapshot — drift here is external mutation,
+// never wave-attributed. Returns null or the paused result.
+function entryFrozenProblem(snapshot, ctx, rootDir, git) {
+  const stateNow = readStateJson(rootDir);
+  if (stateNow == null) {
+    return { ok: false, status: 'paused', paused: true, reason: 'state-unreadable', detail: '.gos/state.json missing or unparsable', waves: [] };
+  }
+  const fr = frozenDrift(snapshot, rootDir, stateNow);
+  if (fr) {
+    return { ok: false, status: 'paused', paused: true, reason: 'external-mutation', detail: fr, waves: [] };
+  }
+  const store = getStore();
+  const stampRead = store.readDispatchTableStamp(rootDir);
+  if (!stampRead.ok) return { ...stampRead, waves: [] };
+  if (stampRead.stamp != null) {
+    const tableFile = typeof ctx.tablePath === 'string' && ctx.tablePath ? ctx.tablePath : path.join(rootDir, DISPATCH_TABLE_REL);
+    const sha = sha256FileSyncSafe(tableFile);
+    if (sha == null || sha !== stampRead.stamp.sha256) {
+      return {
+        ok: false, status: 'paused', paused: true, reason: 'external-mutation',
+        detail: `dispatch table drifted from the store stamp (stamp ${stampRead.stamp.sha256.slice(0, 10)})`, waves: [],
+      };
+    }
+  }
+  if (ctx.pin) {
+    const pv = verifyPin(ctx.pin, { rootDir, gitRunner: git });
+    if (!pv.ok) {
+      return { ok: false, status: 'paused', paused: true, reason: 'external-mutation', detail: `pinned worktree drifted: ${pv.detail || pv.reason}`, waves: [] };
+    }
+  }
+  return null;
+}
+
+// Release-check-lite for a wave whose completion record already exists:
+// the recorded head must still resolve and (non-noop) still touch only the
+// wave's declared files. Returns null or the unattributable detail.
+function completedWaveProblem(rec, declaredSet, git, rootDir) {
+  if (rec.noop === true) {
+    try {
+      const r = git(['rev-parse', `${rec.head}^{commit}`], rootDir);
+      if (r && r.status === 0) return null;
+    } catch { /* fall through */ }
+    return `recorded no-op head ${rec.head} no longer resolves`;
+  }
+  try {
+    const ok = git(['rev-parse', `${rec.head}^{commit}`], rootDir);
+    if (!ok || ok.status !== 0) return `recorded head ${rec.head} no longer resolves`;
+    const df = git(['diff', '--name-only', `${rec.head}^`, rec.head], rootDir);
+    if (!df || df.status !== 0) return `recorded head ${rec.head} diff unreadable`;
+    const changed = String(df.stdout || '').split('\n').map((s) => s.trim()).filter(Boolean);
+    const undeclared = changed.filter((p) => !declaredSet.has(p));
+    if (undeclared.length) return `recorded head touches undeclared paths: ${undeclared.join(', ')}`;
+    return null;
+  } catch (e) { return e.message; }
+}
+
+// runWaveDispatch(snapshot, ctx) — sequential wave iterator over the frozen
+// plan snapshot. ctx:
+//   rootDir      repo root (required; git/store/scratch derive from it)
+//   taskId       GOS task id (required, filename-safe; record keys, spawn ids)
+//   workBranch   branch the waves commit on (required; the only ref allowed
+//                to move is its tip)
+//   spawnRunner  (spec, {wallMs, idleMs}) -> spawnSync shape (injectable)
+//   gitRunner    (args, cwd) -> spawnSync shape (injectable)
+//   env/engineProbe/host  compose inputs (host adapter name, default opencode)
+//   breaker      breaker instance (default: one from the store limits; an
+//                injected breaker must be rooted at the same repo's store —
+//                the budget layer reads its mirrors from there)
+//   limits       breaker limits override when no breaker is passed
+//   pin          {runTag, rootDir} pinned worktree re-verified after waves
+//   tablePath    dispatch table file for stamp checks (default
+//                <rootDir>/templates/auto-dispatch.json)
+//   wallMs/idleMs/now  supervision and clock overrides
+//   runTag       spawn-id tag (default: random hex)
+async function runWaveDispatch(snapshot, ctx = {}) {
+  const valid = validateWaveCtx(snapshot, ctx);
+  if (!valid.ok) return valid;
+  const rootDir = path.resolve(ctx.rootDir);
+  const git = gitRunnerOf(ctx, rootDir);
+  const now = typeof ctx.now === 'function' ? ctx.now : Date.now;
+  const store = getStore();
+  if (!store) return fail('store-unavailable', 'the trust store module could not be loaded');
+
+  const recorded = ensureWavePromptRecorded(rootDir);
+  if (!recorded.ok) {
+    return { ok: false, status: recorded.status || 'error', reason: recorded.reason, detail: recorded.detail, path: recorded.path, guidance: recorded.guidance, waves: [] };
+  }
+
+  let breaker = ctx.breaker || null;
+  if (!breaker) {
+    const breakerMod = getBreaker();
+    const made = breakerMod ? breakerMod.createBreaker({ rootDir, limits: ctx.limits || undefined }) : null;
+    if (!made || !made.ok) {
+      return { ok: false, status: 'paused', paused: true, reason: 'breaker-unavailable', waves: [] };
+    }
+    breaker = made.breaker;
+  }
+  const endWith = (base) => ({ ...base, waves: base.waves || [], breaker: breaker.state() });
+
+  const frozen = entryFrozenProblem(snapshot, ctx, rootDir, git);
+  if (frozen) return endWith(frozen);
+
+  const branch = currentBranchOf(git, rootDir);
+  if (branch !== ctx.workBranch) {
+    return endWith({
+      ok: false, status: 'refused', reason: 'wrong-branch',
+      detail: `HEAD is ${branch == null ? 'unresolvable' : `'${branch}'`}, expected the work branch '${ctx.workBranch}'`, waves: [],
+    });
+  }
+  if (readHeadOf(git, rootDir) == null) {
+    return endWith({ ok: false, status: 'paused', paused: true, reason: 'no-head', waves: [] });
+  }
+
+  const tableFile = typeof ctx.tablePath === 'string' && ctx.tablePath ? ctx.tablePath : path.join(rootDir, DISPATCH_TABLE_REL);
+  const runTag = typeof ctx.runTag === 'string' && ctx.runTag ? ctx.runTag : crypto.randomBytes(4).toString('hex');
+  const results = [];
+
+  for (const g of valid.groups) {
+    const key = `${ctx.taskId}/W${g.wave}`;
+    const existing = store.readWaveRecords(rootDir);
+    if (!existing.ok) return endWith({ ...existing, waves: results });
+    const rec = existing.waves[key];
+    if (rec) {
+      const problem = completedWaveProblem(rec, new Set(g.tasks.flatMap((t) => t.files || [])), git, rootDir);
+      if (problem) {
+        return endWith({ ok: false, status: 'held', reason: 'completion-unattributable', wave: g.wave, detail: problem, waves: results });
+      }
+      results.push({ wave: g.wave, status: 'already-released', head: rec.head, noop: rec.noop === true, rolledTable: rec.rolledTable === true });
+      continue;
+    }
+
+    const breakerMod = getBreaker();
+    const label = breakerMod.waveUnitLabel(g.wave);
+    const visited = breaker.visit(label);
+    if (!visited.ok) return endWith({ ok: false, status: 'paused', paused: true, reason: 'stage-invalid', detail: visited.detail, waves: results });
+    if (visited.tripped) return endWith({ ok: false, status: 'paused', paused: true, reason: 'breaker-tripped', trip: breaker.tripped(), wave: g.wave, waves: results });
+    const budget = breaker.checkBudget();
+    if (!budget.ok) return endWith({ ok: false, status: 'paused', paused: true, reason: budget.reason || 'budget-read-failed', waves: results });
+    if (budget.tripped) return endWith({ ok: false, status: 'paused', paused: true, reason: 'breaker-tripped', trip: breaker.tripped(), wave: g.wave, waves: results });
+
+    const render = renderWavePrompt({ wave: g.wave, taskIds: g.tasks.map((t) => t.id) });
+    if (!render.ok) return endWith({ ok: false, status: 'paused', paused: true, reason: render.reason, detail: render.detail, wave: g.wave, waves: results });
+
+    const declaredSet = new Set(g.tasks.flatMap((t) => t.files || []));
+    const spawnId = `${ctx.taskId}-W${g.wave}-${runTag}`;
+    const waveResult = { wave: g.wave, spawnId, prompt: render.prompt, unitLabel: label };
+
+    const reg = store.registerSpawn({ spawnId, kind: 'work', stage: WAVE_STAGE, wallMs: ctx.wallMs }, rootDir);
+    if (!reg.ok) {
+      return endWith({ ok: false, status: 'paused', paused: true, reason: 'spawn-register-failed', detail: reg.detail, wave: g.wave, waves: results });
+    }
+    const teardown = () => store.removeSpawn(spawnId, rootDir);
+    const failHold = async (violation, detail) => {
+      waveResult.status = 'held';
+      waveResult.violation = violation;
+      waveResult.detail = detail;
+      waveResult.signal = 'task-failed';
+      results.push(waveResult);
+      const res = breaker.recordOutcome(WAVE_STAGE, 'task-failed', `${violation}: ${detail}`);
+      if (res.tripped) {
+        return endWith({ ok: false, status: 'paused', paused: true, reason: 'breaker-tripped', trip: breaker.tripped(), wave: g.wave, waves: results });
+      }
+      return endWith({ ok: false, status: 'held', reason: violation, wave: g.wave, waves: results });
+    };
+
+    const manifest = store.writeGrantManifest(rootDir, spawnId);
+    if (!manifest.ok) {
+      teardown();
+      return endWith({ ok: false, status: 'paused', paused: true, reason: 'grant-manifest-failed', detail: manifest.detail, wave: g.wave, waves: results });
+    }
+    const composed = launcher.compose(pinnedProfile(WAVE_STAGE), {
+      workspace: rootDir,
+      env: ctx.env || process.env,
+      engineProbe: ctx.engineProbe,
+      store,
+      writableRoots: ctx.writableRoots || [rootDir, path.join(rootDir, '.gos'), path.join(rootDir, '.gos', 'logs')],
+      scratchDir: reg.scratch,
+      testBase: true,
+      grantManifestPath: manifest.path,
+    });
+    if (!composed.ok) {
+      teardown();
+      const res = breaker.recordOutcome(WAVE_STAGE, 'spawn-error', `launcher ${composed.code}`);
+      if (res.tripped) return endWith({ ok: false, status: 'paused', paused: true, reason: 'breaker-tripped', trip: breaker.tripped(), wave: g.wave, waves: results });
+      return endWith({ ok: false, status: 'paused', paused: true, reason: 'compose-failed', code: composed.code, wave: g.wave, waves: results });
+    }
+    const adapter = registry.requireAdapter(typeof ctx.host === 'string' && ctx.host ? ctx.host : 'opencode');
+    if (!adapter || typeof adapter.buildSpawnSpec !== 'function') {
+      teardown();
+      return endWith({ ok: false, status: 'paused', paused: true, reason: 'host-adapter-unavailable', wave: g.wave, waves: results });
+    }
+    const loop = getLoop();
+    if (!loop) {
+      teardown();
+      return endWith({ ok: false, status: 'paused', paused: true, reason: 'loop-module-unavailable', wave: g.wave, waves: results });
+    }
+    const adapterSpec = adapter.buildSpawnSpec({
+      prompt: render.prompt,
+      env: loop.spawnEnvTemplate(ctx.env === process.env ? {} : (ctx.env || {})),
+      cwd: rootDir,
+    });
+    const argv = composed.tier === 'bubblewrap'
+      ? ['bwrap', ...composed.argv, '--', ...adapterSpec.argv]
+      : adapterSpec.argv.slice();
+    const spec = {
+      argv,
+      env: { ...adapterSpec.env, ...composed.env, [loop.SPAWN_MARKER_ENV]: '1', GOS_AUTO_SPAWN_ID: spawnId },
+      cwd: adapterSpec.cwd || rootDir,
+      prompt: render.prompt,
+      stage: WAVE_STAGE,
+      spawnId,
+      wave: g.wave,
+      unitLabel: label,
+      tier: composed.tier,
+      profile: composed.profile,
+      deny: composed.deny.slice(),
+      scratch: reg.scratch,
+      declaredFiles: [...declaredSet],
+      roWorkspace: false,
+    };
+
+    const preHead = readHeadOf(git, rootDir);
+    if (preHead == null) {
+      teardown();
+      return endWith({ ok: false, status: 'paused', paused: true, reason: 'no-head', wave: g.wave, waves: results });
+    }
+    const preRefs = refsSnapshotOf(git, rootDir);
+    if (preRefs == null) {
+      teardown();
+      return endWith({ ok: false, status: 'paused', paused: true, reason: 'refs-unreadable', wave: g.wave, waves: results });
+    }
+    const preDirty = statusPathsOf(git, rootDir);
+    if (preDirty == null) {
+      teardown();
+      return endWith({ ok: false, status: 'paused', paused: true, reason: 'status-unreadable', wave: g.wave, waves: results });
+    }
+    writeWaveMarker(reg.scratch, {
+      task: ctx.taskId,
+      wave: g.wave,
+      spawnId,
+      preHead,
+      preRefsText: preRefs.text,
+      preDirty: [...preDirty],
+      startedAtIso: new Date(now()).toISOString(),
+    });
+
+    let result;
+    try {
+      result = await (ctx.spawnRunner || defaultWaveSpawnRunner)(spec, { wallMs: ctx.wallMs, idleMs: ctx.idleMs });
+    } catch (e) {
+      result = { status: null, stdout: '', stderr: '', error: e instanceof Error ? e : new Error(String(e)) };
+    }
+    if (result == null) result = { status: null, stdout: '', stderr: '' };
+
+    // session accounting before any consumer reads the pairing
+    const bumped = store.bumpSpawn(rootDir);
+    if (!bumped.ok) return endWith({ ok: false, status: 'paused', paused: true, reason: 'budget-write-failed', path: bumped.path, wave: g.wave, waves: results });
+    const streamText = String(result.stdout || '');
+    const stamp = store.stampStream(spawnId, WAVE_STAGE, sha256Text(streamText), new Date(now()).toISOString(), rootDir);
+    if (!stamp.ok) return endWith({ ok: false, status: 'paused', paused: true, reason: 'stamp-failed', detail: stamp.reason, wave: g.wave, waves: results });
+
+    // process contract: deny hits 0, the spawn itself must not have failed
+    const hits = launcher.scanSpawnOutput(streamText, { deny: spec.deny });
+    const runnerFailed = !!(result.error != null || (result.status != null && result.status !== 0));
+    if (hits.length || runnerFailed) {
+      const violation = hits.length ? 'deny-hit' : 'spawn-failed';
+      const detail = hits.length
+        ? hits.map((h) => `deny '${h.pattern}': ${h.line.slice(0, 120)}`).join('; ')
+        : String((result.error && result.error.message) || result.stderr || 'spawn failed').slice(0, 240);
+      return failHold(violation, detail);
+    }
+
+    const postHead = readHeadOf(git, rootDir);
+    const postRefs = refsSnapshotOf(git, rootDir);
+    const postDirty = statusPathsOf(git, rootDir);
+    if (postHead == null || postRefs == null || postDirty == null) {
+      return endWith({ ok: false, status: 'paused', paused: true, reason: 'post-wave-unreadable', wave: g.wave, waves: results });
+    }
+
+    const verdict = await evaluateWaveOutput({
+      task: ctx.taskId,
+      wave: g.wave,
+      spawnId,
+      declaredSet,
+      workBranch: ctx.workBranch,
+      rootDir,
+      gitRunner: git,
+      tableFile,
+      preHead,
+      preRefsMap: preRefs.map,
+      preDirtySet: preDirty,
+      postHead,
+      postRefs,
+      postDirtySet: postDirty,
+      scratch: reg.scratch,
+      snapshot,
+      ctx: { ...ctx, rootDir },
+    });
+    if (verdict.action === 'hold') return failHold(verdict.violation, verdict.detail);
+    if (verdict.action === 'pause') {
+      return endWith({ ok: false, status: 'paused', paused: true, reason: verdict.reason, detail: verdict.detail, wave: g.wave, waves: results });
+    }
+    if (verdict.action === 'release-noop') {
+      const recW = store.recordWaveCompletion(rootDir, {
+        task: ctx.taskId, wave: g.wave, head: preHead,
+        refsPointer: sha256Text(postRefs.text), noop: true, noopReason: verdict.noopReason,
+      });
+      if (!recW.ok) return endWith({ ok: false, status: 'paused', paused: true, reason: recW.reason, detail: recW.detail, wave: g.wave, waves: results });
+      breaker.recordSuccess(WAVE_STAGE);
+      teardown();
+      results.push({ ...waveResult, status: 'skipped-noop', noop: true, noopReason: verdict.noopReason, head: preHead });
+      continue;
+    }
+    const recW = store.recordWaveCompletion(rootDir, {
+      task: ctx.taskId, wave: g.wave, head: verdict.head,
+      refsPointer: sha256Text(postRefs.text), rolledTable: verdict.rolledTable === true,
+    });
+    if (!recW.ok) return endWith({ ok: false, status: 'paused', paused: true, reason: recW.reason, detail: recW.detail, wave: g.wave, waves: results });
+    breaker.recordSuccess(WAVE_STAGE);
+    teardown();
+    results.push({ ...waveResult, status: 'released', head: verdict.head, rolledTable: verdict.rolledTable === true || undefined });
+  }
+  return endWith({ ok: true, status: 'complete', waves: results });
+}
+
+// reconcileWaves(snapshot, ctx) — crash recovery. Never spawns: a wave with
+// a completion record re-runs only its release check; the last wave with a
+// spawn but no record reconciles its pre-crash refs range — a commit
+// uniquely attributable to the wave is adopted (record written from it,
+// release check re-run); waves without markers are not-started. Same ctx
+// as runWaveDispatch.
+async function reconcileWaves(snapshot, ctx = {}) {
+  const valid = validateWaveCtx(snapshot, ctx);
+  if (!valid.ok) return valid;
+  const rootDir = path.resolve(ctx.rootDir);
+  const git = gitRunnerOf(ctx, rootDir);
+  const store = getStore();
+  if (!store) return fail('store-unavailable', 'the trust store module could not be loaded');
+  const records = store.readWaveRecords(rootDir);
+  if (!records.ok) return { ...records, waves: [] };
+  const tableFile = typeof ctx.tablePath === 'string' && ctx.tablePath ? ctx.tablePath : path.join(rootDir, DISPATCH_TABLE_REL);
+  const results = [];
+  let ok = true;
+  for (const g of valid.groups) {
+    const key = `${ctx.taskId}/W${g.wave}`;
+    const rec = records.waves[key];
+    const declaredSet = new Set(g.tasks.flatMap((t) => t.files || []));
+    if (rec) {
+      const problem = completedWaveProblem(rec, declaredSet, git, rootDir);
+      if (problem) {
+        ok = false;
+        results.push({ wave: g.wave, action: 'unattributable', detail: problem });
+        continue;
+      }
+      results.push({ wave: g.wave, action: 'release-checked', head: rec.head, noop: rec.noop === true });
+      continue;
+    }
+    const marker = latestWaveMarker(rootDir, ctx.taskId, g.wave);
+    if (!marker) {
+      results.push({ wave: g.wave, action: 'not-started' });
+      continue;
+    }
+    const postHead = readHeadOf(git, rootDir);
+    const postRefs = refsSnapshotOf(git, rootDir);
+    const postDirty = statusPathsOf(git, rootDir);
+    if (postHead == null || postRefs == null || postDirty == null) {
+      ok = false;
+      results.push({ wave: g.wave, action: 'unresolvable', reason: 'post-crash evidence unreadable' });
+      continue;
+    }
+    const verdict = await evaluateWaveOutput({
+      task: ctx.taskId,
+      wave: g.wave,
+      spawnId: marker.spawnId,
+      declaredSet,
+      workBranch: ctx.workBranch,
+      rootDir,
+      gitRunner: git,
+      tableFile,
+      preHead: marker.preHead,
+      preRefsMap: refsMapFromText(marker.preRefsText),
+      preDirtySet: new Set(marker.preDirty || []),
+      postHead,
+      postRefs,
+      postDirtySet: postDirty,
+      scratch: marker.scratch,
+      snapshot,
+      ctx: { ...ctx, rootDir },
+    });
+    if (verdict.action === 'release' || verdict.action === 'release-noop') {
+      const recW = verdict.action === 'release'
+        ? store.recordWaveCompletion(rootDir, {
+          task: ctx.taskId, wave: g.wave, head: verdict.head,
+          refsPointer: sha256Text(postRefs.text), rolledTable: verdict.rolledTable === true,
+        })
+        : store.recordWaveCompletion(rootDir, {
+          task: ctx.taskId, wave: g.wave, head: marker.preHead,
+          refsPointer: sha256Text(postRefs.text), noop: true, noopReason: verdict.noopReason,
+        });
+      if (!recW.ok) {
+        ok = false;
+        results.push({ wave: g.wave, action: 'record-failed', reason: recW.reason, detail: recW.detail });
+        continue;
+      }
+      store.removeSpawn(marker.spawnId, rootDir);
+      results.push(verdict.action === 'release'
+        ? { wave: g.wave, action: 'adopted', head: verdict.head, rolledTable: verdict.rolledTable === true || undefined }
+        : { wave: g.wave, action: 'adopted-noop', noop: true, noopReason: verdict.noopReason });
+      continue;
+    }
+    ok = false;
+    if (verdict.action === 'hold') {
+      results.push({ wave: g.wave, action: 'unattributable', violation: verdict.violation, detail: verdict.detail });
+    } else {
+      results.push({ wave: g.wave, action: 'unresolvable', reason: verdict.reason, detail: verdict.detail });
+    }
+  }
+  return { ok, status: ok ? 'reconciled' : 'held', waves: results };
+}
+
 module.exports = {
   DISPATCH_TABLE_NAME,
   DISPATCH_SCHEMA_VERSION,
@@ -550,4 +1456,17 @@ module.exports = {
   runPinnedLeg,
   recyclePin,
   lazyRecyclePins,
+  verifyPin,
+  WAVE_PROMPT_KIND,
+  WAVE_PROMPT_TEMPLATE,
+  WAVE_PROMPT_TOKENS,
+  WAVE_MARKER_NAME,
+  WAVE_NOOP_NAME,
+  DISPATCH_TABLE_REL,
+  isRunnerCriticalPath,
+  wavePromptSourceHash,
+  renderWavePrompt,
+  ensureWavePromptRecorded,
+  runWaveDispatch,
+  reconcileWaves,
 };
