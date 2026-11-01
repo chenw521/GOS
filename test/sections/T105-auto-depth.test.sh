@@ -286,7 +286,7 @@ state.approvals.THINK = { status: 'PENDING', ts: new Date().toISOString(), mode:
 fs.writeFileSync(path.join(rootDir, '.gos', 'state.json'), JSON.stringify(state, null, 2));
 store.stampStream('t7-spawn-1', 'THINK', sha, new Date().toISOString(), rootDir);
 const ok = ratify.ratify({ stage: 'THINK', spawnId: 't7-spawn-1', streamSha256: sha }, { rootDir });
-if (!ok.ok || ok.stored.status !== 'ratified') problems.push('ratify failed');
+if (!ok.ok || ok.stored.status !== 'cleared') problems.push('ratify failed');
 // tracked bytes: hash + count only
 const stateRaw = fs.readFileSync(path.join(rootDir, '.gos', 'state.json'), 'utf8');
 if (!stateRaw.includes(sha) || !stateRaw.includes('"stampCount"')) problems.push('evidence hash/count missing from tracked state');
@@ -757,6 +757,139 @@ console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
 EOF
 D9_OUT="$(node run-d9.cjs 2>&1 | tail -n 1)"
 t105_eq "approvals schema: 'cleared' round-trips write+read; legacy 'ratified' and bare-string approvals still parse" "OK" "$D9_OUT"
+
+# ---------------------------------------------------------------- PV --
+# provenance re-verification: PENDING converts to cleared with store-paired
+# evidence; legacy records and bare strings grandfather as pre-loop; claims
+# inside the loop window without pairing hold and render claimed-not-verified
+t105_case pv
+t105_state THINK > .gos/state.json
+cat > run-pv.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const ratify = require(path.join(GR, 'bin/lib/ops/auto/ratify.cjs'));
+const rootDir = process.cwd();
+const problems = [];
+const hex = (t) => crypto.createHash('sha256').update(t).digest('hex');
+const loopStart = '2026-06-01T00:00:00.000Z';
+// PENDING -> cleared conversion over a fixture stamp
+store.create({ mode: 'on', rootDir });
+const sha = hex('pv conversion stream');
+store.stampStream('pv-spawn-1', 'THINK', sha, new Date().toISOString(), rootDir);
+const stateFile = path.join(rootDir, '.gos', 'state.json');
+const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+state.approvals.THINK = { status: 'PENDING', ts: '2026-01-01T00:00:00.000Z', mode: 'auto', stage: 'THINK' };
+fs.writeFileSync(stateFile, JSON.stringify(state, null, 2));
+const conv = ratify.ratify({ stage: 'THINK', spawnId: 'pv-spawn-1', streamSha256: sha }, { rootDir });
+if (!conv.ok || conv.stored.status !== 'cleared') problems.push('ratify did not write cleared: ' + JSON.stringify(conv.stored && conv.stored.status));
+if (!conv.stored.evidence || conv.stored.evidence.spawnId !== 'pv-spawn-1' || conv.stored.evidence.streamSha256 !== sha) problems.push('cleared evidence shape changed');
+const stamps = store.load(rootDir).store.stamps;
+// an in-loop conversion (ts after loop start) with pairing: store-verified
+if (ratify.describeApproval(conv.stored, { loopStartIso: loopStart, stamps }) !== 'cleared (store-verified)') problems.push('paired cleared not rendered store-verified');
+const vpPaired = ratify.verifyProvenance({ approvals: { THINK: conv.stored }, loopStartIso: loopStart, stamps });
+if (!vpPaired.ok || !vpPaired.results.some((r) => r.stage === 'THINK' && r.outcome === 'store-verified')) problems.push('paired cleared not verdict store-verified');
+// legacy grandfather: old ratified object + old bare string stay cleared-tier
+const legacyRec = { status: 'ratified', ts: '2026-01-02T00:00:00.000Z', mode: 'auto', stage: 'PLAN' };
+const legacyStr = '2026-01-03T00:00:00.000Z';
+if (!ratify.isRatified(legacyRec) || !ratify.isRatified(legacyStr)) problems.push('legacy records left the cleared tier');
+const vpLegacy = ratify.verifyProvenance({ approvals: { PLAN: legacyRec, THINK: legacyStr }, loopStartIso: loopStart, stamps });
+if (!vpLegacy.ok) problems.push('legacy records held: ' + JSON.stringify(vpLegacy.reason));
+for (const r of vpLegacy.results) if (r.outcome !== 'pre-loop legacy') problems.push('legacy outcome not pre-loop legacy: ' + r.stage);
+if (ratify.describeApproval(legacyRec, { loopStartIso: loopStart, stamps }) !== 'cleared (pre-loop legacy)') problems.push('legacy record render wrong');
+if (ratify.describeApproval(legacyStr, { loopStartIso: loopStart, stamps }) !== 'human') problems.push('legacy bare-string render wrong');
+// forged bare string inside the loop window: holds and renders the claim
+const forgedStr = new Date(Date.parse(loopStart) + 60000).toISOString();
+const vpForged = ratify.verifyProvenance({ approvals: { THINK: forgedStr }, loopStartIso: loopStart, stamps });
+if (vpForged.ok || vpForged.reason !== 'claimed-not-verified' || vpForged.stage !== 'THINK') problems.push('forged bare string not held: ' + JSON.stringify(vpForged.reason));
+if (ratify.describeApproval(forgedStr, { loopStartIso: loopStart, stamps }) !== 'claimed-not-verified') problems.push('forged bare string render wrong');
+// cleared record inside the loop window without pairing: held
+const unpaired = { status: 'cleared', ts: forgedStr, mode: 'auto', stage: 'PLAN', evidence: { spawnId: 'pv-ghost', streamSha256: hex('ghost'), stampCount: 1 } };
+const vpUnpaired = ratify.verifyProvenance({ approvals: { PLAN: unpaired }, loopStartIso: loopStart, stamps });
+if (vpUnpaired.ok || vpUnpaired.reason !== 'claimed-not-verified') problems.push('unpaired cleared record not held');
+if (ratify.describeApproval(unpaired, { loopStartIso: loopStart, stamps }) !== 'claimed-not-verified') problems.push('unpaired cleared render wrong');
+// advisory contexts (no loop start passed): nothing holds on age alone
+const vpAdvisory = ratify.verifyProvenance({ approvals: { THINK: forgedStr, PLAN: unpaired }, stamps });
+if (!vpAdvisory.ok) problems.push('advisory context refused: ' + JSON.stringify(vpAdvisory.reason));
+// render taxonomy: PENDING record and absent record
+if (ratify.describeApproval({ status: 'PENDING', ts: forgedStr, mode: 'auto', stage: 'THINK' }) !== 'pending') problems.push('PENDING render wrong');
+if (ratify.describeApproval(undefined) !== 'pending') problems.push('absent render wrong');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+PV_OUT="$(node run-pv.cjs 2>&1 | tail -n 1)"
+t105_eq "provenance: PENDING converts to cleared (store-verified); legacy grandfather; post-loop claims without pairing hold as claimed-not-verified" "OK" "$PV_OUT"
+
+# ---------------------------------------------------------------- AB --
+# marker-session approvals baseline: an absent baseline fails closed; a
+# delegated advance whose approvals[stage] exists under a drifted map
+# (diffusion) refuses; a matching baseline lets the sanctioned PENDING write
+# proceed; manual (non-marker) commits never consult the baseline
+t105_case ab
+t105_state THINK > .gos/state.json
+T105_EMPTY_BASE="$(node -e "console.log(require('crypto').createHash('sha256').update('{}').digest('hex'))")"
+t105_ch_setup() { # $1=spawnId — runner-side channel: holder lock + spawn entry
+  node -e "
+const sr = require(process.env.GOS_ROOT + '/bin/lib/core/spawnreg.cjs');
+const fs = require('fs');
+fs.writeFileSync('.gos/.lock', JSON.stringify({pid: process.ppid, started_at: new Date().toISOString(), boot_id: null, starttime: sr.procStartTime(process.ppid)}));
+sr.writeEntry(process.cwd(), {spawnId: '$1', kind: 'work', stage: 'THINK', pid: process.ppid, wallMs: 600000});
+"
+}
+# absent baseline in a marker session: fail closed, nothing recorded
+t105_ch_setup ab-no-base
+GOS_AUTO_SPAWNED=1 GOS_AUTO_SPAWN_ID=ab-no-base node "$GOS" commit think > ab1.txt 2>&1; AB1_RC=$?
+rm -f .gos/.lock
+t105_exit "AB: marker commit without the approvals baseline fails closed" 1 "$AB1_RC"
+t105_contains "AB: refusal names the missing baseline" "approvals-baseline-missing" "$(cat ab1.txt)"
+AB1_LEFT="$(python3 -c "import json;print('THINK' in json.load(open('.gos/state.json'))['approvals'])")"
+t105_eq "AB: fail-closed refusal records no approval" "False" "$AB1_LEFT"
+# diffusion: a forged THINK record the runner never passed refuses
+node -e "
+const fs = require('fs');
+const f = '.gos/state.json';
+const st = JSON.parse(fs.readFileSync(f, 'utf8'));
+st.approvals.THINK = new Date().toISOString();
+fs.writeFileSync(f, JSON.stringify(st, null, 2));
+"
+t105_ch_setup ab-diffuse
+GOS_AUTO_SPAWNED=1 GOS_AUTO_SPAWN_ID=ab-diffuse GOS_AUTO_APPROVALS_BASELINE="$T105_EMPTY_BASE" node "$GOS" commit think > ab2.txt 2>&1; AB2_RC=$?
+rm -f .gos/.lock
+t105_exit "AB: drifted approvals record refuses (diffusion)" 1 "$AB2_RC"
+t105_contains "AB: refusal names approvals-diffusion" "approvals-diffusion" "$(cat ab2.txt)"
+# matching baseline: the sanctioned PENDING write proceeds
+node -e "
+const fs = require('fs');
+const f = '.gos/state.json';
+const st = JSON.parse(fs.readFileSync(f, 'utf8'));
+delete st.approvals.THINK;
+fs.writeFileSync(f, JSON.stringify(st, null, 2));
+"
+t105_ch_setup ab-ok
+GOS_AUTO_SPAWNED=1 GOS_AUTO_SPAWN_ID=ab-ok GOS_AUTO_APPROVALS_BASELINE="$T105_EMPTY_BASE" node "$GOS" commit think > ab3.txt 2>&1; AB3_RC=$?
+rm -f .gos/.lock
+t105_exit "AB: matching baseline lets the delegated advance record its PENDING" 0 "$AB3_RC"
+AB3_APP="$(python3 -c "import json;a=json.load(open('.gos/state.json'))['approvals']['THINK'];print(a['status'],a['mode'])")"
+t105_eq "AB: persisted approval is PENDING/auto" "PENDING auto" "$AB3_APP"
+
+# manual commit (marker absent) never consults the baseline guard
+t105_case ab2
+t105_state THINK > .gos/state.json
+node -e "
+const fs = require('fs');
+const f = '.gos/state.json';
+const st = JSON.parse(fs.readFileSync(f, 'utf8'));
+st.approvals.THINK = new Date().toISOString();
+fs.writeFileSync(f, JSON.stringify(st, null, 2));
+"
+node "$GOS" commit think > ab4.txt 2>&1; AB4_RC=$?
+t105_exit "AB: manual commit ignores the approvals baseline guard" 0 "$AB4_RC"
+if grep -q "approvals-baseline-missing\|approvals-diffusion" ab4.txt; then
+  t105_bad "AB: manual commit surfaced a baseline refusal"
+else
+  t105_ok "AB: manual commit free of baseline refusals"
+fi
 
 # ---------------------------------------------------------------- SR --
 t105_case sr

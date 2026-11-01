@@ -68,6 +68,34 @@
 #                   unwritable pin fails loudly without literal fallback;
 #                   unset or relative TESTBASE keeps the literal mktemp
 #                   base (real section green, base swept on exit)
+#   plan-resolve  C17  resolveWorkerPlan splits a script stage's steps into
+#                   execution classes: VERIFY's builtin default is
+#                   gate(P) + sections(S) + truth(P), SHIP resolves empty
+#                   (delivery stays runner-side), table-declared
+#                   contracts.steps win over the builtin default, and a
+#                   step with no clear class refuses; agent stages refuse
+#                   and dispatchNeedsHost is true only for agent workers
+#   class-s-compose C18  composeScriptSpawn registers the spawn as kind
+#                   script, composes the launcher frame (scratch + testbed
+#                   + sized /tmp + grant manifest, all after the masks),
+#                   appends the step's FIXED command after --, never the
+#                   host adapter, no git identity, and a lexical engine
+#                   refuses the whole compose leaving no registration
+#   pin-legs      C19  materializePin checks a detached worktree out at
+#                   the loop-start commit inside the store's
+#                   pin-worktrees namespace, records its tree hash, and a
+#                   pinned leg returns the loaded module's verdict as data
+#   pin-tamper    C20  a recorded tree hash that no longer matches the
+#                   worktree refuses the leg (pin-tampered) BEFORE any
+#                   module load; an unknown run tag refuses pin-unknown
+#   pin-recycle   C21  explicit recycle removes worktree + record + git
+#                   metadata idempotently; lazy recycle drops every pin
+#                   whose run tag is not live; duplicate run tags refuse
+#   verify-zero-llm C22  a full VERIFY iteration resolves its plan,
+#                   composes the Class S spawn at argv level, runs both
+#                   pinned legs from a real worktree, and writes the
+#                   iteration record {steps:[{id,kind,verdict,detail}]}
+#                   with the host probe stub never invoked
 # Standalone-safe: self-provisions env when not under test/run-sections.sh.
 
 T107_STANDALONE=0
@@ -86,6 +114,7 @@ fi
 
 T107_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-t107"
 mkdir -p "$T107_DIR" && cd "$T107_DIR" || exit 1
+export T107_DIR
 
 PASS=0
 FAIL=0
@@ -700,6 +729,371 @@ if grep -q "Sections total: 0 passed, 0 failed" "$T107_DIR/rel-run.out"; then
 else
   t107_bad "relative-pin run did not fall back cleanly"
 fi
+
+# ---------------------------------------------------------------- C17 --
+echo "C17: plan-resolve (execution classes, builtin VERIFY default, no-clear-class)"
+cat > "$T107_DIR/t13-plan.cjs" <<'EOF'
+const path = require('path');
+const workers = require(path.join(process.env.GOS_ROOT, 'bin/lib/ops/auto/workers.cjs'));
+const problems = [];
+const load = workers.loadDispatchTable();
+if (!load.ok) problems.push('shipped table refused: ' + load.reason);
+
+let kinds = '';
+const verify = workers.resolveWorkerPlan('VERIFY', load);
+if (!verify.ok) problems.push('VERIFY plan refused: ' + verify.reason + ' ' + (verify.detail || ''));
+if (verify.ok) {
+  kinds = verify.steps.map((s) => s.kind).join(',');
+  const ids = verify.steps.map((s) => s.id).join(',');
+  if (kinds !== 'P,S,P') problems.push('builtin VERIFY kinds not P,S,P: ' + kinds);
+  if (ids !== 'gate,sections,truth') problems.push('builtin VERIFY ids not gate,sections,truth: ' + ids);
+  const gate = verify.steps[0];
+  if (gate.module !== 'bin/lib/ops/gate.cjs' || gate.fn !== 'computeGateVerdicts') {
+    problems.push('gate leg does not name the programmatic gate entry');
+  }
+}
+const ship = workers.resolveWorkerPlan('SHIP', load);
+if (!ship.ok || ship.steps.length !== 0) problems.push('SHIP plan is not the empty runner-side shape');
+
+const agentPlan = workers.resolveWorkerPlan('INTENT', load);
+if (agentPlan.ok || agentPlan.reason !== 'agent-worker') {
+  problems.push('agent stage not refused: ' + (agentPlan.ok ? 'loaded' : agentPlan.reason));
+}
+
+// table-declared steps win over the builtin default; each step classifies
+const withSteps = { ok: true, table: JSON.parse(JSON.stringify(load.table)) };
+withSteps.table.stages.VERIFY.contracts.steps = [
+  { id: 'gosleg', command: ['node', 'bin/gos.cjs', 'gate'] },
+  { id: 'pinleg', module: 'bin/lib/ops/gate.cjs', fn: 'computeGateVerdicts', args: [] },
+];
+const declared = workers.resolveWorkerPlan('VERIFY', withSteps);
+if (!declared.ok || declared.steps.map((s) => s.kind).join(',') !== 'S,P') {
+  problems.push('declared steps not classified S,P: ' + (declared.ok ? declared.steps.map((s) => s.kind).join(',') : declared.reason));
+}
+
+// ambiguous and featureless steps refuse with no-clear-class
+const reasons = [];
+for (const bad of [
+  [{ id: 'x', command: ['bash'], module: 'bin/lib/ops/gate.cjs', fn: 'computeGateVerdicts' }],
+  [{ id: 'y' }],
+]) {
+  withSteps.table.stages.VERIFY.contracts.steps = bad;
+  const r = workers.resolveWorkerPlan('VERIFY', withSteps);
+  reasons.push(r.ok ? 'ok' : r.reason);
+  if (r.ok || r.reason !== 'no-clear-class') problems.push('ambiguous step not refused no-clear-class: ' + (r.ok ? 'loaded' : r.reason));
+}
+
+const needsVerify = workers.dispatchNeedsHost(load.table.stages.VERIFY);
+const needsIntent = workers.dispatchNeedsHost(load.table.stages.INTENT);
+if (needsVerify !== false) problems.push('dispatchNeedsHost(VERIFY) not false');
+if (needsIntent !== true) problems.push('dispatchNeedsHost(INTENT) not true');
+
+console.log(problems.length ? 'PLAN-BAD ' + problems.join('; ') : 'PLAN-OK');
+console.log('KINDS[' + kinds + ']');
+console.log('NOCLASS[' + reasons.join(',') + ']');
+console.log('HOST[verify:' + needsVerify + ',intent:' + needsIntent + ']');
+EOF
+PLAN_OUT="$(node "$T107_DIR/t13-plan.cjs" 2>&1)"; RC=$?
+t107_exit "plan probe runs clean" "0" "$RC"
+t107_contains "VERIFY resolves P,S,P (gate, sections, truth); SHIP empty; agent stages refuse" "PLAN-OK" "$PLAN_OUT"
+t107_contains "builtin default kinds pinned" "KINDS[P,S,P]" "$PLAN_OUT"
+t107_contains "ambiguous + featureless steps -> no-clear-class" "NOCLASS[no-clear-class,no-clear-class]" "$PLAN_OUT"
+t107_contains "host probe needed only by agent workers" "HOST[verify:false,intent:true]" "$PLAN_OUT"
+
+# ---------------------------------------------------------------- C18 --
+echo "C18: class-s-compose (fixed argv, script-kind registration, kernel tier, no identity)"
+cat > "$T107_DIR/t13-classs.cjs" <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const workers = require(path.join(process.env.GOS_ROOT, 'bin/lib/ops/auto/workers.cjs'));
+const store = require(path.join(process.env.GOS_ROOT, 'bin/lib/ops/auto/store.cjs'));
+const problems = [];
+const ws = path.join(process.env.T107_DIR, 'ws-repo');
+fs.mkdirSync(ws, { recursive: true });
+const ctx = {
+  stage: 'VERIFY', spawnId: 't13.c18.sp1', rootDir: ws, workspace: ws,
+  env: { ...process.env },
+  engineProbe: () => ({ engine: 'bwrap', version: '0.11.0' }),
+};
+const step = { id: 'sections', command: ['bash', 'test/run-sections.sh'] };
+
+const notS = workers.composeScriptSpawn({ id: 'g', module: 'bin/lib/ops/gate.cjs', fn: 'computeGateVerdicts' }, { ...ctx, spawnId: 't13.c18.sp2' });
+if (notS.ok || notS.reason !== 'not-script-step') problems.push('pinned-leg step not refused: ' + (notS.ok ? 'ok' : notS.reason));
+
+const c = workers.composeScriptSpawn(step, ctx);
+let tail = [];
+if (!c.ok) problems.push('class-S compose refused: ' + (c.code || c.reason) + ' ' + (c.detail || ''));
+if (c.ok) {
+  const term = c.argv.indexOf('--');
+  if (term < 0) problems.push('argv lacks the -- terminator');
+  else {
+    tail = c.argv.slice(term + 1);
+    if (JSON.stringify(tail) !== JSON.stringify(step.command)) problems.push('argv tail is not the fixed command: ' + JSON.stringify(tail));
+  }
+  // the mask dests hide the host adapter's state dirs; the fixed command
+  // must never invoke the adapter itself
+  if (c.argv[0] === 'opencode' || tail.some((a) => a === 'opencode' || a.endsWith('/opencode'))) {
+    problems.push('the fixed command invokes the host adapter');
+  }
+  if (c.registration.kind !== 'script') problems.push('registration kind is ' + c.registration.kind);
+  if (c.registration.stage !== 'VERIFY') problems.push('registration stage is not VERIFY');
+  let st = null; try { st = fs.statSync(c.scratch); } catch {}
+  if (!st || !st.isDirectory()) problems.push('scratch dir missing');
+  let tb = null; try { tb = fs.statSync(path.join(c.scratch, 'testbed')); } catch {}
+  if (!tb || !tb.isDirectory()) problems.push('testbed not created');
+  if (c.env.GOS_AUTO_SPAWN_SCRATCH !== c.scratch) problems.push('scratch env not pinned');
+  if (c.env.TESTBASE !== path.join(c.scratch, 'testbed')) problems.push('TESTBASE not the testbed subdir');
+  if (c.env.GOS_AUTO_GRANT_MANIFEST !== '/run/gos-grants.json') problems.push('grant manifest env missing');
+  const gAt = c.argv.findIndex((_, i) => c.argv[i] === '--ro-bind' && c.argv[i + 2] === '/run/gos-grants.json');
+  if (gAt < 0) problems.push('grant manifest not ro-bound at the fixed path');
+  const ops = (argv) => {
+    const out = [];
+    for (let i = 0; i < argv.length;) {
+      const t = argv[i];
+      if (['--ro-bind', '--ro-bind-try', '--bind', '--bind-try', '--dev-bind'].includes(t)) { out.push({ op: t, src: argv[i + 1], dest: argv[i + 2], index: i }); i += 3; }
+      else if (['--tmpfs', '--proc', '--dev', '--dir'].includes(t)) { out.push({ op: t, dest: argv[i + 1], index: i }); i += 2; }
+      else i += 1;
+    }
+    return out;
+  };
+  const os = ops(c.argv);
+  let maxMask = -1;
+  for (const m of c.meta.masks) {
+    const impl = os.filter((o) => o.dest === m.dest && (m.kind === 'empty' ? (o.op === '--ro-bind' && o.src === '/dev/null') : o.op === '--tmpfs'));
+    if (impl.length) maxMask = Math.max(maxMask, impl[impl.length - 1].index);
+  }
+  const sAt = c.argv.findIndex((_, i) => c.argv[i] === '--bind' && c.argv[i + 1] === c.scratch && c.argv[i + 2] === c.scratch);
+  if (sAt < 0 || !(sAt > maxMask)) problems.push('scratch bind not after every mask mount');
+  const sized = c.argv.some((_, i) => c.argv[i] === '--size' && c.argv[i + 1] === '536870912' && c.argv[i + 2] === '--tmpfs' && c.argv[i + 3] === '/tmp');
+  if (!sized) problems.push('sized /tmp tmpfs missing');
+  if (['GIT_AUTHOR_NAME', 'GIT_AUTHOR_EMAIL', 'GIT_COMMITTER_NAME', 'GIT_COMMITTER_EMAIL'].some((k) => k in c.env)) {
+    problems.push('class-S spawn carries the runner git identity');
+  }
+}
+// kernel-tier floor: a lexical engine refuses the compose and leaves no registration
+const lex = workers.composeScriptSpawn(step, { ...ctx, spawnId: 't13.c18.sp3', engineProbe: () => ({ engine: 'none', reason: 'no sandbox engine' }) });
+if (lex.ok || lex.code !== 'auto.launcher.kernel-tier-required') {
+  problems.push('lexical engine not refused: ' + (lex.ok ? 'ok' : (lex.code || lex.reason)));
+}
+const regDir = path.join(store.storeRoot(ws), 'spawnreg');
+let leftovers = [];
+try { leftovers = fs.readdirSync(regDir).filter((n) => n.startsWith('t13.c18.sp3')); } catch {}
+if (leftovers.length) problems.push('refused compose left registration files: ' + leftovers.join(','));
+
+console.log(problems.length ? 'CSS-BAD ' + problems.join('; ') : 'CSS-OK');
+console.log('REG[' + (c.ok ? c.registration.kind + '@' + c.registration.stage : 'none') + ']');
+console.log('TAIL[' + tail.join(' ') + ']');
+EOF
+CSS_OUT="$(node "$T107_DIR/t13-classs.cjs" 2>&1)"; RC=$?
+t107_exit "class-S probe runs clean" "0" "$RC"
+t107_contains "fixed argv, script-kind registration, scratch+testbed+grant after masks, no identity" "CSS-OK" "$CSS_OUT"
+t107_contains "registration recorded as script kind on the stage" "REG[script@VERIFY]" "$CSS_OUT"
+t107_contains "spawn argv tail is the step command verbatim" "TAIL[bash test/run-sections.sh]" "$CSS_OUT"
+
+# ---------------------------------------------------------------- C19 --
+echo "C19: pin-legs (worktree materialize, store record, pinned module verdict)"
+cat > "$T107_DIR/t13-pin.cjs" <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const workers = require(path.join(process.env.GOS_ROOT, 'bin/lib/ops/auto/workers.cjs'));
+const store = require(path.join(process.env.GOS_ROOT, 'bin/lib/ops/auto/store.cjs'));
+const problems = [];
+const repo = path.join(process.env.T107_DIR, 'pinrepo');
+fs.mkdirSync(path.join(repo, 'legs'), { recursive: true });
+fs.writeFileSync(path.join(repo, 'legs', 'gate-leg.cjs'),
+  "'use strict'; module.exports = { verdict: function () { return { pass: true, source: 'pin' }; } };\n");
+fs.writeFileSync(path.join(repo, 'legs', 'truth-leg.cjs'),
+  "'use strict'; module.exports = { verdict: function () { return { pass: true, source: 'pin-truth' }; } };\n");
+const git = (args, cwd) => spawnSync('git', args, { cwd: cwd || repo, encoding: 'utf8' });
+if (git(['init', '-q', '-b', 'work']).status !== 0) problems.push('fixture repo init failed');
+git(['add', '-A']);
+if (git(['-c', 'user.name=gos-test', '-c', 'user.email=t@invalid', 'commit', '-q', '-m', 'seed-legs']).status !== 0) problems.push('fixture seed commit failed');
+const head = String(git(['rev-parse', 'HEAD']).stdout || '').trim();
+const tree = String(git(['rev-parse', 'HEAD^{tree}']).stdout || '').trim();
+if (!/^[0-9a-f]{40}$/.test(head) || !/^[0-9a-f]{40}$/.test(tree)) problems.push('fixture commit/tree unresolvable');
+
+const created = store.create({ rootDir: repo });
+if (!created.ok) problems.push('fixture store create refused: ' + created.reason);
+
+const pin = workers.materializePin(repo, { loopStartCommit: head });
+if (!pin.ok) problems.push('materializePin refused: ' + pin.reason + ' ' + (pin.detail || ''));
+if (pin.ok) {
+  if (!pin.path.startsWith(path.join(store.storeRoot(repo), 'pin-worktrees') + path.sep)) {
+    problems.push('pin worktree not inside the store pin-worktrees dir: ' + pin.path);
+  }
+  if (pin.treeSha !== tree) problems.push('recorded tree sha != fixture tree');
+  let st = null; try { st = fs.statSync(path.join(pin.path, 'legs', 'gate-leg.cjs')); } catch {}
+  if (!st || !st.isFile()) problems.push('pinned worktree lacks the committed leg module');
+  const pins = store.readPins(repo);
+  if (!pins.ok || !pins.pins[pin.runTag]) problems.push('pin record missing from the store');
+  else if (pins.pins[pin.runTag].treeSha !== tree || pins.pins[pin.runTag].loopStartCommit !== head) {
+    problems.push('pin record fields wrong');
+  }
+  const leg = workers.runPinnedLeg({ runTag: pin.runTag, rootDir: repo }, 'legs/gate-leg.cjs', 'verdict', []);
+  if (!leg.ok) problems.push('pinned leg refused: ' + leg.reason + ' ' + (leg.detail || ''));
+  else if (!leg.verdict || leg.verdict.pass !== true || leg.verdict.source !== 'pin') {
+    problems.push('leg verdict is not the module return value: ' + JSON.stringify(leg.verdict));
+  }
+  const noFn = workers.runPinnedLeg({ runTag: pin.runTag, rootDir: repo }, 'legs/gate-leg.cjs', 'missing', []);
+  if (noFn.ok || noFn.reason !== 'leg-fn-missing') problems.push('missing export not refused');
+}
+console.log(problems.length ? 'PIN-BAD ' + problems.join('; ') : 'PIN-OK');
+console.log('PINPATH[' + (pin.ok ? path.relative(store.storeRoot(repo), pin.path) : 'none') + ']');
+
+// C20: a recorded tree hash that no longer matches the worktree refuses the
+// leg before any module load
+const tamp = [];
+if (pin.ok) {
+  const forged = store.recordPin(repo, { runTag: pin.runTag, path: pin.path, treeSha: '0'.repeat(40), loopStartCommit: head });
+  if (!forged.ok) tamp.push('forged record refused: ' + forged.reason);
+  const t1 = workers.runPinnedLeg({ runTag: pin.runTag, rootDir: repo }, 'legs/gate-leg.cjs', 'verdict', []);
+  if (t1.ok || t1.reason !== 'pin-tampered') tamp.push('tampered pin not refused: ' + (t1.ok ? 'ok' : t1.reason));
+  const t2 = workers.runPinnedLeg({ runTag: pin.runTag, rootDir: repo }, 'legs/never-committed.cjs', 'verdict', []);
+  if (t2.ok || t2.reason !== 'pin-tampered') tamp.push('tamper check does not precede the module load: ' + (t2.ok ? 'ok' : t2.reason));
+  const t3 = workers.runPinnedLeg({ runTag: 'pin-never-materialized', rootDir: repo }, 'legs/gate-leg.cjs', 'verdict', []);
+  if (t3.ok || t3.reason !== 'pin-unknown') tamp.push('unknown run tag not refused pin-unknown: ' + (t3.ok ? 'ok' : t3.reason));
+}
+console.log(tamp.length ? 'TAMP-BAD ' + tamp.join('; ') : 'TAMP-OK');
+EOF
+PIN_OUT="$(node "$T107_DIR/t13-pin.cjs" 2>&1)"; RC=$?
+t107_exit "pin probe runs clean" "0" "$RC"
+t107_contains "worktree materialized in-store, recorded, pinned module verdict as data" "PIN-OK" "$PIN_OUT"
+t107_contains "pin lives under the store pin-worktrees namespace" "PINPATH[pin-worktrees/" "$PIN_OUT"
+t107_contains "recorded tree hash mismatch refuses the leg before any load" "TAMP-OK" "$PIN_OUT"
+
+# ---------------------------------------------------------------- C21 --
+echo "C21: pin-recycle (explicit + lazy by live run tags, idempotent)"
+cat > "$T107_DIR/t13-rcy.cjs" <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const workers = require(path.join(process.env.GOS_ROOT, 'bin/lib/ops/auto/workers.cjs'));
+const store = require(path.join(process.env.GOS_ROOT, 'bin/lib/ops/auto/store.cjs'));
+const problems = [];
+const repo = path.join(process.env.T107_DIR, 'pinrepo');
+const git = (args, cwd) => spawnSync('git', args, { cwd: cwd || repo, encoding: 'utf8' });
+const head = String(git(['rev-parse', 'HEAD']).stdout || '').trim();
+
+const sweep = workers.lazyRecyclePins(repo, { liveRunTags: [] });
+if (!sweep.ok) problems.push('sweep recycle failed: ' + JSON.stringify(sweep.failures));
+
+const a = workers.materializePin(repo, { loopStartCommit: head, runTag: 'pin-fx-a' });
+const b = workers.materializePin(repo, { loopStartCommit: head, runTag: 'pin-fx-b' });
+if (!a.ok || !b.ok) problems.push('fixture pins not materialized: ' + (a.ok ? '' : a.reason) + (b.ok ? '' : ' ' + b.reason));
+
+const dup = workers.materializePin(repo, { loopStartCommit: head, runTag: 'pin-fx-a' });
+if (dup.ok || dup.reason !== 'pin-worktree-add-failed') problems.push('duplicate run tag not refused: ' + (dup.ok ? 'ok' : dup.reason));
+
+let staleGone = false; let liveKept = false;
+if (a.ok && b.ok) {
+  const lazy = workers.lazyRecyclePins(repo, { liveRunTags: ['pin-fx-a'] });
+  if (!lazy.ok) problems.push('lazy recycle failed');
+  staleGone = !fs.existsSync(b.path);
+  liveKept = fs.existsSync(a.path);
+  if (!staleGone) problems.push('stale pin worktree still on disk');
+  if (!liveKept) problems.push('live pin worktree was recycled');
+  const pins = store.readPins(repo);
+  if (!pins.ok || pins.pins['pin-fx-b'] || !pins.pins['pin-fx-a']) problems.push('pin records not pruned with their worktrees');
+  const rc = workers.recyclePin(repo, 'pin-fx-a');
+  if (!rc.ok) problems.push('explicit recycle failed: ' + rc.reason);
+  if (fs.existsSync(a.path)) problems.push('recycled worktree path survived on disk');
+  const wl = String(git(['worktree', 'list', '--porcelain']).stdout || '');
+  if (wl.includes('pin-fx')) problems.push('worktree metadata survived recycle: ' + wl.replace(/\n/g, ' '));
+  const again = workers.recyclePin(repo, 'pin-fx-a');
+  if (!again.ok || !again.absent) problems.push('absent run tag recycle not idempotent-ok');
+}
+console.log(problems.length ? 'RCY-BAD ' + problems.join('; ') : 'RCY-OK');
+console.log('LAZY[stale-gone:' + staleGone + ',live-kept:' + liveKept + ']');
+EOF
+RCY_OUT="$(node "$T107_DIR/t13-rcy.cjs" 2>&1)"; RC=$?
+t107_exit "recycle probe runs clean" "0" "$RC"
+t107_contains "lazy recycle drops stale pins, keeps live ones; explicit recycle sweeps metadata" "RCY-OK" "$RCY_OUT"
+t107_contains "lazy recycle verdict line" "LAZY[stale-gone:true,live-kept:true]" "$RCY_OUT"
+
+# ---------------------------------------------------------------- C22 --
+echo "C22: verify-zero-llm (script plan + pinned legs, host probe never invoked)"
+cat > "$T107_DIR/t13-zl.cjs" <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const workers = require(path.join(process.env.GOS_ROOT, 'bin/lib/ops/auto/workers.cjs'));
+const problems = [];
+const repo = path.join(process.env.T107_DIR, 'pinrepo');
+const ws = path.join(process.env.T107_DIR, 'ws-repo');
+const git = (args, cwd) => spawnSync('git', args, { cwd: cwd || repo, encoding: 'utf8' });
+const head = String(git(['rev-parse', 'HEAD']).stdout || '').trim();
+if (!/^[0-9a-f]{40}$/.test(head)) problems.push('fixture repo head unresolvable');
+
+// A table whose VERIFY entry declares the fixture legs: contracts.steps win
+// over the builtin default and name the pinned modules + section command.
+const load = workers.loadDispatchTable();
+const tbl = { ok: true, table: JSON.parse(JSON.stringify(load.table)) };
+tbl.table.stages.VERIFY.contracts.steps = [
+  { id: 'gate', module: 'legs/gate-leg.cjs', fn: 'verdict', args: [] },
+  { id: 'sections', command: ['bash', 'test/run-sections.sh'] },
+  { id: 'truth', module: 'legs/truth-leg.cjs', fn: 'verdict', args: [] },
+];
+const plan = workers.resolveWorkerPlan('VERIFY', tbl);
+if (!plan.ok) problems.push('plan refused: ' + plan.reason);
+
+let probed = false;
+const hostProbe = () => { probed = true; throw new Error('host/LLM probe invoked for a script stage'); };
+const record = { steps: [] };
+if (plan.ok) {
+  const entry = tbl.table.stages.VERIFY;
+  if (workers.dispatchNeedsHost(entry)) hostProbe();
+  const pin = workers.materializePin(repo, { loopStartCommit: head });
+  if (!pin.ok) problems.push('pin not materialized: ' + pin.reason);
+  if (pin.ok) {
+    for (const step of plan.steps) {
+      if (step.kind === 'S') {
+        const c = workers.composeScriptSpawn(step, {
+          stage: 'VERIFY', spawnId: 't13.c22.s1', rootDir: ws, workspace: ws,
+          env: { ...process.env }, engineProbe: () => ({ engine: 'bwrap', version: '0.11.0' }),
+          table: tbl,
+        });
+        if (!c.ok) {
+          problems.push('S step compose refused: ' + (c.code || c.reason));
+          record.steps.push({ id: step.id, kind: 'S', verdict: 'refused', detail: c.code || c.reason });
+          continue;
+        }
+        const at = c.argv.indexOf('--');
+        const cmd = at >= 0 ? c.argv.slice(at + 1) : [];
+        if (!cmd.includes('test/run-sections.sh')) problems.push('S argv missing the section command');
+        if (cmd.some((x) => x === 'opencode' || x.endsWith('/opencode'))) problems.push('S command invokes the host adapter');
+        record.steps.push({ id: step.id, kind: 'S', verdict: 'composed', detail: cmd.join(' ') });
+      } else {
+        const leg = workers.runPinnedLeg({ runTag: pin.runTag, rootDir: repo }, step.module, step.fn, step.args || []);
+        record.steps.push({
+          id: step.id, kind: 'P',
+          verdict: leg.ok ? leg.verdict : null,
+          detail: leg.ok ? step.module + '#' + step.fn : leg.reason,
+        });
+        if (!leg.ok) problems.push('P leg refused: ' + leg.reason + ' ' + (leg.detail || ''));
+      }
+    }
+    workers.recyclePin(repo, pin.runTag);
+  }
+}
+if (probed) problems.push('the host probe was invoked for a script stage');
+
+const kindsLine = record.steps.map((s) => s.id + ':' + s.kind).join(' ');
+if (kindsLine !== 'gate:P sections:S truth:P') problems.push('record steps not gate:P sections:S truth:P: ' + kindsLine);
+for (const s of record.steps) {
+  const keys = Object.keys(s).sort().join(',');
+  if (keys !== 'detail,id,kind,verdict') problems.push('record step keys drifted: ' + keys);
+  if (s.verdict == null || s.verdict === '') problems.push('step ' + s.id + ' carries no verdict');
+}
+console.log(problems.length ? 'ZL-BAD ' + problems.join('; ') : 'ZL-OK');
+console.log('RECORD[' + kindsLine + ']');
+console.log('PROBE[invoked:' + probed + ']');
+EOF
+ZL_OUT="$(node "$T107_DIR/t13-zl.cjs" 2>&1)"; RC=$?
+t107_exit "zero-LLM probe runs clean" "0" "$RC"
+t107_contains "VERIFY completes with zero host/LLM spawns; record names script steps and pinned legs" "ZL-OK" "$ZL_OUT"
+t107_contains "iteration record shape pinned" "RECORD[gate:P sections:S truth:P]" "$ZL_OUT"
+t107_contains "host probe never invoked" "PROBE[invoked:false]" "$ZL_OUT"
 
 echo "--- T107 summary: $PASS passed, $FAIL failed ---"
 if [ "$FAIL" -gt 0 ]; then exit 1; fi
