@@ -53,6 +53,16 @@
 #           telemetry stamps carry the D-5 fields with window sidecars (c23);
 #           script-stage VERIFY never probes the host and advances through
 #           the runner-driven commit channel (c24)
+#   status surfaces case (T18): auto status prints the per-stage dispatch
+#           view (worker form, profile, model slot, verb grants, cap, unit;
+#           BUILD adds wave-dispatch) read-only and failure-tolerant, the
+#           counters line format stays stable (c25); status/resume/SHIP
+#           ledger render the three-tier clearance vocabulary with the
+#           store-verified vs pre-loop-legacy distinction (c26); the nav
+#           hint provider returns the kind-discriminated shape with
+#           sanitized trip details (c27); an ANSI-laden deny trip renders
+#           stripped and spawn-marked (c28); README and gos-verify carry
+#           the mechanical-clearance wording and the script-worker note (c29)
 # Fake host: GOS_AUTO_TEST_FIXTURE=1 activates the registry fixture row
 # (gos-fixture-host; probe answers from recorded data, never a live spawn).
 # Loop spawns run through injected spawnRunner harnesses only — no real host
@@ -1656,6 +1666,142 @@ const world = process.cwd();
 EOF
 C24_OUT="$(node run-c24.cjs 2>&1 | tail -n 1)"
 t104_eq "script-stage VERIFY runs zero-host; failing pinned legs score task-failed" "OK" "$C24_OUT"
+
+# ------------------------------------------- status surfaces (T18) ----------
+# Dispatch view: auto status resolves the stage-dispatch table read-only and
+# prints one compact line per stage (worker form, profile, model slot, verb
+# grants, use cap, unit; BUILD carries the wave-dispatch suffix). The table
+# load is failure-tolerant — missing or corrupt prints nothing extra and the
+# counters line format never moves.
+t104_case c25
+t104_state THINK > .gos/state.json
+node "$GOS" auto on > /dev/null 2>&1
+GOS_AUTO_TEST_FIXTURE=1 node "$GOS" auto status > t25-status.txt 2>&1; T25_SRC=$?
+t104_exit "T18: status with the dispatch view exits 0" 0 "$T25_SRC"
+t104_contains "T18: dispatch block header prints" "dispatch:" "$(cat t25-status.txt)"
+t104_contains "T18: THINK dispatch line (agent, restricted, default slot, four verbs, cap, unit)" "  THINK agent restricted default [commit gate section truth] cap16 unit=stage" "$(cat t25-status.txt)"
+t104_contains "T18: BUILD dispatch line adds wave-dispatch with the implementer slot" "  BUILD agent workspace implementer [commit gate section truth checkpoint] cap64 unit=stage-wave wave-dispatch model=implementer" "$(cat t25-status.txt)"
+t104_contains "T18: VERIFY dispatch line shows the script worker" "  VERIFY script restricted default [commit gate section truth] cap16 unit=stage" "$(cat t25-status.txt)"
+t104_contains "T18: counters line format stays stable" "counters: spawns 0 · trips 0" "$(cat t25-status.txt)"
+T25_U="$(node -e "
+const path = require('path');
+const fs = require('fs');
+const cli = require(path.join(process.env.GOS_ROOT, 'bin/lib/ops/auto/cli.cjs'));
+const out = [];
+out.push('missing:' + cli.dispatchViewLines({ tablePath: 'no-such-dir-t104/auto-dispatch.json' }).length);
+fs.writeFileSync('corrupt-table.json', '{not json');
+out.push('corrupt:' + cli.dispatchViewLines({ tablePath: 'corrupt-table.json' }).length);
+fs.copyFileSync(path.join(process.env.GOS_ROOT, 'templates', 'auto-dispatch.json'), 'good-table.json');
+const good = cli.dispatchViewLines({ tablePath: 'good-table.json' });
+out.push('good:' + good.length + ':' + good[0] + ':' + good[1].trim().split(' ')[0]);
+console.log(out.join('|'));
+")"
+t104_eq "T18: dispatch view failure-tolerant; good table renders header + stage lines in stage order" "missing:0|corrupt:0|good:8:dispatch::INTENT" "$T25_U"
+
+# Clearance renders: status and resume print the three-tier vocabulary per
+# delegated stage — a cleared record pairing a live store stamp renders
+# store-verified, an unpaired cleared record renders pre-loop legacy
+# (advisory status never holds on age alone), PENDING renders pending, and
+# the SHIP delivery ledger labels the same tiers with human counts.
+t104_case c26
+t104_state THINK 3 ',"approvals":{"THINK":{"status":"cleared","ts":"2026-01-01T00:00:00.000Z","mode":"auto","stage":"THINK","evidence":{"spawnId":"c26-think","streamSha256":"1111111111111111111111111111111111111111111111111111111111111111","stampCount":1}},"PLAN":{"status":"PENDING","ts":"2026-01-01T00:01:00.000Z","mode":"auto","stage":"PLAN"}}' > .gos/state.json
+node "$GOS" auto on > /dev/null 2>&1
+node -e "
+const path = require('path');
+const store = require(path.join(process.env.GOS_ROOT, 'bin/lib/ops/auto/store.cjs'));
+store.stampStream('c26-think', 'THINK', '1111111111111111111111111111111111111111111111111111111111111111', '2026-01-01T00:00:00.000Z', process.cwd());
+"
+GOS_AUTO_TEST_FIXTURE=1 node "$GOS" auto status > t26-status.txt 2>&1
+t104_contains "T18: status clearance line — store-verified mechanical clearance" "clearance: THINK mechanical clearance (store-verified) · PLAN pending mechanical clearance" "$(cat t26-status.txt)"
+node "$GOS" resume > t26-resume.txt 2>&1; T26_RRC=$?
+t104_exit "T18: resume with a clearance line exits 0" 0 "$T26_RRC"
+t104_contains "T18: resume handoff carries the same clearance vocabulary" "auto clearance: THINK mechanical clearance (store-verified)" "$(cat t26-resume.txt)"
+T26_LEDGER="$(node -e "
+const path = require('path');
+const fs = require('fs');
+const archive = require(path.join(process.env.GOS_ROOT, 'bin/lib/task/archive.cjs'));
+const clearedPaired = JSON.parse(fs.readFileSync('.gos/state.json', 'utf8')).approvals.THINK;
+const state = {
+  approvals: {
+    THINK: clearedPaired,
+    PLAN: { status: 'cleared', ts: '2026-01-01T00:00:00.000Z', mode: 'auto', stage: 'PLAN', evidence: { spawnId: 'c26-unknown', streamSha256: '2222222222222222222222222222222222222222222222222222222222222222', stampCount: 1 } },
+    REVIEW: { status: 'PENDING', ts: '2026-01-01T00:02:00.000Z', mode: 'auto', stage: 'REVIEW' },
+    ARCHIVE: '2026-01-02T00:00:00.000Z',
+  },
+};
+const lines = archive.shipLedgerLines(state);
+console.log(lines.join('\n'));
+")"
+t104_contains "T18: SHIP ledger labels mechanical clearance with both trust flavors" "  mechanical clearance: THINK (store-verified), PLAN (pre-loop legacy), REVIEW (pending)" "$T26_LEDGER"
+t104_contains "T18: SHIP ledger counts human approvals with the pending suffix" "  human approvals: 1 (+1 pending)" "$T26_LEDGER"
+t104_contains "T18: SHIP ledger names the progress-release tier on the red-team line" "  progress release: red-team findings" "$T26_LEDGER"
+
+# Nav hint provider: one kind-discriminated object {kind, lines} — marker
+# orientation inside a spawned session (artifact, advance verb, human-only
+# gates), loop state when auto mode is on, none otherwise. Trip details
+# quoted into a line pass the spawn-output sanitizer.
+t104_case c27
+t104_state THINK > .gos/state.json
+node "$GOS" auto on > /dev/null 2>&1
+T27_HINT="$(node -e "
+const path = require('path');
+const fs = require('fs');
+const cli = require(path.join(process.env.GOS_ROOT, 'bin/lib/ops/auto/cli.cjs'));
+const out = [];
+const mk = cli.autoHintProvider({ env: { GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: 'hint-1' }, rootDir: process.cwd() });
+out.push('marker:' + mk.kind + ':' + mk.lines.length + ':' + (mk.lines.join(' ').includes('gos commit') && mk.lines.join(' ').includes('.gos/state.json') && mk.lines.join(' ').includes('push')));
+const none = cli.autoHintProvider({ env: {}, rootDir: fs.mkdtempSync(path.join(process.cwd(), 'bare-')) });
+out.push('none:' + none.kind + ':' + none.lines.length);
+const esc = String.fromCharCode(27);
+cli.autoHintProvider; // shape read below runs with a planted trip
+const store = require(path.join(process.env.GOS_ROOT, 'bin/lib/ops/auto/store.cjs'));
+store.recordTrip({ layer: 'N', cls: 'task', detail: \"deny 'gos approve archive': \" + esc + '[31m{\"type\":\"message\"}' + esc + '[0m' }, process.cwd());
+const mo = cli.autoHintProvider({ env: {}, rootDir: process.cwd() });
+const joined = mo.lines.join('\n');
+out.push('mode-on:' + mo.kind + ':' + (joined.includes('auto mode on') && joined.includes('profile restricted') && joined.includes('dispatch:')));
+out.push('sanitized:' + joined.includes('[spawn] deny') + ':' + !joined.includes(esc));
+console.log(out.join('|'));
+")"
+t104_eq "T18: hint provider marker/mode-on/none shapes with sanitized trip bytes" "marker:marker:2:true|none:none:0|mode-on:mode-on:true|sanitized:true:true" "$T27_HINT"
+
+# Sanitizer on status trip details: a breaker record quoting deny lines with
+# raw ANSI-laden JSON renders stripped and carries the spawn-output marker.
+t104_case c28
+t104_state THINK > .gos/state.json
+node "$GOS" auto on > /dev/null 2>&1
+node -e "
+const path = require('path');
+const store = require(path.join(process.env.GOS_ROOT, 'bin/lib/ops/auto/store.cjs'));
+const esc = String.fromCharCode(27);
+store.recordTrip({ layer: 'N', cls: 'task', detail: \"deny 'gos approve archive': \" + esc + '[31m{\"type\":\"message\",\"text\":\"tried\"}' + esc + '[0m' }, process.cwd());
+"
+GOS_AUTO_TEST_FIXTURE=1 node "$GOS" auto status > t28-status.txt 2>&1; T28_SRC=$?
+t104_exit "T18: status with an ANSI-laden trip detail exits 0" 0 "$T28_SRC"
+t104_contains "T18: trip detail renders through the spawn-output sanitizer (marked)" "[spawn] deny 'gos approve archive': {\"type\":\"message\"" "$(cat t28-status.txt)"
+if grep -qF "$(printf '\033')" t28-status.txt; then
+  t104_bad "T18: no escape byte survives into the status render"
+else
+  t104_ok "T18: no escape byte survives into the status render"
+fi
+
+# Wording surfaces: the three-tier vocabulary and the script-worker note
+# live in the README auto section and the gos-verify skill.
+T104_ROOT="$(cd "$GOS_ROOT" && pwd)"
+if grep -qF "mechanical clearance" "$T104_ROOT/README.md"; then
+  t104_ok "T18: README names mechanical clearance"
+else
+  t104_bad "T18: README names mechanical clearance"
+fi
+if grep -qF "mechanical clearance" "$T104_ROOT/skills/gos-verify/SKILL.md"; then
+  t104_ok "T18: gos-verify names mechanical clearance"
+else
+  t104_bad "T18: gos-verify names mechanical clearance"
+fi
+if grep -qF "script worker" "$T104_ROOT/skills/gos-verify/SKILL.md"; then
+  t104_ok "T18: gos-verify carries the script-worker note"
+else
+  t104_bad "T18: gos-verify carries the script-worker note"
+fi
 
 echo "--- T104 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]

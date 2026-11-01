@@ -143,13 +143,19 @@ back on.
 
 ### Delegation with evidence
 
-Stage approvals route three ways: **mechanical** gates pass automatically;
-**delegated** THINK/PLAN stages commit a PENDING record in-spawn and the
-runner ratifies it from outside against captured-stream stamps — an
-unratified PENDING blocks the next stage advance. THINK delegation requires
-a red-team pass from a **separate read-only spawn** whose prompt comes from
-a runner-held template (never repo files), passing **twice with zero
-findings**; any findings escalate to held. Archive and push stay human.
+Stage approvals use a three-tier vocabulary. **Mechanical clearance** —
+delegated THINK/PLAN stages commit a PENDING record in-spawn and the runner
+clears it from outside against captured-stream stamps, rendering it as
+mechanical clearance (store-verified when the evidence pairs a live store
+stamp, pre-loop legacy when the record predates the run); an uncleared
+PENDING blocks the next stage advance. **Progress release** — stage progress
+is released only after its evidence checks pass: THINK delegation requires a
+red-team pass from a **separate read-only spawn** whose prompt comes from a
+runner-held template (never repo files), passing **twice with zero
+findings**; any findings hold the gate. **Human approval** — archive and
+push stay human, never delegated. `gos auto status` prints the per-stage
+dispatch view (worker form, profile, model slot, grants, cap, unit) and the
+clearance tier of every delegated stage.
 
 ### The breaker — what stops a runaway loop
 
