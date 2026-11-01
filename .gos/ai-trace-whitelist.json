@@ -171,6 +171,12 @@
     ]
   },
   {
+    "path": "bin/lib/core/spawnreg.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
     "path": "bin/lib/core/state.cjs",
     "category": "frozen-string",
     "reason": "Contract sidecar-hash table: the lessonsAnchor verdict string is a frozen product contract line asserted by suite sections.",
@@ -629,6 +635,18 @@
     ]
   },
   {
+    "path": "bin/lib/ops/auto/launcher.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/ops/auto/store.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
     "path": "bin/lib/ops/changelog-core.cjs",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -770,6 +788,12 @@
         "sha256": "76b61f6ea9edff48418c510972f1a37168708b30c4ec1969ae883ca70632f7db"
       }
     ]
+  },
+  {
+    "path": "bin/lib/ops/gate.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 34,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/ops/gitseed.cjs",
@@ -925,6 +949,12 @@
     ]
   },
   {
+    "path": "bin/lib/task/commit.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 9,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
     "path": "bin/lib/task/context.cjs",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -960,10 +990,16 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 19,
+        "line": 21,
         "sha256": "8815a4d2e597b3020e9137c05efd61d1c0209ca65df0d2a956f177795e83a0c0"
       }
     ]
+  },
+  {
+    "path": "bin/lib/task/plansnap.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/task/stage.cjs",
@@ -1071,10 +1107,16 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 64,
+        "line": 92,
         "sha256": "ce56c664db6abf69430a9850e8078d1151ed3a2e885a99846882000f2a9a2b07"
       }
     ]
+  },
+  {
+    "path": "test/run-sections.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T10-security-e2e.test.sh",

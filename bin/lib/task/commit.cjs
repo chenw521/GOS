@@ -175,6 +175,16 @@ function enforceStampedSpecFloor(state, specText) {
   console.log(`✓ spec gate: floor v${stamp} holds (stamp kept)`);
 }
 
+// Plan-freeze refusal renderer: the freeze returned {ok:false, reason, detail}
+// (malformed wave structure or an unsafe declared path) — the commit stops
+// before any state mutation, keeping the task exactly where it stood.
+function refusePlanFreeze(refusal) {
+  console.error(`${core.CONTRACTS.state_semantics.commitBlocked} (plan freeze):`);
+  console.error(`✗ ${refusal.reason}: ${refusal.detail}`);
+  console.error('  fix: repair plan.md — waves numbered from 1, contiguous and unique; declared files repo-relative, outside .git/** and hooks/** — then re-run the commit');
+  process.exit(1);
+}
+
 function cmdCommit(argv) {
   // --subject "<text>": explicit commit subject (English escape hatch when the
   // intent summary cannot serve as one). Consumed BEFORE <stage> parsing so
@@ -388,14 +398,20 @@ function cmdCommit(argv) {
     }
   }
   if (stage === 'PLAN' && lv >= 3) {
-    state.plan_snapshot = sibPlansnap.freezeOrRefreshPlanSnapshot(state, { force: forceFlag }); // B-15
+    const frozen = sibPlansnap.freezeOrRefreshPlanSnapshot(state, { force: forceFlag }); // B-15
+    if (frozen && frozen.ok === false) refusePlanFreeze(frozen);
+    state.plan_snapshot = frozen;
   }
   if (stage === 'BUILD' && !state.plan_snapshot) {
     // F1 lazy-freeze: pre-Phase-B task reaches BUILD without a snapshot → freeze from the
-    // current plan.md parse + banner + audit row, then proceed (dogfood path for this task)
+    // current plan.md parse + banner + audit row, then proceed (dogfood path for this task).
+    // Malformed plans (gapped/duplicate waves, unsafe declared paths) refuse here too —
+    // the same freeze validation runs on every freeze path.
     const parsed = sibPlansnap.parsePlanMd();
     if (parsed && parsed.length) {
-      state.plan_snapshot = { tasks: sibPlansnap.buildPlanSnapshotTasks(parsed), audit: [{ at: new Date().toISOString(), what: 'lazy-freeze' }] };
+      const frozen = sibPlansnap.freezeOrRefreshPlanSnapshot(state, { force: false, lazy: true });
+      if (frozen && frozen.ok === false) refusePlanFreeze(frozen);
+      state.plan_snapshot = frozen;
       sibPlansnap.pushLazyFreezeLedger(state, 'lazy-freeze:plan');
       console.log(`⚠ ${core.CONTRACTS.semantic_checks.lazyFreeze}`);
     }

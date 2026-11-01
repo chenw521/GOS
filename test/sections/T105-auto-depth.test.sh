@@ -49,6 +49,12 @@
 #           runner-resolved model pin lands verbatim in the spawn argv;
 #           advisoryLine renders the self-report (mismatch and over-ceiling
 #           included) as one text line
+#   plansnap  D3  wave-field freeze validation: frozen task entries carry
+#           `wave` on multi-wave plans; gapped/duplicate wave numbering and
+#           unsafe declared paths (.git/**, absolute, '..' segments, hooks/**)
+#           refuse the freeze with named errors; a heading-less plan freezes
+#           with the verdict recorded in meta.waveValidation and refuses
+#           BUILD entry with guidance back to PLAN
 # Fake host: GOS_AUTO_TEST_FIXTURE=1 activates the registry fixture row;
 # loop spawns run through injected spawnRunner harnesses only. HOME and
 # XDG_DATA_HOME are pinned per case under TESTBASE;
@@ -1229,6 +1235,99 @@ console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
 EOF
 TL2_OUT="$(node run-tl2.cjs 2>&1 | tail -n 1)"
 t105_eq "T11: pinnedModelArgs — opencode pins --model verbatim into the spawn argv; codex flag unrecorded → no flag invented" "OK" "$TL2_OUT"
+
+# ---------------------------------------------------------------- PS --
+t105_case ps
+# dedicated state: plan_path pins the fixture plan explicitly (the shared
+# t105_state fixture carries a 41-char task_head that cannot anchor a task dir)
+printf '{"schema_version":6,"level":3,"current_stage":"PLAN","completed_stages":["INTENT"],"intent":{"summary":"t105 plansnap fixture","confirmed":true},"task_head":"abc123def0123456789abcdef0123456789abcdef","spec_path":null,"plan_path":".gos/task/ps/plan.md","requirements":[],"decisions":[],"observable_truths":[],"gaps":[],"checkpoints":[],"approvals":{}}' > .gos/state.json
+cat > run-ps.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const plansnap = require(path.join(GR, 'bin/lib/task/plansnap.cjs'));
+const planPath = path.join(process.cwd(), '.gos', 'task', 'ps', 'plan.md');
+const problems = [];
+const writePlan = (s) => { fs.mkdirSync(path.dirname(planPath), { recursive: true }); fs.writeFileSync(planPath, s); };
+const freeze = () => plansnap.freezeOrRefreshPlanSnapshot(
+  { current_stage: 'PLAN', plan_snapshot: null }, { force: false });
+// (a) five-wave plan (the live dispatch plan shape): task entries carry wave,
+// meta.waveValidation ok, BUILD entry passes
+writePlan([
+  '# Plan',
+  '### Wave 1 (parallel — shared substrate)',
+  '#### T1: constants home',
+  '- **Covers**: D-8',
+  '- **Files**: bin/lib/ops/auto/limits.cjs',
+  '#### T2: spawn runner',
+  '- **Covers**: D-5',
+  '- **Files**: bin/lib/ops/auto/spawnrun.cjs, test/sections/T105-auto-depth.test.sh',
+  '### Wave 2 (depends on Wave 1)',
+  '#### T3: dispatch table',
+  '- **Covers**: D-1',
+  '- **Files**: templates/auto-dispatch.json, bin/lib/ops/auto/workers.cjs',
+  '#### T4: store schema',
+  '- **Covers**: D-5',
+  '- **Files**: bin/lib/ops/auto/store.cjs',
+  '### Wave 3 (depends on Wave 2)',
+  '#### T5: plansnap waves',
+  '- **Covers**: D-3',
+  '- **Files**: bin/lib/task/plansnap.cjs',
+  '### Wave 4 (depends on Wave 3)',
+  '#### T6: render surfaces',
+  '- **Covers**: D-4',
+  '- **Files**: bin/lib/ops/auto/cli.cjs',
+  '### Wave 5 (depends on Waves 1-4)',
+  '#### T7: ledger',
+  '- **Covers**: D-49',
+  '- **Files**: census.json',
+].join('\n') + '\n');
+const a = freeze();
+if (!a || a.ok === false) problems.push('five-wave freeze refused: ' + JSON.stringify(a && a.reason));
+if (!a.meta || !a.meta.waveValidation || a.meta.waveValidation.ok !== true || a.meta.waveValidation.waves !== 5) {
+  problems.push('meta.waveValidation not ok/5: ' + JSON.stringify(a.meta));
+}
+const waveOf = new Map(a.tasks.map((t) => [t.id, t.wave]));
+const wantWaves = { T1: 1, T2: 1, T3: 2, T4: 2, T5: 3, T6: 4, T7: 5 };
+for (const [id, w] of Object.entries(wantWaves)) {
+  if (waveOf.get(id) !== w) problems.push('task ' + id + ' wave ' + waveOf.get(id) + ' != ' + w);
+}
+if (!plansnap.buildEntryCheck(a).ok) problems.push('five-wave BUILD entry refused');
+// (b) gapped waves (1,3) refuse at freeze naming the missing middle
+writePlan('# Plan\n### Wave 1\n\n#### T1: a\n- **Covers**: D-1\n- **Files**: test/a.sh\n\n### Wave 3\n\n#### T2: b\n- **Covers**: D-1\n- **Files**: test/b.sh\n');
+const b = freeze();
+if (!b || b.ok !== false || b.reason !== 'gapped-wave') problems.push('gapped not refused: ' + JSON.stringify(b && b.reason));
+if (!String((b && b.detail) || '').includes('2')) problems.push('gapped detail does not name the missing wave');
+// (c) duplicate `### Wave 2` heading refuses at freeze
+writePlan('# Plan\n### Wave 1\n\n#### T1: a\n- **Covers**: D-1\n- **Files**: test/a.sh\n\n### Wave 2\n\n#### T2: b\n- **Covers**: D-1\n- **Files**: test/b.sh\n\n### Wave 2\n\n#### T3: c\n- **Covers**: D-1\n- **Files**: test/c.sh\n');
+const c = freeze();
+if (!c || c.ok !== false || c.reason !== 'duplicate-wave') problems.push('duplicate not refused: ' + JSON.stringify(c && c.reason));
+if (!String((c && c.detail) || '').includes('2')) problems.push('duplicate detail does not name wave 2');
+// (d) unsafe declared paths refuse at freeze, the offender named
+const unsafe = ['.git/config', '/abs/path', 'foo/../bar', 'hooks/pre-push'];
+for (let i = 0; i < unsafe.length; i += 1) {
+  writePlan('# Plan\n### Wave 1\n\n#### T' + (i + 1) + ': unsafe\n- **Covers**: D-1\n- **Files**: ' + unsafe[i] + '\n');
+  const d = freeze();
+  if (!d || d.ok !== false || d.reason !== 'unsafe-path') problems.push('unsafe ' + unsafe[i] + ' not refused: ' + JSON.stringify(d && d.reason));
+  if (!String((d && d.detail) || '').includes(unsafe[i])) problems.push('unsafe refusal does not name ' + unsafe[i]);
+}
+// (e) heading-less plan: freezes legally, verdict recorded zero-wave, BUILD
+// entry refuses with guidance naming PLAN; legacy meta-less snapshots pass
+writePlan('# Plan\n\n#### T1: simple\n- **Covers**: D-1\n- **Files**: test/one.sh\n\n#### T2: plain\n- **Covers**: D-1\n- **Files**: test/two.sh\n');
+const e = freeze();
+if (!e || e.ok === false) problems.push('zero-wave freeze refused: ' + JSON.stringify(e && e.reason));
+const ev = ((e || {}).meta || {}).waveValidation || {};
+if (ev.ok !== false || ev.reason !== 'zero-wave') problems.push('waveValidation not zero-wave: ' + JSON.stringify(ev));
+if (!e.tasks || e.tasks.length !== 2) problems.push('zero-wave snapshot tasks missing');
+if (e.tasks && e.tasks.some((t) => t.wave !== undefined)) problems.push('heading-less snapshot entries carry a wave');
+const entry = plansnap.buildEntryCheck(e);
+if (!entry || entry.ok !== false || entry.reason !== 'zero-wave') problems.push('BUILD entry not refused: ' + JSON.stringify(entry && entry.reason));
+if (!String((entry && entry.guidance && entry.guidance.fix) || '').includes('PLAN')) problems.push('entry guidance does not name PLAN');
+if (!plansnap.buildEntryCheck({ tasks: e.tasks, audit: [] }).ok) problems.push('legacy meta-less snapshot refused at BUILD entry');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+PS_OUT="$(node run-ps.cjs 2>&1 | tail -n 1)"
+t105_eq "T14: plansnap — frozen tasks carry wave; gapped/duplicate/unsafe refuse at freeze; zero-wave freezes but refuses BUILD entry with PLAN guidance" "OK" "$PS_OUT"
 
 echo "--- T105 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]
