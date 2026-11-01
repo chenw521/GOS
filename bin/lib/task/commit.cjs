@@ -318,6 +318,21 @@ function cmdCommit(argv) {
     if (g.fix) console.error(`    fix: ${g.fix}`);
     process.exit(1);
   }
+  // Marker-session approvals baseline: the spawn env carries a sha256 of
+  // the approvals map the runner passed in. A delegated advance may only
+  // add its own PENDING record; an approvals[stage] record that exists
+  // under a drifted map is diffusion — refuse. An absent baseline in a
+  // marker session fails closed (the runner always passes one).
+  if (ratify.spawnMarkerActive() && ratify.isDelegatedStage(stage)) {
+    const base = ratify.checkApprovalsBaseline({ approvals: state.approvals, stage });
+    if (base.ok === false) {
+      console.error(`${core.CONTRACTS.state_semantics.commitBlocked} (ratification boundary):`);
+      console.error(`✗ ${base.reason}${base.detail ? `: ${base.detail}` : ''}`);
+      if (base.guidance && base.guidance.why) console.error(`    why: ${base.guidance.why}`);
+      if (base.guidance && base.guidance.fix) console.error(`    fix: ${base.guidance.fix}`);
+      process.exit(1);
+    }
+  }
   if (ratify.spawnMarkerActive() && ratify.isDelegatedStage(stage) && !(state.approvals || {})[stage]) {
     const rec = ratify.recordPending({ stage });
     state.approvals = state.approvals || {};

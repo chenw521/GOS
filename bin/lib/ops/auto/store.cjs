@@ -80,6 +80,14 @@ const TRIP_LAYERS = new Set(['N', 'K', 'B']);
 
 const SNAPSHOT_KINDS = new Set(['denyBaseline', 'hostSeed', 'redteamPrompt', 'prTemplate']);
 
+// Pinned worktrees (Class P legs): run tags and record bounds. Records map
+// a filename-safe run tag to the worktree's absolute path, its tree hash,
+// the loop-start commit it pins, and the creation time (lazy recycles drop
+// pins whose run tag is not live).
+const PIN_RUN_TAG_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const GIT_SHA_RE = /^[0-9a-f]{7,64}$/;
+const PIN_DIR_NAME = 'pin-worktrees';
+
 // Append caps: oldest entries drop beyond the cap so a long-lived store
 // stays bounded. In-flight entries are always the newest, never trimmed.
 const CAPS = { breakerRecords: 100, dispositions: 200, probeResults: 50, stamps: 1000 };
@@ -197,6 +205,24 @@ function validateStoreShape(st) {
   if (!Array.isArray(st.probeResults)) errs.push('probeResults: array required');
   else if (!st.probeResults.every((p) => isPlainObject(p) && typeof p.host === 'string' && typeof p.state === 'string')) {
     errs.push('probeResults: entries need string host+state');
+  }
+  // Optional pinWorktrees key (additive): absent on older stores, but a
+  // present-but-malformed one is structural damage.
+  if (st.pinWorktrees != null) {
+    if (!isPlainObject(st.pinWorktrees)) errs.push('pinWorktrees: object required');
+    else {
+      for (const tag of Object.keys(st.pinWorktrees)) {
+        const v = st.pinWorktrees[tag];
+        if (!PIN_RUN_TAG_RE.test(tag) || !isPlainObject(v)
+          || typeof v.path !== 'string' || !path.isAbsolute(v.path)
+          || typeof v.treeSha !== 'string' || !GIT_SHA_RE.test(v.treeSha)
+          || typeof v.loopStartCommit !== 'string' || !GIT_SHA_RE.test(v.loopStartCommit)
+          || typeof v.createdAtIso !== 'string' || !ISO_RE.test(v.createdAtIso)) {
+          errs.push(`pinWorktrees: entry ${tag} needs absolute path, hex treeSha + loopStartCommit, ISO createdAtIso`);
+          break;
+        }
+      }
+    }
   }
   return errs;
 }
@@ -1080,12 +1106,14 @@ function breakRunLock(rootDir) {
 // from the dispatch table's stage entry (BUILD carries the checkpoint verb
 // and the raised 64 cap; THINK/PLAN/VERIFY stay at 16); explicit values are
 // validated fail-closed — vocabulary closed set, cap never past the hard
-// ceiling. Redteam spawns register without any write authorization.
+// ceiling. Redteam spawns register without any write authorization; script
+// spawns (Class S fixed-argv steps) register as kind 'script' and only for
+// script-worker stages.
 function registerSpawn(rec, rootDir) {
   if (!isPlainObject(rec) || typeof rec.spawnId !== 'string' || !SPAWN_ID_FILE_RE.test(rec.spawnId)) {
     return { ok: false, status: 'error', reason: 'invalid-spawn-id', detail: 'spawnId must be filename-safe (letters, digits, dot, dash, underscore)' };
   }
-  const kind = rec.kind === 'redteam' ? 'redteam' : 'work';
+  const kind = rec.kind === 'redteam' ? 'redteam' : rec.kind === 'script' ? 'script' : 'work';
   const stage = String(rec.stage || '').toUpperCase();
   if (!stage) return { ok: false, status: 'error', reason: 'invalid-stage', detail: 'stage required' };
   const table = workers.loadDispatchTable();
@@ -1094,6 +1122,9 @@ function registerSpawn(rec, rootDir) {
   }
   const stageEntry = table.table.stages[stage];
   if (!stageEntry) return { ok: false, status: 'error', reason: 'invalid-stage', detail: `unknown stage ${stage}` };
+  if (kind === 'script' && stageEntry.worker !== 'script') {
+    return { ok: false, status: 'error', reason: 'invalid-kind', detail: `kind 'script' registers only for script-worker stages (${stage} runs '${stageEntry.worker}')` };
+  }
   let grants = Array.isArray(rec.grants) ? [...new Set(rec.grants.map(String))] : [...stageEntry.verbs];
   if (kind === 'redteam') grants = [];
   const badVerbs = grants.filter((v) => !workers.VERBS.includes(v));
@@ -1211,6 +1242,91 @@ function admitAndAck(rootDir, spawnId, cmdName, argvStage, opts = {}) {
   return out;
 }
 
+// ---- pinned worktree records (Class P legs) ----
+// Pin records live as an additive store.json key (never written by older
+// writers, never fatal to older readers — validation only fires when the
+// key is present). The worktree directories themselves live under
+// <storeRoot>/pin-worktrees/<runTag>, this machine only.
+
+function pinWorktreesDir(rootDir) {
+  const root = storeRoot(rootDir);
+  return root == null ? null : path.join(root, PIN_DIR_NAME);
+}
+
+// Record (or refresh) one pinned worktree. The path must be exactly the
+// pin-worktrees/<runTag> slot for this store so a record can never point a
+// recycle at an arbitrary path.
+function recordPin(rootDir, rec) {
+  if (!isPlainObject(rec)) return { ok: false, status: 'error', reason: 'invalid-pin' };
+  if (typeof rec.runTag !== 'string' || !PIN_RUN_TAG_RE.test(rec.runTag)) {
+    return { ok: false, status: 'error', reason: 'invalid-pin-run-tag', detail: 'runTag must be filename-safe (letters, digits, dot, dash, underscore)' };
+  }
+  if (typeof rec.loopStartCommit !== 'string' || !GIT_SHA_RE.test(rec.loopStartCommit)) {
+    return { ok: false, status: 'error', reason: 'invalid-pin-commit', detail: 'loopStartCommit must be a git commit hash (7-64 hex chars)' };
+  }
+  if (typeof rec.treeSha !== 'string' || !GIT_SHA_RE.test(rec.treeSha)) {
+    return { ok: false, status: 'error', reason: 'invalid-pin-tree-sha', detail: 'treeSha must be a git tree hash (7-64 hex chars)' };
+  }
+  const dir = pinWorktreesDir(rootDir);
+  if (dir == null) return paused('unwritable', null, 'no XDG data home resolvable', 'auto.store.unwritable');
+  if (typeof rec.path !== 'string' || path.resolve(rec.path) !== path.join(dir, rec.runTag)) {
+    return { ok: false, status: 'error', reason: 'invalid-pin-path', detail: `pin path must be ${path.join(dir, rec.runTag)}` };
+  }
+  const r = mutate(rootDir, (st) => {
+    if (!isPlainObject(st.pinWorktrees)) st.pinWorktrees = {};
+    st.pinWorktrees[rec.runTag] = {
+      path: path.resolve(rec.path),
+      treeSha: rec.treeSha,
+      loopStartCommit: rec.loopStartCommit,
+      createdAtIso: new Date().toISOString(),
+    };
+    return st;
+  });
+  return r.ok ? { ok: true, path: r.path, record: r.store.pinWorktrees[rec.runTag] } : r;
+}
+
+// Read-only view of every recorded pin.
+function readPins(rootDir) {
+  const cur = load(rootDir);
+  if (!cur.ok) return cur;
+  return { ok: true, path: cur.path, pins: isPlainObject(cur.store.pinWorktrees) ? cur.store.pinWorktrees : {} };
+}
+
+// Drop one pin record (worktree removal is the caller's job).
+function dropPin(rootDir, runTag) {
+  if (typeof runTag !== 'string' || !PIN_RUN_TAG_RE.test(runTag)) {
+    return { ok: false, status: 'error', reason: 'invalid-pin-run-tag', detail: 'runTag must be filename-safe' };
+  }
+  let dropped = null;
+  const r = mutate(rootDir, (st) => {
+    if (isPlainObject(st.pinWorktrees) && Object.prototype.hasOwnProperty.call(st.pinWorktrees, runTag)) {
+      dropped = st.pinWorktrees[runTag];
+      delete st.pinWorktrees[runTag];
+    }
+    return st;
+  });
+  return r.ok ? { ok: true, path: r.path, dropped } : r;
+}
+
+// Prune helper: drop every pin record whose run tag is not live; the
+// dropped records ride the result so the caller can remove the worktrees.
+function prunePins(rootDir, opts = {}) {
+  const live = new Set(Array.isArray(opts.liveRunTags) ? opts.liveRunTags.map(String) : []);
+  const dropped = [];
+  const r = mutate(rootDir, (st) => {
+    if (isPlainObject(st.pinWorktrees)) {
+      for (const tag of Object.keys(st.pinWorktrees)) {
+        if (!live.has(tag)) {
+          dropped.push({ runTag: tag, ...st.pinWorktrees[tag] });
+          delete st.pinWorktrees[tag];
+        }
+      }
+    }
+    return st;
+  });
+  return r.ok ? { ok: true, path: r.path, dropped } : r;
+}
+
 // ---- teardown ----
 
 // Remove this repo's store (`auto off --purge`). Only the per-repo directory
@@ -1267,5 +1383,10 @@ module.exports = {
   removeSpawn,
   writeGrantManifest,
   admitAndAck,
+  pinWorktreesDir,
+  recordPin,
+  readPins,
+  dropPin,
+  prunePins,
   purgeStore,
 };

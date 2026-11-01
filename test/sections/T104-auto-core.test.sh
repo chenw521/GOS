@@ -206,7 +206,8 @@ const fs = require('fs');
 fs.writeFileSync('.gos/.lock', JSON.stringify({pid: process.ppid, started_at: new Date().toISOString(), boot_id: null, starttime: sr.procStartTime(process.ppid)}));
 sr.writeEntry(process.cwd(), {spawnId: 't3', kind: 'work', stage: 'THINK', pid: process.ppid, wallMs: 600000});
 "
-GOS_AUTO_SPAWNED=1 GOS_AUTO_SPAWN_ID=t3 node "$GOS" commit think > t3-pending.txt 2>&1; T3_PRC=$?
+T3_BASE="$(node -e "console.log(require('crypto').createHash('sha256').update('{}').digest('hex'))")" # runner-passed approvals baseline (empty map)
+GOS_AUTO_SPAWNED=1 GOS_AUTO_SPAWN_ID=t3 GOS_AUTO_APPROVALS_BASELINE="$T3_BASE" node "$GOS" commit think > t3-pending.txt 2>&1; T3_PRC=$?
 rm -f .gos/.lock   # the runner releases between spawns — later probes must meet the PENDING boundary, not the lock
 t104_exit "T3: in-spawn commit on a delegated stage succeeds structurally" 0 "$T3_PRC"
 t104_contains "T3: in-spawn commit records a PENDING auto-approval (no evidence claim)" "approval recorded as PENDING" "$(cat t3-pending.txt)"
@@ -241,7 +242,7 @@ const ok = ratify.ratify({ stage: 'THINK', spawnId: 'spawn-t3', streamSha256: sh
 if (!ok.ok || !ok.replacedPending) problems.push('ratify did not replace the PENDING');
 const ev = ok.stored && ok.stored.evidence;
 if (!ev || ev.spawnId !== 'spawn-t3' || ev.streamSha256 !== sha || ev.stampCount !== 1) problems.push('evidence shape');
-if (ok.stored.mode !== 'auto' || ok.stored.status !== 'ratified') problems.push('ratified record mode/status');
+if (ok.stored.mode !== 'auto' || ok.stored.status !== 'cleared') problems.push('ratified record mode/status');
 if (ratify.advanceBlocker({ THINK: ok.stored })) problems.push('ratified still blocks');
 if (!ratify.advanceBlocker({ THINK: ratify.recordPending({ stage: 'THINK' }).approval })) problems.push('PENDING does not block');
 console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
@@ -732,8 +733,9 @@ const gosCommit = (stage) => {
   fs.writeFileSync(path.join(rootDir, '.gos', '.lock'), JSON.stringify({ pid: process.pid, started_at: new Date().toISOString(), boot_id: null, starttime: sr.procStartTime(process.pid) }));
   const sid = 'leg-' + stage.toLowerCase();
   sr.writeEntry(rootDir, { spawnId: sid, kind: 'work', stage, pid: process.pid, wallMs: 600000 });
+  const approvalsNow = (JSON.parse(fs.readFileSync(stateFile, 'utf8')).approvals) || {};
   return spawnSync(process.execPath, [path.join(GR, 'bin', 'gos.cjs'), 'commit', stage.toLowerCase()], {
-    cwd: rootDir, env: { ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: sid }, encoding: 'utf8',
+    cwd: rootDir, env: { ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: sid, GOS_AUTO_APPROVALS_BASELINE: require('crypto').createHash('sha256').update(JSON.stringify(approvalsNow)).digest('hex') }, encoding: 'utf8',
   });
 };
 const spawnRunner = (spec) => {
@@ -754,8 +756,8 @@ const spawnRunner = (spec) => {
   const st = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
   const aT = (st.approvals || {}).THINK || {};
   const aP = (st.approvals || {}).PLAN || {};
-  if (aT.status !== 'ratified' || aT.mode !== 'auto') problems.push('THINK not ratified: ' + JSON.stringify(aT));
-  if (aP.status !== 'ratified' || aP.mode !== 'auto') problems.push('PLAN not ratified: ' + JSON.stringify(aP));
+  if (aT.status !== 'cleared' || aT.mode !== 'auto') problems.push('THINK not ratified: ' + JSON.stringify(aT));
+  if (aP.status !== 'cleared' || aP.mode !== 'auto') problems.push('PLAN not ratified: ' + JSON.stringify(aP));
   const thinkIter = (r.iterations || []).find((i) => i.stage === 'THINK');
   if (!thinkIter) problems.push('no THINK iteration recorded');
   else {
@@ -811,8 +813,9 @@ function mkWorld(name, verdictFor) {
     const sr = require(path.join(GR, 'bin/lib/core/spawnreg.cjs'));
     fs.writeFileSync(path.join(dir, '.gos', '.lock'), JSON.stringify({ pid: process.pid, started_at: new Date().toISOString(), boot_id: null, starttime: sr.procStartTime(process.pid) }));
     sr.writeEntry(dir, { spawnId: spec.spawnId, kind: 'work', stage: 'THINK', pid: process.pid, wallMs: 600000 });
+    const approvalsNow = (JSON.parse(fs.readFileSync(path.join(dir, '.gos', 'state.json'), 'utf8')).approvals) || {};
     const r = spawnSync(process.execPath, [path.join(GR, 'bin', 'gos.cjs'), 'commit', 'think'], {
-      cwd: dir, env: { ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: spec.spawnId }, encoding: 'utf8',
+      cwd: dir, env: { ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: spec.spawnId, GOS_AUTO_APPROVALS_BASELINE: require('crypto').createHash('sha256').update(JSON.stringify(approvalsNow)).digest('hex') }, encoding: 'utf8',
     });
     try { fs.unlinkSync(path.join(dir, '.gos', '.lock')); } catch { /* gone */ }
     if (r.status !== 0) problems.push(`in-spawn commit rc=${r.status}: ${String(r.stderr || r.stdout).slice(0, 200)}`);
@@ -1155,8 +1158,9 @@ function snapshotState() {
     const sr = require(path.join(GR, 'bin/lib/core/spawnreg.cjs'));
     fs.writeFileSync(path.join(world, '.gos', '.lock'), JSON.stringify({ pid: process.pid, started_at: new Date().toISOString(), boot_id: null, starttime: sr.procStartTime(process.pid) }));
     sr.writeEntry(world, { spawnId: spec.spawnId, kind: 'work', stage: 'THINK', pid: process.pid, wallMs: 600000 });
+    const approvalsNow = (JSON.parse(fs.readFileSync(path.join(world, '.gos', 'state.json'), 'utf8')).approvals) || {};
     spawnSync(process.execPath, [path.join(GR, 'bin', 'gos.cjs'), 'commit', 'think'], {
-      cwd: world, env: { ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: spec.spawnId }, encoding: 'utf8',
+      cwd: world, env: { ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: spec.spawnId, GOS_AUTO_APPROVALS_BASELINE: require('crypto').createHash('sha256').update(JSON.stringify(approvalsNow)).digest('hex') }, encoding: 'utf8',
     });
     return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
   };
@@ -1204,7 +1208,7 @@ const spawnRunner = (spec) => {
   if (r.reason === 'orphan-pending-unrecoverable') problems.push('stamp present but orphan declared unrecoverable');
   const st = JSON.parse(fs.readFileSync(path.join(world, '.gos', 'state.json'), 'utf8'));
   const aT = (st.approvals || {}).THINK || {};
-  if (aT.status !== 'ratified') problems.push('orphan PENDING not ratified: ' + JSON.stringify(aT.status));
+  if (aT.status !== 'cleared') problems.push('orphan PENDING not ratified: ' + JSON.stringify(aT.status));
   if (r.status === 'paused' && r.reason !== 'iteration-cap') problems.push('paused: ' + r.reason);
   console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
 })().catch((e) => { console.error(e); process.exit(1); });
@@ -1279,7 +1283,7 @@ const spawnRunner = (spec) => {
   spawnreg.writeEntry(world, { spawnId: 'c20', kind: 'work', stage: 'THINK', pid: process.pid, wallMs: 600000 });
   fs.writeFileSync(path.join(world, 'test', 'session-work.txt'), 'session output\n');
   const r = spawnSync(process.execPath, [path.join(GR, 'bin', 'gos.cjs'), 'commit', 'think'], {
-    cwd: world, env: { ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: 'c20', GOS_AUTO_DIRTY_BASELINE: spec.env.GOS_AUTO_DIRTY_BASELINE }, encoding: 'utf8',
+    cwd: world, env: { ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: 'c20', GOS_AUTO_DIRTY_BASELINE: spec.env.GOS_AUTO_DIRTY_BASELINE, GOS_AUTO_APPROVALS_BASELINE: require('crypto').createHash('sha256').update(JSON.stringify((JSON.parse(fs.readFileSync(path.join(world, '.gos', 'state.json'), 'utf8')).approvals) || {})).digest('hex') }, encoding: 'utf8',
   });
   const childAll = String(r.stdout || '').concat(r.stderr || '');
   if (!(childAll.includes('spawn baseline guard') && childAll.includes('test/supervisor-scratch.txt'))) problems.push('exclusion warning missing');
