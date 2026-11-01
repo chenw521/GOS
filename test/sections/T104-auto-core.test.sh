@@ -45,6 +45,14 @@
 #   mutation case (extends the external-mutation truth): spawn-authored
 #           non-advancing commits count into N (rc0-no-advance), an external
 #           stage change pauses with a report
+#   dispatch case: per-stage composition is table-driven — THINK restricted
+#           with four-verb grants and no model argv under inherit, BUILD
+#           workspace with git identity, five-verb grants, kernel tier and a
+#           resolved --model pin (c19); unknown stages and mid-run table
+#           flips pause as external-mutation before the next consume (c22);
+#           telemetry stamps carry the D-5 fields with window sidecars (c23);
+#           script-stage VERIFY never probes the host and advances through
+#           the runner-driven commit channel (c24)
 # Fake host: GOS_AUTO_TEST_FIXTURE=1 activates the registry fixture row
 # (gos-fixture-host; probe answers from recorded data, never a live spawn).
 # Loop spawns run through injected spawnRunner harnesses only — no real host
@@ -698,19 +706,37 @@ kill "$T16_CHILD" 2>/dev/null
 T104_PIDS=""
 
 # ------------------------------------------- runner legs (delegation) ------
-# runner legs end to end: the fake host runs the REAL in-spawn commit for the
-# delegated stages (PENDING recorded by the commit gate), red-team rounds
-# answer findings=0 twice, and the loop ratifies from the store stamp before
-# the next stage spawn proceeds.
+# runner legs end to end over the dispatch table: the fake host runs the REAL
+# in-spawn commit for the delegated stages (PENDING recorded by the commit
+# gate), red-team rounds answer findings=0 twice, and the loop ratifies from
+# the store stamp before the next stage spawn proceeds. BUILD runs the wave
+# driver over the frozen two-wave snapshot (one commit per wave touching only
+# declared files) and exits through one final advance spawn running the real
+# `gos commit build`; VERIFY runs as a script stage (pinned legs + a Class S
+# sections spawn, never a model spawn) and its advance is runner-driven.
 t104_case c13
 mkdir -p .gos/task/p0
 printf '# Spec\n\np0 auto spec\n' > .gos/task/p0/spec.md
-printf '# Plan\n\np0 auto plan\n' > .gos/task/p0/plan.md
-t104_state THINK 3 ',"spec_path":".gos/task/p0/spec.md","plan_path":".gos/task/p0/plan.md"' > .gos/state.json
+cat > .gos/task/p0/plan.md <<'PLAN'
+# Plan
+
+### Wave 1
+
+#### T13a: first fixture wave
+**Files**: src/w1.txt
+
+### Wave 2
+
+#### T13b: second fixture wave
+**Files**: src/w2.txt
+PLAN
+t104_state THINK 3 ',"spec_path":".gos/task/p0/spec.md","plan_path":".gos/task/p0/plan.md","semantic":{"allowlist":["run-c13.cjs"]}' > .gos/state.json
+node -e "const fs=require('fs');const p='.gos/state.json';const st=JSON.parse(fs.readFileSync(p,'utf8'));const {execSync}=require('child_process');st.task_head=execSync('git rev-parse HEAD').toString().trim();fs.writeFileSync(p,JSON.stringify(st,null,2));"
 export GOS_AUTO_TIMEOUT_WALL_SEC=5 GOS_AUTO_TIMEOUT_IDLE_SEC=2
 cat > run-c13.cjs <<'EOF'
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const GR = process.env.GOS_ROOT;
 const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
@@ -719,29 +745,43 @@ const rootDir = process.cwd();
 const env = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
 const problems = [];
 const stateFile = path.join(rootDir, '.gos', 'state.json');
-const NEXT = { BUILD: 'REVIEW', REVIEW: 'VERIFY', VERIFY: 'SHIP' };
-function setStage(s) {
-  const st = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-  st.current_stage = s;
-  fs.writeFileSync(stateFile, JSON.stringify(st, null, 2));
-}
-const gosCommit = (stage) => {
-  // Channel setup per assigned advance: the harness process holds the lock
-  // and registers a fresh spawn entry for this stage.
+const NEXT = { REVIEW: 'VERIFY', VERIFY: 'SHIP' };
+const sha = (t) => crypto.createHash('sha256').update(t, 'utf8').digest('hex');
+function readState() { return JSON.parse(fs.readFileSync(stateFile, 'utf8')); }
+function setStage(s) { const st = readState(); st.current_stage = s; fs.writeFileSync(stateFile, JSON.stringify(st, null, 2)); }
+function gosCommit(stage, specEnv) {
   const sr = require(path.join(GR, 'bin/lib/core/spawnreg.cjs'));
-  const fs = require('fs');
   fs.writeFileSync(path.join(rootDir, '.gos', '.lock'), JSON.stringify({ pid: process.pid, started_at: new Date().toISOString(), boot_id: null, starttime: sr.procStartTime(process.pid) }));
-  const sid = 'leg-' + stage.toLowerCase();
-  sr.writeEntry(rootDir, { spawnId: sid, kind: 'work', stage, pid: process.pid, wallMs: 600000 });
-  const approvalsNow = (JSON.parse(fs.readFileSync(stateFile, 'utf8')).approvals) || {};
-  return spawnSync(process.execPath, [path.join(GR, 'bin', 'gos.cjs'), 'commit', stage.toLowerCase()], {
-    cwd: rootDir, env: { ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: sid, GOS_AUTO_APPROVALS_BASELINE: require('crypto').createHash('sha256').update(JSON.stringify(approvalsNow)).digest('hex') }, encoding: 'utf8',
-  });
-};
+  const childEnv = { ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: specEnv.GOS_AUTO_SPAWN_ID, GOS_AUTO_APPROVALS_BASELINE: specEnv.GOS_AUTO_APPROVALS_BASELINE };
+  if (specEnv.GOS_AUTO_DIRTY_BASELINE) childEnv.GOS_AUTO_DIRTY_BASELINE = specEnv.GOS_AUTO_DIRTY_BASELINE;
+  const r = spawnSync(process.execPath, [path.join(GR, 'bin', 'gos.cjs'), 'commit', stage], { cwd: rootDir, env: childEnv, encoding: 'utf8' });
+  try { fs.unlinkSync(path.join(rootDir, '.gos', '.lock')); } catch { /* gone */ }
+  return r;
+}
+const seen = [];
 const spawnRunner = (spec) => {
+  seen.push(spec);
   if (spec.roWorkspace) return { status: 0, stdout: 'independent review\nREDTEAM-FINDINGS: 0\n', stderr: '' };
+  if (spec.kind === 'script') return { status: 0, stdout: 'sections pass\n', stderr: '' };
+  if (Number.isInteger(spec.wave)) {
+    for (const p of spec.declaredFiles) {
+      const abs = path.join(rootDir, p);
+      fs.mkdirSync(path.dirname(abs), { recursive: true });
+      fs.writeFileSync(abs, `wave ${spec.wave} content\n`);
+    }
+    spawnSync('git', ['add', ...spec.declaredFiles], { cwd: rootDir });
+    spawnSync('git', ['commit', '-q', '-m', `wave ${spec.wave} work`], { cwd: rootDir });
+    return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
+  }
+  if (spec.stageExit) {
+    const r = gosCommit('build', spec.env);
+    if (r.status !== 0) problems.push(`advance build rc=${r.status}: ${String(r.stderr || r.stdout).slice(0, 300)}`);
+    return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
+  }
   if (spec.stage === 'THINK' || spec.stage === 'PLAN') {
-    const r = gosCommit(spec.stage.toLowerCase());
+    const want = sha(JSON.stringify((readState().approvals) || {}));
+    if (spec.env.GOS_AUTO_APPROVALS_BASELINE !== want) problems.push(`${spec.stage} spawn env approvals baseline mismatch`);
+    const r = gosCommit(spec.stage.toLowerCase(), spec.env);
     if (r.status !== 0) problems.push(`in-spawn commit ${spec.stage} rc=${r.status}: ${String(r.stderr || r.stdout).slice(0, 200)}`);
     return { status: 0, stdout: '{"type":"message","text":"stage work done"}\n{"type":"result"}\n', stderr: '' };
   }
@@ -750,10 +790,14 @@ const spawnRunner = (spec) => {
   return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
 };
 (async () => {
-  store.create({ mode: 'on', rootDir, limits: { N: 3, K: 9, B: 30 } });
-  const r = await loop.createLoop({ rootDir, host: 'gos-fixture-host', env, maxIterations: 9, spawnRunner }).loop.run();
-  if (r.status !== 'ship' || r.ok !== true) problems.push('loop did not ship: ' + r.status + '/' + r.reason);
-  const st = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  store.create({ mode: 'on', rootDir, limits: { N: 3, K: 9, B: 60 } });
+  const r = await loop.createLoop({
+    rootDir, host: 'gos-fixture-host', env, maxIterations: 9, spawnRunner,
+    engineProbe: () => ({ engine: 'bwrap', version: '0.11.0' }),
+    legRunner: () => ({ ok: true, verdict: { ok: true, failures: [] } }),
+  }).loop.run();
+  if (r.status !== 'ship' || r.ok !== true) problems.push('loop did not ship: ' + r.status + '/' + r.reason + (r.detail ? ':' + String(r.detail).slice(0, 160) : ''));
+  const st = readState();
   const aT = (st.approvals || {}).THINK || {};
   const aP = (st.approvals || {}).PLAN || {};
   if (aT.status !== 'cleared' || aT.mode !== 'auto') problems.push('THINK not ratified: ' + JSON.stringify(aT));
@@ -765,6 +809,22 @@ const spawnRunner = (spec) => {
     if (!dl || !dl.redteam || dl.redteam.rounds !== 2 || dl.redteam.zeros !== 2) problems.push('THINK red-team leg summary missing');
     if (aT.evidence && aT.evidence.spawnId !== thinkIter.spawnId) problems.push('evidence does not pair the stage spawn');
   }
+  // BUILD: two waves released through the driver + one advance spawn
+  const waveRecs = store.readWaveRecords(rootDir);
+  const waveKeys = Object.keys(waveRecs.waves || {}).filter((k) => /\/W[12]$/.test(k));
+  if (waveKeys.length !== 2) problems.push('wave completion records missing: ' + JSON.stringify(Object.keys(waveRecs.waves || {})));
+  const waveSpecs = seen.filter((s) => Number.isInteger(s.wave));
+  if (waveSpecs.length !== 2) problems.push('wave spawn count ' + waveSpecs.length + ' != 2');
+  for (const ws of waveSpecs) {
+    if (!/^GOS auto BUILD wave \d+ — tasks T13[ab]\.$/.test(String(ws.prompt || '').split('\n')[0])) problems.push('wave prompt is not the pointer-only render');
+    if (!ws.env.GOS_AUTO_APPROVALS_BASELINE) problems.push('wave spawn lacks the approvals baseline env');
+  }
+  const buildIter = (r.iterations || []).find((i) => i.stage === 'BUILD');
+  if (!buildIter || buildIter.signal !== 'advanced') problems.push('BUILD advance spawn missing or not advanced: ' + JSON.stringify(buildIter && buildIter.signal));
+  if (buildIter && (!Array.isArray(buildIter.waves) || buildIter.waves.some((w) => w.status !== 'released'))) problems.push('BUILD iteration lacks the released-wave summary');
+  // VERIFY: script spawns only, never a model spawn
+  if (seen.some((s) => s.stage === 'VERIFY' && s.kind !== 'script' && !Number.isInteger(s.wave))) problems.push('VERIFY composed a model spawn');
+  if (!seen.some((s) => s.kind === 'script')) problems.push('VERIFY sections step never composed a script spawn');
   const s = store.load(rootDir);
   const stampKeys = s.ok && store.isPlainObject(s.store.stamps) ? Object.keys(s.store.stamps) : [];
   const roundStage = (prefix) => {
@@ -848,14 +908,20 @@ T13B_OUT="$(node run-c13b.cjs 2>&1 | tail -n 1)"
 t104_eq "T12: single zero and findings>0 hold the gate — PENDING stays, next advance blocked, never N" "OK" "$T13B_OUT"
 
 # ------------------------------------------- publish leg at SHIP ------
-# publish leg at SHIP: with a green fixture delivery adapter (probe state in
-# the store) the loop invokes publish (push -> PR -> subject lint -> squash
-# merge -> CI watch) and the closure record lands in the repo ledger mirror;
-# a red CI run pauses the loop awaiting a human disposition (never N). With no
-# adapter the loop still ends cleanly at SHIP (covered by C1).
+# publish leg at SHIP: entering at VERIFY (a script stage — pinned gate and
+# truth legs plus a Class S sections spawn, never a model spawn) the loop
+# advances through the runner-driven commit channel, reaches SHIP and, with a
+# green fixture delivery adapter (probe state in the store), invokes publish
+# (push -> PR -> subject lint -> squash merge -> CI watch); the closure record
+# lands in the repo ledger mirror. A red CI run pauses the loop awaiting a
+# human disposition (never N). With no adapter the loop still ends cleanly at
+# SHIP (covered by C1).
 t104_case c14
 git remote add origin https://github.com/octocat/widget.git
-t104_state BUILD > .gos/state.json
+mkdir -p .gos/task/p0
+printf '# Spec\n\np0 auto spec\n' > .gos/task/p0/spec.md
+t104_state VERIFY 3 ',"spec_path":".gos/task/p0/spec.md","semantic":{"allowlist":["run-c14.cjs"]}' > .gos/state.json
+node -e "const fs=require('fs');const p='.gos/state.json';const st=JSON.parse(fs.readFileSync(p,'utf8'));const {execSync}=require('child_process');st.task_head=execSync('git rev-parse HEAD').toString().trim();fs.writeFileSync(p,JSON.stringify(st,null,2));"
 cat > run-c14.cjs <<'EOF'
 const fs = require('fs');
 const path = require('path');
@@ -866,30 +932,24 @@ const delivery = require(path.join(GR, 'bin/lib/ops/auto/delivery.cjs'));
 const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
 const problems = [];
 const templateState = JSON.parse(fs.readFileSync(path.join(process.cwd(), '.gos', 'state.json'), 'utf8'));
-const NEXT = { BUILD: 'VERIFY', VERIFY: 'SHIP' };
 function mkWorld(name) {
   const dir = path.join(process.cwd(), name);
+  fs.mkdirSync(path.join(dir, '.gos', 'task', 'p0'), { recursive: true });
   fs.mkdirSync(path.join(dir, '.gos', 'logs'), { recursive: true });
+  fs.copyFileSync(path.join(process.cwd(), '.gos', 'task', 'p0', 'spec.md'), path.join(dir, '.gos', 'task', 'p0', 'spec.md'));
   fs.writeFileSync(path.join(dir, '.gos', 'state.json'), JSON.stringify(templateState));
   spawnSync('git', ['init', '-q', '-b', 'work', '.'], { cwd: dir });
   spawnSync('git', ['remote', 'add', 'origin', 'https://github.com/octocat/widget.git'], { cwd: dir });
-  spawnSync('git', ['commit', '--allow-empty', '-m', 'root'], { cwd: dir });
-  const stateFile = path.join(dir, '.gos', 'state.json');
-  const setStage = (s) => {
-    const st = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-    st.current_stage = s;
-    fs.writeFileSync(stateFile, JSON.stringify(st, null, 2));
+  spawnSync('git', ['commit', '-q', '--allow-empty', '-m', 'root'], { cwd: dir });
+  const spawnRunner = (spec) => {
+    if (spec.kind === 'script') return { status: 0, stdout: 'sections pass\n', stderr: '' };
+    problems.push('unexpected non-script spawn at VERIFY: ' + JSON.stringify(spec.stage));
+    return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
   };
   const gitRunner = (args) => (args[0] === 'ls-remote'
     ? { status: 0, stdout: 'f'.repeat(40) + '\tHEAD\n', stderr: '' }
     : spawnSync('git', args, { cwd: dir, encoding: 'utf8' }));
-  const spawnRunner = (spec) => {
-    if (spec.roWorkspace) return { status: 0, stdout: 'REDTEAM-FINDINGS: 0\n', stderr: '' };
-    spawnSync('git', ['commit', '--allow-empty', '-m', `chore(task): advance ${spec.stage.toLowerCase()}`], { cwd: dir });
-    setStage(NEXT[spec.stage]);
-    return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
-  };
-  return { dir, stateFile, gitRunner, spawnRunner };
+  return { dir, gitRunner, spawnRunner };
 }
 const deliveryOpts = (baseline, ci) => ({
   subject: 'fix widget ratchet for ci gate',
@@ -904,7 +964,13 @@ const deliveryOpts = (baseline, ci) => ({
 });
 (async () => {
   const env = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
-  // green CI: publish completes, closure record written
+  const loopOpts = (dir, spawnRunner, gitRunner) => ({
+    rootDir: dir, host: 'gos-fixture-host', env, maxIterations: 6,
+    spawnRunner, gitRunner,
+    engineProbe: () => ({ engine: 'bwrap', version: '0.11.0' }),
+    legRunner: () => ({ ok: true, verdict: { ok: true, failures: [] } }),
+  });
+  // green CI: VERIFY advances runner-side, publish completes, closure written
   const g = mkWorld('green');
   store.create({ mode: 'on', rootDir: g.dir });
   store.saveProbeResult({ host: 'delivery', state: 'green', checkedAtIso: new Date().toISOString() }, g.dir);
@@ -912,11 +978,10 @@ const deliveryOpts = (baseline, ci) => ({
   if (!pinned.ok) throw new Error('baseline capture failed: ' + pinned.reason);
   if (!delivery.pinBaseline(pinned.baseline, g.dir).ok) problems.push('baseline pin failed');
   const green = await loop.createLoop({
-    rootDir: g.dir, host: 'gos-fixture-host', env, maxIterations: 6,
-    spawnRunner: g.spawnRunner, gitRunner: g.gitRunner,
+    ...loopOpts(g.dir, g.spawnRunner, g.gitRunner),
     delivery: deliveryOpts(pinned.baseline, async () => ({ state: 'green', runId: '555' })),
   }).loop.run();
-  if (green.status !== 'ship' || green.ok !== true) problems.push('green run did not ship: ' + green.status + '/' + green.reason);
+  if (green.status !== 'ship' || green.ok !== true) problems.push('green run did not ship: ' + green.status + '/' + green.reason + (green.detail ? ':' + String(green.detail).slice(0, 160) : ''));
   if (green.deliveryAdapter !== true) problems.push('deliveryAdapter not reported active');
   if (!green.delivery || green.delivery.status !== 'green' || !green.delivery.closure) problems.push('green publish outcome missing');
   const steps = green.delivery && Array.isArray(green.delivery.steps) ? green.delivery.steps.map((s) => s.name).join(',') : '';
@@ -930,8 +995,7 @@ const deliveryOpts = (baseline, ci) => ({
   const pinned2 = delivery.captureBaseline({ rootDir: w.dir, gitRunner: w.gitRunner });
   if (!delivery.pinBaseline(pinned2.baseline, w.dir).ok) problems.push('baseline pin 2 failed');
   const red = await loop.createLoop({
-    rootDir: w.dir, host: 'gos-fixture-host', env, maxIterations: 6,
-    spawnRunner: w.spawnRunner, gitRunner: w.gitRunner,
+    ...loopOpts(w.dir, w.spawnRunner, w.gitRunner),
     delivery: deliveryOpts(pinned2.baseline, async () => ({ state: 'red', runId: '999' })),
   }).loop.run();
   if (red.status !== 'paused' || red.reason !== 'red-run' || red.requiresDisposition !== true) problems.push('red CI did not hold: ' + red.status + '/' + red.reason);
@@ -1216,36 +1280,121 @@ EOF
 C18_OUT="$(node run-c18.cjs 2>&1 | tail -n 1)"
 t104_eq "orphaned PENDING is recovered from the store stamp and ratified at loop start" "OK" "$C18_OUT"
 
-# Profile-dependent writable grant: workspace-writing profiles bind the
-# repo root read-write so BUILD-shaped stages can edit code; restricted
-# never grants it.
+# Dispatch-table compose shapes: per-stage composition is entry-driven —
+# THINK pins restricted (no rw repo bind, four-verb grants, cap 16, no --model
+# argv while the slot resolves to inherit) while BUILD pins workspace (repo
+# root rw at the kernel tier, runner git identity, five-verb grants incl.
+# checkpoint at cap 64, --model argv when the slot resolves, scratch +
+# testbed + grant manifest equipage) and exits through one stage-exit spawn
+# after the waves release.
 t104_case c19
 mkdir -p .gos/task/p0 .gos/logs
-t104_state BUILD > .gos/state.json
+cat > .gos/task/p0/plan.md <<'PLAN'
+# Plan
+
+### Wave 1
+
+#### T19a: fixture wave one
+**Files**: src/w1.txt
+
+### Wave 2
+
+#### T19b: fixture wave two
+**Files**: src/w2.txt
+PLAN
 cat > run-c19.cjs <<'EOF'
+const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 const GR = process.env.GOS_ROOT;
 const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
 const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const spawnreg = require(path.join(GR, 'bin/lib/core/spawnreg.cjs'));
+const crypto = require('crypto');
 const problems = [];
 const world = process.cwd();
-store.create({ mode: 'on', rootDir: world });
+const snapshot = {
+  tasks: [
+    { id: 'T19a', covers: [], files: ['src/w1.txt'], wave: 1 },
+    { id: 'T19b', covers: [], files: ['src/w2.txt'], wave: 2 },
+  ],
+  audit: [],
+  meta: { waveValidation: { ok: true, waves: 2 } },
+};
+const baseState = { schema_version: 6, level: 3, current_stage: 'THINK', completed_stages: ['INTENT'], intent: { summary: 'c19', confirmed: true }, task_head: 'abc123def0123456789abcdef0123456789abcdef', spec_path: '.gos/task/p0/spec.md', plan_path: '.gos/task/p0/plan.md', requirements: [], decisions: [], observable_truths: [], gaps: [], checkpoints: [], approvals: {} };
+fs.writeFileSync(path.join(world, '.gos', 'task', 'p0', 'spec.md'), '# Spec\n\nc19 spec\n');
+function writeState(stage) {
+  const st = { ...baseState, current_stage: stage, plan_snapshot: snapshot };
+  fs.writeFileSync(path.join(world, '.gos', 'state.json'), JSON.stringify(st, null, 2));
+}
+store.create({ mode: 'on', rootDir: world, limits: { N: 3, K: 9, B: 60 } });
 const seen = [];
-const stateReader = () => JSON.parse(require('fs').readFileSync(path.join(world, '.gos', 'state.json'), 'utf8'));
-const spawnRunner = (spec) => { seen.push(spec); return { status: 0, stdout: '{"type":"result"}\n', stderr: '' }; };
+const liveReg = [];
+const spawnRunner = (spec) => {
+  seen.push(spec);
+  const ent = spawnreg.readEntry(world, spec.spawnId);
+  let m = null;
+  try { m = JSON.parse(fs.readFileSync(spawnreg.manifestPath(world, spec.spawnId), 'utf8')); } catch { /* no manifest on this shape */ }
+  liveReg.push({ stage: spec.stage, wave: spec.wave, stageExit: spec.stageExit === true, entry: ent, manifest: m });
+  if (Number.isInteger(spec.wave)) {
+    fs.mkdirSync(path.join(spec.scratch, 'testbed'), { recursive: true });
+    fs.writeFileSync(path.join(spec.scratch, 'noop'), 'fixture no-op wave\n');
+    return { status: 0, stdout: 'noop wave\n', stderr: '' };
+  }
+  if (spec.stageExit) {
+    spawnSync('git', ['commit', '--allow-empty', '-m', 'chore(task): advance build'], { cwd: world });
+    const st = JSON.parse(fs.readFileSync(path.join(world, '.gos', 'state.json'), 'utf8'));
+    st.current_stage = 'REVIEW';
+    fs.writeFileSync(path.join(world, '.gos', 'state.json'), JSON.stringify(st, null, 2));
+    return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
+  }
+  return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
+};
+const argvHas = (argv, ...toks) => { const i = argv.findIndex((_, k) => toks.every((t, j) => argv[k + j] === t)); return i >= 0; };
 (async () => {
-  for (const profile of ['restricted', 'workspace']) {
-    seen.length = 0;
-    const r = await loop.createLoop({ rootDir: world, host: 'gos-fixture-host', env: { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' }, profile, maxIterations: 1, spawnRunner, stateReader, ...(profile === 'full' ? { allowFull: true } : {}) }).loop.run();
-    const spec = seen.find((s) => s && Array.isArray(s.argv));
-    if (!spec) { problems.push(profile + ': no spawn spec captured'); continue; }
-    // Mount tables exist only at the kernel tier: a lexical degrade carries
-    // the adapter command line, so the bind assertions gate on the tier.
-    const rw = spec.argv.some((_, i) => spec.argv[i] === '--bind' && spec.argv[i + 1] === world && spec.argv[i + 2] === world);
-    if (spec.tier === 'bubblewrap') {
-      if (profile === 'workspace' && !rw) problems.push('workspace profile did not bind the repo root read-write');
-    }
-    if (profile === 'restricted' && rw) problems.push('restricted profile bound the repo root writable');
+  const env = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
+  const probe = () => ({ engine: 'bwrap', version: '0.11.0' });
+  const stateOf = () => JSON.parse(fs.readFileSync(path.join(world, '.gos', 'state.json'), 'utf8'));
+  // THINK: restricted + four-verb grants + inherit (no --model argv)
+  writeState('THINK');
+  seen.length = 0;
+  await loop.createLoop({ rootDir: world, host: 'gos-fixture-host', env, maxIterations: 1, spawnRunner, stateReader: stateOf }).loop.run();
+  const think = seen.find((s) => s.stage === 'THINK' && !s.roWorkspace);
+  if (!think) problems.push('no THINK spawn composed');
+  else {
+    if (think.profile !== 'restricted') problems.push('THINK compose profile not the table pin: ' + think.profile);
+    if (argvHas(think.argv, '--model')) problems.push('THINK spawn pinned a --model argv while the slot resolves inherit');
+    const regT = liveReg.find((r) => r.stage === 'THINK');
+    const grantsT = regT && regT.entry && regT.entry.grants;
+    if (JSON.stringify(grantsT) !== JSON.stringify(['commit', 'gate', 'section', 'truth'])) problems.push('THINK grants not the four-verb entry set: ' + JSON.stringify(grantsT));
+    if (regT && regT.entry && regT.entry.use_cap !== 16) problems.push('THINK use_cap not 16');
+    if (think.tier === 'bubblewrap' && argvHas(think.argv, '--bind', world, world)) problems.push('THINK compose bound the repo root writable');
+    if (think.env.GIT_AUTHOR_NAME === 'gos-auto') problems.push('THINK compose carries the BUILD runner identity');
+    const wantBase = crypto.createHash('sha256').update('{}').digest('hex');
+    if (think.env.GOS_AUTO_APPROVALS_BASELINE !== wantBase) problems.push('THINK spawn env lacks the approvals baseline');
+  }
+  // BUILD: workspace + identity + five-verb grants + kernel tier + model pin
+  writeState('BUILD');
+  seen.length = 0;
+  await loop.createLoop({ rootDir: world, host: 'gos-fixture-host', env, maxIterations: 1, spawnRunner, engineProbe: probe, modelResolver: () => ({ model: 'zai/glm-mini' }), stateReader: stateOf }).loop.run();
+  const adv = seen.find((s) => s.stageExit === true);
+  if (!adv) problems.push('no BUILD stage-exit spawn composed');
+  else {
+    if (adv.profile !== 'workspace') problems.push('BUILD compose profile not the table pin: ' + adv.profile);
+    if (adv.tier !== 'bubblewrap') problems.push('BUILD compose not kernel tier');
+    if (!argvHas(adv.argv, '--bind', world, world)) problems.push('workspace compose did not bind the repo root read-write');
+    if (!argvHas(adv.argv, '--model', 'zai/glm-mini')) problems.push('BUILD spawn lacks the resolved --model argv');
+    if (adv.env.GIT_AUTHOR_NAME !== 'gos-auto' || adv.env.GIT_COMMITTER_EMAIL !== 'gos-auto@invalid') problems.push('BUILD spawn lacks the runner git identity');
+    if (adv.env.TESTBASE !== path.join(adv.scratch, 'testbed')) problems.push('BUILD spawn lacks the testbed env pin');
+    if (adv.env.GOS_AUTO_GRANT_MANIFEST !== '/run/gos-grants.json') problems.push('BUILD spawn lacks the grant manifest env');
+    const regB = liveReg.find((r) => r.stageExit);
+    if (!regB || !regB.manifest || !regB.manifest.grants.includes('checkpoint') || regB.manifest.use_cap !== 64) problems.push('BUILD grants not the entry five-verb/cap-64 set: ' + JSON.stringify(regB && regB.manifest));
+    if (!regB || !regB.entry || regB.entry.use_cap !== 64) problems.push('BUILD registration cap not 64');
+  }
+  const st = store.load(world);
+  if (st.ok) {
+    const pinnedStamps = Object.values(st.store.stamps).filter((v) => v && v.stage === 'BUILD' && v.modelPinned);
+    if (pinnedStamps.length !== 1 || pinnedStamps[0].modelPinned !== 'zai/glm-mini') problems.push('BUILD stamp lacks the pinned-model telemetry: ' + JSON.stringify(pinnedStamps.map((v) => v.modelPinned)));
   }
   console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
 })().catch((e) => { console.error(e); process.exit(1); });
@@ -1333,6 +1482,180 @@ const problems = [];
 EOF
 C21_OUT="$(node run-c21.cjs 2>&1 | tail -n 1)"
 t104_eq "async spawn runner: live idle kill, live wall kill, healthy resolution" "OK" "$C21_OUT"
+
+# Dispatch-table drift: an unknown stage key and a mid-run flip of the
+# stamped table file both pause as external-mutation before the next consume
+# (compose/grant registration read the table only under a matching stamp).
+t104_case c22
+t104_state FOO > .gos/state.json
+cat > run-c22.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const problems = [];
+const world = process.cwd();
+(async () => {
+  const env = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
+  store.create({ mode: 'on', rootDir: world, limits: { N: 3, K: 9, B: 9 } });
+  // unknown stage: the closed table is the vocabulary — a stage outside it
+  // pauses as external-mutation, never as a spawn
+  const r1 = await loop.createLoop({ rootDir: world, host: 'gos-fixture-host', env, spawnRunner: () => { problems.push('unknown stage spawned'); return { status: 0, stdout: '', stderr: '' }; } }).loop.run();
+  if (r1.status !== 'paused' || r1.reason !== 'external-mutation' || !/stage/.test(String(r1.detail || ''))) {
+    problems.push('unknown stage not an external-mutation pause: ' + r1.status + '/' + r1.reason);
+  }
+  // mid-run table flip: first THINK spawn advances, the file then drifts, the
+  // next consume re-verifies the stamp and pauses before composing again
+  const stateFile = path.join(world, '.gos', 'state.json');
+  const setStage = (s) => { const st = JSON.parse(fs.readFileSync(stateFile, 'utf8')); st.current_stage = s; fs.writeFileSync(stateFile, JSON.stringify(st, null, 2)); };
+  const tableCopy = path.join(world, 'fixture-dispatch.json');
+  fs.copyFileSync(path.join(GR, 'templates', 'auto-dispatch.json'), tableCopy);
+  const state2 = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  state2.current_stage = 'THINK';
+  fs.writeFileSync(stateFile, JSON.stringify(state2, null, 2));
+  let spawns = 0;
+  const spawnRunner = (spec) => {
+    if (!spec.roWorkspace) spawns += 1;
+    if (spec.roWorkspace) return { status: 0, stdout: 'REDTEAM-FINDINGS: 0\n', stderr: '' };
+    if (spec.stage === 'THINK') {
+      spawnSync('git', ['commit', '--allow-empty', '-m', 'chore(task): advance think'], { cwd: world });
+      setStage('PLAN');
+      const tbl = JSON.parse(fs.readFileSync(tableCopy, 'utf8'));
+      tbl.stages.PLAN.use_cap = 8;
+      fs.writeFileSync(tableCopy, JSON.stringify(tbl, null, 2) + '\n');
+    }
+    return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
+  };
+  const r2 = await loop.createLoop({ rootDir: world, host: 'gos-fixture-host', env, maxIterations: 5, spawnRunner, tablePath: tableCopy }).loop.run();
+  if (r2.status !== 'paused' || r2.reason !== 'external-mutation' || !/dispatch table/i.test(String(r2.detail || ''))) {
+    problems.push('mid-run table drift not an external-mutation pause: ' + r2.status + '/' + r2.reason + '/' + String(r2.detail || '').slice(0, 80));
+  }
+  if (spawns !== 1) problems.push('table drift pause did not freeze spawns (count ' + spawns + ')');
+  const v = loop.verifyDispatchTableStamp(world, tableCopy);
+  if (v.ok || v.reason !== 'dispatch-table-drift') problems.push('verify helper did not name the drift: ' + JSON.stringify(v.reason));
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+C22_OUT="$(node run-c22.cjs 2>&1 | tail -n 1)"
+t104_eq "dispatch-table integration: unknown stage and mid-run table drift pause as external-mutation before the next consume" "OK" "$C22_OUT"
+
+# Telemetry stamps: at spawn exit the store v2 stamp carries the D-5 fields —
+# modelPinned from the entry resolution, modelObserved/commandCount from the
+# adapter telemetry over the parsed stream, denyHits from the windows, and
+# the head/tail window sidecars land with their hashes and byte total.
+t104_case c23
+t104_state THINK > .gos/state.json
+cat > run-c23.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const problems = [];
+const world = process.cwd();
+const stateFile = path.join(world, '.gos', 'state.json');
+const head = Buffer.from('{"type":"message","text":"hi","model":"glm-5.3"}\n');
+const tail = Buffer.from('{"type":"tool_use","part":{"tool":"bash"}}\n{"type":"tool_use","part":{"tool":"read"}}\n{"type":"result"}\n');
+(async () => {
+  store.create({ mode: 'on', rootDir: world, limits: { N: 3, K: 9, B: 9 } });
+  const spawnRunner = (spec) => {
+    if (spec.roWorkspace) return { status: 0, stdout: 'REDTEAM-FINDINGS: 0\n', stderr: '' };
+    spawnSync('git', ['commit', '--allow-empty', '-m', 'chore(task): advance think'], { cwd: world });
+    const st = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    st.current_stage = 'PLAN';
+    fs.writeFileSync(stateFile, JSON.stringify(st, null, 2));
+    return {
+      status: 0, stdout: head.toString('utf8') + tail.toString('utf8'), stderr: '',
+      preTruncationDenyHits: [],
+      totalBytes: { stdout: head.length + tail.length, stderr: 0 },
+      windowHead: { stdout: head, stderr: Buffer.alloc(0) },
+      windowTail: { stdout: tail, stderr: Buffer.alloc(0) },
+    };
+  };
+  const r = await loop.createLoop({
+    rootDir: world, host: 'gos-fixture-host', env: { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' },
+    maxIterations: 1, spawnRunner,
+    modelResolver: () => ({ model: 'zai/glm-5.3' }),
+  }).loop.run();
+  const st = store.load(world);
+  const iter = (r.iterations || []).find((i) => i.stage === 'THINK');
+  const stamp = st.ok && iter ? st.store.stamps[iter.spawnId] : null;
+  if (!stamp) problems.push('THINK stamp missing');
+  else {
+    if (stamp.modelPinned !== 'zai/glm-5.3') problems.push('modelPinned not the entry resolution: ' + JSON.stringify(stamp.modelPinned));
+    if (stamp.modelObserved !== 'glm-5.3') problems.push('modelObserved not the host self-report: ' + JSON.stringify(stamp.modelObserved));
+    if (stamp.commandCount !== 2) problems.push('commandCount not the tool_use count: ' + JSON.stringify(stamp.commandCount));
+    if (stamp.denyHits !== 0) problems.push('denyHits not carried: ' + JSON.stringify(stamp.denyHits));
+    if (!/^[0-9a-f]{64}$/.test(String(stamp.headSha256 || '')) || !/^[0-9a-f]{64}$/.test(String(stamp.tailSha256 || ''))) problems.push('window hashes not stamped');
+    if (stamp.totalBytes !== head.length + tail.length) problems.push('totalBytes not the sidecar byte total: ' + JSON.stringify(stamp.totalBytes));
+    const dir = path.join(store.storeRoot(world), 'windows');
+    const sid = iter.spawnId;
+    if (!fs.existsSync(path.join(dir, `${sid}.head.txt`)) || !fs.existsSync(path.join(dir, `${sid}.tail.txt`))) problems.push('window sidecars missing');
+  }
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+C23_OUT="$(node run-c23.cjs 2>&1 | tail -n 1)"
+t104_eq "telemetry stamps carry the D-5 fields with window sidecars at spawn exit" "OK" "$C23_OUT"
+
+# Script-stage VERIFY never probes the host: with a probe stub that throws if
+# called, the stage runs its pinned legs and the Class S sections spawn,
+# advances through the runner-driven commit channel, and the loop ends at
+# SHIP. A failing pinned leg scores task-failed into the breaker instead.
+t104_case c24
+mkdir -p .gos/task/p0 .gos/logs
+printf '# Spec\n\np0 auto spec\n' > .gos/task/p0/spec.md
+t104_state VERIFY 3 ',"spec_path":".gos/task/p0/spec.md","semantic":{"allowlist":["run-c24.cjs"]}' > .gos/state.json
+node -e "const fs=require('fs');const p='.gos/state.json';const st=JSON.parse(fs.readFileSync(p,'utf8'));const {execSync}=require('child_process');st.task_head=execSync('git rev-parse HEAD').toString().trim();fs.writeFileSync(p,JSON.stringify(st,null,2));"
+cat > run-c24.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const problems = [];
+const world = process.cwd();
+(async () => {
+  const env = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
+  const probeRunner = () => { throw new Error('host probe must never run for a script stage'); };
+  // zero-host happy path: legs green, sections spawn rc0, advance lands
+  store.create({ mode: 'on', rootDir: world, limits: { N: 3, K: 9, B: 9 } });
+  const specs = [];
+  const spawnRunner = (spec) => { specs.push(spec); return { status: 0, stdout: 'sections pass\n', stderr: '' }; };
+  const r1 = await loop.createLoop({
+    rootDir: world, host: 'opencode', env, maxIterations: 3, spawnRunner, probeRunner,
+    engineProbe: () => ({ engine: 'bwrap', version: '0.11.0' }),
+    legRunner: () => ({ ok: true, verdict: { ok: true, failures: [] } }),
+  }).loop.run();
+  if (r1.status !== 'ship' || r1.ok !== true) problems.push('zero-host VERIFY did not reach SHIP: ' + r1.status + '/' + r1.reason + (r1.detail ? ':' + String(r1.detail).slice(0, 160) : ''));
+  const st1 = JSON.parse(fs.readFileSync(path.join(world, '.gos', 'state.json'), 'utf8'));
+  if (st1.current_stage !== 'SHIP') problems.push('VERIFY stage did not advance through the commit channel');
+  if (!specs.length || !specs.every((s) => s.kind === 'script')) problems.push('VERIFY composed a non-script spawn');
+  const st = store.load(world);
+  const stamped = st.ok ? Object.entries(st.store.stamps).filter(([, v]) => v.stage === 'VERIFY') : [];
+  if (!stamped.length) problems.push('VERIFY sections spawn not stamped');
+  // failing pinned leg: scored task-failed into N, loop keeps driving
+  const st2 = JSON.parse(fs.readFileSync(path.join(world, '.gos', 'state.json'), 'utf8'));
+  st2.current_stage = 'VERIFY';
+  (st2.completed_stages = st2.completed_stages || []).push('VERIFY');
+  delete st2.approvals;
+  fs.writeFileSync(path.join(world, '.gos', 'state.json'), JSON.stringify(st2, null, 2));
+  const r2 = await loop.createLoop({
+    rootDir: world, host: 'opencode', env, maxIterations: 1, spawnRunner, probeRunner,
+    engineProbe: () => ({ engine: 'bwrap', version: '0.11.0' }),
+    legRunner: (step) => (step.id === 'gate' ? { ok: true, verdict: { ok: false, failures: ['coverage gate red'] } } : { ok: true, verdict: { ok: true, failures: [] } }),
+  }).loop.run();
+  const vi = (r2.iterations || []).find((i) => i.stage === 'VERIFY');
+  if (!vi || vi.signal !== 'task-failed' || vi.counted !== true) problems.push('failing leg not scored task-failed/counted: ' + JSON.stringify(vi && vi.signal) + '/' + JSON.stringify(vi && vi.counted));
+  if (!r2.breaker || r2.breaker.consecutive !== 1) problems.push('failing leg did not count one consecutive failure');
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+C24_OUT="$(node run-c24.cjs 2>&1 | tail -n 1)"
+t104_eq "script-stage VERIFY runs zero-host; failing pinned legs score task-failed" "OK" "$C24_OUT"
 
 echo "--- T104 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]

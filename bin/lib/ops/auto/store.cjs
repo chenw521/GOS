@@ -93,6 +93,10 @@ const PIN_DIR_NAME = 'pin-worktrees';
 // head, the sha256 of the post-wave refs snapshot (for-each-ref + reflog
 // head text), release time, and the optional no-op / table-roll markers.
 const WAVE_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*\/W[1-9][0-9]*$/;
+// Run-start dispatch-table stamp provenance: '<runTag>/start' where runTag
+// is the loop's filename-safe run tag (never a wave — a run start releases
+// nothing, it only pins what the run loaded).
+const RUN_START_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*\/start$/;
 
 // Append caps: oldest entries drop beyond the cap so a long-lived store
 // stays bounded. In-flight entries are always the newest, never trimmed.
@@ -1417,17 +1421,22 @@ function readWaveRecords(rootDir) {
   return { ok: true, path: cur.path, waves: isPlainObject(cur.store.waves) ? cur.store.waves : {} };
 }
 
-// Roll the dispatch-table stamp: called only after a red-team-passed,
-// runner-released edit of the table. The stamp is the sha256 of the table
-// file as of that release; every later wave re-verifies the live table
-// against it.
+// Roll the dispatch-table stamp. Two provenance shapes: a red-team-passed,
+// runner-released wave edit records its wave key '<task>/W<n>'; a run start
+// records '<runTag>/start' — the loop stamps the table it loaded before any
+// consume, and every later wave re-verifies against that hash. The stamp is
+// the sha256 of the table file as of the write; shape validation keeps
+// refusing everything outside the two forms.
 function rollDispatchTableStamp(rootDir, rec) {
   if (!isPlainObject(rec)) return { ok: false, status: 'error', reason: 'invalid-table-stamp' };
   if (typeof rec.sha256 !== 'string' || !HEX64_RE.test(rec.sha256)) {
     return { ok: false, status: 'error', reason: 'invalid-table-stamp', detail: 'sha256 must be the hex64 hash of the dispatch table file' };
   }
-  if (typeof rec.rolledByWave !== 'string' || !WAVE_KEY_RE.test(rec.rolledByWave)) {
-    return { ok: false, status: 'error', reason: 'invalid-table-stamp', detail: `rolledByWave must be a wave key '<task>/W<n>' (got '${rec.rolledByWave}')` };
+  if (typeof rec.rolledByWave !== 'string' || !(WAVE_KEY_RE.test(rec.rolledByWave) || RUN_START_KEY_RE.test(rec.rolledByWave))) {
+    return {
+      ok: false, status: 'error', reason: 'invalid-table-stamp',
+      detail: `rolledByWave must be a wave key '<task>/W<n>' or a run-start tag '<runTag>/start' (got '${rec.rolledByWave}')`,
+    };
   }
   const r = mutate(rootDir, (st) => {
     st.dispatchTable = { sha256: rec.sha256, rolledAtIso: new Date().toISOString(), rolledByWave: rec.rolledByWave };

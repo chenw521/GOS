@@ -45,6 +45,12 @@
 #   unit-labels   C12 waveUnitLabel/validation surface: closed enum, digit
 #                   rule, breaker visit refusal for slash-carrying labels
 #                   outside the enum
+#   loop-wired    C13 the auto loop drives BUILD through the wave driver:
+#                   two waves release, the stage exits through one advance
+#                   spawn (`gos commit build`), the run-start dispatch-table
+#                   stamp pins the loaded file, wave spawns carry the
+#                   approvals baseline, and the advance spawn pins the
+#                   resolved model
 # Standalone-safe: self-provisions env when not under test/run-sections.sh.
 
 T108_STANDALONE=0
@@ -671,6 +677,11 @@ const repo = L.makeRepo(path.join(process.env.T108_DIR, 'c11-repo'), [[{ id: 'T1
   if (badStamp.ok) problems.push('malformed rolledByWave accepted');
   const goodStamp = L.store.rollDispatchTableStamp(repo.dir, { sha256: 'a'.repeat(64), rolledByWave: 'T108fx/W1' });
   if (!goodStamp.ok || !goodStamp.stamp.rolledAtIso) problems.push('valid roll refused');
+  // run-start provenance: the loop's load-time stamp records '<runTag>/start'
+  const startStamp = L.store.rollDispatchTableStamp(repo.dir, { sha256: 'b'.repeat(64), rolledByWave: 'run0a1b2c3d/start' });
+  if (!startStamp.ok || startStamp.stamp.rolledByWave !== 'run0a1b2c3d/start') problems.push('run-start stamp refused: ' + JSON.stringify(startStamp.reason));
+  const badStart = L.store.rollDispatchTableStamp(repo.dir, { sha256: 'b'.repeat(64), rolledByWave: 'run0a1b2c3d/started' });
+  if (badStart.ok) problems.push('non-/start provenance accepted');
   // the prompt snapshot kind is part of the closed set (before corruption)
   const seeded = L.store.saveSnapshot('wavePrompt', 'x', repo.dir);
   if (!seeded.ok) problems.push('wavePrompt snapshot kind refused');
@@ -719,6 +730,142 @@ C12_OUT="$(node "$T108_DIR/c12.cjs" 2>&1)"; RC=$?
 t108_exit "unit-label probe runs clean" "0" "$RC"
 t108_contains "closed enum + digit rule + visit validation hold" "C12-OK" "$C12_OUT"
 t108_contains "label derivation pinned" "LABEL[BUILD/W3]" "$C12_OUT"
+
+# ---------------------------------------------------------------- C13 --
+echo "C13: loop-wired waves (the auto loop drives BUILD through the wave driver)"
+cat > "$T108_DIR/c13.cjs" <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const { spawnSync } = require('child_process');
+const GR = process.env.GOS_ROOT;
+const L = require(path.join(process.env.T108_DIR, 't108-lib.cjs'));
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const problems = [];
+const dir = path.join(process.env.T108_DIR, 'c13-repo');
+fs.mkdirSync(path.join(dir, '.gos'), { recursive: true });
+const specFile = path.join(dir, 'task', 'fx', 'spec.md');
+fs.mkdirSync(path.dirname(specFile), { recursive: true });
+fs.writeFileSync(specFile, '# c13 spec\n');
+fs.writeFileSync(path.join(dir, '.gitignore'), '.gos/\n');
+const git = (args) => { const r = spawnSync('git', args, { cwd: dir, encoding: 'utf8' }); if (r.status !== 0) throw new Error(`git ${args.join(' ')}: ${r.stderr}`); return String(r.stdout || ''); };
+git(['init', '-q', '-b', 'work']);
+git(['add', '-A']);
+git(['commit', '-q', '-m', 'fixture seed']);
+// task_head anchors the real diff baseline; the task id derives from it the
+// way currentTaskId does, so the work branch and wave-record keys line up.
+const rootCommit = git(['rev-parse', 'HEAD']).trim();
+const TASKID = rootCommit.slice(0, 8);
+git(['checkout', '-q', '-b', `auto/${TASKID}`]);
+const snapshot = {
+  tasks: [
+    { id: 'T13a', covers: [], files: ['src/w1.txt'], wave: 1 },
+    { id: 'T13b', covers: [], files: ['src/w2.txt'], wave: 2 },
+  ],
+  audit: [],
+  meta: { waveValidation: { ok: true, waves: 2 } },
+};
+fs.writeFileSync(path.join(dir, '.gos', 'state.json'), JSON.stringify({
+  schema_version: 6, level: 3, current_stage: 'BUILD', completed_stages: ['INTENT', 'THINK', 'PLAN'],
+  intent: { summary: 'c13', confirmed: true },
+  task_head: rootCommit,
+  spec_path: 'task/fx/spec.md', spec_sha256: crypto.createHash('sha256').update('# c13 spec\n').digest('hex'),
+  plan_snapshot: snapshot,
+  requirements: [], decisions: [], observable_truths: [], gaps: [], checkpoints: [], approvals: {},
+}, null, 2));
+const created = L.store.create({ rootDir: dir, mode: 'on', limits: { N: 3, K: 5, B: 100 } });
+if (!created.ok) throw new Error('store refused: ' + created.reason);
+const seen = [];
+function gosCommit(stage, specEnv) {
+  const sr = require(path.join(GR, 'bin/lib/core/spawnreg.cjs'));
+  fs.writeFileSync(path.join(dir, '.gos', '.lock'), JSON.stringify({ pid: process.pid, started_at: new Date().toISOString(), boot_id: null, starttime: sr.procStartTime(process.pid) }));
+  const r = spawnSync(process.execPath, [path.join(GR, 'bin', 'gos.cjs'), 'commit', stage], {
+    cwd: dir,
+    env: { ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: specEnv.GOS_AUTO_SPAWN_ID, GOS_AUTO_APPROVALS_BASELINE: specEnv.GOS_AUTO_APPROVALS_BASELINE },
+    encoding: 'utf8',
+  });
+  try { fs.unlinkSync(path.join(dir, '.gos', '.lock')); } catch { /* gone */ }
+  return r;
+}
+const spawnRunner = (spec) => {
+  seen.push(spec);
+  if (spec.roWorkspace) return { status: 0, stdout: 'REDTEAM-FINDINGS: 0\n', stderr: '' };
+  if (Number.isInteger(spec.wave)) {
+    for (const p of spec.declaredFiles) {
+      const abs = path.join(dir, p);
+      fs.mkdirSync(path.dirname(abs), { recursive: true });
+      fs.writeFileSync(abs, `wave ${spec.wave} content\n`);
+    }
+    git(['add', ...spec.declaredFiles]);
+    git(['commit', '-q', '-m', `wave ${spec.wave} work`]);
+    return { status: 0, stdout: `wave ${spec.wave} done\n`, stderr: '' };
+  }
+  if (spec.stageExit) {
+    const r = gosCommit('build', spec.env);
+    if (r.status !== 0) problems.push(`advance build rc=${r.status}: ${String(r.stderr || r.stdout).slice(0, 300)}`);
+    return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
+  }
+  return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
+};
+(async () => {
+  const env = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
+  const r = await loop.createLoop({
+    rootDir: dir, host: 'gos-fixture-host', env, maxIterations: 1, spawnRunner,
+    engineProbe: () => ({ engine: 'bwrap', version: '0.11.0' }),
+    modelResolver: () => ({ model: 'zai/glm-5.3' }),
+  }).loop.run();
+  if (r.status !== 'iteration-cap' || r.ok !== true) problems.push('run did not end at the cap: ' + r.status + '/' + r.reason + (r.detail ? ':' + String(r.detail).slice(0, 160) : ''));
+  const bi = (r.iterations || []).find((i) => i.stage === 'BUILD');
+  if (!bi || bi.signal !== 'advanced') problems.push('BUILD iteration not advanced: ' + JSON.stringify(bi && bi.signal));
+  if (bi && (!Array.isArray(bi.waves) || bi.waves.length !== 2 || bi.waves.some((w) => w.status !== 'released'))) {
+    problems.push('BUILD iteration lacks the released-wave summary: ' + JSON.stringify(bi && bi.waves));
+  }
+  const stateAfter = JSON.parse(fs.readFileSync(path.join(dir, '.gos', 'state.json'), 'utf8'));
+  if (stateAfter.current_stage !== 'REVIEW') problems.push('stage did not move to REVIEW: ' + stateAfter.current_stage);
+  const subj = spawnSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' });
+  if (!/^chore\(task\): advance build\b/.test(String(subj.stdout || ''))) problems.push('HEAD is not the labeled advance commit: ' + String(subj.stdout).slice(0, 60));
+  // wave completion records through the loop
+  const recs = L.store.readWaveRecords(dir);
+  if (!recs.ok || !recs.waves[`${TASKID}/W1`] || !recs.waves[`${TASKID}/W2`]) problems.push('wave records missing: ' + JSON.stringify(Object.keys(recs.waves || {})));
+  // run-start table stamp: pins the loaded file with run-start provenance
+  const tableFile = path.join(GR, 'templates', 'auto-dispatch.json');
+  const stampRead = L.store.readDispatchTableStamp(dir);
+  const liveSha = crypto.createHash('sha256').update(fs.readFileSync(tableFile)).digest('hex');
+  if (!stampRead.ok || !stampRead.stamp || stampRead.stamp.sha256 !== liveSha) problems.push('run-start stamp does not pin the live table');
+  if (stampRead.stamp && !/\/start$/.test(stampRead.stamp.rolledByWave)) problems.push('run-start stamp provenance not <runTag>/start: ' + stampRead.stamp.rolledByWave);
+  // wave spawns: driver prompts + baseline env; advance spawn: model pin + equipage
+  const waveSpecs = seen.filter((s) => Number.isInteger(s.wave));
+  if (waveSpecs.length !== 2) problems.push('wave spawn count ' + waveSpecs.length + ' != 2');
+  for (const ws of waveSpecs) {
+    const want = L.workers.renderWavePrompt({ wave: ws.wave, taskIds: ws.wave === 1 ? ['T13a'] : ['T13b'] });
+    if (!want.ok || ws.prompt !== want.prompt) problems.push(`wave ${ws.wave} prompt is not the pointer-only render`);
+    if (!ws.env.GOS_AUTO_APPROVALS_BASELINE) problems.push(`wave ${ws.wave} spawn lacks the approvals baseline env`);
+  }
+  const adv = seen.find((s) => s.stageExit === true);
+  if (!adv) problems.push('no stage-exit advance spawn');
+  else {
+    const i = adv.argv.indexOf('--model');
+    if (i < 0 || adv.argv[i + 1] !== 'zai/glm-5.3') problems.push('advance spawn lacks the resolved --model argv');
+    if (adv.env.GIT_AUTHOR_NAME !== 'gos-auto') problems.push('advance spawn lacks the runner git identity');
+  }
+  if (bi) {
+    const st = L.store.load(dir);
+    const stamp = st.ok ? st.store.stamps[bi.spawnId] : null;
+    if (!stamp || stamp.modelPinned !== 'zai/glm-5.3') problems.push('advance stamp lacks the pinned-model telemetry');
+  }
+  if (r.breaker && r.breaker.tripped) problems.push('breaker tripped on a green run');
+  console.log(problems.length ? 'C13-BAD ' + problems.join('; ') : 'C13-OK');
+  console.log('ITER[' + (bi && bi.signal) + ' waves:' + (bi && bi.waves ? bi.waves.map((w) => w.status).join(',') : 'none') + ']');
+  console.log('STAGE[' + stateAfter.current_stage + ']');
+  console.log('STAMP[' + (stampRead.stamp ? stampRead.stamp.rolledByWave.slice(-6) : 'none') + ']');
+})().catch((e) => { console.log('C13-BAD ' + e.message); process.exitCode = 1; });
+EOF
+C13_OUT="$(node "$T108_DIR/c13.cjs" 2>&1)"; RC=$?
+t108_exit "loop-wired wave probe runs clean" "0" "$RC"
+t108_contains "the loop drives BUILD waves, exits through one advance spawn, stamps the run-start table" "C13-OK" "$C13_OUT"
+t108_contains "BUILD iteration advanced over two released waves" "ITER[advanced waves:released,released]" "$C13_OUT"
+t108_contains "stage moved past BUILD" "STAGE[REVIEW]" "$C13_OUT"
+t108_contains "run-start stamp provenance" "STAMP[/start]" "$C13_OUT"
 
 echo "--- T108 summary: $PASS passed, $FAIL failed ---"
 if [ "$FAIL" -gt 0 ]; then exit 1; fi
