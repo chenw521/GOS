@@ -2,12 +2,13 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "REVIEW",
+  "current_stage": "VERIFY",
   "completed_stages": [
     "INTENT",
     "THINK",
     "PLAN",
-    "BUILD"
+    "BUILD",
+    "REVIEW"
   ],
   "intent": {
     "summary": "Ship the stage-dispatch blueprint for the auto loop: per-stage worker forms (script workers for mechanical stages like VERIFY, equipped agent workers for BUILD), a three-contract system for BUILD spawns (input skill-contract prompt, process behavioral assertions, output artifacts), wave-granularity dispatch for BUILD, trust-semantics separation (mechanical clearance vs progress release vs human approval - ratify renamed to mechanical clearance), and spawn telemetry (model pin, command counts, head+tail dual-window stream capture)",
