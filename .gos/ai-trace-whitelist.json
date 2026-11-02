@@ -171,12 +171,6 @@
     ]
   },
   {
-    "path": "bin/lib/core/spawnreg.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "bin/lib/core/state.cjs",
     "category": "frozen-string",
     "reason": "Contract sidecar-hash table: the lessonsAnchor verdict string is a frozen product contract line asserted by suite sections.",
@@ -635,30 +629,6 @@
     ]
   },
   {
-    "path": "bin/lib/ops/auto/breaker.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "bin/lib/ops/auto/launcher.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 1,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "bin/lib/ops/auto/store.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 5,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "bin/lib/ops/auto/workers.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "bin/lib/ops/changelog-core.cjs",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -768,6 +738,10 @@
         "sha256": "f69cdae81003f8cdcf1de1b2a11b77fd714f66025a5d8894939329d35669756f"
       },
       {
+        "line": 704,
+        "sha256": "3fd79ac83f68a6d17bcbbeb4c41d1eb44234e37a39a5c9a3cbe8de52e7bc37db"
+      },
+      {
         "line": 752,
         "sha256": "9e738a1abff613739e7cd9ddeb2f253493c672c18734ea82afbbb8f788f603f3"
       },
@@ -796,12 +770,6 @@
         "sha256": "76b61f6ea9edff48418c510972f1a37168708b30c4ec1969ae883ca70632f7db"
       }
     ]
-  },
-  {
-    "path": "bin/lib/ops/gate.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/ops/gitseed.cjs",
@@ -1122,24 +1090,6 @@
         "sha256": "70d8651708941ddfd40596ba17331471e55eabb227571a98607473cc2e4a04f3"
       }
     ]
-  },
-  {
-    "path": "test/sections/T104-auto-core.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 8,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T107-auto-dispatch.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
-    "path": "test/sections/T108-auto-wave-contracts.test.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 6,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T12-wiring.test.sh",

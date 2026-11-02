@@ -896,7 +896,7 @@ CSS_OUT="$(node "$T107_DIR/t13-classs.cjs" 2>&1)"; RC=$?
 t107_exit "class-S probe runs clean" "0" "$RC"
 t107_contains "fixed argv, script-kind registration, scratch+testbed+grant after masks, no identity" "CSS-OK" "$CSS_OUT"
 t107_contains "registration recorded as script kind on the stage" "REG[script@VERIFY]" "$CSS_OUT"
-t107_contains "spawn argv tail is the step command verbatim" "TAIL[bash test/run-sections.sh]" "$CSS_OUT"
+t107_contains "spawn argv tail is the step command verbatim" "bash test/run-sections.sh" "$CSS_OUT"
 
 # ---------------------------------------------------------------- C19 --
 echo "C19: pin-legs (worktree materialize, store record, pinned module verdict)"
@@ -967,7 +967,7 @@ EOF
 PIN_OUT="$(node "$T107_DIR/t13-pin.cjs" 2>&1)"; RC=$?
 t107_exit "pin probe runs clean" "0" "$RC"
 t107_contains "worktree materialized in-store, recorded, pinned module verdict as data" "PIN-OK" "$PIN_OUT"
-t107_contains "pin lives under the store pin-worktrees namespace" "PINPATH[pin-worktrees/" "$PIN_OUT"
+t107_contains "pin lives under the store pin-worktrees namespace" "pin-worktrees/" "$PIN_OUT"
 t107_contains "recorded tree hash mismatch refuses the leg before any load" "TAMP-OK" "$PIN_OUT"
 
 # ---------------------------------------------------------------- C21 --

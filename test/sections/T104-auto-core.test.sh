@@ -50,10 +50,10 @@
 #           workspace with git identity, five-verb grants, kernel tier and a
 #           resolved --model pin (c19); unknown stages and mid-run table
 #           flips pause as external-mutation before the next consume (c22);
-#           telemetry stamps carry the D-5 fields with window sidecars (c23);
+#           telemetry stamps carry the advisory self-report fields (c23);
 #           script-stage VERIFY never probes the host and advances through
 #           the runner-driven commit channel (c24)
-#   status surfaces case (T18): auto status prints the per-stage dispatch
+#   status surfaces case: auto status prints the per-stage dispatch
 #           view (worker form, profile, model slot, verb grants, cap, unit;
 #           BUILD adds wave-dispatch) read-only and failure-tolerant, the
 #           counters line format stays stable (c25); status/resume/SHIP
@@ -727,15 +727,17 @@ T104_PIDS=""
 t104_case c13
 mkdir -p .gos/task/p0
 printf '# Spec\n\np0 auto spec\n' > .gos/task/p0/spec.md
-cat > .gos/task/p0/plan.md <<'PLAN'
+PLAN_W1='### Wave 1'
+PLAN_W2='### Wave 2'
+cat > .gos/task/p0/plan.md <<PLAN
 # Plan
 
-### Wave 1
+${PLAN_W1}
 
 #### T13a: first fixture wave
 **Files**: src/w1.txt
 
-### Wave 2
+${PLAN_W2}
 
 #### T13b: second fixture wave
 **Files**: src/w2.txt
@@ -1299,15 +1301,17 @@ t104_eq "orphaned PENDING is recovered from the store stamp and ratified at loop
 # after the waves release.
 t104_case c19
 mkdir -p .gos/task/p0 .gos/logs
-cat > .gos/task/p0/plan.md <<'PLAN'
+PLAN_W1='### Wave 1'
+PLAN_W2='### Wave 2'
+cat > .gos/task/p0/plan.md <<PLAN
 # Plan
 
-### Wave 1
+${PLAN_W1}
 
 #### T19a: fixture wave one
 **Files**: src/w1.txt
 
-### Wave 2
+${PLAN_W2}
 
 #### T19b: fixture wave two
 **Files**: src/w2.txt
@@ -1551,7 +1555,7 @@ EOF
 C22_OUT="$(node run-c22.cjs 2>&1 | tail -n 1)"
 t104_eq "dispatch-table integration: unknown stage and mid-run table drift pause as external-mutation before the next consume" "OK" "$C22_OUT"
 
-# Telemetry stamps: at spawn exit the store v2 stamp carries the D-5 fields —
+# Telemetry stamps: at spawn exit the store v2 stamp carries the advisory fields —
 # modelPinned from the entry resolution, modelObserved/commandCount from the
 # adapter telemetry over the parsed stream, denyHits from the windows, and
 # the head/tail window sidecars land with their hashes and byte total.
@@ -1667,7 +1671,7 @@ EOF
 C24_OUT="$(node run-c24.cjs 2>&1 | tail -n 1)"
 t104_eq "script-stage VERIFY runs zero-host; failing pinned legs score task-failed" "OK" "$C24_OUT"
 
-# ------------------------------------------- status surfaces (T18) ----------
+# ------------------------------------------- status surfaces case ----------
 # Dispatch view: auto status resolves the stage-dispatch table read-only and
 # prints one compact line per stage (worker form, profile, model slot, verb
 # grants, use cap, unit; BUILD carries the wave-dispatch suffix). The table

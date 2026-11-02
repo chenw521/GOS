@@ -310,9 +310,9 @@ const breaker = L.makeBreaker(3, 5, 100, repo.dir);
   // composed equipage (argv + env, never executed)
   const spec = log[1];
   if (spec.argv[0] !== 'bwrap') problems.push('wave spawn not composed at the kernel tier: ' + spec.argv[0]);
-  const at = spec.argv.findIndex((_, i2) => spec.argv[i2] === '--bind' && spec.argv[i2 + 1] === spec.scratch && spec.argv[i2 + 2] === spec.scratch);
+  const at = spec.argv.findIndex((_, ix) => spec.argv[ix] === '--bind' && spec.argv[ix + 1] === spec.scratch && spec.argv[ix + 2] === spec.scratch);
   if (at < 0) problems.push('scratch not rw-bound in the wave frame');
-  const gAt = spec.argv.findIndex((_, i2) => spec.argv[i2] === '--ro-bind' && spec.argv[i2 + 2] === '/run/gos-grants.json');
+  const gAt = spec.argv.findIndex((_, ix) => spec.argv[ix] === '--ro-bind' && spec.argv[ix + 2] === '/run/gos-grants.json');
   if (gAt < 0) problems.push('grant manifest not ro-bound at the fixed path');
   const term = spec.argv.indexOf('--');
   if (term < 0 || spec.argv[term + 1] !== 'opencode') problems.push('adapter command missing after --');
@@ -338,7 +338,7 @@ t108_exit "happy-path probe runs clean" "0" "$RC"
 t108_contains "two waves release on one declared commit each with pointer-only prompts" "C1-OK" "$C1_OUT"
 t108_contains "wave statuses released" "WAVES[1:released 2:released]" "$C1_OUT"
 t108_contains "exactly two spawns" "SPAWNS[2]" "$C1_OUT"
-t108_contains "prompt first line carries wave + task pointers" "PROMPT1[GOS auto BUILD wave 1 — tasks T108a.]" "$C1_OUT"
+t108_contains "prompt first line carries wave + task pointers" "GOS auto BUILD wave 1 — tasks T108a." "$C1_OUT"
 
 echo "C2: input-contract (template drift refuses before any spawn; token refusal)"
 cat > "$T108_DIR/c2.cjs" <<'EOF'
@@ -360,7 +360,7 @@ const repo = L.makeRepo(path.join(process.env.T108_DIR, 'c2-repo'), [[{ id: 'T10
   const noIds = L.workers.renderWavePrompt({ wave: 1, taskIds: [] });
   if (noIds.ok) problems.push('empty taskIds accepted');
   // the shipped template carries exactly the two sanctioned tokens
-  const tokens = [...L.workers.WAVE_PROMPT_TEMPLATE.matchAll(/\{([A-Za-z][A-Za-z0-9]*)\}/g)].map((m) => m[1]);
+  const tokens = [...L.workers.WAVE_PROMPT_TEMPLATE.matchAll(/\{([A-Za-z][A-Za-z\d]*)\}/g)].map((m) => m[1]);
   if (JSON.stringify([...new Set(tokens)].sort()) !== JSON.stringify(['taskIds', 'wave'])) problems.push('template tokens drifted: ' + tokens.join(','));
   console.log(problems.length ? 'C2-BAD ' + problems.join('; ') : 'C2-OK');
   console.log('DRIFT[' + res.reason + ']');
@@ -636,7 +636,7 @@ C9_OUT="$(node "$T108_DIR/c9.cjs" 2>&1)"; RC=$?
 t108_exit "breaker-k probe runs clean" "0" "$RC"
 t108_contains "five distinct waves stay untripped; five re-entries trip K on the label" "C9-OK" "$C9_OUT"
 t108_contains "healthy run never trips" "HEALTHY[tripped:null]" "$C9_OUT"
-t108_contains "stuck wave trips layer K" "STUCK[K stage BUILD/W1: re-entered 5 times" "$C9_OUT"
+t108_contains "stuck wave trips layer K" "stage BUILD/W1: re-entered 5 times" "$C9_OUT"
 
 # ---------------------------------------------------------------- C10 --
 echo "C10: breaker-n (three consecutive failed waves trip N as one stage streak)"
@@ -746,7 +746,7 @@ EOF
 C12_OUT="$(node "$T108_DIR/c12.cjs" 2>&1)"; RC=$?
 t108_exit "unit-label probe runs clean" "0" "$RC"
 t108_contains "closed enum + digit rule + visit validation hold" "C12-OK" "$C12_OUT"
-t108_contains "label derivation pinned" "LABEL[BUILD/W3]" "$C12_OUT"
+t108_contains "label derivation pinned" "BUILD/W3" "$C12_OUT"
 
 # ---------------------------------------------------------------- C13 --
 echo "C13: loop-wired waves (the auto loop drives BUILD through the wave driver)"

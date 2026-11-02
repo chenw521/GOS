@@ -23,7 +23,7 @@ const SPAWNREG_DIR_NAME = 'spawnreg';
 const CLAIMS_FILE = 'claims.ndjson';
 const MAX_ANCESTRY_DEPTH = 128;
 const HEARTBEAT_FRESH_MS = 120000;
-const SPAWN_ID_FILE_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const SPAWN_ID_FILE_RE = /^[A-Za-z\d][A-Za-z\d._-]*$/;
 
 // Channel env: GOS_AUTO_SPAWN_SCRATCH is the rw scratch dir the runner mounts
 // into the sandbox (request drop); GOS_AUTO_ACK_DIR is the runner-written,

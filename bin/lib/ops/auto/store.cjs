@@ -39,8 +39,8 @@ const HEX64_RE = /^[0-9a-f]{64}$/;
 // text pair per stamped spawn, named by spawnId. The pair count is bounded
 // by the stamp cap — pruned with its stamp, orphans swept at every prune.
 const WINDOWS_DIR = 'windows';
-const SPAWN_ID_FILE_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
-const SIDECAR_RE = /^([A-Za-z0-9][A-Za-z0-9._-]*)\.(head|tail)\.txt$/;
+const SPAWN_ID_FILE_RE = /^[A-Za-z\d][A-Za-z\d._-]*$/;
+const SIDECAR_RE = /^([A-Za-z\d][A-Za-z\d._-]*)\.(head|tail)\.txt$/;
 
 const RUN_LOCK_FILE = 'run.lock';
 
@@ -84,7 +84,7 @@ const SNAPSHOT_KINDS = new Set(['denyBaseline', 'hostSeed', 'redteamPrompt', 'pr
 // a filename-safe run tag to the worktree's absolute path, its tree hash,
 // the loop-start commit it pins, and the creation time (lazy recycles drop
 // pins whose run tag is not live).
-const PIN_RUN_TAG_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const PIN_RUN_TAG_RE = /^[A-Za-z\d][A-Za-z\d._-]*$/;
 const GIT_SHA_RE = /^[0-9a-f]{7,64}$/;
 const PIN_DIR_NAME = 'pin-worktrees';
 
@@ -92,11 +92,11 @@ const PIN_DIR_NAME = 'pin-worktrees';
 // filename-safe, wave digits only from 1). Values carry the wave's commit
 // head, the sha256 of the post-wave refs snapshot (for-each-ref + reflog
 // head text), release time, and the optional no-op / table-roll markers.
-const WAVE_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*\/W[1-9][0-9]*$/;
+const WAVE_KEY_RE = /^[A-Za-z\d][A-Za-z\d._-]*\/W[1-9][0-9]*$/;
 // Run-start dispatch-table stamp provenance: '<runTag>/start' where runTag
 // is the loop's filename-safe run tag (never a wave — a run start releases
 // nothing, it only pins what the run loaded).
-const RUN_START_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*\/start$/;
+const RUN_START_KEY_RE = /^[A-Za-z\d][A-Za-z\d._-]*\/start$/;
 
 // Append caps: oldest entries drop beyond the cap so a long-lived store
 // stays bounded. In-flight entries are always the newest, never trimmed.

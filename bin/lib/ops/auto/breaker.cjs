@@ -80,7 +80,7 @@ function isWaveUnitLabel(label) {
 
 // Label validation for visit: a plain stage label stays any non-empty
 // string (loop-era contract); a slash-carrying label must be a wave unit
-// label from the closed enum — 'THINK/W1' or 'BUILD/W' or 'BUILD/w2'
+// label from the closed enum — a stage name or a stage name with the wave suffix
 // refuse instead of counting toward a ghost label's visit budget.
 function validateVisitLabel(label) {
   if (typeof label !== 'string' || !label) {

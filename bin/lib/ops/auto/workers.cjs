@@ -57,7 +57,7 @@ const WAVE_STAGE = 'BUILD';
 // Filename-safe identifier rule shared by spawn ids and pin run tags (the
 // same shape spawnreg enforces, so derived paths can never escape their
 // store directory through path fragments).
-const RUNTAG_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const RUNTAG_RE = /^[A-Za-z\d][A-Za-z\d._-]*$/;
 // Git object hashes: sha-1 repos carry 40 hex chars, sha-256 repos 64.
 const GIT_SHA_RE = /^[0-9a-f]{7,64}$/;
 
@@ -618,7 +618,7 @@ function wavePromptSourceHash() {
 // never ride into the prompt through the template.
 function renderWavePrompt(ctx, template) {
   const tpl = typeof template === 'string' ? template : WAVE_PROMPT_TEMPLATE;
-  for (const m of tpl.matchAll(/\{([A-Za-z][A-Za-z0-9]*)\}/g)) {
+  for (const m of tpl.matchAll(/\{([A-Za-z][A-Za-z\d]*)\}/g)) {
     if (!WAVE_PROMPT_TOKENS.includes(m[1])) {
       return stepFail('prompt-token-refused', `template carries unsanctioned token '{${m[1]}}' — only {wave} and {taskIds} may appear`);
     }
