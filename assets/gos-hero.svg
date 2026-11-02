@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-label="GOS — Get Organized System: deterministic execution layer and adaptive workflow for AI coding agents">
+  <defs>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#58a6ff"/>
+      <stop offset="0.55" stop-color="#bc8cff"/>
+      <stop offset="1" stop-color="#f778ba"/>
+    </linearGradient>
+    <linearGradient id="cardline" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#58a6ff"/>
+      <stop offset="1" stop-color="#bc8cff"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.22" cy="0.25" r="0.9">
+      <stop offset="0" stop-color="#1c2636"/>
+      <stop offset="1" stop-color="#0d1117"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="300" rx="14" fill="url(#glow)"/>
+
+  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+    <text x="60" y="98" font-size="56" font-weight="800" letter-spacing="2" fill="url(#brand)">GOS</text>
+    <text x="60" y="126" font-size="15" font-weight="600" fill="#e6edf3" letter-spacing="4">GET ORGANIZED SYSTEM</text>
+    <text x="60" y="154" font-size="14.5" fill="#8b949e">Deterministic execution layer &amp; adaptive workflow</text>
+    <text x="60" y="174" font-size="14.5" fill="#8b949e">for AI coding agents</text>
+
+    <text x="60" y="236" font-size="12.5" fill="#8b949e">Lv0 direct&#160;&#160;·&#160;&#160;Lv1 BUILD→VERIFY&#160;&#160;·&#160;&#160;Lv2 +THINK&#160;&#160;·&#160;&#160;Lv3 +PLAN/REVIEW/SHIP</text>
+    <rect x="60" y="252" width="430" height="3" rx="1.5" fill="url(#cardline)" opacity="0.8"/>
+
+    <rect x="530" y="36" width="308" height="112" rx="10" fill="#161b22" stroke="#30363d"/>
+    <g transform="translate(554,62)">
+      <rect x="0" y="0" width="4" height="26" rx="2" fill="#58a6ff"/>
+      <rect x="9" y="-6" width="4" height="38" rx="2" fill="#58a6ff" opacity="0.75"/>
+      <rect x="18" y="-12" width="4" height="50" rx="2" fill="#58a6ff" opacity="0.5"/>
+    </g>
+    <text x="606" y="66" font-size="14.5" font-weight="700" fill="#e6edf3">HARD GATES</text>
+    <text x="606" y="86" font-size="12" fill="#8b949e">exit 1 beats "trust me" — gates,</text>
+    <text x="606" y="102" font-size="12" fill="#8b949e">coverage, spec-hash drift</text>
+    <rect x="606" y="114" width="46" height="16" rx="8" fill="#58a6ff" opacity="0.15"/>
+    <text x="613" y="126" font-size="10.5" font-weight="700" fill="#58a6ff">exit 1</text>
+
+    <rect x="852" y="36" width="308" height="112" rx="10" fill="#161b22" stroke="#30363d"/>
+    <circle cx="878" cy="75" r="17" fill="none" stroke="#3fb950" stroke-width="2.5"/>
+    <path d="M870 75 L876 81 L887 69" fill="none" stroke="#3fb950" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="928" y="66" font-size="14.5" font-weight="700" fill="#e6edf3">VERIFIED TRUTHS</text>
+    <text x="928" y="86" font-size="12" fill="#8b949e">every claim re-executed against</text>
+    <text x="928" y="102" font-size="12" fill="#8b949e">real stdout, artifacts on disk</text>
+    <rect x="928" y="114" width="72" height="16" rx="8" fill="#3fb950" opacity="0.15"/>
+    <text x="935" y="126" font-size="10.5" font-weight="700" fill="#3fb950">--replay</text>
+
+    <rect x="530" y="160" width="308" height="112" rx="10" fill="#161b22" stroke="#30363d"/>
+    <path d="M566 188 L578 193 V204 C578 214 570 220 566 222 C562 220 554 214 554 204 V193 Z" fill="none" stroke="#f0883e" stroke-width="2.5"/>
+    <path d="M584 184 L566 202" stroke="#f0883e" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M582 180 L588 186 L580 188 Z" fill="#f0883e"/>
+    <text x="606" y="196" font-size="14.5" font-weight="700" fill="#e6edf3">RED TEAM</text>
+    <text x="606" y="216" font-size="12" fill="#8b949e">fresh-context attackers challenge</text>
+    <text x="606" y="232" font-size="12" fill="#8b949e">every spec until a round is empty</text>
+    <rect x="606" y="244" width="98" height="16" rx="8" fill="#f0883e" opacity="0.15"/>
+    <text x="613" y="256" font-size="10.5" font-weight="700" fill="#f0883e">zero findings</text>
+
+    <rect x="852" y="160" width="308" height="112" rx="10" fill="#161b22" stroke="#30363d"/>
+    <path d="M892 196 A16 16 0 1 1 877.9 206.5" fill="none" stroke="#bc8cff" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M874 210 L880 204 L882 212 Z" fill="#bc8cff"/>
+    <text x="928" y="196" font-size="14.5" font-weight="700" fill="#e6edf3">FULL-AUTO LOOP</text>
+    <text x="928" y="216" font-size="12" fill="#8b949e">fresh session per stage, breaker-</text>
+    <text x="928" y="232" font-size="12" fill="#8b949e">guarded, SHIP lands as a PR</text>
+    <rect x="928" y="244" width="72" height="16" rx="8" fill="#bc8cff" opacity="0.15"/>
+    <text x="935" y="256" font-size="10.5" font-weight="700" fill="#bc8cff">gos auto</text>
+  </g>
+</svg>
