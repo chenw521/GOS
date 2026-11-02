@@ -9,7 +9,16 @@
 // Stream contract mirrors the opencode adapter: events parse as JSON lines,
 // a terminal event closes the stream, malformed JSON or a missing terminal
 // event is a classified failure, never a crash.
+//
+// Advisory telemetry mirrors the opencode surface: extractTelemetry scans
+// the generic model self-report field (tolerant, null on absent evidence);
+// no command-execution item type is recorded yet, so commandCount is null
+// until a dogfood run records the real shape. pinnedModelArgs returns []
+// (the exec model flag shape is unrecorded — no flag invented). Data only,
+// never a breaker signal.
 'use strict';
+
+const registryMod = require('./registry.cjs');
 
 const NAME = 'codex';
 const SPAWN_MODE = 'display-only';
@@ -90,4 +99,32 @@ function spawnRefused() {
   };
 }
 
-module.exports = { NAME, SPAWN_MODE, DISPLAY_ONLY, TERMINAL_TYPES, RECORDED_FIXTURES, validateFixture, spawnRefused };
+// ---------- host self-report telemetry (advisory) ----------
+
+// Counted tool-execution item types: NONE RECORDED. The recorded exec-JSONL
+// fixtures carry agentMessage items and turn.completed usage only — no
+// command-execution item shape has been captured and none is invented, so
+// the count predicate never fires (commandCount reports null — unobserved).
+// Extend after a dogfood run records the real item shape.
+function isToolExecutionItem() {
+  return false;
+}
+
+// Tolerant telemetry extractor over a parsed fixture/stream outcome
+// ({ events, ... }): latest string `model` field → modelObserved; counted
+// command-execution items → commandCount (always null until the item shape
+// is recorded); absent evidence → null for both. Never throws; data only —
+// never a breaker signal.
+function extractTelemetryCodex(outcome) {
+  return registryMod.extractSelfReport(outcome && outcome.events, isToolExecutionItem);
+}
+
+// Model pin argv: the codex exec model flag shape is unrecorded (the
+// adapter, its fixtures and the registry matrix carry no model flag) — no
+// flag is invented, so the pin contributes no argv. Update after a dogfood
+// run records the real flag.
+function pinnedModelArgsCodex() {
+  return [];
+}
+
+module.exports = { NAME, SPAWN_MODE, DISPLAY_ONLY, TERMINAL_TYPES, RECORDED_FIXTURES, validateFixture, spawnRefused, extractTelemetry: extractTelemetryCodex, pinnedModelArgs: pinnedModelArgsCodex, advisoryLine: registryMod.advisoryLine };

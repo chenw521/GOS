@@ -6,6 +6,14 @@
 // store. Every trip persists a breaker record through the store and
 // pauses the loop — nothing auto-resumes; explicit re-enable only.
 //
+// Wave dispatch widens the K label vocabulary: alongside plain stage
+// names, visit accepts wave unit labels 'BUILD/W<n>' (digits only,
+// derived from the closed stage enum — BUILD is the one stage that
+// dispatches by wave). A stuck wave re-entering under its own label
+// trips K on that label alone, while the consecutive layer keeps
+// counting against the stage itself: three failed waves are three
+// failed BUILD spawns and trip N as one stage streak.
+//
 // Spawn failures carry a class tag (task/env/auth/timeout) so environment
 // trouble never masquerades as task trouble. CI-watch timeouts are
 // external waits, not spawn failures: they never count toward N and route
@@ -17,13 +25,12 @@
 
 const { spawnSync } = require('node:child_process');
 const store = require('./store.cjs');
+const limits = require('./limits.cjs');
 const core = require('../../core/index.cjs');
 
-const DEFAULT_LIMITS = { N: 3, K: 5, B: 30 };
-
-// Per-spawn timeout defaults: 60 minutes wall clock, 10 minutes since the
-// last stream event. Overridable through the two env vars below.
-const DEFAULT_WALL_SEC = 60 * 60;
+// Per-spawn timeout default: 10 minutes since the last stream event. The
+// wall-clock default lives in limits.cjs. Both are overridable through the
+// two env vars below.
 const DEFAULT_IDLE_SEC = 10 * 60;
 const WALL_ENV = 'GOS_AUTO_TIMEOUT_WALL_SEC';
 const IDLE_ENV = 'GOS_AUTO_TIMEOUT_IDLE_SEC';
@@ -52,6 +59,41 @@ const SIGNALS = {
 };
 
 const OID_RE = /^[0-9a-f]{7,40}$/i;
+
+// Wave unit labels: stage + '/' + 'W' + n over the wave-dispatching stage
+// only. The enum is closed — anything slash-carrying that is not exactly
+// BUILD/W<digits, n >= 1> refuses as a label.
+const WAVE_UNIT_STAGE = 'BUILD';
+const WAVE_UNIT_LABEL_RE = /^BUILD\/W([1-9][0-9]*)$/;
+
+// The unit label for one wave number, or null when n is not a positive
+// integer (fail-closed — callers never string-build labels by hand).
+function waveUnitLabel(n) {
+  if (!Number.isInteger(n) || n < 1) return null;
+  return `${WAVE_UNIT_STAGE}/W${n}`;
+}
+
+// True only for labels the closed enum derives (BUILD/W<n>, digits only).
+function isWaveUnitLabel(label) {
+  return typeof label === 'string' && WAVE_UNIT_LABEL_RE.test(label);
+}
+
+// Label validation for visit: a plain stage label stays any non-empty
+// string (loop-era contract); a slash-carrying label must be a wave unit
+// label from the closed enum — a stage name or a stage name with the wave suffix
+// refuse instead of counting toward a ghost label's visit budget.
+function validateVisitLabel(label) {
+  if (typeof label !== 'string' || !label) {
+    return { ok: false, status: 'error', reason: 'invalid-stage', detail: 'stage label required' };
+  }
+  if (label.includes('/') && !isWaveUnitLabel(label)) {
+    return {
+      ok: false, status: 'error', reason: 'invalid-stage',
+      detail: `slash-carrying labels must be wave unit labels '${WAVE_UNIT_STAGE}/W<n>' (digits only) — got '${label}'`,
+    };
+  }
+  return { ok: true };
+}
 
 
 
@@ -111,7 +153,7 @@ function timeoutPolicy(env, defaults) {
     }
     return { ok: true, value: Number(String(raw).trim()) };
   };
-  const wall = read(WALL_ENV, Number.isInteger(d.wallSec) && d.wallSec >= 1 ? d.wallSec : DEFAULT_WALL_SEC);
+  const wall = read(WALL_ENV, Number.isInteger(d.wallSec) && d.wallSec >= 1 ? d.wallSec : limits.DEFAULT_WALL_SEC);
   if (!wall.ok) return wall;
   const idle = read(IDLE_ENV, Number.isInteger(d.idleSec) && d.idleSec >= 1 ? d.idleSec : DEFAULT_IDLE_SEC);
   if (!idle.ok) return idle;
@@ -304,12 +346,13 @@ function createBreaker(opts = {}) {
   const breaker = {
     // Observe a stage entry. A different stage label ends the previous
     // stage's consecutive streak; the visit itself counts toward that
-    // label's ping-pong cap for the whole run.
+    // label's ping-pong cap for the whole run. Labels may be wave unit
+    // labels (BUILD/W<n>) — each wave counts its own K budget, so a stuck
+    // wave trips on its own label while distinct waves stay independent.
     visit(nextStage) {
       if (tripped) return trippedView();
-      if (typeof nextStage !== 'string' || !nextStage) {
-        return { ok: false, status: 'error', reason: 'invalid-stage', detail: 'stage label required' };
-      }
+      const valid = validateVisitLabel(nextStage);
+      if (!valid.ok) return valid;
       if (nextStage !== stage) {
         consecutive = 0;
         stage = nextStage;
@@ -401,10 +444,14 @@ function createBreaker(opts = {}) {
 }
 
 module.exports = {
-  DEFAULT_LIMITS,
-  DEFAULT_WALL_SEC,
+  DEFAULT_LIMITS: limits.DEFAULT_LIMITS,
+  DEFAULT_WALL_SEC: limits.DEFAULT_WALL_SEC,
   DEFAULT_IDLE_SEC,
   FAILURE_CLASSES,
+  WAVE_UNIT_STAGE,
+  WAVE_UNIT_LABEL_RE,
+  waveUnitLabel,
+  isWaveUnitLabel,
   validateLimits,
   classify,
   timeoutPolicy,

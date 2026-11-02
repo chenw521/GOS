@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gos-map:cmd status,next
 # next/status archived-state navigation + pending phase hints + snapshot coverage
-#      computation + commit handoff block + phase mark-done
+#      computation + commit handoff block + phase mark-done + auto-loop hints
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 T26_DIR=""
 
@@ -118,5 +118,66 @@ node "$GOS" phase claim 1 >/dev/null 2>&1
 set +e; OUT=$(node "$GOS" phase mark-done 1 2>&1); RC=$?; set -e
 assert_exit "mark-done on ACTIVE phase exits 1 (no pipeline bypass)" 1 "$RC"
 assert_contains "active refusal explains full-pipeline path" "finish and archive" "$OUT"
+
+# --- .7-.10: nav auto-aware hints (task facade wiring) — marker env, mode-on
+# outside a marker session, no-store silence, allowlist direction. Hint cases
+# pin HOME+XDG_DATA_HOME per case so machine-local stores never leak in and
+# the no-store assertion stays local to the case world.
+t26_hintcase() {
+  T26_CASE="$T26_DIR/$1"
+  mkdir -p "$T26_CASE/home" "$T26_CASE/xdg" "$T26_CASE/repo"
+  export HOME="$T26_CASE/home"
+  export XDG_DATA_HOME="$T26_CASE/xdg"
+  cd "$T26_CASE/repo" || exit 1
+  git init -q -b work . && git commit -q --allow-empty -m root
+}
+
+# .7 marker env: the hint names the tracked artifact, the advance verb and the
+# human-gate refusal
+t26_hintcase hints-marker
+node "$GOS" init 1 "nav hints marker" >/dev/null 2>&1
+set +e; OUT=$(GOS_AUTO_SPAWNED=1 GOS_AUTO_SPAWN_ID=t19-nav node "$GOS" status 2>&1); RC=$?; set -e
+assert_exit "marker-env status exits 0" 0 "$RC"
+assert_contains "marker hint names the tracked artifact" ".gos/state.json" "$OUT"
+assert_contains "marker hint names the advance verb" "gos commit" "$OUT"
+assert_contains "marker hint names the human-gate refusal" "human gates" "$OUT"
+
+# .8 mode-on outside a marker session: the hint names the loop state (status and next)
+t26_hintcase hints-mode-on
+node "$GOS" init 1 "nav hints mode" >/dev/null 2>&1
+node "$GOS" auto on >/dev/null 2>&1
+set +e; OUT=$(node "$GOS" status 2>&1); RC=$?; set -e
+assert_exit "mode-on outside: status exits 0" 0 "$RC"
+assert_contains "mode-on hint names the loop state" "auto mode on" "$OUT"
+assert_contains "mode-on hint carries the profile" "profile restricted" "$OUT"
+set +e; NOUT=$(node "$GOS" next 2>&1); RC=$?; set -e
+assert_exit "mode-on outside: next exits 0" 0 "$RC"
+assert_contains "next tail carries the same loop-state hint" "auto mode on" "$NOUT"
+
+# .9 no store: silence — no new hint lines, and the store dir is never created
+t26_hintcase hints-none
+node "$GOS" init 1 "nav hints none" >/dev/null 2>&1
+set +e; OUT=$(node "$GOS" status 2>&1); RC=$?; set -e
+assert_exit "no-store status exits 0" 0 "$RC"
+if echo "$OUT" | grep -q "auto loop session\|auto mode on"; then
+  echo "  ✗ no-store status printed auto hint lines"; FAIL=$((FAIL+1))
+else echo "  ✓ no-store status prints no auto hint lines"; PASS=$((PASS+1)); fi
+if [ -e "$XDG_DATA_HOME/gos" ]; then
+  echo "  ✗ status run created a store dir (read-only invariant broken)"; FAIL=$((FAIL+1))
+else echo "  ✓ status run created no store dir"; PASS=$((PASS+1)); fi
+
+# .10 allowlist: the direction covering the task→ops/auto require is present
+# and carries the new edge (longest-match module root, the same resolution
+# the gate applies)
+T26_ALW="$(node -e '
+const fs = require("fs");
+const path = require("path");
+const doc = JSON.parse(fs.readFileSync(path.join(process.env.GOS_ROOT, ".gos/codebase/require-allowlist.json"), "utf8"));
+const target = "bin/lib/ops/auto/cli.cjs";
+const root = [...doc.moduleRoots].sort((a, b) => b.length - a.length).find((r) => target.startsWith(r + "/"));
+const dir = (doc.directions || []).find((d) => d.from === "bin/lib/task" && d.to === root);
+console.log(`${root}|${dir && dir.edges >= 9 ? "carries-edge" : dir ? "stale-count" : "absent"}`);
+')"
+assert_eq "task→ops/auto covered by a registered direction carrying the edge" "bin/lib/ops|carries-edge" "$T26_ALW"
 
 t26_teardown

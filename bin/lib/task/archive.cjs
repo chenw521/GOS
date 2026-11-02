@@ -48,22 +48,40 @@ function archiveDirExists(date, slug) {
 }
 
 // SHIP ledger: counts-only provenance of how this task crossed its gates,
-// rendered at ship for human final review. Delegated approvals are approval
-// records carrying mode 'auto' (legacy string approvals are explicit human
-// acts, never delegated); VERIFY truth counts and red-team findings totals
+// rendered at ship for human final review. Approval provenance reads the
+// three-tier vocabulary: delegated records render as mechanical clearance
+// with their trust flavor (store-verified pairs live machine-local store
+// stamps; unpaired cleared records read pre-loop legacy — advisory here,
+// never a hold), a lingering PENDING is a clearance still awaiting runner
+// verification, and legacy string approvals are explicit human acts.
+// Progress-release evidence (red-team rounds) and VERIFY truth counts
 // follow. Evidence detail (hashes, session ids, output tails) stays
-// machine-local — only counts render here.
+// machine-local — only counts and tier labels render here.
 function shipLedgerLines(state) {
   const approvals = (state && state.approvals) || {};
-  const delegated = [];
+  let stamps;
+  try {
+    const autoStore = require('../ops/auto/store.cjs');
+    const loaded = autoStore.load();
+    if (loaded.ok && autoStore.isPlainObject(loaded.store.stamps)) stamps = loaded.store.stamps;
+  } catch { /* advisory: without readable stamps, cleared records read pre-loop legacy */ }
+  const describe = (v) => {
+    try { return require('../ops/auto/ratify.cjs').describeApproval(v, { stamps }); }
+    catch { return null; }
+  };
+  const mechanical = [];
   let pendingCount = 0;
   let humanCount = 0;
   for (const name of Object.keys(approvals)) {
     const v = approvals[name];
     if (v != null && typeof v === 'object') {
       if (v.mode === 'auto') {
-        delegated.push(v.status === 'PENDING' || v.pending === true ? `${name} (pending ratification)` : name);
-        if (v.status === 'PENDING' || v.pending === true) pendingCount++;
+        const desc = describe(v);
+        if (desc === 'cleared (store-verified)') mechanical.push(`${name} (store-verified)`);
+        else if (desc === 'cleared (pre-loop legacy)') mechanical.push(`${name} (pre-loop legacy)`);
+        else if (desc === 'claimed-not-verified') mechanical.push(`${name} (claimed-not-verified, held for human)`);
+        else if (desc === 'pending') { mechanical.push(`${name} (pending)`); pendingCount++; }
+        else humanCount++;
       } else humanCount++;
     } else if (typeof v === 'string' && v) humanCount++;
   }
@@ -73,10 +91,10 @@ function shipLedgerLines(state) {
   const rtFindings = rtRounds.reduce((n, r) => n + ((r && Number.isInteger(r.findings)) ? r.findings : 0), 0);
   return [
     'SHIP ledger — human final review:',
-    `  delegated approvals: ${delegated.length ? delegated.join(', ') : 'none (every gate crossed by explicit human approval)'}`,
-    `  human approvals: ${humanCount}${pendingCount ? ` (+${pendingCount} pending runner ratification)` : ''}`,
+    `  mechanical clearance: ${mechanical.length ? mechanical.join(', ') : 'none (every gate crossed by explicit human approval)'}`,
+    `  human approvals: ${humanCount}${pendingCount ? ` (+${pendingCount} pending)` : ''}`,
     `  VERIFY truths: ${verifiedCount}/${truths.length} verified`,
-    `  red-team findings: ${rtFindings} across ${rtRounds.length} round(s)`,
+    `  progress release: red-team findings ${rtFindings} across ${rtRounds.length} round(s)`,
   ];
 }
 

@@ -2,9 +2,10 @@
 # Section test runner — exports shared assert helpers + env (GOS/TESTBASE), runs
 # test/sections/T*.test.sh in name order, counts ✓/✗ from output (sections bump
 # their own PASS/FAIL copies; output counting is authoritative across processes).
-# TESTBASE is an isolated base dir under the repo (sections' convention: sandbox
-# dirs created inside it, removed by each section's own teardown; runner sweeps
-# any abort leftovers).
+# TESTBASE is an isolated base dir (sections' convention: sandbox dirs created
+# inside it, removed by each section's own teardown; runner sweeps any abort
+# leftovers). A non-empty absolute TESTBASE in the env is an enclosing-runner
+# pin used verbatim; anything else gets the literal mktemp base under the repo.
 # Usage:
 #   bash test/run-sections.sh [name-filter]            # machine-state mode (default)
 #   bash test/run-sections.sh --fresh [name-filter]    # clean git worktree (CI parity)
@@ -57,10 +58,37 @@ fi
 export GOS="$GOS_ROOT/bin/gos.cjs"
 export GOS_ROOT
 # TESTBASE is deliberately not the repo root: an isolated base dir (absolute
-# path inside GOS_ROOT) keeps sections from running with cwd=repo-root when
-# their cd fails, which would let fixtures overwrite the real .gos/
-export TESTBASE="$(mktemp -d "$GOS_ROOT/test-sections-base-XXXXXX")"
-trap 'rm -rf "$TESTBASE"' EXIT
+# path) keeps sections from running with cwd=repo-root when their cd fails,
+# which would let fixtures overwrite the real .gos/ Two ways to get one:
+# (a) env pin — a non-empty ABSOLUTE TESTBASE that the enclosing runner
+#     already created is used verbatim: never re-created, never deleted by
+#     this runner (the pin's owner sweeps it), and an unusable pin (missing
+#     dir, unwritable, the repo root itself) fails loudly — never a silent
+#     literal fallback;
+# (b) literal mktemp base under GOS_ROOT (unset/empty/relative TESTBASE),
+#     created and swept by this runner on exit.
+if [ -n "${TESTBASE:-}" ] && [ "${TESTBASE:0:1}" = "/" ]; then
+  if [ ! -d "$TESTBASE" ]; then
+    echo "✗ TESTBASE pin '$TESTBASE' is not a directory — the enclosing runner must create it; refusing literal fallback" >&2
+    exit 1
+  fi
+  if [ ! -x "$TESTBASE" ] || [ ! -w "$TESTBASE" ]; then
+    echo "✗ TESTBASE pin '$TESTBASE' is not writable — refusing literal fallback (unusable pin fails loudly)" >&2
+    exit 1
+  fi
+else
+  # literal base: pid-tagged so a nested runner's sweep can tell a live
+  # enclosing runner's base from an abort leftover
+  TESTBASE="$(mktemp -d "$GOS_ROOT/test-sections-base-$$-XXXXXX")"
+  trap 'rm -rf "$TESTBASE"' EXIT
+fi
+export TESTBASE
+TB_CANON="$(cd "$TESTBASE" 2>/dev/null && pwd -P)"
+GR_CANON="$(cd "$GOS_ROOT" 2>/dev/null && pwd -P)"
+if [ -z "$TB_CANON" ] || [ "$TB_CANON" = "$GR_CANON" ]; then
+  echo "✗ TESTBASE '$TESTBASE' cannot serve as the section base (unenterable or the repo root itself) — refusing literal fallback" >&2
+  exit 1
+fi
 # Phase B T9 [R3-F7]: default fake HOME — global-file sections (T15/T18…) may override
 # with their own sandbox HOME; nothing here may touch the real ~/.config/gos/
 export HOME="$TESTBASE/home"
@@ -223,7 +251,10 @@ for f in "$GOS_ROOT"/test/sections/T*.test.sh; do
     # A section that dies mid-script with zero ✗ lines must never report green.
     TOTAL_FAIL=$((TOTAL_FAIL + 1))
   fi
-  if ! (cd "$TESTBASE" && pwd -P) | grep -q "test-sections-base"; then
+  # cwd guard: the section base must still be enterable and resolve to the
+  # base this runner pinned (env pin) or created (literal mktemp) — a section
+  # that deleted or replaced it runs from an escaped cwd.
+  if [ "$(cd "$TESTBASE" && pwd -P)" != "$TB_CANON" ]; then
     echo "  ✗ RUNNER GUARD FAILED: cwd escaped TESTBASE"; TOTAL_FAIL=$((TOTAL_FAIL+1))
   fi
   P="$(printf '%s\n' "$SEC_OUT" | grep -c '^  ✓' || true)"
@@ -237,9 +268,21 @@ for f in "$GOS_ROOT"/test/sections/T*.test.sh; do
   if [ "$SEC_FAIL" -gt 0 ]; then FAILED_SECS="$FAILED_SECS $name($SEC_FAIL)"; fi
 done
 
-# sweep: sections clean up via their own teardown; remove sandboxes leaked by aborts
+# sweep: sections clean up via their own teardown; remove sandboxes leaked by
+# aborts. Literal bases carry their runner's pid — a base owned by a LIVE
+# runner (an enclosing suite, a concurrent invocation) is never a leak; bases
+# without a readable pid are never deleted (unattributable, product-runner
+# no-marker precedent).
 shopt -s nullglob
-for leak in "$GOS_ROOT"/test-*-t[0-9]* "$GOS_ROOT"/test-sections-base-*; do [ "$leak" = "$TESTBASE" ] && continue; rm -rf "$leak"; done
+for leak in "$GOS_ROOT"/test-*-t[0-9]*; do rm -rf "$leak"; done
+for base in "$GOS_ROOT"/test-sections-base-*; do
+  [ "$base" = "$TESTBASE" ] && continue
+  bpid="$(basename "$base" | sed -n 's/^test-sections-base-\([0-9][0-9]*\)-.*/\1/p')"
+  [ -z "$bpid" ] && continue
+  [ "$bpid" = "$$" ] && continue
+  kill -0 "$bpid" 2>/dev/null && continue
+  rm -rf "$base"
+done
 shopt -u nullglob
 
 echo ""

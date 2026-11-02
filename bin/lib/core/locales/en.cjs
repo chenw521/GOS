@@ -547,6 +547,11 @@ module.exports = {
     why: 'the ratified approval is written into the task state file',
     fix: 'run from the repository root with an active task, then re-run the auto loop',
   },
+  'auto.store.mutateBusy': {
+    what: 'store busy: another writer (pid {pid}) holds the mutation mutex past the bounded wait',
+    why: 'the store mutation path serializes writers — it never resolves a race by last-writer-wins',
+    fix: 'retry the command shortly; a busy that never clears means a stuck holder — inspect the mutex file in the store dir',
+  },
 
   // ---- auto mode: red-team orchestration ----
   'auto.redteam.promptDrift': {

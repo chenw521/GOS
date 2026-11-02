@@ -115,7 +115,7 @@ assert_exit "B2 commit plan (first freeze) exits 0" 0 "$RC"
 RT=$(python3 -c "
 import json
 s=json.load(open('.gos/state.json'))
-exp=[{'id':'T1','covers':['D-01'],'files':['src/a.cjs','src/b.js']}]
+exp=[{'id':'T1','covers':['D-01'],'files':['src/a.cjs','src/b.js'],'wave':1}]
 got=(s.get('plan_snapshot') or {}).get('tasks')
 print('EQ' if got==exp else 'NE:'+json.dumps(got))")
 assert_eq "B2 snapshot round-trip: frozen tasks == parsed plan" "EQ" "$RT"
@@ -174,7 +174,7 @@ print('OK' if 'snapshot-force' in rows else 'BAD:'+','.join(rows))")
 assert_eq "C2 audit row what=snapshot-force written" "OK" "$AUD"
 NEWSNAP=$(python3 -c "
 import json; s=json.load(open('.gos/state.json'))
-exp=[{'id':'T1','covers':['D-01'],'files':['src/b.js']}]
+exp=[{'id':'T1','covers':['D-01'],'files':['src/b.js'],'wave':1}]
 print('EQ' if s['plan_snapshot']['tasks']==exp else 'NE')")
 assert_eq "C2 refreshed snapshot reflects the forced plan" "EQ" "$NEWSNAP"
 
@@ -211,7 +211,7 @@ node "$GOS" approve plan >/dev/null 2>&1
 set +e; OUT=$(node "$GOS" commit plan 2>&1); RC=$?; set -e
 assert_exit "D3 empty Files value = undeclared, no crash" 0 "$RC"
 D3=$(python3 -c "import json; print(json.dumps(json.load(open('.gos/state.json'))['plan_snapshot']['tasks']))")
-assert_eq "D3 snapshot files == []" '[{"id": "T1", "covers": ["D-01"], "files": []}]' "$D3"
+assert_eq "D3 snapshot files == []" '[{"id": "T1", "covers": ["D-01"], "files": [], "wave": 1}]' "$D3"
 
 # --- D4: letter-suffixed task ids (T4a/T7b style) must parse with their Files ---
 t14_teardown; t14_setup
@@ -233,7 +233,7 @@ node "$GOS" approve plan >/dev/null 2>&1
 set +e; OUT=$(node "$GOS" commit plan 2>&1); RC=$?; set -e
 assert_exit "D4 suffixed ids parse, commit plan exit 0" 0 "$RC"
 D4=$(python3 -c "import json; print(json.dumps(json.load(open('.gos/state.json'))['plan_snapshot']['tasks']))")
-assert_eq "D4 snapshot keeps T4a/T7b with files" '[{"id": "T4a", "covers": ["D-01"], "files": ["core/lock.cjs"]}, {"id": "T7b", "covers": ["D-01"], "files": ["ops/track.cjs"]}]' "$D4"
+assert_eq "D4 snapshot keeps T4a/T7b with files" '[{"id": "T4a", "covers": ["D-01"], "files": ["core/lock.cjs"], "wave": 1}, {"id": "T7b", "covers": ["D-01"], "files": ["ops/track.cjs"], "wave": 1}]' "$D4"
 
 
 # ============================================================
@@ -312,7 +312,7 @@ G1=$(python3 -c "
 import json; s=json.load(open('.gos/state.json'))
 ps=s.get('plan_snapshot') or {}
 rows=[r.get('what') for r in ps.get('audit',[])]
-ok = ps.get('tasks')==[{'id':'T1','covers':['D-01'],'files':['src/a.cjs']}] and 'lazy-freeze' in rows
+ok = ps.get('tasks')==[{'id':'T1','covers':['D-01'],'files':['src/a.cjs'],'wave':1}] and 'lazy-freeze' in rows
 print('OK' if ok else 'BAD:'+json.dumps(ps))")
 assert_eq "G1 snapshot frozen + audit row lazy-freeze" "OK" "$G1"
 

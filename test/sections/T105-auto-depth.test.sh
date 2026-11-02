@@ -26,6 +26,35 @@
 #           at the kernel tier; mask-over-bind ordering intact
 #   D8  registry rows without version_command classify a probe failure via
 #           the --version fallback instead of crashing
+#   spawnrun  one async spawn runner: idle killer kills a stalled stream
+#           live, wall killer bounds the run, deny lines are caught as they
+#           stream in, and the head/tail dual-window capture keeps both ends
+#           of a long stream with sha256 + total byte counts
+#   store-mutex  store.mutate serializes under a cross-process mutex: no
+#           lost counter update, held-past-wait fails closed as store-busy,
+#           stale reclaim needs full holder identity (boot_id + starttime,
+#           mtime fallback for cross-host), and a network-filesystem store
+#           refuses at auto run
+#   store-v2  telemetry stamps + window sidecars: v1 stores migrate in
+#           memory (additive fields, lazy write-back on the next mutate,
+#           pure reads never write), future schema versions still refuse,
+#           saveWindows persists a bounded head/tail sidecar pair whose
+#           hashes and retained byte total ride the stamp, cap pruning
+#           drops sidecars with their stamps and sweeps orphans, and
+#           self-reported telemetry is advisory — stored verbatim, never
+#           branched on
+#   telemetry  adapter self-report extraction: model field + tool-execution
+#           count read from a parsed outcome stream (tolerant, null on
+#           absent evidence, data only — never a breaker signal); the
+#           runner-resolved model pin lands verbatim in the spawn argv;
+#           advisoryLine renders the self-report (mismatch and over-ceiling
+#           included) as one text line
+#   plansnap  D3  wave-field freeze validation: frozen task entries carry
+#           `wave` on multi-wave plans; gapped/duplicate wave numbering and
+#           unsafe declared paths (.git/**, absolute, '..' segments, hooks/**)
+#           refuse the freeze with named errors; a heading-less plan freezes
+#           with the verdict recorded in meta.waveValidation and refuses
+#           BUILD entry with guidance back to PLAN
 # Fake host: GOS_AUTO_TEST_FIXTURE=1 activates the registry fixture row;
 # loop spawns run through injected spawnRunner harnesses only. HOME and
 # XDG_DATA_HOME are pinned per case under TESTBASE;
@@ -257,7 +286,7 @@ state.approvals.THINK = { status: 'PENDING', ts: new Date().toISOString(), mode:
 fs.writeFileSync(path.join(rootDir, '.gos', 'state.json'), JSON.stringify(state, null, 2));
 store.stampStream('t7-spawn-1', 'THINK', sha, new Date().toISOString(), rootDir);
 const ok = ratify.ratify({ stage: 'THINK', spawnId: 't7-spawn-1', streamSha256: sha }, { rootDir });
-if (!ok.ok || ok.stored.status !== 'ratified') problems.push('ratify failed');
+if (!ok.ok || ok.stored.status !== 'cleared') problems.push('ratify failed');
 // tracked bytes: hash + count only
 const stateRaw = fs.readFileSync(path.join(rootDir, '.gos', 'state.json'), 'utf8');
 if (!stateRaw.includes(sha) || !stateRaw.includes('"stampCount"')) problems.push('evidence hash/count missing from tracked state');
@@ -691,6 +720,757 @@ console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
 EOF
 D8_OUT="$(node run-d8.cjs 2>&1 | tail -n 1)"
 t105_eq "registry: row without version_command classifies a probe failure (fallback --version), never crashes" "OK" "$D8_OUT"
+
+# ---------------------------------------------------------------- D9 --
+t105_case d9
+t105_state THINK > .gos/state.json
+cat > run-d9.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const stateMod = require(path.join(GR, 'bin/lib/core/state.cjs'));
+const problems = [];
+const hex64 = 'a'.repeat(64);
+// writer+reader pair: the canonical auto spelling 'cleared' must survive the
+// fail-closed write path, while legacy 'ratified' objects and bare ts-string
+// approvals (human `gos approve`) still parse untouched
+const st = JSON.parse(fs.readFileSync('.gos/state.json', 'utf8'));
+st.approvals.THINK = {
+  status: 'cleared', ts: '2026-10-31T00:00:00.000Z', mode: 'auto', stage: 'THINK',
+  evidence: { spawnId: 'x', streamSha256: hex64, stampCount: 1 },
+};
+st.approvals.PLAN = { status: 'ratified', ts: '2026-10-31T00:00:00.000Z', mode: 'auto', stage: 'PLAN' };
+st.approvals.INTENT = '2026-10-30T00:00:00.000Z';
+stateMod.writeState(st);
+const back = stateMod.readState();
+if (!back || !back.approvals) problems.push('read-back missing approvals');
+else {
+  const think = back.approvals.THINK || {};
+  if (think.status !== 'cleared') problems.push('cleared not preserved: ' + think.status);
+  if (!think.evidence || think.evidence.streamSha256 !== hex64 || think.evidence.stampCount !== 1) problems.push('cleared evidence mangled');
+  if ((back.approvals.PLAN || {}).status !== 'ratified') problems.push('legacy ratified not preserved');
+  if (back.approvals.INTENT !== '2026-10-30T00:00:00.000Z') problems.push('bare-string approval not preserved');
+}
+const raw = fs.readFileSync('.gos/state.json', 'utf8');
+if (!raw.includes('"cleared"') || !raw.includes(hex64)) problems.push('tracked bytes lost cleared status or evidence');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+D9_OUT="$(node run-d9.cjs 2>&1 | tail -n 1)"
+t105_eq "approvals schema: 'cleared' round-trips write+read; legacy 'ratified' and bare-string approvals still parse" "OK" "$D9_OUT"
+
+# ---------------------------------------------------------------- PV --
+# provenance re-verification: PENDING converts to cleared with store-paired
+# evidence; legacy records and bare strings grandfather as pre-loop; claims
+# inside the loop window without pairing hold and render claimed-not-verified
+t105_case pv
+t105_state THINK > .gos/state.json
+cat > run-pv.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const ratify = require(path.join(GR, 'bin/lib/ops/auto/ratify.cjs'));
+const rootDir = process.cwd();
+const problems = [];
+const hex = (t) => crypto.createHash('sha256').update(t).digest('hex');
+const loopStart = '2026-06-01T00:00:00.000Z';
+// PENDING -> cleared conversion over a fixture stamp
+store.create({ mode: 'on', rootDir });
+const sha = hex('pv conversion stream');
+store.stampStream('pv-spawn-1', 'THINK', sha, new Date().toISOString(), rootDir);
+const stateFile = path.join(rootDir, '.gos', 'state.json');
+const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+state.approvals.THINK = { status: 'PENDING', ts: '2026-01-01T00:00:00.000Z', mode: 'auto', stage: 'THINK' };
+fs.writeFileSync(stateFile, JSON.stringify(state, null, 2));
+const conv = ratify.ratify({ stage: 'THINK', spawnId: 'pv-spawn-1', streamSha256: sha }, { rootDir });
+if (!conv.ok || conv.stored.status !== 'cleared') problems.push('ratify did not write cleared: ' + JSON.stringify(conv.stored && conv.stored.status));
+if (!conv.stored.evidence || conv.stored.evidence.spawnId !== 'pv-spawn-1' || conv.stored.evidence.streamSha256 !== sha) problems.push('cleared evidence shape changed');
+const stamps = store.load(rootDir).store.stamps;
+// an in-loop conversion (ts after loop start) with pairing: store-verified
+if (ratify.describeApproval(conv.stored, { loopStartIso: loopStart, stamps }) !== 'cleared (store-verified)') problems.push('paired cleared not rendered store-verified');
+const vpPaired = ratify.verifyProvenance({ approvals: { THINK: conv.stored }, loopStartIso: loopStart, stamps });
+if (!vpPaired.ok || !vpPaired.results.some((r) => r.stage === 'THINK' && r.outcome === 'store-verified')) problems.push('paired cleared not verdict store-verified');
+// legacy grandfather: old ratified object + old bare string stay cleared-tier
+const legacyRec = { status: 'ratified', ts: '2026-01-02T00:00:00.000Z', mode: 'auto', stage: 'PLAN' };
+const legacyStr = '2026-01-03T00:00:00.000Z';
+if (!ratify.isRatified(legacyRec) || !ratify.isRatified(legacyStr)) problems.push('legacy records left the cleared tier');
+const vpLegacy = ratify.verifyProvenance({ approvals: { PLAN: legacyRec, THINK: legacyStr }, loopStartIso: loopStart, stamps });
+if (!vpLegacy.ok) problems.push('legacy records held: ' + JSON.stringify(vpLegacy.reason));
+for (const r of vpLegacy.results) if (r.outcome !== 'pre-loop legacy') problems.push('legacy outcome not pre-loop legacy: ' + r.stage);
+if (ratify.describeApproval(legacyRec, { loopStartIso: loopStart, stamps }) !== 'cleared (pre-loop legacy)') problems.push('legacy record render wrong');
+if (ratify.describeApproval(legacyStr, { loopStartIso: loopStart, stamps }) !== 'human') problems.push('legacy bare-string render wrong');
+// forged bare string inside the loop window: holds and renders the claim
+const forgedStr = new Date(Date.parse(loopStart) + 60000).toISOString();
+const vpForged = ratify.verifyProvenance({ approvals: { THINK: forgedStr }, loopStartIso: loopStart, stamps });
+if (vpForged.ok || vpForged.reason !== 'claimed-not-verified' || vpForged.stage !== 'THINK') problems.push('forged bare string not held: ' + JSON.stringify(vpForged.reason));
+if (ratify.describeApproval(forgedStr, { loopStartIso: loopStart, stamps }) !== 'claimed-not-verified') problems.push('forged bare string render wrong');
+// cleared record inside the loop window without pairing: held
+const unpaired = { status: 'cleared', ts: forgedStr, mode: 'auto', stage: 'PLAN', evidence: { spawnId: 'pv-ghost', streamSha256: hex('ghost'), stampCount: 1 } };
+const vpUnpaired = ratify.verifyProvenance({ approvals: { PLAN: unpaired }, loopStartIso: loopStart, stamps });
+if (vpUnpaired.ok || vpUnpaired.reason !== 'claimed-not-verified') problems.push('unpaired cleared record not held');
+if (ratify.describeApproval(unpaired, { loopStartIso: loopStart, stamps }) !== 'claimed-not-verified') problems.push('unpaired cleared render wrong');
+// advisory contexts (no loop start passed): nothing holds on age alone
+const vpAdvisory = ratify.verifyProvenance({ approvals: { THINK: forgedStr, PLAN: unpaired }, stamps });
+if (!vpAdvisory.ok) problems.push('advisory context refused: ' + JSON.stringify(vpAdvisory.reason));
+// render taxonomy: PENDING record and absent record
+if (ratify.describeApproval({ status: 'PENDING', ts: forgedStr, mode: 'auto', stage: 'THINK' }) !== 'pending') problems.push('PENDING render wrong');
+if (ratify.describeApproval(undefined) !== 'pending') problems.push('absent render wrong');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+PV_OUT="$(node run-pv.cjs 2>&1 | tail -n 1)"
+t105_eq "provenance: PENDING converts to cleared (store-verified); legacy grandfather; post-loop claims without pairing hold as claimed-not-verified" "OK" "$PV_OUT"
+
+# ---------------------------------------------------------------- AB --
+# marker-session approvals baseline: an absent baseline fails closed; a
+# delegated advance whose approvals[stage] exists under a drifted map
+# (diffusion) refuses; a matching baseline lets the sanctioned PENDING write
+# proceed; manual (non-marker) commits never consult the baseline
+t105_case ab
+t105_state THINK > .gos/state.json
+T105_EMPTY_BASE="$(node -e "console.log(require('crypto').createHash('sha256').update('{}').digest('hex'))")"
+t105_ch_setup() { # $1=spawnId — runner-side channel: holder lock + spawn entry
+  node -e "
+const sr = require(process.env.GOS_ROOT + '/bin/lib/core/spawnreg.cjs');
+const fs = require('fs');
+fs.writeFileSync('.gos/.lock', JSON.stringify({pid: process.ppid, started_at: new Date().toISOString(), boot_id: null, starttime: sr.procStartTime(process.ppid)}));
+sr.writeEntry(process.cwd(), {spawnId: '$1', kind: 'work', stage: 'THINK', pid: process.ppid, wallMs: 600000});
+"
+}
+# absent baseline in a marker session: fail closed, nothing recorded
+t105_ch_setup ab-no-base
+GOS_AUTO_SPAWNED=1 GOS_AUTO_SPAWN_ID=ab-no-base node "$GOS" commit think > ab1.txt 2>&1; AB1_RC=$?
+rm -f .gos/.lock
+t105_exit "AB: marker commit without the approvals baseline fails closed" 1 "$AB1_RC"
+t105_contains "AB: refusal names the missing baseline" "approvals-baseline-missing" "$(cat ab1.txt)"
+AB1_LEFT="$(python3 -c "import json;print('THINK' in json.load(open('.gos/state.json'))['approvals'])")"
+t105_eq "AB: fail-closed refusal records no approval" "False" "$AB1_LEFT"
+# diffusion: a forged THINK record the runner never passed refuses
+node -e "
+const fs = require('fs');
+const f = '.gos/state.json';
+const st = JSON.parse(fs.readFileSync(f, 'utf8'));
+st.approvals.THINK = new Date().toISOString();
+fs.writeFileSync(f, JSON.stringify(st, null, 2));
+"
+t105_ch_setup ab-diffuse
+GOS_AUTO_SPAWNED=1 GOS_AUTO_SPAWN_ID=ab-diffuse GOS_AUTO_APPROVALS_BASELINE="$T105_EMPTY_BASE" node "$GOS" commit think > ab2.txt 2>&1; AB2_RC=$?
+rm -f .gos/.lock
+t105_exit "AB: drifted approvals record refuses (diffusion)" 1 "$AB2_RC"
+t105_contains "AB: refusal names approvals-diffusion" "approvals-diffusion" "$(cat ab2.txt)"
+# matching baseline: the sanctioned PENDING write proceeds
+node -e "
+const fs = require('fs');
+const f = '.gos/state.json';
+const st = JSON.parse(fs.readFileSync(f, 'utf8'));
+delete st.approvals.THINK;
+fs.writeFileSync(f, JSON.stringify(st, null, 2));
+"
+t105_ch_setup ab-ok
+GOS_AUTO_SPAWNED=1 GOS_AUTO_SPAWN_ID=ab-ok GOS_AUTO_APPROVALS_BASELINE="$T105_EMPTY_BASE" node "$GOS" commit think > ab3.txt 2>&1; AB3_RC=$?
+rm -f .gos/.lock
+t105_exit "AB: matching baseline lets the delegated advance record its PENDING" 0 "$AB3_RC"
+AB3_APP="$(python3 -c "import json;a=json.load(open('.gos/state.json'))['approvals']['THINK'];print(a['status'],a['mode'])")"
+t105_eq "AB: persisted approval is PENDING/auto" "PENDING auto" "$AB3_APP"
+
+# manual commit (marker absent) never consults the baseline guard
+t105_case ab2
+t105_state THINK > .gos/state.json
+node -e "
+const fs = require('fs');
+const f = '.gos/state.json';
+const st = JSON.parse(fs.readFileSync(f, 'utf8'));
+st.approvals.THINK = new Date().toISOString();
+fs.writeFileSync(f, JSON.stringify(st, null, 2));
+"
+node "$GOS" commit think > ab4.txt 2>&1; AB4_RC=$?
+t105_exit "AB: manual commit ignores the approvals baseline guard" 0 "$AB4_RC"
+if grep -q "approvals-baseline-missing\|approvals-diffusion" ab4.txt; then
+  t105_bad "AB: manual commit surfaced a baseline refusal"
+else
+  t105_ok "AB: manual commit free of baseline refusals"
+fi
+
+# ---------------------------------------------------------------- SR --
+t105_case sr
+cat > run-sr.cjs <<'EOF'
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const spawnrun = require(path.join(GR, 'bin/lib/ops/auto/spawnrun.cjs'));
+const problems = [];
+const run = (script, opts) => spawnrun.spawnRun({
+  argv: [process.execPath, '-e', script],
+  cwd: process.cwd(),
+  env: { ...process.env },
+}, opts);
+(async () => {
+  // stalled stream: one chunk then silence — the idle killer fires live
+  const stalled = await run('process.stdout.write("first-chunk\\n"); setInterval(() => {}, 1000);', { idleMs: 400, wallMs: 10000 });
+  if (!stalled.error || stalled.error.idle !== true || stalled.error.killed !== true) problems.push('stalled stream not idle-killed');
+  if (stalled.status !== null) problems.push('idle kill must resolve status null');
+  if (!String(stalled.stdout).includes('first-chunk')) problems.push('idle kill lost the captured chunk');
+  // wall killer: a chatty forever-child is killed at the wall clock
+  const walled = await run('setInterval(() => process.stdout.write("tick\\n"), 20);', { idleMs: 10000, wallMs: 400 });
+  if (!walled.error || walled.error.killed !== true || walled.error.idle === true) problems.push('wall kill missing or misclassified');
+  if (walled.status !== null) problems.push('wall kill must resolve status null');
+  // streaming deny scan: the hit rides the payload even under tiny windows
+  const denied = await run('process.stdout.write("running forbidden-cmd now\\n"); for (let i = 0; i < 40; i++) process.stdout.write("pad" + i + "\\n");', { idleMs: 5000, wallMs: 10000, deny: ['forbidden-cmd'], windows: { headBytes: 32, tailBytes: 32 } });
+  if (denied.status !== 0 || denied.error) problems.push('deny-scan child exited dirty: ' + JSON.stringify(denied.status));
+  if (!(denied.preTruncationDenyHits || []).some((h) => h.pattern === 'forbidden-cmd')) problems.push('streaming deny scan missed the hit');
+  if (denied.windowHead.stdout.length !== 32) problems.push('head window not bounded to headBytes');
+  // dual-window capture: head keeps the start, tail keeps the end
+  const long = await run('for (let i = 0; i < 100; i++) process.stdout.write("L" + String(i).padStart(4, "0") + "\\n");', { windows: { headBytes: 16, tailBytes: 24 } });
+  if (long.status !== 0 || long.error) problems.push('normal exit mangled');
+  if (long.totalBytes.stdout !== long.stdout.length && long.totalBytes.stdout < 100 * 6) problems.push('totalBytes.stdout undercounts');
+  if (!long.windowHead.stdout.toString().startsWith('L0000')) problems.push('head window lost the stream start');
+  if (!long.windowTail.stdout.toString().includes('L0099')) problems.push('tail window lost the stream end');
+  if (long.windowTail.stdout.length !== 24) problems.push('tail window not bounded to tailBytes');
+  for (const side of ['stdout', 'stderr']) {
+    for (const w of ['head', 'tail']) {
+      if (!/^[0-9a-f]{64}$/.test((long.windowSha256s || {})[side][w])) problems.push('window sha256 missing for ' + side + '/' + w);
+    }
+  }
+  // empty argv resolves the error shape instead of throwing
+  const empty = await spawnrun.spawnRun({ argv: [] }, {});
+  if (!empty.error || empty.status !== null) problems.push('empty argv not an error result');
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+SR_OUT="$(node run-sr.cjs 2>&1 | tail -n 1)"
+t105_eq "spawnrun: idle killer kills a stalled stream live; wall killer bounds the run; deny hits stream-sampled; dual-window capture bounded with sha256 + totalBytes" "OK" "$SR_OUT"
+
+# ---------------------------------------------------------------- MU1 --
+t105_case mu1
+cat > mu-worker.cjs <<'EOF'
+const path = require('path');
+const store = require(path.join(process.env.GOS_ROOT, 'bin/lib/ops/auto/store.cjs'));
+const rootDir = process.argv[2];
+for (let i = 0; i < 50; i += 1) {
+  const r = store.bumpSpawn(rootDir);
+  if (!r.ok) { console.error('worker bump failed: ' + JSON.stringify(r.reason)); process.exit(1); }
+}
+console.log('WORKER-DONE');
+EOF
+cat > run-mu1.cjs <<'EOF'
+const { spawn } = require('child_process');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const rootDir = process.cwd();
+const problems = [];
+store.create({ mode: 'on', rootDir });
+const worker = () => new Promise((resolve) => {
+  const c = spawn(process.execPath, [path.join(rootDir, 'mu-worker.cjs'), rootDir], { env: { ...process.env } });
+  let out = '';
+  c.stdout.on('data', (d) => { out += d; });
+  c.on('exit', (code) => resolve({ code, out }));
+});
+(async () => {
+  const results = await Promise.all([worker(), worker()]);
+  for (const r of results) {
+    if (r.code !== 0) problems.push('a worker failed: ' + r.out.trim());
+  }
+  const m = store.mirrors(rootDir);
+  if (!m.ok || m.spawnCount !== 100) problems.push('lost update under concurrency: spawnCount=' + (m.ok ? m.spawnCount : m.reason));
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+MU1_OUT="$(node run-mu1.cjs 2>&1 | tail -n 1)"
+t105_eq "store mutex: two concurrent mutators (50 bumps each) serialize — no lost counter update" "OK" "$MU1_OUT"
+
+# ---------------------------------------------------------------- MU2 --
+t105_case mu2
+cat > mu-holder.cjs <<'EOF'
+const path = require('path');
+const store = require(path.join(process.env.GOS_ROOT, 'bin/lib/ops/auto/store.cjs'));
+const r = store.acquireMutateLock(process.argv[2], { waitMs: 3000 });
+if (!r.ok) { console.error('holder acquire failed: ' + r.reason); process.exit(1); }
+console.log('HELD');
+setTimeout(() => process.exit(0), 3500);
+EOF
+cat > run-mu2.cjs <<'EOF'
+const { spawn } = require('child_process');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const rootDir = process.cwd();
+const problems = [];
+store.create({ mode: 'on', rootDir });
+const hold = spawn(process.execPath, [path.join(rootDir, 'mu-holder.cjs'), rootDir], { env: { ...process.env } });
+hold.stdout.on('data', (d) => { if (String(d).includes('HELD')) held = true; });
+let held = false;
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+(async () => {
+  const deadline = Date.now() + 5000;
+  while (!held && Date.now() < deadline) await sleep(20);
+  if (!held) problems.push('holder child never acquired the mutex');
+  const busy = store.bumpSpawn(rootDir, { waitMs: 600 });
+  if (busy.ok || busy.reason !== 'store-busy') problems.push('held mutex past the wait did not fail closed: ' + JSON.stringify(busy.reason));
+  if (!busy.holder || busy.holder.pid !== hold.pid) problems.push('store-busy refusal does not name the live holder');
+  const done = new Promise((res) => hold.on('exit', res));
+  await done;
+  const after = store.bumpSpawn(rootDir, { waitMs: 3000 });
+  if (!after.ok) problems.push('mutex not recoverable after the holder exits: ' + JSON.stringify(after.reason));
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+MU2_OUT="$(node run-mu2.cjs 2>&1 | tail -n 1)"
+t105_eq "store mutex: held mutex past the bounded wait reports store-busy (fail closed, holder named); releases recover" "OK" "$MU2_OUT"
+
+# ---------------------------------------------------------------- MU3 --
+t105_case mu3
+cat > run-mu3.cjs <<'EOF'
+const { spawn } = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const rootDir = process.cwd();
+const problems = [];
+// /proc/<pid>/stat field 22 (starttime), parsed after the last ')'
+function starttimeOf(pid) {
+  const stat = fs.readFileSync(`/proc/${pid}/stat`, 'utf8');
+  return Number(stat.slice(stat.lastIndexOf(')') + 2).split(' ')[19]);
+}
+store.create({ mode: 'on', rootDir });
+// recycled-pid holder: the pid IS alive (a live sleeper) but the recorded
+// starttime belongs to a previous process — bare pid-liveness must not
+// satisfy the reclaim check's block; full identity proves the holder gone
+const sleeper = spawn(process.execPath, ['-e', 'setInterval(() => {}, 5000)'], { stdio: 'ignore' });
+const bootId = fs.readFileSync('/proc/sys/kernel/random/boot_id', 'utf8').trim();
+const lockPath = store.mutateLockPath(rootDir);
+fs.writeFileSync(lockPath, JSON.stringify({
+  hostname: os.hostname(), pid: sleeper.pid, boot_id: bootId,
+  starttime: starttimeOf(sleeper.pid) + 7, created_at: new Date().toISOString(),
+}));
+const r = store.bumpSpawn(rootDir, { waitMs: 800 });
+if (!r.ok) problems.push('recycled-pid holder blocked the mutation: ' + JSON.stringify(r.reason));
+if (r.ok && r.mirrors.spawnCount !== 1) problems.push('reclaim mutation lost the counter bump');
+const st = store.load(rootDir);
+const records = st.ok ? st.store.breaker.records : [];
+if (!records.some((x) => x.cls === 'takeover' && /recycled/.test(String(x.detail)))) problems.push('recycled-pid reclaim not audited as a takeover record');
+sleeper.kill();
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+MU3_OUT="$(node run-mu3.cjs 2>&1 | tail -n 1)"
+t105_eq "store mutex: recycled-pid holder (live pid, wrong starttime) reclaims with a takeover record — pid liveness alone cannot hold the lock" "OK" "$MU3_OUT"
+
+# ---------------------------------------------------------------- MU4 --
+t105_case mu4
+cat > run-mu4.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const rootDir = process.cwd();
+const problems = [];
+store.create({ mode: 'on', rootDir });
+const lockPath = store.mutateLockPath(rootDir);
+const crossHost = () => fs.writeFileSync(lockPath, JSON.stringify({
+  hostname: 'other-machine.example', pid: 424242, boot_id: 'b'.repeat(36),
+  starttime: 1, created_at: new Date().toISOString(),
+}));
+// fresh cross-host holder: identity unreadable from this machine and the
+// lock is not aged — fail closed as store-busy, never a blind reclaim
+crossHost();
+const busy = store.bumpSpawn(rootDir, { waitMs: 400 });
+if (busy.ok || busy.reason !== 'store-busy') problems.push('fresh identity-unreadable holder was not store-busy: ' + JSON.stringify(busy.reason));
+// aged past the threshold: the mtime fallback reclaims and audits it
+crossHost();
+const aged = new Date(Date.now() - 120000);
+fs.utimesSync(lockPath, aged, aged);
+const r = store.bumpSpawn(rootDir, { waitMs: 400, staleMs: 30000 });
+if (!r.ok) problems.push('aged identity-unreadable holder was not reclaimed: ' + JSON.stringify(r.reason));
+const st = store.load(rootDir);
+const records = st.ok ? st.store.breaker.records : [];
+if (!records.some((x) => x.cls === 'takeover' && /unreadable/.test(String(x.detail)))) problems.push('mtime-fallback reclaim missing its takeover record');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+MU4_OUT="$(node run-mu4.cjs 2>&1 | tail -n 1)"
+t105_eq "store mutex: identity-unreadable holder fails closed while fresh, reclaims with a takeover record past the mtime threshold" "OK" "$MU4_OUT"
+
+# ---------------------------------------------------------------- MU5 --
+t105_case mu5
+t105_state THINK > .gos/state.json
+cat > run-mu5.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const rootDir = process.cwd();
+const problems = [];
+store.create({ mode: 'on', rootDir });
+const sr = store.storeRoot(rootDir);
+fs.mkdirSync(sr, { recursive: true });
+const nfsTable = `tmpfs / tmpfs rw 0 0\nsrv:/export ${sr} nfs4 rw 0 0\n`;
+const localTable = `tmpfs / tmpfs rw 0 0\n/dev/sda1 ${sr} ext4 rw 0 0\n`;
+const refused = store.refuseNetworkStore(rootDir, { readMounts: () => nfsTable });
+if (refused.ok || refused.reason !== 'network-store' || refused.fstype !== 'nfs4') problems.push('network store not refused: ' + JSON.stringify(refused.reason));
+if (!store.refuseNetworkStore(rootDir, { readMounts: () => localTable }).ok) problems.push('local-disk store wrongly refused');
+for (const fstype of ['nfs', 'cifs', '9p', 'ceph', 'lustre', 'fuse.sshfs']) {
+  const t = `tmpfs / tmpfs rw 0 0\nsrv ${sr} ${fstype} rw 0 0\n`;
+  if (store.refuseNetworkStore(rootDir, { readMounts: () => t }).ok) problems.push(fstype + ' not refused');
+}
+(async () => {
+  const r = await loop.createLoop({
+    rootDir, host: 'gos-fixture-host',
+    env: { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' },
+    readMounts: () => nfsTable,
+  }).loop.run();
+  if (r.status !== 'refused' || r.reason !== 'network-store') problems.push('auto run did not refuse the network store: ' + r.status + '/' + r.reason);
+  if (!r.guidance || !String(r.guidance.what || r.guidance).includes('XDG_DATA_HOME')) problems.push('refusal guidance does not point XDG_DATA_HOME at local disk');
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+MU5_OUT="$(node run-mu5.cjs 2>&1 | tail -n 1)"
+t105_eq "network-FS store: mount-table fixture refuses hard at auto run with XDG_DATA_HOME-local-disk guidance; local fstypes pass" "OK" "$MU5_OUT"
+
+# ---------------------------------------------------------------- SV1 --
+t105_case sv1
+cat > run-sv1.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const rootDir = process.cwd();
+const problems = [];
+const hex = (t) => crypto.createHash('sha256').update(t).digest('hex');
+const storeFile = path.join(store.storeRoot(rootDir), 'store.json');
+const made = store.create({ mode: 'on', rootDir });
+if (!made.ok) problems.push('store create failed');
+// v1 fixture: schema-1 store whose stamps predate every telemetry field
+const v1 = JSON.parse(JSON.stringify(made.store));
+v1.store_schema_version = 1;
+v1.stamps = {
+  'sv-legacy-1': { stage: 'THINK', streamSha256: hex('s1'), spawnedAtIso: '2026-01-01T00:00:00.000Z', stampedAtIso: '2026-01-01T00:00:01.000Z' },
+  'sv-legacy-2': { stage: 'PLAN', streamSha256: hex('s2'), spawnedAtIso: '2026-01-02T00:00:00.000Z', stampedAtIso: '2026-01-02T00:00:01.000Z' },
+};
+fs.writeFileSync(storeFile, JSON.stringify(v1, null, 2));
+const m = store.load(rootDir);
+if (!m.ok) problems.push('v1 store did not load: ' + m.reason);
+else {
+  if (m.store.store_schema_version !== 2) problems.push('v1 store not schema 2 in memory');
+  if (m.migrated !== true) problems.push('load does not report the migration');
+  for (const id of Object.keys(v1.stamps)) {
+    const s = m.store.stamps[id] || {};
+    if (s.stage !== v1.stamps[id].stage || s.streamSha256 !== v1.stamps[id].streamSha256) problems.push(id + ': legacy fields lost');
+    if (s.modelPinned !== null || s.modelObserved !== null || s.headSha256 !== null || s.tailSha256 !== null) problems.push(id + ': nullable fields not normalized to null');
+    if (s.commandCount !== 0 || s.totalBytes !== 0 || s.denyHits !== 0) problems.push(id + ': count fields not normalized to 0');
+  }
+}
+// pure read never writes back: disk stays v1 until the next mutate
+if (JSON.parse(fs.readFileSync(storeFile, 'utf8')).store_schema_version !== 1) problems.push('pure read rewrote the v1 store');
+const bump = store.bumpSpawn(rootDir);
+if (!bump.ok) problems.push('mutate over a migrated store failed: ' + bump.reason);
+const afterBump = JSON.parse(fs.readFileSync(storeFile, 'utf8'));
+if (afterBump.store_schema_version !== 2) problems.push('lazy write-back did not persist schema 2');
+if ((afterBump.stamps['sv-legacy-1'] || {}).commandCount !== 0) problems.push('normalized stamp not persisted by write-back');
+// advisory contract: self-reported values ride the stamp verbatim — the
+// write path stores them, never branches on them
+const tel = { modelPinned: 'pinned-model-x', modelObserved: 'whatever', commandCount: 999999, denyHits: 7, totalBytes: 424242, headSha256: hex('hh'), tailSha256: hex('tt') };
+const adv = store.stampStream('sv-adv-1', 'SHIP', hex('adv'), new Date().toISOString(), rootDir, tel);
+if (!adv.ok) problems.push('telemetry stamp failed: ' + adv.reason);
+for (const [k, v] of Object.entries(tel)) {
+  if ((adv.stamp || {})[k] !== v) problems.push('advisory field ' + k + ' not stored verbatim');
+}
+const reread = store.load(rootDir);
+if (!reread.ok || JSON.stringify(reread.store.stamps['sv-adv-1']) !== JSON.stringify(adv.stamp)) problems.push('advisory stamp round-trip mismatch');
+// malformed telemetry types refuse with a named error
+if (store.stampStream('sv-bad-1', 'SHIP', hex('bad'), new Date().toISOString(), rootDir, { commandCount: 'lots' }).reason !== 'invalid-telemetry') problems.push('non-integer commandCount accepted');
+if (store.stampStream('sv-bad-2', 'SHIP', hex('bad'), new Date().toISOString(), rootDir, { headSha256: 'not-hex' }).reason !== 'invalid-telemetry') problems.push('malformed window hash accepted');
+// future schema still refuses with the existing refusal
+const v3 = JSON.parse(fs.readFileSync(storeFile, 'utf8'));
+v3.store_schema_version = 3;
+fs.writeFileSync(storeFile, JSON.stringify(v3));
+const f = store.load(rootDir);
+if (f.status !== 'paused' || f.reason !== 'version-mismatch') problems.push('schema 3 not refused: ' + f.reason);
+if (!(f.guidance && String(f.guidance.what).includes('v3'))) problems.push('refusal does not name v3');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+SV1_OUT="$(node run-sv1.cjs 2>&1 | tail -n 1)"
+t105_eq "store v2: v1 stores migrate in memory (lazy write-back, pure reads never write); advisory telemetry stored verbatim; schema 3 refuses" "OK" "$SV1_OUT"
+
+# ---------------------------------------------------------------- SV2 --
+t105_case sv2
+cat > run-sv2.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const rootDir = process.cwd();
+const problems = [];
+const hex = (t) => crypto.createHash('sha256').update(t).digest('hex');
+const storeFile = path.join(store.storeRoot(rootDir), 'store.json');
+const winDir = path.join(store.storeRoot(rootDir), 'windows');
+const iso = () => new Date().toISOString();
+store.create({ mode: 'on', rootDir });
+// saveWindows: two sidecars under the store dir + window hashes and the
+// retained byte total stamped
+store.stampStream('sv-win-1', 'THINK', hex('w1'), iso(), rootDir, { denyHits: 1 });
+const sw = store.saveWindows('sv-win-1', { head: 'HEAD-ONE\nline2\n', tail: 'TAIL-ONE\n' }, rootDir);
+if (!sw.ok) problems.push('saveWindows failed: ' + sw.reason);
+if (fs.readFileSync(path.join(winDir, 'sv-win-1.head.txt'), 'utf8') !== 'HEAD-ONE\nline2\n') problems.push('head sidecar content wrong');
+if (fs.readFileSync(path.join(winDir, 'sv-win-1.tail.txt'), 'utf8') !== 'TAIL-ONE\n') problems.push('tail sidecar content wrong');
+let s = store.load(rootDir).store.stamps['sv-win-1'];
+if (s.headSha256 !== hex('HEAD-ONE\nline2\n')) problems.push('head window hash not stamped');
+if (s.tailSha256 !== hex('TAIL-ONE\n')) problems.push('tail window hash not stamped');
+if (s.totalBytes !== 'HEAD-ONE\nline2\n'.length + 'TAIL-ONE\n'.length) problems.push('retained byte total not stamped');
+if (s.denyHits !== 1) problems.push('earlier advisory fields clobbered by saveWindows');
+// binary windows hash their exact bytes
+store.stampStream('sv-win-2', 'THINK', hex('w2'), iso(), rootDir);
+store.saveWindows('sv-win-2', { head: Buffer.from([0, 1, 2, 255]), tail: '' }, rootDir);
+s = store.load(rootDir).store.stamps['sv-win-2'];
+if (s.headSha256 !== crypto.createHash('sha256').update(Buffer.from([0, 1, 2, 255])).digest('hex')) problems.push('binary head window hash wrong');
+if (s.totalBytes !== 4) problems.push('binary retained byte total wrong');
+// refusals: unstamped spawn, path-hostile spawnId, malformed windows
+if (store.saveWindows('sv-ghost', { head: 'x', tail: 'y' }, rootDir).reason !== 'stamp-missing') problems.push('unstamped saveWindows not refused');
+if (store.saveWindows('sv/../evil', { head: 'x', tail: 'y' }, rootDir).reason !== 'invalid-spawn-id') problems.push('path-hostile spawnId accepted');
+if (store.saveWindows('sv-win-1', { head: 7, tail: 'y' }, rootDir).reason !== 'invalid-windows') problems.push('non-string window accepted');
+// pruning at the stamp cap: sidecars die with their stamps, orphans swept
+const CAP = 1000; // stamp cap (CAPS.stamps in store.cjs)
+const disk = JSON.parse(fs.readFileSync(storeFile, 'utf8'));
+disk.stamps = {};
+const base = Date.UTC(2026, 0, 1);
+for (let i = 0; i < CAP; i++) {
+  disk.stamps['sv-seed-' + i] = { stage: 'THINK', streamSha256: hex('seed' + i), spawnedAtIso: new Date(base + i * 1000).toISOString(), stampedAtIso: new Date(base + i * 1000).toISOString() };
+}
+fs.writeFileSync(storeFile, JSON.stringify(disk));
+for (const id of ['sv-seed-0', 'sv-seed-1', 'sv-seed-500']) {
+  fs.writeFileSync(path.join(winDir, id + '.head.txt'), 'H' + id);
+  fs.writeFileSync(path.join(winDir, id + '.tail.txt'), 'T' + id);
+}
+fs.writeFileSync(path.join(winDir, 'sv-orphan.head.txt'), 'ORPHAN');
+// one stamp past the cap prunes the oldest (sv-seed-0) and sweeps orphans
+store.stampStream('sv-fresh-1', 'SHIP', hex('f1'), iso(), rootDir);
+store.saveWindows('sv-fresh-1', { head: 'FH', tail: 'FT' }, rootDir);
+const after = store.load(rootDir).store;
+if (Object.keys(after.stamps).length !== CAP) problems.push('stamp count not capped: ' + Object.keys(after.stamps).length);
+if (after.stamps['sv-seed-0']) problems.push('oldest stamp not pruned');
+if (!after.stamps['sv-seed-1'] || !after.stamps['sv-seed-500'] || !after.stamps['sv-fresh-1']) problems.push('surviving stamps lost');
+const files = fs.readdirSync(winDir).sort();
+const want = ['sv-fresh-1.head.txt', 'sv-fresh-1.tail.txt', 'sv-seed-1.head.txt', 'sv-seed-1.tail.txt', 'sv-seed-500.head.txt', 'sv-seed-500.tail.txt'].sort();
+if (JSON.stringify(files) !== JSON.stringify(want)) problems.push('sidecar set after prune wrong: ' + files.join(','));
+// the next prune drops the next oldest with its sidecars
+store.stampStream('sv-fresh-2', 'SHIP', hex('f2'), iso(), rootDir);
+const after2 = store.load(rootDir).store;
+if (after2.stamps['sv-seed-1']) problems.push('second prune did not drop the next oldest');
+if (fs.existsSync(path.join(winDir, 'sv-seed-1.head.txt')) || fs.existsSync(path.join(winDir, 'sv-seed-1.tail.txt'))) problems.push('pruned stamp sidecar survived');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+SV2_OUT="$(node run-sv2.cjs 2>&1 | tail -n 1)"
+t105_eq "store v2: saveWindows persists hashed sidecars; cap pruning drops sidecars with stamps and sweeps orphans" "OK" "$SV2_OUT"
+
+# ---------------------------------------------------------------- TL --
+t105_case tl
+cat > run-tl.cjs <<'EOF'
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const opencode = require(path.join(GR, 'bin/lib/ops/auto/adapters/opencode.cjs'));
+const codex = require(path.join(GR, 'bin/lib/ops/auto/adapters/codex.cjs'));
+const problems = [];
+// (a) opencode stream WITH a model field and three tool_use events — model
+// text inside a message body is content, not a model field
+const rich = opencode.parseEventStream([
+  '{"type":"message","text":"session started on model fake-in-text"}',
+  '{"type":"tool_use","part":{"tool":"bash","command":"ls -la"}}',
+  '{"type":"tool_use","part":{"tool":"edit"}}',
+  '{"type":"tool_use","part":{"tool":"bash"}}',
+  '{"type":"result","model":"glm-9.9"}',
+].join('\n') + '\n');
+const richTel = opencode.extractTelemetry(rich);
+if (richTel.modelObserved !== 'glm-9.9' || richTel.commandCount !== 3) problems.push('rich telemetry wrong: ' + JSON.stringify(richTel));
+// several model fields: the latest self-report wins
+const multi = opencode.parseEventStream('{"type":"message","model":"early-m"}\n{"type":"result","model":"late-m"}\n');
+if (opencode.extractTelemetry(multi).modelObserved !== 'late-m') problems.push('latest model self-report not kept');
+// (b) stream without model/tool events → null/null (unobserved, not zero)
+const bare = opencode.parseEventStream('{"type":"message","text":"no telemetry"}\n{"type":"result"}\n');
+const bareTel = opencode.extractTelemetry(bare);
+if (bareTel.modelObserved !== null || bareTel.commandCount !== null) problems.push('absent telemetry not null: ' + JSON.stringify(bareTel));
+// (c) malformed and non-object events never throw, contribute nothing
+const messy = opencode.parseEventStream([
+  '[1,2,3]',
+  '"bare string"',
+  '42',
+  '{"type":"tool_use"',
+  '{"type":"tool_use","part":{"tool":"bash"}}',
+  '{"type":"result","model":"messy-m"}',
+].join('\n') + '\n');
+let messyTel = null;
+try { messyTel = opencode.extractTelemetry(messy); } catch (e) { problems.push('extractTelemetry threw on messy events: ' + e.message); }
+if (messyTel && (messyTel.modelObserved !== 'messy-m' || messyTel.commandCount !== 1)) problems.push('messy telemetry wrong: ' + JSON.stringify(messyTel));
+for (const absent of [null, undefined, {}, { events: null }, { events: 'nope' }]) {
+  try {
+    const t = opencode.extractTelemetry(absent);
+    if (t.modelObserved !== null || t.commandCount !== null) problems.push('absent outcome not null/null: ' + JSON.stringify(t));
+  } catch (e) { problems.push('extractTelemetry threw on ' + JSON.stringify(absent)); }
+}
+// (d) codex recorded fixtures carry no model field and no command-execution
+// item type (agentMessage items + turn.completed usage only) — null/null,
+// nothing invented. The synthetic model-bearing line only exercises the
+// tolerant generic scan, not a claimed host shape.
+for (const f of codex.validateFixture()) {
+  const t = codex.extractTelemetry(f);
+  if (t.modelObserved !== null || t.commandCount !== null) problems.push('codex fixture telemetry not null/null: ' + f.name);
+}
+const cx = codex.validateFixture('{"type":"item.completed","item":{"type":"agentMessage","text":"hi"},"model":"m-x"}\n{"type":"turn.completed"}\n');
+const cxTel = codex.extractTelemetry(cx);
+if (cxTel.modelObserved !== 'm-x' || cxTel.commandCount !== null) problems.push('codex tolerant model scan wrong: ' + JSON.stringify(cxTel));
+// (e) advisoryLine: all three shapes
+const a1 = opencode.advisoryLine({ modelPinned: 'pinned-m', modelObserved: 'other-m', commandCount: 3, cap: 5 });
+if (a1 !== 'self-report: model other-m (pinned pinned-m), commands 3 (cap 5) — advisory only') problems.push('mismatch line wrong: ' + a1);
+const a2 = codex.advisoryLine({ modelPinned: 'm', modelObserved: 'm', commandCount: 9, cap: 5 });
+if (a2 !== 'self-report: model m (pinned m), commands 9 (cap 5) — advisory only') problems.push('over-ceiling line wrong: ' + a2);
+if (opencode.advisoryLine({}) !== null) problems.push('all-absent not null');
+if (codex.advisoryLine({ cap: 5 }) !== null) problems.push('cap-only not null');
+const a3 = opencode.advisoryLine({ modelPinned: 'm' });
+if (a3 !== 'self-report: model unobserved (pinned m) — advisory only') problems.push('pin-only line wrong: ' + a3);
+// (f) breaker-guard: the extract path returns data only — whatever the
+// values say, no classification key ever rides the payload
+const hostileLines = [];
+for (let i = 0; i < 500; i++) hostileLines.push('{"type":"tool_use","part":{"tool":"bash"}}');
+hostileLines.push('{"type":"result","model":"hostile-m"}');
+const hostile = opencode.extractTelemetry(opencode.parseEventStream(hostileLines.join('\n') + '\n'));
+const keys = Object.keys(hostile).sort();
+if (JSON.stringify(keys) !== JSON.stringify(['commandCount', 'modelObserved'])) problems.push('extract output carries foreign keys: ' + keys.join(','));
+if (keys.some((k) => /signal|breaker|trip|abort|fail|class/i.test(k))) problems.push('extract output carries a classification key');
+if (hostile.commandCount !== 500) problems.push('hostile count wrong');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+TL_OUT="$(node run-tl.cjs 2>&1 | tail -n 1)"
+t105_eq "T11: telemetry extractor tolerant over parsed events (null on absent, never throws) + advisoryLine renders mismatch/over-ceiling/absent — data only, no breaker signal" "OK" "$TL_OUT"
+
+# ---------------------------------------------------------------- TL2 --
+t105_case tl2
+cat > run-tl2.cjs <<'EOF'
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const opencode = require(path.join(GR, 'bin/lib/ops/auto/adapters/opencode.cjs'));
+const codex = require(path.join(GR, 'bin/lib/ops/auto/adapters/codex.cjs'));
+const problems = [];
+// opencode pin: non-empty string → ['--model', <id>] verbatim; else []
+if (JSON.stringify(opencode.pinnedModelArgs('glm-9.9')) !== JSON.stringify(['--model', 'glm-9.9'])) problems.push('opencode pin argv wrong');
+for (const empty of ['', '   ', null, undefined, 42, {}]) {
+  if (opencode.pinnedModelArgs(empty).length) problems.push('opencode pin accepted absent model: ' + JSON.stringify(empty));
+}
+// the pin lands between the flags and the prompt — argv the spawn cannot alter
+const spec = opencode.buildSpawnSpec({ prompt: 'stage work', args: opencode.pinnedModelArgs('glm-9.9') });
+if (JSON.stringify(spec.argv) !== JSON.stringify(['opencode', 'run', '--format', 'json', '--model', 'glm-9.9', 'stage work'])) problems.push('pin argv not verbatim in spec: ' + spec.argv.join(' '));
+const plain = opencode.buildSpawnSpec({ prompt: 'stage work', args: opencode.pinnedModelArgs(null) });
+if (JSON.stringify(plain.argv) !== JSON.stringify(['opencode', 'run', '--format', 'json', 'stage work'])) problems.push('empty pin changed the spec argv');
+// codex: the exec model flag shape is unrecorded (adapter, fixtures and the
+// registry matrix carry no model flag) — no flag invented
+if (codex.pinnedModelArgs('glm-9.9').length) problems.push('codex pin argv invented a flag');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+TL2_OUT="$(node run-tl2.cjs 2>&1 | tail -n 1)"
+t105_eq "T11: pinnedModelArgs — opencode pins --model verbatim into the spawn argv; codex flag unrecorded → no flag invented" "OK" "$TL2_OUT"
+
+# ---------------------------------------------------------------- PS --
+t105_case ps
+# dedicated state: plan_path pins the fixture plan explicitly (the shared
+# t105_state fixture carries a 41-char task_head that cannot anchor a task dir)
+printf '{"schema_version":6,"level":3,"current_stage":"PLAN","completed_stages":["INTENT"],"intent":{"summary":"t105 plansnap fixture","confirmed":true},"task_head":"abc123def0123456789abcdef0123456789abcdef","spec_path":null,"plan_path":".gos/task/ps/plan.md","requirements":[],"decisions":[],"observable_truths":[],"gaps":[],"checkpoints":[],"approvals":{}}' > .gos/state.json
+cat > run-ps.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const plansnap = require(path.join(GR, 'bin/lib/task/plansnap.cjs'));
+const planPath = path.join(process.cwd(), '.gos', 'task', 'ps', 'plan.md');
+const problems = [];
+const writePlan = (s) => { fs.mkdirSync(path.dirname(planPath), { recursive: true }); fs.writeFileSync(planPath, s); };
+const freeze = () => plansnap.freezeOrRefreshPlanSnapshot(
+  { current_stage: 'PLAN', plan_snapshot: null }, { force: false });
+// (a) five-wave plan (the live dispatch plan shape): task entries carry wave,
+// meta.waveValidation ok, BUILD entry passes
+writePlan([
+  '# Plan',
+  '### Wave 1 (parallel — shared substrate)',
+  '#### T1: constants home',
+  '- **Covers**: D-8',
+  '- **Files**: bin/lib/ops/auto/limits.cjs',
+  '#### T2: spawn runner',
+  '- **Covers**: D-5',
+  '- **Files**: bin/lib/ops/auto/spawnrun.cjs, test/sections/T105-auto-depth.test.sh',
+  '### Wave 2 (depends on Wave 1)',
+  '#### T3: dispatch table',
+  '- **Covers**: D-1',
+  '- **Files**: templates/auto-dispatch.json, bin/lib/ops/auto/workers.cjs',
+  '#### T4: store schema',
+  '- **Covers**: D-5',
+  '- **Files**: bin/lib/ops/auto/store.cjs',
+  '### Wave 3 (depends on Wave 2)',
+  '#### T5: plansnap waves',
+  '- **Covers**: D-3',
+  '- **Files**: bin/lib/task/plansnap.cjs',
+  '### Wave 4 (depends on Wave 3)',
+  '#### T6: render surfaces',
+  '- **Covers**: D-4',
+  '- **Files**: bin/lib/ops/auto/cli.cjs',
+  '### Wave 5 (depends on Waves 1-4)',
+  '#### T7: ledger',
+  '- **Covers**: D-49',
+  '- **Files**: census.json',
+].join('\n') + '\n');
+const a = freeze();
+if (!a || a.ok === false) problems.push('five-wave freeze refused: ' + JSON.stringify(a && a.reason));
+if (!a.meta || !a.meta.waveValidation || a.meta.waveValidation.ok !== true || a.meta.waveValidation.waves !== 5) {
+  problems.push('meta.waveValidation not ok/5: ' + JSON.stringify(a.meta));
+}
+const waveOf = new Map(a.tasks.map((t) => [t.id, t.wave]));
+const wantWaves = { T1: 1, T2: 1, T3: 2, T4: 2, T5: 3, T6: 4, T7: 5 };
+for (const [id, w] of Object.entries(wantWaves)) {
+  if (waveOf.get(id) !== w) problems.push('task ' + id + ' wave ' + waveOf.get(id) + ' != ' + w);
+}
+if (!plansnap.buildEntryCheck(a).ok) problems.push('five-wave BUILD entry refused');
+// (b) gapped waves (1,3) refuse at freeze naming the missing middle
+writePlan('# Plan\n### Wave 1\n\n#### T1: a\n- **Covers**: D-1\n- **Files**: test/a.sh\n\n### Wave 3\n\n#### T2: b\n- **Covers**: D-1\n- **Files**: test/b.sh\n');
+const b = freeze();
+if (!b || b.ok !== false || b.reason !== 'gapped-wave') problems.push('gapped not refused: ' + JSON.stringify(b && b.reason));
+if (!String((b && b.detail) || '').includes('2')) problems.push('gapped detail does not name the missing wave');
+// (c) duplicate `### Wave 2` heading refuses at freeze
+writePlan('# Plan\n### Wave 1\n\n#### T1: a\n- **Covers**: D-1\n- **Files**: test/a.sh\n\n### Wave 2\n\n#### T2: b\n- **Covers**: D-1\n- **Files**: test/b.sh\n\n### Wave 2\n\n#### T3: c\n- **Covers**: D-1\n- **Files**: test/c.sh\n');
+const c = freeze();
+if (!c || c.ok !== false || c.reason !== 'duplicate-wave') problems.push('duplicate not refused: ' + JSON.stringify(c && c.reason));
+if (!String((c && c.detail) || '').includes('2')) problems.push('duplicate detail does not name wave 2');
+// (d) unsafe declared paths refuse at freeze, the offender named
+const unsafe = ['.git/config', '/abs/path', 'foo/../bar', 'hooks/pre-push'];
+for (let i = 0; i < unsafe.length; i += 1) {
+  writePlan('# Plan\n### Wave 1\n\n#### T' + (i + 1) + ': unsafe\n- **Covers**: D-1\n- **Files**: ' + unsafe[i] + '\n');
+  const d = freeze();
+  if (!d || d.ok !== false || d.reason !== 'unsafe-path') problems.push('unsafe ' + unsafe[i] + ' not refused: ' + JSON.stringify(d && d.reason));
+  if (!String((d && d.detail) || '').includes(unsafe[i])) problems.push('unsafe refusal does not name ' + unsafe[i]);
+}
+// (e) heading-less plan: freezes legally, verdict recorded zero-wave, BUILD
+// entry refuses with guidance naming PLAN; legacy meta-less snapshots pass
+writePlan('# Plan\n\n#### T1: simple\n- **Covers**: D-1\n- **Files**: test/one.sh\n\n#### T2: plain\n- **Covers**: D-1\n- **Files**: test/two.sh\n');
+const e = freeze();
+if (!e || e.ok === false) problems.push('zero-wave freeze refused: ' + JSON.stringify(e && e.reason));
+const ev = ((e || {}).meta || {}).waveValidation || {};
+if (ev.ok !== false || ev.reason !== 'zero-wave') problems.push('waveValidation not zero-wave: ' + JSON.stringify(ev));
+if (!e.tasks || e.tasks.length !== 2) problems.push('zero-wave snapshot tasks missing');
+if (e.tasks && e.tasks.some((t) => t.wave !== undefined)) problems.push('heading-less snapshot entries carry a wave');
+const entry = plansnap.buildEntryCheck(e);
+if (!entry || entry.ok !== false || entry.reason !== 'zero-wave') problems.push('BUILD entry not refused: ' + JSON.stringify(entry && entry.reason));
+if (!String((entry && entry.guidance && entry.guidance.fix) || '').includes('PLAN')) problems.push('entry guidance does not name PLAN');
+if (!plansnap.buildEntryCheck({ tasks: e.tasks, audit: [] }).ok) problems.push('legacy meta-less snapshot refused at BUILD entry');
+// (f) single-wave plan: freezes with wave:1 stamped on every task and
+// passes the BUILD entry check (a one-wave plan is a wave plan, not a
+// wedge at the door)
+writePlan('# Plan\n### Wave 1\n\n#### T1: solo\n- **Covers**: D-1\n- **Files**: test/solo.sh\n');
+const f = freeze();
+if (!f || f.ok === false) problems.push('single-wave freeze refused: ' + JSON.stringify(f && f.reason));
+const fv = ((f || {}).meta || {}).waveValidation || {};
+if (fv.ok !== true || fv.waves !== 1) problems.push('single-wave waveValidation not ok/1: ' + JSON.stringify(fv));
+if (!f.tasks || f.tasks.length !== 1 || f.tasks[0].wave !== 1) problems.push('single-wave task not stamped wave 1: ' + JSON.stringify(f.tasks));
+if (!plansnap.buildEntryCheck(f).ok) problems.push('single-wave BUILD entry refused');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+PS_OUT="$(node run-ps.cjs 2>&1 | tail -n 1)"
+t105_eq "T14: plansnap — frozen tasks carry wave; gapped/duplicate/unsafe refuse at freeze; zero-wave freezes but refuses BUILD entry with PLAN guidance; single-wave freezes wave 1 and enters BUILD" "OK" "$PS_OUT"
 
 echo "--- T105 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]

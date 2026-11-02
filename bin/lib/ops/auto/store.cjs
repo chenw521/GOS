@@ -1,14 +1,17 @@
 // ops/auto/store — machine-local runner trust store, external to every
 // spawned sandbox: schema-versioned records for the auto loop (mode/profile/
-// limits, cumulative counters, breaker records, stream stamps, dispositions,
-// runner-held snapshots, probe results) plus the exclusive run-lock family.
+// limits, cumulative counters, breaker records, stream stamps with their
+// window sidecars, dispositions, runner-held snapshots, probe results) plus
+// the exclusive run-lock family.
 //
 // Load semantics are fail-closed by construction: a missing, corrupt, or
 // future-versioned store NEVER yields a fresh writable store — the loader
 // returns a paused result with guidance, and only `create` (the `auto on`
 // path) may lay down a fresh store, warning when tracked mirror counters
 // imply prior history. The repo-local ledger mirror is never a read source
-// here; this store is the single trust input.
+// here; this store is the single trust input. Older on-disk schemas load
+// with an in-memory migration (never written by a pure read; the next
+// mutate persists the migrated shape).
 'use strict';
 
 const fs = require('node:fs');
@@ -16,10 +19,28 @@ const path = require('node:path');
 const os = require('node:os');
 const crypto = require('node:crypto');
 const core = require('../../core/index.cjs');
+const spawnreg = require('../../core/spawnreg.cjs');
+const limits = require('./limits.cjs');
+const workers = require('./workers.cjs');
 
-const STORE_SCHEMA_VERSION = 1;
+const STORE_SCHEMA_VERSION = 2;
 
 const STORE_FILE = 'store.json';
+
+// Stamp telemetry fields: self-reported model fields and runner counts are
+// advisory by contract (stored verbatim, never used to gate a disposition);
+// the window hashes and byte totals describe the retained sidecar pair.
+const STAMP_TEXT_FIELDS = ['modelPinned', 'modelObserved'];
+const STAMP_HASH_FIELDS = ['headSha256', 'tailSha256'];
+const STAMP_COUNT_FIELDS = ['commandCount', 'totalBytes', 'denyHits'];
+const HEX64_RE = /^[0-9a-f]{64}$/;
+
+// Window sidecars: one directory under the store dir holding a head/tail
+// text pair per stamped spawn, named by spawnId. The pair count is bounded
+// by the stamp cap — pruned with its stamp, orphans swept at every prune.
+const WINDOWS_DIR = 'windows';
+const SPAWN_ID_FILE_RE = /^[A-Za-z\d][A-Za-z\d._-]*$/;
+const SIDECAR_RE = /^([A-Za-z\d][A-Za-z\d._-]*)\.(head|tail)\.txt$/;
 
 const RUN_LOCK_FILE = 'run.lock';
 
@@ -37,6 +58,19 @@ const LOCK_HEARTBEAT_MARGIN_MS = 15 * 60 * 1000;
 // shared-home double-runner hazards at `auto on`.
 const NETWORK_FS_TYPES = new Set(['nfs', 'nfs4', 'cifs', '9p', 'lustre', 'lustre2', 'gpfs', 'beegfs']);
 
+// Hard-refusal superset for `auto run`: types whose store would be shared
+// across machines (two runners, one remote). A local-pid mutation mutex
+// cannot serialize writers across hosts, so the run refuses instead.
+const REFUSE_NETWORK_FS_TYPES = new Set([...NETWORK_FS_TYPES, 'ceph', 'fuse.sshfs']);
+
+// Cross-process mutation mutex (store.mutate): bounded spin before the
+// fail-closed store-busy refusal, retry cadence, and the mtime-age staleness
+// threshold for locks whose holder identity this machine cannot verify.
+const MUTATE_LOCK_FILE = 'mutate.lock';
+const MUTATE_WAIT_MS = 5 * 1000;
+const MUTATE_RETRY_MS = 20;
+const MUTATE_MTIME_STALE_MS = 30 * 1000;
+
 // Failure-class taxonomy for breaker records. Takeover is a lock-family
 // event class, not a loop failure class — it appends records but never
 // counts as a trip.
@@ -44,15 +78,31 @@ const BREAKER_CLASSES = new Set(['task', 'env', 'auth', 'timeout', 'takeover']);
 const TRIP_CLASSES = new Set(['task', 'env', 'auth', 'timeout']);
 const TRIP_LAYERS = new Set(['N', 'K', 'B']);
 
-const SNAPSHOT_KINDS = new Set(['denyBaseline', 'hostSeed', 'redteamPrompt', 'prTemplate']);
+const SNAPSHOT_KINDS = new Set(['denyBaseline', 'hostSeed', 'redteamPrompt', 'prTemplate', 'wavePrompt']);
+
+// Pinned worktrees (Class P legs): run tags and record bounds. Records map
+// a filename-safe run tag to the worktree's absolute path, its tree hash,
+// the loop-start commit it pins, and the creation time (lazy recycles drop
+// pins whose run tag is not live).
+const PIN_RUN_TAG_RE = /^[A-Za-z\d][A-Za-z\d._-]*$/;
+const GIT_SHA_RE = /^[0-9a-f]{7,64}$/;
+const PIN_DIR_NAME = 'pin-worktrees';
+
+// Wave completion records: one key per task wave ('<task>/W<n>', task id
+// filename-safe, wave digits only from 1). Values carry the wave's commit
+// head, the sha256 of the post-wave refs snapshot (for-each-ref + reflog
+// head text), release time, and the optional no-op / table-roll markers.
+const WAVE_KEY_RE = /^[A-Za-z\d][A-Za-z\d._-]*\/W[1-9][0-9]*$/;
+// Run-start dispatch-table stamp provenance: '<runTag>/start' where runTag
+// is the loop's filename-safe run tag (never a wave — a run start releases
+// nothing, it only pins what the run loaded).
+const RUN_START_KEY_RE = /^[A-Za-z\d][A-Za-z\d._-]*\/start$/;
 
 // Append caps: oldest entries drop beyond the cap so a long-lived store
 // stays bounded. In-flight entries are always the newest, never trimmed.
 const CAPS = { breakerRecords: 100, dispositions: 200, probeResults: 50, stamps: 1000 };
 
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
-
-const DEFAULT_LIMITS = { N: 3, K: 5, B: 30 };
 
 // ---- locale surfaces ----
 // All user-facing failure text resolves through locale keys; the catalogs
@@ -114,6 +164,15 @@ function nonNegInt(v) {
   return Number.isInteger(v) && v >= 0;
 }
 
+// Optional stamp telemetry: absent or well-typed. A wrong-typed count or a
+// malformed hash is structural damage, so the store reads as corrupt.
+function stampTelemetryWellTyped(s) {
+  for (const f of STAMP_TEXT_FIELDS) if (s[f] != null && typeof s[f] !== 'string') return false;
+  for (const f of STAMP_HASH_FIELDS) if (s[f] != null && (typeof s[f] !== 'string' || !HEX64_RE.test(s[f]))) return false;
+  for (const f of STAMP_COUNT_FIELDS) if (s[f] != null && !nonNegInt(s[f])) return false;
+  return true;
+}
+
 function validateStoreShape(st) {
   const errs = [];
   if (!isPlainObject(st)) return ['store: not an object'];
@@ -139,8 +198,11 @@ function validateStoreShape(st) {
     errs.push('breaker.records: entries need string cls+ts');
   }
   if (!isPlainObject(st.stamps)) errs.push('stamps: object required');
-  else if (!Object.values(st.stamps).every((v) => isPlainObject(v) && typeof v.streamSha256 === 'string' && /^[0-9a-f]{64}$/.test(v.streamSha256))) {
+  else if (!Object.values(st.stamps).every((v) => isPlainObject(v) && typeof v.streamSha256 === 'string' && HEX64_RE.test(v.streamSha256))) {
     errs.push('stamps: values need hex64 streamSha256');
+  }
+  else if (!Object.values(st.stamps).every(stampTelemetryWellTyped)) {
+    errs.push('stamps: telemetry fields must be absent or well-typed (string, hex64, integer >= 0)');
   }
   if (!Array.isArray(st.dispositions)) errs.push('dispositions: array required');
   else if (!st.dispositions.every((d) => isPlainObject(d) && typeof d.runId === 'string')) {
@@ -154,6 +216,101 @@ function validateStoreShape(st) {
   else if (!st.probeResults.every((p) => isPlainObject(p) && typeof p.host === 'string' && typeof p.state === 'string')) {
     errs.push('probeResults: entries need string host+state');
   }
+  // Optional pinWorktrees key (additive): absent on older stores, but a
+  // present-but-malformed one is structural damage.
+  if (st.pinWorktrees != null) {
+    if (!isPlainObject(st.pinWorktrees)) errs.push('pinWorktrees: object required');
+    else {
+      for (const tag of Object.keys(st.pinWorktrees)) {
+        const v = st.pinWorktrees[tag];
+        if (!PIN_RUN_TAG_RE.test(tag) || !isPlainObject(v)
+          || typeof v.path !== 'string' || !path.isAbsolute(v.path)
+          || typeof v.treeSha !== 'string' || !GIT_SHA_RE.test(v.treeSha)
+          || typeof v.loopStartCommit !== 'string' || !GIT_SHA_RE.test(v.loopStartCommit)
+          || typeof v.createdAtIso !== 'string' || !ISO_RE.test(v.createdAtIso)) {
+          errs.push(`pinWorktrees: entry ${tag} needs absolute path, hex treeSha + loopStartCommit, ISO createdAtIso`);
+          break;
+        }
+      }
+    }
+  }
+  // Optional wave completion records (additive): absent on older stores,
+  // present-but-malformed is structural damage.
+  if (st.waves != null) {
+    if (!isPlainObject(st.waves)) errs.push('waves: object required');
+    else {
+      for (const k of Object.keys(st.waves)) {
+        const v = st.waves[k];
+        if (!WAVE_KEY_RE.test(k) || !isPlainObject(v)
+          || typeof v.head !== 'string' || !GIT_SHA_RE.test(v.head)
+          || typeof v.refsPointer !== 'string' || !HEX64_RE.test(v.refsPointer)
+          || typeof v.releasedAtIso !== 'string' || !ISO_RE.test(v.releasedAtIso)
+          || (v.noop != null && typeof v.noop !== 'boolean')
+          || (v.noopReason != null && typeof v.noopReason !== 'string')
+          || (v.rolledTable != null && typeof v.rolledTable !== 'boolean')) {
+          errs.push(`waves: entry ${k} needs git head, hex64 refsPointer, ISO releasedAtIso, boolean noop/rolledTable`);
+          break;
+        }
+      }
+    }
+  }
+  // Optional wave start records (additive): runner-written pre-spawn evidence
+  // for the crash-recovery window — never read from the spawn-writable
+  // scratch.
+  if (st.waveStarts != null) {
+    if (!isPlainObject(st.waveStarts)) errs.push('waveStarts: object required');
+    else {
+      for (const k of Object.keys(st.waveStarts)) {
+        const v = st.waveStarts[k];
+        if (!WAVE_KEY_RE.test(k) || !isPlainObject(v)
+          || typeof v.spawnId !== 'string' || !SPAWN_ID_FILE_RE.test(v.spawnId)
+          || typeof v.preHead !== 'string' || !GIT_SHA_RE.test(v.preHead)
+          || typeof v.preRefsText !== 'string'
+          || !Array.isArray(v.preDirty) || !v.preDirty.every((p) => typeof p === 'string')
+          || typeof v.startedAtIso !== 'string' || !ISO_RE.test(v.startedAtIso)) {
+          errs.push(`waveStarts: entry ${k} needs filename-safe spawnId, git preHead, string preRefsText, string[] preDirty, ISO startedAtIso`);
+          break;
+        }
+      }
+    }
+  }
+  // Optional held-wave records (additive): a held wave is a runner verdict,
+  // never a crash — reconcile must be able to tell them apart.
+  if (st.heldWaves != null) {
+    if (!isPlainObject(st.heldWaves)) errs.push('heldWaves: object required');
+    else {
+      for (const k of Object.keys(st.heldWaves)) {
+        const v = st.heldWaves[k];
+        if (!WAVE_KEY_RE.test(k) || !isPlainObject(v)
+          || typeof v.reason !== 'string' || !v.reason
+          || typeof v.spawnId !== 'string' || !SPAWN_ID_FILE_RE.test(v.spawnId)
+          || typeof v.heldAtIso !== 'string' || !ISO_RE.test(v.heldAtIso)) {
+          errs.push(`heldWaves: entry ${k} needs non-empty reason, filename-safe spawnId, ISO heldAtIso`);
+          break;
+        }
+      }
+    }
+  }
+  // Optional dispatch-table stamp (additive): the sha256 of the dispatch
+  // table file as of the last runner-released edit, plus when/by-whom.
+  if (st.dispatchTable != null) {
+    if (!isPlainObject(st.dispatchTable)
+      || typeof st.dispatchTable.sha256 !== 'string' || !HEX64_RE.test(st.dispatchTable.sha256)
+      || typeof st.dispatchTable.rolledAtIso !== 'string' || !ISO_RE.test(st.dispatchTable.rolledAtIso)
+      || typeof st.dispatchTable.rolledByWave !== 'string' || !st.dispatchTable.rolledByWave) {
+      errs.push('dispatchTable: hex64 sha256 + ISO rolledAtIso + non-empty rolledByWave required');
+    }
+  }
+  // Optional baseline-state record (additive): the sha256 of the state file
+  // bytes as the loop last read and validated them — the crashed-advance
+  // recovery gate against crafted spawn-writable snapshots.
+  if (st.baselineState != null) {
+    if (!isPlainObject(st.baselineState)
+      || typeof st.baselineState.sha256 !== 'string' || !HEX64_RE.test(st.baselineState.sha256)
+      || typeof st.baselineState.recordedAtIso !== 'string' || !ISO_RE.test(st.baselineState.recordedAtIso)) {
+      errs.push('baselineState: hex64 sha256 + ISO recordedAtIso required');
+    }
+  }
   return errs;
 }
 
@@ -163,6 +320,18 @@ function paused(reason, file, detail, localeKey, params) {
   const out = { ok: false, status: 'paused', reason, path: file, guidance: guidanceFor(localeKey, params) };
   if (detail) out.detail = detail;
   return out;
+}
+
+// In-memory v1 -> v2 migration: every stamp gains the telemetry fields at
+// their absent-value defaults and the version bumps to the known schema.
+// Pure — load never writes; the migrated shape persists lazily on the next
+// mutate (which loads through this same normalization before its fn runs).
+function normalizeStampsToV2(st) {
+  for (const s of Object.values(st.stamps)) {
+    for (const f of [...STAMP_TEXT_FIELDS, ...STAMP_HASH_FIELDS]) if (s[f] == null) s[f] = null;
+    for (const f of STAMP_COUNT_FIELDS) if (s[f] == null) s[f] = 0;
+  }
+  st.store_schema_version = STORE_SCHEMA_VERSION;
 }
 
 // Fail-closed read. Never throws, never creates directories, never repairs.
@@ -181,8 +350,12 @@ function load(rootDir) {
   if (st.store_schema_version > STORE_SCHEMA_VERSION) {
     return paused('version-mismatch', file, `store at schema v${st.store_schema_version}, this CLI knows v${STORE_SCHEMA_VERSION}`, 'auto.store.versionMismatch', { found: st.store_schema_version, known: STORE_SCHEMA_VERSION });
   }
-  if (st.store_schema_version < STORE_SCHEMA_VERSION) {
+  if (st.store_schema_version < 1) {
     return paused('version-mismatch', file, `store at older schema v${st.store_schema_version}`, 'auto.store.versionMismatch', { found: st.store_schema_version, known: STORE_SCHEMA_VERSION });
+  }
+  if (st.store_schema_version === 1) {
+    normalizeStampsToV2(st);
+    return { ok: true, status: 'ok', path: file, store: st, migrated: true };
   }
   return { ok: true, status: 'ok', path: file, store: st };
 }
@@ -192,7 +365,7 @@ function freshStore(opts) {
     store_schema_version: STORE_SCHEMA_VERSION,
     mode: opts.mode === 'on' ? 'on' : 'off',
     profile: typeof opts.profile === 'string' && opts.profile.length ? opts.profile : 'restricted',
-    limits: { ...DEFAULT_LIMITS },
+    limits: { ...limits.DEFAULT_LIMITS },
     counters: { spawnCount: 0, tripCount: 0 },
     breaker: { records: [] },
     stamps: {},
@@ -294,21 +467,267 @@ function networkFsUnderStore(rootDir) {
   return best != null && NETWORK_FS_TYPES.has(best.fstype) ? best : null;
 }
 
+// ---- store mutation mutex ----
+
+function mutateLockPath(rootDir) {
+  const root = storeRoot(rootDir);
+  return root == null ? null : path.join(root, MUTATE_LOCK_FILE);
+}
+
+// Identity written by every mutex holder: the pid bound to one process
+// lifetime (boot_id + /proc starttime, the same binding the spawn channel
+// uses), so a recycled pid can never fake the original holder's liveness.
+function mutateHolderRecord() {
+  return {
+    hostname: os.hostname(),
+    pid: process.pid,
+    boot_id: readBootId(),
+    starttime: spawnreg.procStartTime(process.pid),
+    created_at: new Date().toISOString(),
+  };
+}
+
+function readMutateLock(lp) {
+  if (!fs.existsSync(lp)) return null;
+  try { return JSON.parse(fs.readFileSync(lp, 'utf8')); }
+  catch { return null; } // unreadable record = unproven ownership
+}
+
+let _mutateLockPath = null;
+let _mutateDepth = 0;
+let _mutateExitHook = false;
+
+// Crash cleanup: a process dying mid-mutation must not strand its mutex
+// (a live-pid lock blocks every other writer until the pid dies). Installed
+// once; only ever removes OUR lock.
+function installMutateExitHook() {
+  if (_mutateExitHook) return;
+  _mutateExitHook = true;
+  process.on('exit', () => {
+    if (_mutateLockPath == null) return;
+    const rec = readMutateLock(_mutateLockPath);
+    if (rec && rec.pid === process.pid && rec.hostname === os.hostname()) {
+      try { fs.unlinkSync(_mutateLockPath); } catch { /* gone */ }
+    }
+  });
+}
+
+// Synchronous bounded sleep for the spin loop (blocks without burning CPU;
+// mutate is deliberately synchronous).
+function sleepSpinMs(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+// Exclusive creation of the mutex file: O_EXCL directly, hard-link fallback
+// for filesystems without exclusive create (link fails with EEXIST exactly
+// when the lock is already held). Returns false when the lock is held.
+function createMutateLockFile(lp, rec) {
+  let fd;
+  try { fd = fs.openSync(lp, 'wx'); }
+  catch (e) {
+    if (e.code === 'EEXIST') return false;
+    if (['ENOSYS', 'EOPNOTSUPP', 'EINVAL', 'EPERM'].includes(e.code)) {
+      const tmp = `${lp}.tmp-${process.pid}-${Date.now()}`;
+      try {
+        fs.writeFileSync(tmp, JSON.stringify(rec));
+        fs.linkSync(tmp, lp);
+        return true;
+      } catch { return false; }
+      finally {
+        try { fs.unlinkSync(tmp); } catch { /* gone */ }
+      }
+    }
+    throw e;
+  }
+  try { fs.writeSync(fd, JSON.stringify(rec)); } finally { fs.closeSync(fd); }
+  return true;
+}
+
+// Staleness verdict for an existing mutex. A readable same-host record is
+// judged by full holder identity: a dead pid, a changed boot_id, or a
+// starttime mismatch (the pid was recycled by an unrelated process) each
+// prove the recorded holder gone and make the lock reclaimable. Records
+// whose identity this machine cannot verify (unreadable, cross-host, no
+// readable /proc starttime) fall back to lock mtime age.
+function mutateLockStale(lp, staleMs) {
+  const rec = readMutateLock(lp);
+  const identityFallback = (why) => {
+    let ageMs = NaN;
+    try { ageMs = Date.now() - fs.statSync(lp).mtimeMs; } catch { ageMs = NaN; }
+    if (Number.isFinite(ageMs) && ageMs > staleMs) {
+      return { stale: true, holder: rec, detail: `holder identity unreadable (${why}); lock mtime ${Math.round(ageMs / 1000)}s old past the ${Math.round(staleMs / 1000)}s threshold` };
+    }
+    return { stale: false, holder: rec, identityUnreadable: true };
+  };
+  if (rec == null) return identityFallback('record unreadable');
+  if (!Number.isInteger(rec.pid)) return identityFallback('record has no pid');
+  if (rec.hostname !== os.hostname()) return identityFallback('holder is on another host');
+  const myBoot = readBootId();
+  if (myBoot != null && rec.boot_id != null && rec.boot_id !== myBoot) {
+    return { stale: true, holder: rec, detail: `holder pid ${rec.pid} is from a previous boot (boot_id changed)` };
+  }
+  if (!livePid(rec.pid)) {
+    return { stale: true, holder: rec, detail: `holder pid ${rec.pid} is not running` };
+  }
+  const st = spawnreg.procStartTime(rec.pid);
+  if (rec.starttime == null || st == null) return identityFallback('holder starttime unverifiable');
+  if (Number(rec.starttime) !== st) {
+    return { stale: true, holder: rec, detail: `pid ${rec.pid} was recycled (starttime mismatch) — the recorded holder is gone` };
+  }
+  return { stale: false, holder: rec };
+}
+
+// Acquire the mutation mutex with a bounded spin. Returns { ok, takeover }
+// (takeover carries the reclaim audit detail when a stale lock was broken)
+// or the fail-closed store-busy refusal — contention is never resolved by
+// last-writer-wins.
+function acquireMutateLock(rootDir, opts = {}) {
+  const lp = mutateLockPath(rootDir);
+  if (lp == null) return paused('unwritable', null, 'no XDG data home resolvable', 'auto.store.unwritable');
+  const waitMs = Number.isFinite(opts.waitMs) && opts.waitMs >= 0 ? opts.waitMs : MUTATE_WAIT_MS;
+  const staleMs = Number.isFinite(opts.staleMs) && opts.staleMs > 0 ? opts.staleMs : MUTATE_MTIME_STALE_MS;
+  try { fs.mkdirSync(path.dirname(lp), { recursive: true }); }
+  catch (e) { return { ok: false, status: 'error', reason: 'unwritable', path: lp, detail: e.message, guidance: guidanceFor('auto.store.unwritable', { path: lp }) }; }
+  const deadline = Date.now() + waitMs;
+  let takeoverDetail = null;
+  for (;;) {
+    if (!fs.existsSync(lp)) {
+      let created;
+      try { created = createMutateLockFile(lp, mutateHolderRecord()); }
+      catch (e) {
+        return { ok: false, status: 'error', reason: 'mutex-create-failed', path: lp, detail: e.message, guidance: guidanceFor('auto.store.unwritable', { path: lp }) };
+      }
+      if (created) {
+        _mutateLockPath = lp;
+        installMutateExitHook();
+        return { ok: true, path: lp, takeover: takeoverDetail };
+      }
+    }
+    const verdict = mutateLockStale(lp, staleMs);
+    if (verdict.stale) {
+      takeoverDetail = takeoverDetail || verdict.detail;
+      try { fs.unlinkSync(lp); } catch { /* racing writer — re-evaluate */ }
+      continue;
+    }
+    if (Date.now() >= deadline) {
+      const holderPid = verdict.holder && verdict.holder.pid;
+      return {
+        ok: false, status: 'error', reason: 'store-busy', path: lp, holder: verdict.holder || null,
+        detail: `store mutation mutex held${holderPid != null ? ` by pid ${holderPid}` : ''} past the ${Math.round(waitMs / 1000)}s wait`,
+        guidance: guidanceFor('auto.store.mutateBusy', { pid: holderPid }),
+      };
+    }
+    sleepSpinMs(MUTATE_RETRY_MS);
+  }
+}
+
+// Release OUR mutex (the outermost mutate releases; nested mutates join the
+// outer critical section). Foreign locks are never touched.
+function releaseMutateLock() {
+  const lp = _mutateLockPath;
+  if (lp == null) return;
+  const rec = readMutateLock(lp);
+  if (rec && rec.pid === process.pid && rec.hostname === os.hostname()) {
+    try { fs.unlinkSync(lp); } catch { /* gone */ }
+  }
+  _mutateLockPath = null;
+}
+
+// Hard network-filesystem refusal for the auto run entry: resolves the
+// store directory against the mount table (longest covering mount wins) and
+// refuses when that mount is network-shaped. The mount table is injectable
+// (tests feed a fixture table); an unreadable table passes — the advisory
+// probe at `auto on` still warns there.
+function refuseNetworkStore(rootDir, opts = {}) {
+  const read = typeof opts.readMounts === 'function'
+    ? opts.readMounts
+    : () => fs.readFileSync(opts.mountsFile || '/proc/mounts', 'utf8');
+  const root = storeRoot(rootDir);
+  if (root == null) return { ok: true };
+  let target;
+  try { target = fs.realpathSync(root); } catch { target = path.resolve(root); }
+  let lines;
+  try { lines = String(read()).split('\n'); } catch { return { ok: true }; }
+  let best = null;
+  for (const line of lines) {
+    const parts = line.trim().split(/\s+/);
+    if (parts.length < 3) continue;
+    const mp = parts[1].replace(/\\([0-7]{3})/g, (m, oct) => String.fromCharCode(parseInt(oct, 8)));
+    const fstype = parts[2];
+    let cmp;
+    try { cmp = fs.realpathSync(mp); } catch { cmp = mp; }
+    if (target === cmp || target.startsWith(cmp + path.sep)) {
+      if (!best || cmp.length > best.mount.length) best = { mount: cmp, fstype };
+    }
+  }
+  if (best != null && REFUSE_NETWORK_FS_TYPES.has(best.fstype)) {
+    return {
+      ok: false, status: 'refused', reason: 'network-store', mount: best.mount, fstype: best.fstype, path: target,
+      guidance: guidanceFor('auto.cli.on.nfsAdvisory', { fstype: best.fstype, mount: best.mount }),
+    };
+  }
+  return { ok: true };
+}
+
 // ---- shared writer plumbing ----
 
-// Mutate the loaded store under fn, persist atomically. Writers are safe
-// from the single runner process (the run lock enforces that) and from
-// short CLI commands; there is deliberately no cross-process merge.
-function mutate(rootDir, fn) {
-  const cur = load(rootDir);
-  if (!cur.ok) return cur;
-  const next = fn(cur.store);
-  if (next == null) return { ok: false, status: 'error', reason: 'rejected', path: cur.path };
-  try { core.writeAtomicJson(cur.path, next); }
-  catch (e) {
-    return { ok: false, status: 'error', reason: 'write-failed', path: cur.path, detail: e.message, guidance: guidanceFor('auto.store.unwritable', { path: cur.path }) };
+// Mutate the loaded store under fn, persist atomically. The whole
+// read-modify-write runs under the cross-process mutation mutex: concurrent
+// writers serialize (no lost update), and a mutex held past the bounded
+// spin fails closed as store-busy instead of resolving by last-writer-wins.
+// Reentrant within one process — nested mutates join the outer critical
+// section. A stale mutex is reclaimed only on provable holder identity
+// (dead pid, changed boot_id, or a recycled pid caught by starttime); the
+// reclaim is audited as a takeover breaker record.
+function mutate(rootDir, fn, opts = {}) {
+  const file = storeFile(rootDir);
+  if (file == null) return paused('unwritable', null, 'no XDG data home resolvable', 'auto.store.unwritable');
+  if (!fs.existsSync(file)) return load(rootDir);
+  const nested = _mutateDepth > 0;
+  let acquired = null;
+  if (!nested) {
+    acquired = acquireMutateLock(rootDir, opts);
+    if (!acquired.ok) return acquired;
+    _mutateDepth += 1;
   }
-  return { ok: true, path: cur.path, store: next };
+  try {
+    const cur = load(rootDir);
+    if (!cur.ok) return cur;
+    // Pre-fn snapshot on the reclaim path only: a refused mutation must
+    // never persist caller changes made before the null return.
+    const auditText = acquired && acquired.takeover ? JSON.stringify(cur.store) : null;
+    let next = fn(cur.store);
+    if (next == null) {
+      if (auditText != null) persistTakeoverAudit(cur.path, auditText, acquired.takeover);
+      return { ok: false, status: 'error', reason: 'rejected', path: cur.path };
+    }
+    if (auditText != null) {
+      const records = isPlainObject(next.breaker) && Array.isArray(next.breaker.records) ? next.breaker.records : null;
+      if (records) next.breaker.records = trimArray([...records, { cls: 'takeover', ts: new Date().toISOString(), detail: acquired.takeover }], CAPS.breakerRecords);
+    }
+    try { core.writeAtomicJson(cur.path, next); }
+    catch (e) {
+      return { ok: false, status: 'error', reason: 'write-failed', path: cur.path, detail: e.message, guidance: guidanceFor('auto.store.unwritable', { path: cur.path }) };
+    }
+    return { ok: true, path: cur.path, store: next };
+  } finally {
+    if (!nested) {
+      _mutateDepth -= 1;
+      releaseMutateLock();
+    }
+  }
+}
+
+// Persist the takeover audit alone when the caller's mutation was refused —
+// the reclaim is an audit fact independent of the refused change.
+function persistTakeoverAudit(storeFilePath, auditText, detail) {
+  try {
+    const st = JSON.parse(auditText);
+    if (isPlainObject(st.breaker) && Array.isArray(st.breaker.records)) {
+      st.breaker.records = trimArray([...st.breaker.records, { cls: 'takeover', ts: new Date().toISOString(), detail }], CAPS.breakerRecords);
+      core.writeAtomicJson(storeFilePath, st);
+    }
+  } catch { /* audit best-effort */ }
 }
 
 function trimArray(arr, cap) {
@@ -321,28 +740,118 @@ function mirrorsOf(st) {
 
 // ---- record API ----
 
-// Stamp the captured-stream hash for one spawn. One spawnId stamps once:
-// an identical re-stamp is idempotent, a conflicting one is refused (the
-// pairing between spawn and stream hash must not be rewritable).
-function stampStream(spawnId, stage, streamSha256, spawnedAtIso, rootDir) {
+// Stamp the captured-stream hash for one spawn, optionally with runner
+// telemetry (self-reported model fields, command count, deny hits, window
+// hashes, byte totals — all advisory). One spawnId stamps once: an
+// identical re-stamp refreshes, a conflicting one is refused (the pairing
+// between spawn and stream hash must not be rewritable).
+function stampStream(spawnId, stage, streamSha256, spawnedAtIso, rootDir, telemetry) {
   if (typeof spawnId !== 'string' || !spawnId) return { ok: false, status: 'error', reason: 'invalid-spawn-id' };
   if (typeof stage !== 'string' || !stage) return { ok: false, status: 'error', reason: 'invalid-stage' };
-  if (typeof streamSha256 !== 'string' || !/^[0-9a-f]{64}$/.test(streamSha256)) return { ok: false, status: 'error', reason: 'invalid-stream-sha256' };
+  if (typeof streamSha256 !== 'string' || !HEX64_RE.test(streamSha256)) return { ok: false, status: 'error', reason: 'invalid-stream-sha256' };
   if (typeof spawnedAtIso !== 'string' || !ISO_RE.test(spawnedAtIso)) return { ok: false, status: 'error', reason: 'invalid-spawned-at' };
+  const tel = telemetry == null ? {} : telemetry;
+  if (!isPlainObject(tel)) return { ok: false, status: 'error', reason: 'invalid-telemetry', detail: 'telemetry must be an object' };
+  if (!stampTelemetryWellTyped(tel)) {
+    return { ok: false, status: 'error', reason: 'invalid-telemetry', detail: 'fields must be string, hex64, or integer >= 0' };
+  }
   let conflict = false;
   const r = mutate(rootDir, (st) => {
     const prev = st.stamps[spawnId];
     if (prev && prev.streamSha256 !== streamSha256) { conflict = true; return null; }
-    st.stamps[spawnId] = { stage, streamSha256, spawnedAtIso, stampedAtIso: new Date().toISOString() };
-    const keys = Object.keys(st.stamps);
-    if (keys.length > CAPS.stamps) {
-      keys.sort((a, b) => st.stamps[a].stampedAtIso.localeCompare(st.stamps[b].stampedAtIso));
-      for (const k of keys.slice(0, keys.length - CAPS.stamps)) delete st.stamps[k];
-    }
+    st.stamps[spawnId] = stampEntry(stage, streamSha256, spawnedAtIso, tel, prev);
+    pruneStamps(st, rootDir);
     return st;
   });
   if (conflict) return { ok: false, status: 'error', reason: 'stamp-conflict', path: r.path };
   return r.ok ? { ok: true, path: r.path, stamp: r.store.stamps[spawnId] } : r;
+}
+
+// Full v2 stamp: legacy fields plus telemetry, absent telemetry normalized
+// to null/0 so every consumer reads one shape. An identical re-stamp keeps
+// the prior telemetry values it is not re-handed (window hashes survive a
+// saveWindows-then-restamp sequence instead of resetting).
+function stampEntry(stage, streamSha256, spawnedAtIso, tel, prev) {
+  const src = prev != null ? prev : {};
+  const s = { stage, streamSha256, spawnedAtIso, stampedAtIso: new Date().toISOString() };
+  for (const f of [...STAMP_TEXT_FIELDS, ...STAMP_HASH_FIELDS]) s[f] = tel[f] != null ? tel[f] : (src[f] != null ? src[f] : null);
+  for (const f of STAMP_COUNT_FIELDS) s[f] = tel[f] != null ? tel[f] : (src[f] != null ? src[f] : 0);
+  return s;
+}
+
+// Stamp-cap pruning: oldest stamps drop past the cap, their window sidecar
+// files die with them, and a sweep removes sidecars whose stamp no longer
+// exists (crash leftovers, restored stores). File hygiene is best-effort —
+// a failed unlink never fails the mutation.
+function pruneStamps(st, rootDir) {
+  const keys = Object.keys(st.stamps);
+  if (keys.length <= CAPS.stamps) return;
+  keys.sort((a, b) => st.stamps[a].stampedAtIso.localeCompare(st.stamps[b].stampedAtIso));
+  const dropped = keys.slice(0, keys.length - CAPS.stamps);
+  for (const k of dropped) delete st.stamps[k];
+  const dir = windowsDirOf(rootDir);
+  if (dir == null) return;
+  for (const k of dropped) unlinkSidecarPair(dir, k);
+  sweepOrphanSidecars(dir, st.stamps);
+}
+
+// ---- window sidecars ----
+
+function windowsDirOf(rootDir) {
+  const root = storeRoot(rootDir);
+  return root == null ? null : path.join(root, WINDOWS_DIR);
+}
+
+function unlinkSidecarPair(dir, spawnId) {
+  for (const suffix of ['head', 'tail']) {
+    try { fs.unlinkSync(path.join(dir, `${spawnId}.${suffix}.txt`)); } catch { /* gone */ }
+  }
+}
+
+function sweepOrphanSidecars(dir, stamps) {
+  let names;
+  try { names = fs.readdirSync(dir); } catch { return; }
+  for (const name of names) {
+    const m = SIDECAR_RE.exec(name);
+    if (m && !Object.prototype.hasOwnProperty.call(stamps, m[1])) {
+      try { fs.unlinkSync(path.join(dir, name)); } catch { /* gone */ }
+    }
+  }
+}
+
+// Persist the retained dual-window capture for one stamped spawn: a head
+// and a tail sidecar file under the store dir, plus the stamp's window
+// hashes and the retained byte total (exactly the sidecar bytes, so a
+// later reader verifies the files against the stamp without the loop).
+// Advisory stamp fields are never read or touched here.
+function saveWindows(spawnId, windows, rootDir) {
+  if (typeof spawnId !== 'string' || !SPAWN_ID_FILE_RE.test(spawnId)) {
+    return { ok: false, status: 'error', reason: 'invalid-spawn-id', detail: 'spawnId must be filename-safe (letters, digits, dot, dash, underscore)' };
+  }
+  const w = windows == null ? {} : windows;
+  if (!isPlainObject(w)) return { ok: false, status: 'error', reason: 'invalid-windows', detail: 'windows must be an object' };
+  const head = w.head == null ? '' : w.head;
+  const tail = w.tail == null ? '' : w.tail;
+  if (typeof head !== 'string' && !Buffer.isBuffer(head)) return { ok: false, status: 'error', reason: 'invalid-windows', detail: 'head must be a string or Buffer' };
+  if (typeof tail !== 'string' && !Buffer.isBuffer(tail)) return { ok: false, status: 'error', reason: 'invalid-windows', detail: 'tail must be a string or Buffer' };
+  const headBuf = Buffer.isBuffer(head) ? head : Buffer.from(head, 'utf8');
+  const tailBuf = Buffer.isBuffer(tail) ? tail : Buffer.from(tail, 'utf8');
+  const dir = windowsDirOf(rootDir);
+  if (dir == null) return paused('unwritable', null, 'no XDG data home resolvable', 'auto.store.unwritable');
+  let missing = false;
+  const r = mutate(rootDir, (st) => {
+    const stamp = st.stamps[spawnId];
+    if (!stamp) { missing = true; return null; }
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, `${spawnId}.head.txt`), headBuf);
+    fs.writeFileSync(path.join(dir, `${spawnId}.tail.txt`), tailBuf);
+    stamp.headSha256 = crypto.createHash('sha256').update(headBuf).digest('hex');
+    stamp.tailSha256 = crypto.createHash('sha256').update(tailBuf).digest('hex');
+    stamp.totalBytes = headBuf.length + tailBuf.length;
+    return st;
+  });
+  if (missing) return { ok: false, status: 'refused', reason: 'stamp-missing', spawnId, path: r.path };
+  return r.ok ? { ok: true, path: r.path, windowsDir: dir, stamp: r.store.stamps[spawnId] } : r;
 }
 
 // Human dispositions (red runs, unknown-state CI) live here — the repo
@@ -416,11 +925,11 @@ function saveProbeResult(p, rootDir) {
 
 // Cumulative spawn counter; the returned mirrors are what the caller
 // persists into tracked repo state (counts are clone-safe, detail is not).
-function bumpSpawn(rootDir) {
+function bumpSpawn(rootDir, opts) {
   const r = mutate(rootDir, (st) => {
     st.counters.spawnCount += 1;
     return st;
-  });
+  }, opts);
   return r.ok ? { ok: true, path: r.path, mirrors: mirrorsOf(r.store) } : r;
 }
 
@@ -668,6 +1177,423 @@ function breakRunLock(rootDir) {
   return { ok: true, broke: why };
 }
 
+// ---- spawn registry (runner side) ----
+// Authoritative spawn entries live in <storeRoot>/spawnreg/<spawnId>.json as
+// separate files, not a store.json key: every request the loop's wait loop
+// acks settles a claim (entry uses++ rewrite + claims.ndjson append), and
+// routing that through store.json's cross-process mutate mutex would churn
+// the shared store per ack and contend with breaker/stamp mutations. Entries
+// are ephemeral per spawn and die with removeSpawn; the directory sits inside
+// the store root (machine-local, masked from every sandbox) and dies with
+// purgeStore. Policy bounds live HERE — the verb vocabulary from the
+// dispatch table and the use-cap hard ceiling — because core may not require
+// ops; core/spawnreg only compares against what an entry records.
+
+// Register one spawn before launching it. Grants and the use cap default
+// from the dispatch table's stage entry (BUILD carries the checkpoint verb
+// and the raised 64 cap; THINK/PLAN/VERIFY stay at 16); explicit values are
+// validated fail-closed — vocabulary closed set, cap never past the hard
+// ceiling. Redteam spawns register without any write authorization; script
+// spawns (Class S fixed-argv steps) register as kind 'script' and only for
+// script-worker stages.
+function registerSpawn(rec, rootDir) {
+  if (!isPlainObject(rec) || typeof rec.spawnId !== 'string' || !SPAWN_ID_FILE_RE.test(rec.spawnId)) {
+    return { ok: false, status: 'error', reason: 'invalid-spawn-id', detail: 'spawnId must be filename-safe (letters, digits, dot, dash, underscore)' };
+  }
+  const kind = rec.kind === 'redteam' ? 'redteam' : rec.kind === 'script' ? 'script' : 'work';
+  const stage = String(rec.stage || '').toUpperCase();
+  if (!stage) return { ok: false, status: 'error', reason: 'invalid-stage', detail: 'stage required' };
+  const table = workers.loadDispatchTable();
+  if (!table.ok) {
+    return { ok: false, status: 'error', reason: 'dispatch-table-unavailable', detail: table.detail, file: table.file };
+  }
+  const stageEntry = table.table.stages[stage];
+  if (!stageEntry) return { ok: false, status: 'error', reason: 'invalid-stage', detail: `unknown stage ${stage}` };
+  if (kind === 'script' && stageEntry.worker !== 'script') {
+    return { ok: false, status: 'error', reason: 'invalid-kind', detail: `kind 'script' registers only for script-worker stages (${stage} runs '${stageEntry.worker}')` };
+  }
+  let grants = Array.isArray(rec.grants) ? [...new Set(rec.grants.map(String))] : [...stageEntry.verbs];
+  if (kind === 'redteam') grants = [];
+  const badVerbs = grants.filter((v) => !workers.VERBS.includes(v));
+  if (badVerbs.length) {
+    return { ok: false, status: 'error', reason: 'invalid-grants', detail: `verbs outside the dispatch vocabulary (${workers.VERBS.join('|')}): ${badVerbs.join(', ')}` };
+  }
+  let useCap = rec.useCap == null ? stageEntry.use_cap : rec.useCap;
+  if (!Number.isInteger(useCap) || useCap < 1) {
+    return { ok: false, status: 'error', reason: 'invalid-use-cap', detail: 'useCap must be an integer >= 1' };
+  }
+  if (useCap > limits.HARD_USE_CAP_CEILING) {
+    return { ok: false, status: 'error', reason: 'use-cap-over-ceiling', detail: `useCap ${useCap} exceeds the hard ceiling ${limits.HARD_USE_CAP_CEILING}` };
+  }
+  const scratch = spawnreg.scratchPath(rootDir, rec.spawnId);
+  if (scratch == null) return paused('unwritable', null, 'no XDG data home resolvable', 'auto.store.unwritable');
+  const acksDir = spawnreg.acksPath(rootDir, rec.spawnId);
+  const doc = spawnreg.saveEntryDoc(rootDir, {
+    spawn_id: rec.spawnId,
+    kind,
+    stage,
+    grants,
+    use_cap: useCap,
+    uses: 0,
+    window_expiry: Date.now() + (rec.wallMs || 3600000),
+    pid: rec.pid,
+  });
+  try {
+    fs.mkdirSync(scratch, { recursive: true });
+    if (acksDir != null) fs.mkdirSync(acksDir, { recursive: true });
+  } catch (e) {
+    return { ok: false, status: 'error', reason: 'unwritable', path: scratch, detail: e.message, guidance: guidanceFor('auto.store.unwritable', { path: scratch }) };
+  }
+  return { ok: true, path: spawnreg.entryPath(rootDir, rec.spawnId), scratch, acksDir, entry: doc };
+}
+
+// Drop the entry, its manifest, and its scratch when the spawn exits.
+function removeSpawn(spawnId, rootDir) {
+  spawnreg.removeEntry(rootDir, spawnId);
+  return { ok: true };
+}
+
+// Write this spawn's immutable grant manifest for ro-binding into its
+// sandbox: grants, cap, and stage ONLY — no use counter, no other spawn's
+// data, nothing the sandbox could replay against another entry.
+function writeGrantManifest(rootDir, spawnId) {
+  const entry = spawnreg.readEntry(rootDir, spawnId);
+  if (!entry) return { ok: false, status: 'refused', reason: 'no-entry', spawnId };
+  const manifest = {
+    spawn_id: entry.spawn_id,
+    stage: entry.stage,
+    grants: [...spawnreg.resolvedGrantsOf(entry)],
+    use_cap: entry.use_cap,
+  };
+  const file = spawnreg.manifestPath(rootDir, spawnId);
+  if (file == null) return paused('unwritable', null, 'no XDG data home resolvable', 'auto.store.unwritable');
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(manifest));
+  } catch (e) {
+    return { ok: false, status: 'error', reason: 'write-failed', path: file, detail: e.message };
+  }
+  return { ok: true, path: file, manifest };
+}
+
+// Ack-file helper: the verdict payload lands in the spawn's store-side ack
+// dir (<storeRoot>/spawnreg/<spawnId>.acks/<requestId>.ack.json) — outside
+// every sandbox, runner-written, ro-bound into the spawn at /run/gos-acks.
+// Best-effort — a missing dir just means the spawned side will time out
+// closed.
+const writeAckFile = (acksDir, requestId, payload) => {
+  try {
+    fs.mkdirSync(acksDir, { recursive: true });
+    fs.writeFileSync(path.join(acksDir, `${requestId}.ack.json`), JSON.stringify(payload));
+    return true;
+  } catch { return false; }
+};
+
+// One-shot runner-side admission: judge the request against the STORE entry
+// (never the request's self-declared identity), burn one use for every
+// judged verdict, append the claim ledger line, and answer the ack. Grants,
+// stage, and budget all come from the entry — a forged request can only
+// burn its own spawn's budget. Re-acking the same requestId replays the
+// ledger-recorded verdict without a second burn: the spawned side deletes
+// its ack file after consuming it, so the ack file cannot be the replay
+// anchor — only the store-side ledger can.
+function admitAndAck(rootDir, spawnId, cmdName, argvStage, opts = {}) {
+  const requestId = typeof opts.requestId === 'string' && opts.requestId ? opts.requestId : null;
+  const acksDir = spawnreg.acksPath(rootDir, spawnId);
+  const ackFile = requestId && acksDir != null ? path.join(acksDir, `${requestId}.ack.json`) : null;
+  if (requestId) {
+    const prior = spawnreg.findClaimByRequestId(rootDir, requestId);
+    if (prior) {
+      const out = {
+        admitted: prior.admitted === true,
+        reason: prior.reason || undefined,
+        remaining: prior.remaining == null ? null : Number(prior.remaining),
+        replay: true,
+      };
+      if (ackFile) writeAckFile(acksDir, requestId, { request_id: requestId, ...out, stage: prior.stage || null, ts: new Date().toISOString() });
+      return out;
+    }
+  }
+  const entry = spawnreg.readEntry(rootDir, spawnId);
+  if (!entry) {
+    spawnreg.appendClaim(rootDir, { request_id: requestId, spawnId, cmd: cmdName, admitted: false, reason: 'no-entry', remaining: null, stage: null, ts: new Date().toISOString() });
+    const refused = { admitted: false, reason: 'no-entry', detail: `no live registry entry for spawn ${spawnId || '(unset)'}`, remaining: null };
+    if (ackFile) writeAckFile(acksDir, requestId, { request_id: requestId, ...refused, stage: null, ts: new Date().toISOString() });
+    return refused;
+  }
+  const verdict = spawnreg.judgeClaim(entry, cmdName, argvStage);
+  const settled = spawnreg.settleClaim(rootDir, spawnId, entry, cmdName, verdict, requestId);
+  let out;
+  if (verdict.admitted && !settled.persisted) {
+    out = { admitted: false, reason: 'claim-write-failed', detail: 'the claim could not be recorded — an uncountable admission is refused', remaining: settled.remaining };
+  } else {
+    out = { admitted: verdict.admitted === true, reason: verdict.admitted ? undefined : verdict.reason, detail: verdict.admitted ? undefined : verdict.detail, remaining: settled.remaining };
+  }
+  if (ackFile) {
+    writeAckFile(acksDir, requestId, { request_id: requestId, ...out, stage: entry.stage, ts: new Date().toISOString() });
+  }
+  return out;
+}
+
+// ---- pinned worktree records (Class P legs) ----
+// Pin records live as an additive store.json key (never written by older
+// writers, never fatal to older readers — validation only fires when the
+// key is present). The worktree directories themselves live under
+// <storeRoot>/pin-worktrees/<runTag>, this machine only.
+
+function pinWorktreesDir(rootDir) {
+  const root = storeRoot(rootDir);
+  return root == null ? null : path.join(root, PIN_DIR_NAME);
+}
+
+// Record (or refresh) one pinned worktree. The path must be exactly the
+// pin-worktrees/<runTag> slot for this store so a record can never point a
+// recycle at an arbitrary path.
+function recordPin(rootDir, rec) {
+  if (!isPlainObject(rec)) return { ok: false, status: 'error', reason: 'invalid-pin' };
+  if (typeof rec.runTag !== 'string' || !PIN_RUN_TAG_RE.test(rec.runTag)) {
+    return { ok: false, status: 'error', reason: 'invalid-pin-run-tag', detail: 'runTag must be filename-safe (letters, digits, dot, dash, underscore)' };
+  }
+  if (typeof rec.loopStartCommit !== 'string' || !GIT_SHA_RE.test(rec.loopStartCommit)) {
+    return { ok: false, status: 'error', reason: 'invalid-pin-commit', detail: 'loopStartCommit must be a git commit hash (7-64 hex chars)' };
+  }
+  if (typeof rec.treeSha !== 'string' || !GIT_SHA_RE.test(rec.treeSha)) {
+    return { ok: false, status: 'error', reason: 'invalid-pin-tree-sha', detail: 'treeSha must be a git tree hash (7-64 hex chars)' };
+  }
+  const dir = pinWorktreesDir(rootDir);
+  if (dir == null) return paused('unwritable', null, 'no XDG data home resolvable', 'auto.store.unwritable');
+  if (typeof rec.path !== 'string' || path.resolve(rec.path) !== path.join(dir, rec.runTag)) {
+    return { ok: false, status: 'error', reason: 'invalid-pin-path', detail: `pin path must be ${path.join(dir, rec.runTag)}` };
+  }
+  const r = mutate(rootDir, (st) => {
+    if (!isPlainObject(st.pinWorktrees)) st.pinWorktrees = {};
+    st.pinWorktrees[rec.runTag] = {
+      path: path.resolve(rec.path),
+      treeSha: rec.treeSha,
+      loopStartCommit: rec.loopStartCommit,
+      createdAtIso: new Date().toISOString(),
+    };
+    return st;
+  });
+  return r.ok ? { ok: true, path: r.path, record: r.store.pinWorktrees[rec.runTag] } : r;
+}
+
+// Read-only view of every recorded pin.
+function readPins(rootDir) {
+  const cur = load(rootDir);
+  if (!cur.ok) return cur;
+  return { ok: true, path: cur.path, pins: isPlainObject(cur.store.pinWorktrees) ? cur.store.pinWorktrees : {} };
+}
+
+// Drop one pin record (worktree removal is the caller's job).
+function dropPin(rootDir, runTag) {
+  if (typeof runTag !== 'string' || !PIN_RUN_TAG_RE.test(runTag)) {
+    return { ok: false, status: 'error', reason: 'invalid-pin-run-tag', detail: 'runTag must be filename-safe' };
+  }
+  let dropped = null;
+  const r = mutate(rootDir, (st) => {
+    if (isPlainObject(st.pinWorktrees) && Object.prototype.hasOwnProperty.call(st.pinWorktrees, runTag)) {
+      dropped = st.pinWorktrees[runTag];
+      delete st.pinWorktrees[runTag];
+    }
+    return st;
+  });
+  return r.ok ? { ok: true, path: r.path, dropped } : r;
+}
+
+// Prune helper: drop every pin record whose run tag is not live; the
+// dropped records ride the result so the caller can remove the worktrees.
+function prunePins(rootDir, opts = {}) {
+  const live = new Set(Array.isArray(opts.liveRunTags) ? opts.liveRunTags.map(String) : []);
+  const dropped = [];
+  const r = mutate(rootDir, (st) => {
+    if (isPlainObject(st.pinWorktrees)) {
+      for (const tag of Object.keys(st.pinWorktrees)) {
+        if (!live.has(tag)) {
+          dropped.push({ runTag: tag, ...st.pinWorktrees[tag] });
+          delete st.pinWorktrees[tag];
+        }
+      }
+    }
+    return st;
+  });
+  return r.ok ? { ok: true, path: r.path, dropped } : r;
+}
+
+// ---- wave completion records + dispatch-table stamp ----
+
+// Record (or idempotently re-affirm) one released wave. Keyed
+// '<task>/W<n>'. An identical re-record refreshes the timestamp-free
+// fields; a conflicting re-record refuses — a released wave's head and
+// refs pointer are history, never rewritable.
+function recordWaveCompletion(rootDir, rec) {
+  if (!isPlainObject(rec)) return { ok: false, status: 'error', reason: 'invalid-wave-record' };
+  if (typeof rec.task !== 'string' || !rec.task) return { ok: false, status: 'error', reason: 'invalid-wave-record', detail: 'task required' };
+  if (!Number.isInteger(rec.wave) || rec.wave < 1) return { ok: false, status: 'error', reason: 'invalid-wave-record', detail: 'wave must be an integer >= 1' };
+  if (typeof rec.head !== 'string' || !GIT_SHA_RE.test(rec.head)) {
+    return { ok: false, status: 'error', reason: 'invalid-wave-record', detail: 'head must be a git commit hash' };
+  }
+  if (typeof rec.refsPointer !== 'string' || !HEX64_RE.test(rec.refsPointer)) {
+    return { ok: false, status: 'error', reason: 'invalid-wave-record', detail: 'refsPointer must be the hex64 sha256 of the post-wave refs snapshot' };
+  }
+  const key = `${rec.task}/W${rec.wave}`;
+  if (!WAVE_KEY_RE.test(key)) {
+    return { ok: false, status: 'error', reason: 'invalid-wave-record', detail: `task id must be filename-safe (got '${rec.task}')` };
+  }
+  let conflict = null;
+  const r = mutate(rootDir, (st) => {
+    if (!isPlainObject(st.waves)) st.waves = {};
+    const prev = st.waves[key];
+    const next = { head: rec.head, refsPointer: rec.refsPointer, releasedAtIso: new Date().toISOString() };
+    if (rec.noop === true) {
+      next.noop = true;
+      if (typeof rec.noopReason === 'string' && rec.noopReason) next.noopReason = rec.noopReason;
+    }
+    if (rec.rolledTable === true) next.rolledTable = true;
+    if (prev) {
+      const held = (o) => [o.head, o.refsPointer, o.noop === true, o.rolledTable === true];
+      if (JSON.stringify(held(prev)) !== JSON.stringify(held(next))) {
+        conflict = { key, prev };
+        return null;
+      }
+      return st; // identical re-affirmation: keep the original record
+    }
+    st.waves[key] = next;
+    return st;
+  });
+  if (conflict) {
+    return { ok: false, status: 'error', reason: 'wave-record-conflict', path: r.path, detail: `wave ${conflict.key} already recorded with a different outcome` };
+  }
+  return r.ok ? { ok: true, path: r.path, record: r.store.waves[key] } : r;
+}
+
+// Read-only view of every wave completion record.
+function readWaveRecords(rootDir) {
+  const cur = load(rootDir);
+  if (!cur.ok) return cur;
+  return { ok: true, path: cur.path, waves: isPlainObject(cur.store.waves) ? cur.store.waves : {} };
+}
+
+// Record (or overwrite on re-entry) one wave's pre-spawn start evidence:
+// the refs/dirty world the runner validated BEFORE the spawn ran. The
+// record is store-side so crash recovery never trusts spawn-writable
+// scratch content for attribution.
+function recordWaveStart(rootDir, rec) {
+  if (!isPlainObject(rec)) return { ok: false, status: 'error', reason: 'invalid-wave-start' };
+  if (typeof rec.task !== 'string' || !rec.task) return { ok: false, status: 'error', reason: 'invalid-wave-start', detail: 'task required' };
+  if (!Number.isInteger(rec.wave) || rec.wave < 1) return { ok: false, status: 'error', reason: 'invalid-wave-start', detail: 'wave must be an integer >= 1' };
+  if (typeof rec.spawnId !== 'string' || !SPAWN_ID_FILE_RE.test(rec.spawnId)) {
+    return { ok: false, status: 'error', reason: 'invalid-wave-start', detail: 'spawnId must be filename-safe' };
+  }
+  if (typeof rec.preHead !== 'string' || !GIT_SHA_RE.test(rec.preHead)) {
+    return { ok: false, status: 'error', reason: 'invalid-wave-start', detail: 'preHead must be a git commit hash' };
+  }
+  if (typeof rec.preRefsText !== 'string') return { ok: false, status: 'error', reason: 'invalid-wave-start', detail: 'preRefsText must be a string' };
+  if (!Array.isArray(rec.preDirty) || !rec.preDirty.every((p) => typeof p === 'string')) {
+    return { ok: false, status: 'error', reason: 'invalid-wave-start', detail: 'preDirty must be a string array' };
+  }
+  const key = `${rec.task}/W${rec.wave}`;
+  const r = mutate(rootDir, (st) => {
+    if (!isPlainObject(st.waveStarts)) st.waveStarts = {};
+    st.waveStarts[key] = {
+      spawnId: rec.spawnId,
+      preHead: rec.preHead,
+      preRefsText: rec.preRefsText,
+      preDirty: rec.preDirty.slice(),
+      startedAtIso: new Date().toISOString(),
+    };
+    return st;
+  });
+  return r.ok ? { ok: true, path: r.path, record: r.store.waveStarts[key] } : r;
+}
+
+// Read-only view of every wave start record.
+function readWaveStarts(rootDir) {
+  const cur = load(rootDir);
+  if (!cur.ok) return cur;
+  return { ok: true, path: cur.path, waveStarts: isPlainObject(cur.store.waveStarts) ? cur.store.waveStarts : {} };
+}
+
+// Record one held wave: a runner verdict (contract violation), never a
+// crash shape. Reconciliation distinguishes held from crashed waves by this
+// record and never adopts a held wave's commit.
+function recordHeldWave(rootDir, rec) {
+  if (!isPlainObject(rec)) return { ok: false, status: 'error', reason: 'invalid-held-wave' };
+  if (typeof rec.task !== 'string' || !rec.task) return { ok: false, status: 'error', reason: 'invalid-held-wave', detail: 'task required' };
+  if (!Number.isInteger(rec.wave) || rec.wave < 1) return { ok: false, status: 'error', reason: 'invalid-held-wave', detail: 'wave must be an integer >= 1' };
+  if (typeof rec.reason !== 'string' || !rec.reason) return { ok: false, status: 'error', reason: 'invalid-held-wave', detail: 'reason required' };
+  if (typeof rec.spawnId !== 'string' || !SPAWN_ID_FILE_RE.test(rec.spawnId)) {
+    return { ok: false, status: 'error', reason: 'invalid-held-wave', detail: 'spawnId must be filename-safe' };
+  }
+  const key = `${rec.task}/W${rec.wave}`;
+  const r = mutate(rootDir, (st) => {
+    if (!isPlainObject(st.heldWaves)) st.heldWaves = {};
+    st.heldWaves[key] = { reason: rec.reason, spawnId: rec.spawnId, heldAtIso: new Date().toISOString() };
+    return st;
+  });
+  return r.ok ? { ok: true, path: r.path, record: r.store.heldWaves[key] } : r;
+}
+
+// Read-only view of every held-wave record.
+function readHeldWaves(rootDir) {
+  const cur = load(rootDir);
+  if (!cur.ok) return cur;
+  return { ok: true, path: cur.path, heldWaves: isPlainObject(cur.store.heldWaves) ? cur.store.heldWaves : {} };
+}
+
+// Roll the dispatch-table stamp. Two provenance shapes: a red-team-passed,
+// runner-released wave edit records its wave key '<task>/W<n>'; a run start
+// records '<runTag>/start' — the loop stamps the table it loaded before any
+// consume, and every later wave re-verifies against that hash. The stamp is
+// the sha256 of the table file as of the write; shape validation keeps
+// refusing everything outside the two forms.
+function rollDispatchTableStamp(rootDir, rec) {
+  if (!isPlainObject(rec)) return { ok: false, status: 'error', reason: 'invalid-table-stamp' };
+  if (typeof rec.sha256 !== 'string' || !HEX64_RE.test(rec.sha256)) {
+    return { ok: false, status: 'error', reason: 'invalid-table-stamp', detail: 'sha256 must be the hex64 hash of the dispatch table file' };
+  }
+  if (typeof rec.rolledByWave !== 'string' || !(WAVE_KEY_RE.test(rec.rolledByWave) || RUN_START_KEY_RE.test(rec.rolledByWave))) {
+    return {
+      ok: false, status: 'error', reason: 'invalid-table-stamp',
+      detail: `rolledByWave must be a wave key '<task>/W<n>' or a run-start tag '<runTag>/start' (got '${rec.rolledByWave}')`,
+    };
+  }
+  const r = mutate(rootDir, (st) => {
+    st.dispatchTable = { sha256: rec.sha256, rolledAtIso: new Date().toISOString(), rolledByWave: rec.rolledByWave };
+    return st;
+  });
+  return r.ok ? { ok: true, path: r.path, stamp: r.store.dispatchTable } : r;
+}
+
+// Read-only view of the current dispatch-table stamp (null when never rolled).
+function readDispatchTableStamp(rootDir) {
+  const cur = load(rootDir);
+  if (!cur.ok) return cur;
+  return { ok: true, path: cur.path, stamp: isPlainObject(cur.store.dispatchTable) ? cur.store.dispatchTable : null };
+}
+
+// Record the loop's baseline state hash: the sha256 of the state file bytes
+// as the runner last read and validated them. The crashed-advance recovery
+// adopts a snapshot only on an exact hash match, so a crafted snapshot from
+// a spawn-writable path can never ride the rollback.
+function recordBaselineState(rootDir, sha256) {
+  if (typeof sha256 !== 'string' || !HEX64_RE.test(sha256)) {
+    return { ok: false, status: 'error', reason: 'invalid-baseline-state', detail: 'sha256 must be the hex64 hash of the state file bytes' };
+  }
+  const r = mutate(rootDir, (st) => {
+    st.baselineState = { sha256, recordedAtIso: new Date().toISOString() };
+    return st;
+  });
+  return r.ok ? { ok: true, path: r.path, baselineState: r.store.baselineState } : r;
+}
+
+// Read-only view of the current baseline-state record (null when absent).
+function readBaselineState(rootDir) {
+  const cur = load(rootDir);
+  if (!cur.ok) return cur;
+  return { ok: true, path: cur.path, baselineState: isPlainObject(cur.store.baselineState) ? cur.store.baselineState : null };
+}
+
 // ---- teardown ----
 
 // Remove this repo's store (`auto off --purge`). Only the per-repo directory
@@ -690,7 +1616,7 @@ function purgeStore(rootDir) {
 
 module.exports = {
   STORE_SCHEMA_VERSION,
-  DEFAULT_LIMITS,
+  DEFAULT_LIMITS: limits.DEFAULT_LIMITS,
   storeRoot,
   repoKey,
   guidanceFor,
@@ -700,8 +1626,13 @@ module.exports = {
   create,
   probeWritable,
   networkFsUnderStore,
+  refuseNetworkStore,
+  mutateLockPath,
+  acquireMutateLock,
+  releaseMutateLock,
   heartbeatStaleThresholdMs,
   stampStream,
+  saveWindows,
   recordReviewRound,
   recordDisposition,
   saveSnapshot,
@@ -715,5 +1646,24 @@ module.exports = {
   releaseRunLock,
   readRunLock,
   breakRunLock,
+  registerSpawn,
+  removeSpawn,
+  writeGrantManifest,
+  admitAndAck,
+  pinWorktreesDir,
+  recordPin,
+  readPins,
+  dropPin,
+  prunePins,
+  recordWaveCompletion,
+  readWaveRecords,
+  recordWaveStart,
+  readWaveStarts,
+  recordHeldWave,
+  readHeldWaves,
+  rollDispatchTableStamp,
+  readDispatchTableStamp,
+  recordBaselineState,
+  readBaselineState,
   purgeStore,
 };

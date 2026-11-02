@@ -5,9 +5,16 @@
 // tier when absent), unions profile deny baselines one-way over the user's
 // resolved permission config, and scans captured spawn streams for deny
 // escapes. Profiles are tracked JSON data under templates/auto-profiles/.
+// Class S composes extend the same frame: a runner-created per-spawn
+// scratch dir rw-bound after the masks (the store-tree carve-out), an
+// explicitly sized /tmp tmpfs, the grant manifest and the store-side ack
+// dir ro-bound at fixed paths (grants immutable, acks runner-written
+// read-only pickup), and the runner-held git identity in every BUILD spawn
+// env.
 'use strict';
 
 const core = require('../../core/index.cjs');
+const spawnreg = require('../../core/spawnreg.cjs');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -50,6 +57,36 @@ const SEED_SNAPSHOT_NAMES = Object.freeze(['host-config', 'host-data']);
 // Fallback deny floor for the detector when the default profile file cannot
 // be read (fail toward detection, never toward silence).
 const DETECTOR_FLOOR_DENY = Object.freeze(['sudo', 'su -', 'su root', 'gos auto']);
+
+// Class S compose constants. The scratch env name mirrors the channel env
+// in core/spawnreg.cjs (kept in sync by test); the spawn id rule mirrors
+// spawnreg's filename-safe id so a derived scratch can never escape the
+// spawnreg directory through path fragments. The ack dir env and fixed
+// dest mirror spawnreg's ACK_DIR_ENV the same way.
+const SCRATCH_ENV = 'GOS_AUTO_SPAWN_SCRATCH';
+const ACK_DIR_ENV = 'GOS_AUTO_ACK_DIR';
+const ACK_DIR_DEST = '/run/gos-acks';
+const SPAWN_ID_RE = /^[A-Za-z\d][A-Za-z\d._-]*$/;
+const GRANT_MANIFEST_DEST = '/run/gos-grants.json';
+const GRANT_MANIFEST_ENV = 'GOS_AUTO_GRANT_MANIFEST';
+const TESTBASE_ENV = 'TESTBASE';
+const GIT_IDENTITY = Object.freeze({ name: 'gos-auto', email: 'gos-auto@invalid' });
+// bwrap --size (bytes, applied to the next --tmpfs) landed in 0.7.0; an
+// engine whose version cannot be parsed never earns sizing trust.
+const TMPFS_SIZE_BYTES = 512 * 1024 * 1024;
+const TMPFS_SIZE_MIN_VERSION = [0, 7, 0];
+
+// Dotted numeric version compare against a minimum; false for anything
+// unparseable (unknown never passes a capability floor).
+function engineVersionAtLeast(version, min) {
+  if (typeof version !== 'string' || !/^\d+(\.\d+)*$/.test(version.trim())) return false;
+  const parts = version.trim().split('.').map((p) => Number.parseInt(p, 10));
+  for (let i = 0; i < min.length; i++) {
+    const a = parts.length > i ? parts[i] : 0;
+    if (a !== min[i]) return a > min[i];
+  }
+  return true;
+}
 
 // Profile tokens resolve to machine-absolute paths at compose time so the
 // tracked JSON stays correct on every host.
@@ -185,8 +222,12 @@ function composeArgv(ctx) {
     '--ro-bind-try', '/sys', '/sys',
     '--proc', '/proc',
     '--dev', '/dev',
-    '--tmpfs', '/tmp',
   ];
+  // Explicit /tmp sizing: --size applies to the next --tmpfs only, so it
+  // must sit directly in front of the /tmp mount and never leaks into the
+  // mask tmpfs mounts below.
+  if (ctx.tmpfsSize != null) argv.push('--size', String(ctx.tmpfsSize));
+  argv.push('--tmpfs', '/tmp');
   // DNS: a stub resolv.conf managed by systemd-resolved or NetworkManager
   // symlinks outside /etc into /run, which is not mounted — the link would
   // dangle and name resolution would die inside the sandbox
@@ -220,7 +261,34 @@ function composeArgv(ctx) {
     for (const e of entries) argv.push('--ro-bind', path.join(abs, e.name), path.join(m.dest, e.name));
   }
   for (const af of (ctx.authFiles || [])) argv.push('--ro-bind', af.src, af.dest);
-  return { argv, seeds, seedsSkipped };
+  // Post-mask carve-outs: the scratch dir (and its testbed) live inside the
+  // masked store tree, so they re-bind rw AFTER every mask mount — the
+  // same later-mount-wins trick the seed and auth ro-binds use. The grant
+  // manifest ro-binds at a fixed path outside every mask dest; /run only
+  // gets a --dir when nothing earlier already mounts it (the resolv stub
+  // bind would otherwise be shadowed).
+  const postMaskBinds = [];
+  if (ctx.scratch) {
+    argv.push('--bind', ctx.scratch, ctx.scratch);
+    postMaskBinds.push({ op: '--bind', src: ctx.scratch, dest: ctx.scratch });
+  }
+  if (ctx.testBase) {
+    argv.push('--bind', ctx.testBase, ctx.testBase);
+    postMaskBinds.push({ op: '--bind', src: ctx.testBase, dest: ctx.testBase });
+  }
+  if (ctx.grantManifest) {
+    const runMounted = parseArgvOps(argv).some((o) => o.dest === '/run' && o.op !== '--dir');
+    if (!runMounted) argv.push('--dir', '/run');
+    argv.push('--ro-bind', ctx.grantManifest.src, ctx.grantManifest.dest);
+  }
+  // The ack dir ro-binds read-only after every mask mount: the spawned side
+  // reads its verdicts from the fixed path and can never write one there.
+  if (ctx.ackBind) {
+    const runMounted = parseArgvOps(argv).some((o) => o.dest === '/run' && o.op !== '--dir');
+    if (!runMounted) argv.push('--dir', '/run');
+    argv.push('--ro-bind', ctx.ackBind.src, ctx.ackBind.dest);
+  }
+  return { argv, seeds, seedsSkipped, postMaskBinds };
 }
 
 // maskOverBindHolds(spec) — ordering invariant checker. Accepts a compose()
@@ -287,7 +355,11 @@ function maskOverBindHolds(spec) {
           && Array.isArray(meta.authFiles) && meta.authFiles.some((a) => a.src === later.src);
         const nestedMask = meta.masks.some((n) => n !== m && n.dest === later.dest
           && maskMountOp([later], n, meta.emptySrc));
-        if (!seeded && !authed && !nestedMask) return false; // deeper mask mounts win; anything else re-exposes
+        // recorded post-mask rw carve-outs (the scratch dir and its
+        // testbed) are the only binds allowed to land inside a mask dest
+        const carved = later.op === '--bind' && Array.isArray(meta.postMaskBinds)
+          && meta.postMaskBinds.some((c) => c.op === later.op && c.src === later.src && c.dest === later.dest);
+        if (!seeded && !authed && !nestedMask && !carved) return false; // deeper mask mounts win; anything else re-exposes
       }
     }
   }
@@ -570,21 +642,41 @@ function materializeSeedDir(files, baseDir, prefix) {
 // compose(profileName, opts) -> { ok, profile, tier, engine, argv, env, deny,
 // meta } on success, or { ok: false, code, ... } fail-closed results.
 // opts:
-//   allowFull      boolean  explicit gate for the full profile
-//   workspace      string   repo root, ro-bound into the sandbox
-//   writableRoots  string[] adapter-declared writable binds (e.g. .gos/, scratch)
-//   seedRoots      object   seed name -> materialized snapshot dir on disk
-//   store          object   store API injection (saveSnapshot/loadSnapshot);
-//                           defaults to a lazy require of ./store.cjs
-//   env            object   env for token resolution and the engine probe
-//   engineProbe    function () -> {engine, version?, reason?} probe stub
-//   userConfig     object   resolved permission config override (tests/runner)
+//   allowFull        boolean  explicit gate for the full profile
+//   workspace        string   repo root, ro-bound into the sandbox
+//   writableRoots    string[] adapter-declared writable binds (e.g. .gos/, scratch)
+//   seedRoots        object   seed name -> materialized snapshot dir on disk
+//   store            object   store API injection (saveSnapshot/loadSnapshot);
+//                            defaults to a lazy require of ./store.cjs
+//   env              object   env for token resolution and the engine probe
+//   engineProbe      function () -> {engine, version?, reason?} probe stub
+//   userConfig       object   resolved permission config override (tests/runner)
+//   scratchDir       string   explicit per-spawn scratch dir override (tests);
+//                            default derives the spawnreg convention
+//   spawnId          string   spawn id deriving <storeRoot>/spawnreg/<id>.scratch
+//   testBase         boolean  pin TESTBASE at a testbed subdir of the scratch
+//   grantManifestPath string  writeGrantManifest output ro-bound at
+//                            /run/gos-grants.json
+//   ackDir         string    store-side per-spawn ack dir ro-bound at
+//                            /run/gos-acks (the channel's read-only verdict
+//                            pickup)
+//   buildSpawn       boolean  entry carries BUILD semantics (git identity env)
+//   gitIdentity      boolean  false suppresses the runner git identity env
+//   requiresKernelTier boolean refuse unless the engine resolves to bwrap
 function compose(profileName, opts) {
   const o = opts || {};
   const env = o.env || process.env;
   const probe = probeEngine(o);
   const base = { tier: probe.tier, engine: probe.engine };
   const name = typeof profileName === 'string' && profileName ? profileName : DEFAULT_PROFILE;
+  // Kernel-tier floor: entries carrying script steps or wave dispatch never
+  // degrade — a lexical tier would run run-authored content unsandboxed.
+  if (o.requiresKernelTier === true && probe.tier !== 'bubblewrap') {
+    return {
+      ok: false, code: 'auto.launcher.kernel-tier-required', profile: name, ...base,
+      detail: probe.reason || 'sandbox engine did not resolve to the kernel tier',
+    };
+  }
   const load = loadProfile(name);
   if (!load.ok) return { ok: false, code: load.code, profile: name, ...base, ...(load.known ? { known: load.known } : {}), ...(load.detail ? { detail: load.detail } : {}), ...(load.file ? { file: load.file } : {}) };
   if (name === 'full' && !o.allowFull) {
@@ -672,7 +764,81 @@ function compose(profileName, opts) {
     if (real) { try { st = fs.lstatSync(real); } catch { st = null; } }
     if (real && st && st.isFile()) authFiles.push({ src: real, dest: path.resolve(af) });
   }
-  const { argv, seeds, seedsSkipped } = composeArgv({
+  // Per-spawn scratch dir: explicit override wins, else the spawnreg
+  // convention under the machine-local store root (never the repo tree).
+  // Created here so the spawn channel has its request drop from the start.
+  let scratch = null;
+  let testBase = null;
+  if (typeof o.scratchDir === 'string' && o.scratchDir) {
+    if (!path.isAbsolute(o.scratchDir)) {
+      return { ok: false, code: 'auto.launcher.scratch-invalid', profile: name, ...base, detail: 'scratchDir must be an absolute path' };
+    }
+    scratch = path.resolve(o.scratchDir);
+  } else if (typeof o.spawnId === 'string' && o.spawnId) {
+    if (!SPAWN_ID_RE.test(o.spawnId)) {
+      return { ok: false, code: 'auto.launcher.scratch-invalid', profile: name, ...base, detail: 'spawnId must be filename-safe (letters, digits, dot, dash, underscore)' };
+    }
+    const derived = spawnreg.scratchPath(o.workspace ? path.resolve(String(o.workspace)) : null, o.spawnId);
+    if (derived == null) {
+      return { ok: false, code: 'auto.launcher.scratch-unavailable', profile: name, ...base, detail: 'no machine-local data home resolvable for the spawn scratch dir' };
+    }
+    scratch = derived;
+  }
+  if (scratch) {
+    if (o.testBase === true) testBase = path.join(scratch, 'testbed');
+    try {
+      fs.mkdirSync(scratch, { recursive: true });
+      if (testBase) fs.mkdirSync(testBase, { recursive: true });
+    } catch (e) {
+      return { ok: false, code: 'auto.launcher.scratch-unwritable', profile: name, ...base, path: scratch, detail: e.message };
+    }
+  }
+  // /tmp sizing applies only where the argv is real: a bubblewrap engine
+  // too old to express --size (or of unknown version) refuses the scratch
+  // compose rather than shipping a default-sized tmpfs; a lexical tier
+  // executes nothing, so its inert argv keeps the unsized base mount.
+  let tmpfsSize = null;
+  if (scratch && probe.tier === 'bubblewrap') {
+    if (!engineVersionAtLeast(probe.version, TMPFS_SIZE_MIN_VERSION)) {
+      return {
+        ok: false, code: 'auto.launcher.tmpfs-sizing-unsupported', profile: name, ...base,
+        detail: `${probe.engine || 'bwrap'} ${probe.version || 'unknown version'} cannot size a tmpfs (needs bwrap >= 0.7.0 for --size)`,
+      };
+    }
+    tmpfsSize = TMPFS_SIZE_BYTES;
+  }
+  // Grant manifest (store writeGrantManifest output): immutable per-spawn
+  // grants ro-bound at a fixed path after the masks.
+  let grantManifest = null;
+  if (typeof o.grantManifestPath === 'string' && o.grantManifestPath) {
+    if (!path.isAbsolute(o.grantManifestPath)) {
+      return { ok: false, code: 'auto.launcher.grant-manifest-invalid', profile: name, ...base, detail: 'grantManifestPath must be an absolute path' };
+    }
+    let real = null;
+    try { real = fs.realpathSync(o.grantManifestPath); } catch { real = null; }
+    let st = null;
+    if (real) { try { st = fs.lstatSync(real); } catch { st = null; } }
+    if (!real || !st || !st.isFile()) {
+      return { ok: false, code: 'auto.launcher.grant-manifest-invalid', profile: name, ...base, path: o.grantManifestPath, detail: 'grant manifest missing or not a regular file' };
+    }
+    grantManifest = { src: real, dest: GRANT_MANIFEST_DEST };
+  }
+  // Ack dir (store registerSpawn acksDir): runner-written channel verdicts
+  // ro-bound read-only at the fixed ack path after the masks — the spawned
+  // side reads acks there and nowhere else.
+  let ackBind = null;
+  if (typeof o.ackDir === 'string' && o.ackDir) {
+    if (!path.isAbsolute(o.ackDir)) {
+      return { ok: false, code: 'auto.launcher.ack-dir-invalid', profile: name, ...base, detail: 'ackDir must be an absolute path' };
+    }
+    const abs = path.resolve(o.ackDir);
+    try { fs.mkdirSync(abs, { recursive: true }); }
+    catch (e) {
+      return { ok: false, code: 'auto.launcher.ack-dir-invalid', profile: name, ...base, path: abs, detail: e.message };
+    }
+    ackBind = { src: abs, dest: ACK_DIR_DEST };
+  }
+  const { argv, seeds, seedsSkipped, postMaskBinds } = composeArgv({
     home: env.HOME || os.homedir(),
     workspace: o.workspace ? path.resolve(String(o.workspace)) : null,
     writableRoots,
@@ -681,12 +847,31 @@ function compose(profileName, opts) {
     authFiles,
     seedRoots: o.seedRoots && typeof o.seedRoots === 'object' ? o.seedRoots : {},
     masks,
+    tmpfsSize,
+    scratch,
+    testBase,
+    grantManifest,
+    ackBind,
   });
   const injected = injectPermissionConfig(readResolvedPermissionConfig(o), load.profile.deny);
   const envOut = {
     ...(o.envPassthrough && typeof o.envPassthrough === 'object' ? o.envPassthrough : {}),
     OPENCODE_CONFIG_CONTENT: JSON.stringify(injected.config),
   };
+  if (scratch) envOut[SCRATCH_ENV] = scratch;
+  if (testBase) envOut[TESTBASE_ENV] = testBase;
+  if (grantManifest) envOut[GRANT_MANIFEST_ENV] = GRANT_MANIFEST_DEST;
+  if (ackBind) envOut[ACK_DIR_ENV] = ACK_DIR_DEST;
+  // Runner-held git identity for every BUILD spawn: the mandatory masks
+  // empty ~/.gitconfig, so a spawn without injected identity vars cannot
+  // commit at all. Workspace profiles carry BUILD semantics by default;
+  // buildSpawn marks BUILD entries composed under any profile.
+  if (o.gitIdentity !== false && (name === 'workspace' || o.buildSpawn === true)) {
+    envOut.GIT_AUTHOR_NAME = GIT_IDENTITY.name;
+    envOut.GIT_AUTHOR_EMAIL = GIT_IDENTITY.email;
+    envOut.GIT_COMMITTER_NAME = GIT_IDENTITY.name;
+    envOut.GIT_COMMITTER_EMAIL = GIT_IDENTITY.email;
+  }
   const writableShadowed = writableRoots.filter((w) => masks.some((m) => isAncestorPath(m.dest, w)));
   return {
     ok: true,
@@ -709,6 +894,12 @@ function compose(profileName, opts) {
       emptySrc: EMPTY_SRC,
       defaultProfile: DEFAULT_PROFILE,
       phases: ['ro-binds', 'writable-binds', 'mask-mounts', 'seed-ro-binds'],
+      ...(scratch ? { scratch: { src: scratch, dest: scratch } } : {}),
+      ...(testBase ? { testBase: { src: testBase, dest: testBase } } : {}),
+      ...(grantManifest ? { grantManifest } : {}),
+      ...(ackBind ? { ackBind } : {}),
+      ...(tmpfsSize != null ? { tmpfsSize } : {}),
+      ...(postMaskBinds.length ? { postMaskBinds } : {}),
     },
   };
 }

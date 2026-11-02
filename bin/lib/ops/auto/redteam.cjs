@@ -15,12 +15,13 @@
 
 const crypto = require('node:crypto');
 const path = require('node:path');
-const { spawn: spawnChild, spawnSync } = require('node:child_process');
 
 const store = require('./store.cjs');
 const launcher = require('./launcher.cjs');
 const loop = require('./loop.cjs');
 const registry = require('./adapters/registry.cjs');
+const limits = require('./limits.cjs');
+const spawnrun = require('./spawnrun.cjs');
 const core = require('../../core/index.cjs');
 
 // Stamp stage label and prompt snapshot kind in the trust store.
@@ -33,11 +34,10 @@ const REQUIRED_ZEROS = 2;
 
 const DEFAULT_PROFILE = 'restricted';
 // Wall clock per review round: the runner's GOS_AUTO_TIMEOUT_WALL_SEC
-// override wins over the 60-minute default, with the same strict positive
-// integer grammar (a malformed override fails closed, never falls back).
+// override wins over the 60-minute default in limits.cjs, with the same
+// strict positive integer grammar (a malformed override fails closed,
+// never falls back).
 const WALL_ENV = 'GOS_AUTO_TIMEOUT_WALL_SEC';
-const DEFAULT_WALL_SEC = 60 * 60;
-const SPAWN_MAX_BUFFER = 64 * 1024 * 1024;
 
 // Runner-held prompt template. The sha256 of this exact constant is the
 // prompt source hash recorded in the store; the worker session receives an
@@ -143,53 +143,18 @@ function evaluateClearance(rounds) {
   };
 }
 
-// Event-loop-alive review spawn (same contract as the working spawn): the
-// wall clock kills live and the runner's own timers keep firing while the
-// round runs. Returns the spawnSync shape runRound scores.
+// Review-round spawn: composes the shared spawn runner, so the idle killer
+// and the streaming deny scan cover review streams exactly like working
+// spawns (same contract, one code path). Returns the spawnSync shape
+// runRound scores.
 function redteamSpawnRunner(spec, ctx) {
   if (!Array.isArray(spec.argv) || spec.argv.length === 0) {
     return Promise.resolve({ status: null, stdout: '', stderr: '', error: new Error('no spawn argv composed (lexical tier without a host command)') });
   }
-  return new Promise((resolve) => {
-    let child;
-    try {
-      child = spawnChild(spec.argv[0], spec.argv.slice(1), {
-        cwd: spec.cwd,
-        env: spec.env,
-        detached: true,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
-    } catch (e) {
-      resolve({ status: null, stdout: '', stderr: '', error: e instanceof Error ? e : new Error(String(e)) });
-      return;
-    }
-    const cap = SPAWN_MAX_BUFFER;
-    let out = '';
-    let err = '';
-    let wallTimer = null;
-    let killed = false;
-    let settled = false;
-    const finish = (payload) => {
-      if (settled) return;
-      settled = true;
-      if (wallTimer) clearTimeout(wallTimer);
-      resolve(payload);
-    };
-    const wallMs = Number(ctx && ctx.wallMs);
-    if (wallMs > 0) {
-      wallTimer = setTimeout(() => {
-        killed = true;
-        try { process.kill(-child.pid, 'SIGKILL'); } catch { /* group gone */ try { child.kill('SIGKILL'); } catch { /* already gone */ } }
-      }, wallMs);
-      if (typeof wallTimer.unref === 'function') wallTimer.unref();
-    }
-    child.stdout.on('data', (d) => { out += d; if (out.length > cap) out = out.slice(out.length - cap); });
-    child.stderr.on('data', (d) => { err += d; if (err.length > cap) err = err.slice(err.length - cap); });
-    child.on('error', (e) => finish({ status: null, stdout: out, stderr: err, error: e }));
-    child.on('close', (code) => {
-      if (killed) finish({ status: null, stdout: out, stderr: err, error: Object.assign(new Error('review round exceeded the wall clock'), { killed: true }) });
-      else finish({ status: code, stdout: out, stderr: err });
-    });
+  return spawnrun.spawnRun(spec, {
+    idleMs: ctx && ctx.idleMs,
+    wallMs: ctx && ctx.wallMs,
+    deny: Array.isArray(spec.deny) ? spec.deny : undefined,
   });
 }
 
@@ -198,7 +163,7 @@ function redteamSpawnRunner(spec, ctx) {
 function resolveWallMs(ctx) {
   if (Number.isInteger(ctx.wallMs) && ctx.wallMs > 0) return { ok: true, wallMs: ctx.wallMs };
   const raw = (ctx.env || process.env)[WALL_ENV];
-  if (raw == null) return { ok: true, wallMs: DEFAULT_WALL_SEC * 1000 };
+  if (raw == null) return { ok: true, wallMs: limits.DEFAULT_WALL_SEC * 1000 };
   const text = String(raw).trim();
   if (!/^[1-9][0-9]*$/.test(text)) {
     return {
@@ -304,7 +269,7 @@ async function runRound({ stage, spawnId }, ctx = {}) {
   const wallMs = wall.wallMs;
   let result;
   try {
-    result = await spawnRunner(spec, { wallMs });
+    result = await spawnRunner(spec, { wallMs, idleMs: ctx.idleMs });
   } catch (e) {
     result = { status: null, stdout: '', stderr: '', error: e instanceof Error ? e : new Error(String(e)) };
   }

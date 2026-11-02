@@ -14,6 +14,8 @@ const breaker = require('./breaker.cjs');
 const loop = require('./loop.cjs');
 const delivery = require('./delivery.cjs');
 const publish = require('./delivery-publish.cjs');
+const workers = require('./workers.cjs');
+const { renderSpawnOutput } = require('../../core/sanitize.cjs');
 
 // auto — full-auto runner family. Runtime state (mode/profile/limits,
 // counters, breaker records, dispositions) lives in the machine-local store
@@ -209,6 +211,67 @@ function autoOff(mods, rest, ui) {
   console.log(core.t('auto.cli.off.purgeHint'));
 }
 
+// Per-stage dispatch view for `auto status`: one compact line per stage
+// resolved from the stage-dispatch table (worker form, capability profile,
+// model slot, verb grants, use cap, dispatch unit; BUILD carries its
+// wave-dispatch suffix). The table load is read-only and failure-tolerant —
+// a missing or corrupt table renders nothing (status never mkdirs or probes
+// for the table).
+function dispatchViewLines(opts) {
+  let load;
+  try { load = workers.loadDispatchTable(opts || {}); }
+  catch { return []; }
+  if (!load || load.ok !== true || !load.table || !load.table.stages) return [];
+  const lines = ['dispatch:'];
+  for (const stage of workers.STAGES) {
+    const e = load.table.stages[stage];
+    if (!e || typeof e !== 'object') continue;
+    let line = `  ${stage} ${e.worker} ${e.profile} ${e.model_slot} [${Array.isArray(e.verbs) ? e.verbs.join(' ') : ''}] cap${e.use_cap} unit=${e.unit}`;
+    if (e.wave_dispatch) line += ` wave-dispatch model=${e.model_slot}`;
+    lines.push(line);
+  }
+  return lines.length > 1 ? lines : [];
+}
+
+// Three-tier clearance vocabulary for the delegated-stage approval records:
+// mechanical clearance (store-verified vs pre-loop legacy trust flavors),
+// human approval, pending mechanical clearance, or a hold. Advisory
+// contexts pass only the live store stamps — a pairing-free record then
+// reads pre-loop legacy, never a hold (age alone proves nothing either way
+// here). Returns one term per delegated stage carrying a record.
+function clearanceTerms(approvals, stamps) {
+  const ratify = require('./ratify.cjs');
+  const out = [];
+  if (!store.isPlainObject(approvals)) return out;
+  for (const stage of ratify.DELEGATED_STAGES) {
+    const rec = approvals[stage];
+    if (rec === undefined || rec === null) continue;
+    const desc = ratify.describeApproval(rec, { stamps });
+    if (desc === 'cleared (store-verified)') out.push(`${stage} mechanical clearance (store-verified)`);
+    else if (desc === 'cleared (pre-loop legacy)') out.push(`${stage} mechanical clearance (pre-loop legacy)`);
+    else if (desc === 'human') out.push(`${stage} human approval`);
+    else if (desc === 'pending') out.push(`${stage} pending mechanical clearance`);
+    else out.push(`${stage} claimed-not-verified (held for human approval)`);
+  }
+  return out;
+}
+
+// Tracked approvals for the current repo, or null when no readable task
+// state exists (read-only; the render stays silent rather than guessing).
+function trackedApprovals() {
+  try {
+    const stJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), '.gos', 'state.json'), 'utf8'));
+    return store.isPlainObject(stJson.approvals) ? stJson.approvals : null;
+  } catch { return null; }
+}
+
+// Breaker trip details quote spawn streams (deny lines with raw JSON, host
+// stderr slices) — every byte rendered to humans passes the spawn-output
+// sanitizer so escape sequences cannot ride along.
+function tripDetailArg(detail) {
+  return detail ? ` ${renderSpawnOutput(detail)}` : '';
+}
+
 function autoStatus(mods, ui) {
   const loaded = mods.store.load();
   if (loaded.ok) {
@@ -260,16 +323,17 @@ function autoStatus(mods, ui) {
     const st = loaded.store;
     console.log(core.t('auto.cli.status.counters', { spawns: st.counters.spawnCount, trips: st.counters.tripCount }));
     const lastTrip = [...st.breaker.records].reverse().find((r) => r.layer);
-    if (lastTrip) console.log(core.t('auto.cli.status.breakerTripped', { layer: lastTrip.layer, cls: lastTrip.cls, ts: lastTrip.ts, detail: lastTrip.detail || '' }));
+    if (lastTrip) console.log(core.t('auto.cli.status.breakerTripped', { layer: lastTrip.layer, cls: lastTrip.cls, ts: lastTrip.ts, detail: tripDetailArg(lastTrip.detail) }));
     else console.log(core.t('auto.cli.status.breakerClean', { n: st.breaker.records.length }));
+    // Clearance summary: the three-tier vocabulary over the delegated-stage
+    // approval records, trust-flavored from the live store stamps.
+    const clearance = clearanceTerms(trackedApprovals(), store.isPlainObject(st.stamps) ? st.stamps : undefined);
+    if (clearance.length) console.log(`clearance: ${clearance.join(' · ')}`);
     // A held delegation is only decidable with its evidence: surface the
     // stored review rounds when a delegated stage waits on a human.
     const ratify = require('./ratify.cjs');
-    let blocker = null;
-    try {
-      const stJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), '.gos', 'state.json'), 'utf8'));
-      blocker = ratify.advanceBlocker(stJson.approvals);
-    } catch { blocker = null; }
+    const approvals = trackedApprovals();
+    const blocker = approvals ? ratify.advanceBlocker(approvals) : null;
     if (blocker && ratify.isDelegatedStage(blocker.stage)) {
       const rounds = store.isPlainObject(st.reviewRounds) ? st.reviewRounds : {};
       const recent = Object.entries(rounds).sort((a, b) => String(a[1].ts).localeCompare(String(b[1].ts))).slice(-4);
@@ -280,6 +344,7 @@ function autoStatus(mods, ui) {
     }
     const lock = mods.store.readRunLock();
     if (lock) console.log(core.t('auto.cli.status.lock', { pid: lock.pid, host: lock.hostname }));
+    for (const line of dispatchViewLines()) console.log(line);
   } else {
     console.log(core.t('auto.cli.status.countersAbsent'));
   }
@@ -334,7 +399,7 @@ function autoRun(mods, rest, ui) {
     } catch { /* unwritable: the summary above still printed */ }
     if (Number.isInteger(report.iterations)) console.log(`  ${core.t('auto.cli.run.iterations', { n: report.iterations })}`);
     if (report.breaker && report.breaker.tripped) {
-      console.log(`  ${core.t('auto.cli.status.breakerTripped', { layer: report.breaker.layer, cls: report.breaker.cls, ts: report.breaker.ts || '', detail: report.breaker.reason || '' })}`);
+      console.log(`  ${core.t('auto.cli.status.breakerTripped', { layer: report.breaker.layer, cls: report.breaker.cls, ts: report.breaker.ts || '', detail: tripDetailArg(report.breaker.reason || '') })}`);
     }
     const g = report.guidance;
     if (g) {
@@ -387,7 +452,7 @@ function autoDisposition(mods, rest, ui) {
   if (g) console.log(`✓ ${g.what}`);
 }
 
-module.exports = { cmdAuto, autoResumeLine };
+module.exports = { cmdAuto, autoResumeLine, dispatchViewLines, clearanceTerms, autoHintProvider };
 
 // Resume tail: one machine-local auto line when a store exists — breaker
 // trip first when present — and silence when auto was never configured here.
@@ -404,4 +469,45 @@ function autoResumeLine() {
   const lastTrip = [...st.breaker.records].reverse().find((r) => r.layer);
   if (lastTrip) console.log(core.t('auto.cli.resume.tripped', { mode: st.mode, profile: st.profile, layer: lastTrip.layer, cls: lastTrip.cls, ts: lastTrip.ts }));
   else console.log(core.t('auto.cli.resume.auto', { mode: st.mode, profile: st.profile }));
+  const clearance = clearanceTerms(trackedApprovals(), store.isPlainObject(st.stamps) ? st.stamps : undefined);
+  if (clearance.length) console.log(`auto clearance: ${clearance.join(' · ')}`);
+}
+
+// Nav hint provider: compact auto-loop orientation lines for surfaces that
+// want one read-only glance (the nav summary wires this). One
+// kind-discriminated object:
+//   {kind:'marker',  lines:[...]}  inside a runner-spawned session — the
+//                                  worker orientation (tracked artifact,
+//                                  advance verb, human-only gates)
+//   {kind:'mode-on', lines:[...]}  auto configured and enabled — loop state
+//   {kind:'none',    lines:[]}     nothing auto-shaped to say
+// Store and dispatch-table reads are read-only and failure-tolerant; trip
+// details quoted into a line pass the spawn-output sanitizer.
+function autoHintProvider(ctx = {}) {
+  const env = ctx.env || process.env;
+  if (env[loop.SPAWN_MARKER_ENV]) {
+    const spawnId = typeof env.GOS_AUTO_SPAWN_ID === 'string' && env.GOS_AUTO_SPAWN_ID ? env.GOS_AUTO_SPAWN_ID : '(unknown)';
+    return {
+      kind: 'marker',
+      lines: [
+        `auto loop session ${spawnId}: stage work lands through 'gos commit <stage>' on the tracked task state (.gos/state.json)`,
+        'archive and push stay human gates — they are never delegated to a spawned session',
+      ],
+    };
+  }
+  let loaded;
+  try { loaded = store.load(ctx.rootDir); }
+  catch { loaded = { ok: false }; }
+  if (loaded && loaded.ok && loaded.store.mode === 'on') {
+    const st = loaded.store;
+    const lines = [`auto mode on — profile ${st.profile}, limits N=${st.limits.N}/K=${st.limits.K}/B=${st.limits.B}`];
+    const lastTrip = [...st.breaker.records].reverse().find((r) => r.layer);
+    if (lastTrip) {
+      lines.push(`breaker TRIPPED ${lastTrip.layer}/${lastTrip.cls}${tripDetailArg(lastTrip.detail)}`);
+    }
+    const dispatch = dispatchViewLines(typeof ctx.tablePath === 'string' ? { tablePath: ctx.tablePath } : {});
+    if (dispatch.length) lines.push(`${dispatch[0]} (${dispatch.length - 1} stages)`);
+    return { kind: 'mode-on', lines };
+  }
+  return { kind: 'none', lines: [] };
 }

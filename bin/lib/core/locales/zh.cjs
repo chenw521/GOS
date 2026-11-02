@@ -540,6 +540,11 @@ module.exports = {
     why: '批准后的审批要写回任务状态文件',
     fix: '在含活跃任务的仓库根目录运行，然后重新运行 auto 循环',
   },
+  'auto.store.mutateBusy': {
+    what: 'store 忙：另一写入方（pid {pid}）持锁超过有界等待',
+    why: 'store 写入路径按写入方串行化——绝不以最后写入覆盖裁决竞态',
+    fix: '稍后重试命令；持续 busy 意味持有方卡死——检查 store 目录内的互斥文件',
+  },
 
   // ---- auto 模式：红队编排 ----
   'auto.redteam.promptDrift': {

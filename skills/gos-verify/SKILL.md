@@ -39,8 +39,15 @@ too — never reconstruct the loop's bookkeeping from memory:
 
 - `gos auto status` prints mode, profile, hardening tier (bubblewrap/lexical),
   host matrix (verified / probe-pending / fixture-tested), delivery probe
-  state, spawn counters, and any breaker record. Read it FIRST when resuming
-  an auto task.
+  state, spawn counters, any breaker record, the per-stage dispatch view
+  (worker form, profile, model slot, grants, cap, unit), and the clearance
+  tier of every delegated stage — mechanical clearance (store-verified vs
+  pre-loop legacy), progress release, or human approval. Read it FIRST when
+  resuming an auto task.
+- Under the auto loop VERIFY itself runs as a **script worker**: its steps
+  are deterministic CLI verbs (the programmatic gate, the section suite, the
+  truths check) executed as fixed commands or pinned module legs — no model
+  spawn, no prompt, so its verdicts are return values, never parsed prose.
 - A tripped breaker (consecutive N / stage visits K / spawn budget B) shows
   first-line in `gos resume`. Paused ≠ failed: pause reports and
   external-mutation pauses carry no failure count — classify the underlying

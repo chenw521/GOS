@@ -11,6 +11,7 @@ const sibTrack = require('./track.cjs');    // T8 flip-reconcile leg consumes th
 const render = require('../render/views.cjs');
 const fs = require('fs');
 const path = require('path');
+const util = require('util');
 const { execFileSync } = require('child_process');
 
 const EXEMPT_LOG_REL = core.GOS_PATHS.exemptions.rel; // T16: logs/ via registry (relative read/write path join)
@@ -652,76 +653,57 @@ function cmdGateTrust(args) {
   if (gced.length) console.log(`${core.CONTRACTS.gate_verdicts.trustGc}${gced.join(', ')}`);
 }
 
-function cmdGate(args) {
-  // gos gate trust <name>: hash registration must work on unmanaged trees too
-  // (setup seeding runs before any `gos init`).
-  if (args[0] === 'trust') { cmdGateTrust(args); return; }
- // gate --exempt <section> --reason "<why>": explicit,
-  // machine-local, auto-expiring exemption. --reason is MANDATORY, >=10 codepoints
-  // after sanitization (truth-waive precedent — an exemption must be auditable).
-  // Line grammar pinned `<iso8601> <section> :: <reason>` (single line, no # — a
-  // #-prefixed form would be filtered as a comment by the one-shot reader).
-  if (args[0] === '--exempt') {
-    const sec = args[1];
-    if (!sec || sec.startsWith('--')) core.die('Usage: gos gate --exempt <section-name> --reason "<why>"   (--reason mandatory, >=10 codepoints)');
-    if (/[\s#]/.test(sec)) core.die('gate --exempt: section name must be a single token without whitespace or # (line grammar: <iso8601> <section> :: <reason>)');
-    const ri = args.indexOf('--reason');
-    const rawReason = ri >= 0 ? args[ri + 1] : null;
-    const reason = rawReason == null ? '' : String(rawReason).replace(/[\r\n#]+/g, ' ').replace(/\s+/g, ' ').trim();
-    if (rawReason == null || core.cpLen(reason) < 10) {
-      core.die('gate --exempt: --reason is mandatory and must be at least 10 codepoints after sanitization (single line, no #) — one-shot exemptions must be auditable [R-35]');
-    }
-    const root = core.mapRootDir();
-    core.acquireEdgeLock();
- // -class hardening (mirrors appendTruthReceipt): a planted symlink at
-    // the ledger path must not redirect exemption content in cloned repos.
-    const exemptPath = path.join(root, '.gos', EXEMPT_LOG_REL);
-    if (fs.existsSync(exemptPath) && !fs.lstatSync(exemptPath).isFile()) {
-      core.die(`gate exempt: ${exemptPath} is not a regular file (symlink?) — write refused (B-18)`);
-    }
-    try { fs.appendFileSync(exemptPath, `${new Date().toISOString()} ${sec} :: ${reason}\n`,
-      { flag: fs.constants.O_APPEND | fs.constants.O_CREAT | fs.constants.O_WRONLY | fs.constants.O_NOFOLLOW }); } catch (e) { core.die(`cannot write exemptions.log: ${e.message}`); }
-    console.log(`✓ exemption recorded: ${sec} — ${reason} (consumed + cleared at next gos commit — one-shot by design)`);
-    return;
-  }
-  // Flag-tolerant positional parse: `gate --audit` and `gate all --audit` both
-  // resolve the check set to `all`; flags never masquerade as check names.
-  const auditMode = args.includes('--audit');
-  const positional = args.filter((a) => !String(a).startsWith('--'));
-  const which = (positional[0] || 'all').toLowerCase();
-  const state = core.readState();
+// Programmatic verdict entry (auto-loop legs): runs every check the CLI
+// gate runs and returns the verdict set as data — no process exit, no
+// stdout bytes (per-check ✓/⚠ lines are captured into `lines`; the CLI
+// renderer replays them). ctx mirrors the CLI surface: {which, auditMode,
+// strictMode, state} (state defaults to the on-disk read). A precondition
+// miss (no active task) comes back as `refused` message data — the CLI
+// dies with the same bytes it always printed; red outcomes stay in
+// `failures` (the red-hold surface: findings as data, never an exit).
+function computeGateVerdicts(ctx = {}) {
+  const which = String(ctx.which || 'all').toLowerCase();
+  const auditMode = !!ctx.auditMode;
+  const strictMode = !!ctx.strictMode;
+  const state = Object.prototype.hasOwnProperty.call(ctx, 'state') ? ctx.state : core.readState();
   // Audit mode: a stateless tree (CI checkout, fresh clone) skips every
   // task-level check and runs the structural layer only. With a state present
   // --audit changes nothing — identical to a plain gate all.
   // Structural subcommand: gate codemap inspects map data only and never
   // consumes task state — it must run on stateless trees (CI checkouts),
- // same philosophy as `gate all --audit`. gate flip is the same shape:
+  // same philosophy as `gate all --audit`. gate flip is the same shape:
   // the flip-reconcile leg reads census/git/manifest, never task state.
   const structuralOnly = which === 'codemap' || which === 'flip';
   if (!state && !(auditMode && which === 'all') && !structuralOnly) {
-    core.die(`${core.CONTRACTS.state_semantics.noActiveTask} \`gos init\` first.`);
+    return { ok: false, refused: `${core.CONTRACTS.state_semantics.noActiveTask} \`gos init\` first.`, failures: [], lines: [], checked: 0, semanticPass: 0, idleAdvisories: [], bareNameAdvisories: [], nothingToCheck: false };
   }
-  // DONE is "no active task" for audit purposes: an archived task's plan is
-  // gone from .gos/task/, so task-level checks cannot run against it.
-  const auditNoState = !state || (state.current_stage === 'DONE' && process.argv.includes('--audit'));
-  if (auditNoState) console.log('⚠ gate audit: no active task — task-level checks skipped, structural layer only');
-  // Between-tasks idle: DONE + completed_at is the archive transaction's
-  // "this task WAS archived" marker (the same discriminator the archive
-  // idempotency path trusts), retained in state.json until the next init.
-  // In that window the coverage and semantic branches downgrade to loud
-  // advisory lines carrying the init hint — dead-task state must not feed
-  // live-task checks. Bare DONE (no completed_at) keeps every task-level
-  // check live.
-  const doneIdle = !!(state && state.current_stage === 'DONE' && state.completed_at);
-  const idleAdvisories = [];
-  // B-19 [R3-F4] lock reordering: builtin layer (incl. semantic engine + anchor
-  // verification, which read project files) holds the lock; the gates.json lint and
-  // custom-script layers run UNLOCKED (long user scripts must not block GOS).
   const failures = [];
+  const lines = [];
+  const idleAdvisories = [];
+  const bareNameAdvisories = [];
   let checked = 0;
   // B-3 [R1-F11+R3-F9]: ✓ lines from semantic_checks-table check types (coverage/
   // truths/lessons) arm the green-light downgrade banner — emitted as LAST line.
   let semanticPass = 0;
+  let nothingToCheck = false;
+  const realLog = console.log;
+  console.log = (...a) => { lines.push(util.format(...a)); };
+  try {
+    // DONE is "no active task" for audit purposes: an archived task's plan is
+    // gone from .gos/task/, so task-level checks cannot run against it.
+    const auditNoState = !state || (state.current_stage === 'DONE' && auditMode);
+    if (auditNoState) console.log('⚠ gate audit: no active task — task-level checks skipped, structural layer only');
+   // Between-tasks idle: DONE + completed_at is the archive transaction's
+    // "this task WAS archived" marker (the same discriminator the archive
+    // idempotency path trusts), retained in state.json until the next init.
+    // In that window the coverage and semantic branches downgrade to loud
+    // advisory lines carrying the init hint — dead-task state must not feed
+    // live-task checks. Bare DONE (no completed_at) keeps every task-level
+    // check live.
+    const doneIdle = !!(state && state.current_stage === 'DONE' && state.completed_at);
+   // B-19 [R3-F4] lock reordering: builtin layer (incl. semantic engine + anchor
+    // verification, which read project files) holds the lock; the gates.json lint and
+    // custom-script layers run UNLOCKED (long user scripts must not block GOS).
 
   // ---- builtin layer (upgraded: check file contents, not just booleans) ----
   if (!auditNoState && (which === 'all' || which === 'coverage')) {
@@ -1078,7 +1060,6 @@ function cmdGate(args) {
   // --strict escalates orphans to FAIL (CI / one-shot audit semantics). The
   // registry-gap tier (tracked but unregistered files) stays advisory under
   // every mode — registration gaps prompt, they never block.
-  const strictMode = args.includes('--strict');
   {
     const tier = auditNoState ? { orphans: [], unregisteredTracked: [], probeFailure: null } : sibDoctor.detectOrphans(state);
     const orphans = tier.orphans;
@@ -1231,47 +1212,102 @@ function cmdGate(args) {
     }
   }
 
-  if (!checked) { console.log('- nothing to check (no decisions/truths/rules)'); return; }
+    if (!checked) { console.log('- nothing to check (no decisions/truths/rules)'); nothingToCheck = true; return { ok: true, refused: null, failures, lines, checked, semanticPass, idleAdvisories, bareNameAdvisories, nothingToCheck }; }
   // ---- bare-name gos-map:fn annotation advisory (multi-file byName first-win can silently mis-bind) ----
   // Inline block (no new top-level fn); new bare names yield an advisory line and a --json verdict entry.
-  const bareNameAdvisories = [];
-  {
-    const secDir = path.join(core.mapRootDir(), 'test', 'sections');   // USER project root — bare-name advisory covers product sections too
-    let secFiles = [];
-    try { secFiles = fs.readdirSync(secDir).filter((f) => /^T.*\.test\.sh$/.test(f)).sort(); } catch { secFiles = []; }
-    for (const f of secFiles) {
-      let head = [];
-      try { head = fs.readFileSync(path.join(secDir, f), 'utf8').split('\n').slice(0, 5); } catch { head = []; }
-      for (const l of head) {
-        const m = l.match(/^#\s*gos-map:fn\s+(\S+)/);
-        if (m && !m[1].includes('#')) bareNameAdvisories.push(`${f.replace(/\.test\.sh$/, '')}: gos-map:fn ${m[1]} — must be fully-qualified (path#fn:name); bare names silently mis-bind under multi-file byName first-win (D-17/DI-10)`);
+    {
+      const secDir = path.join(core.mapRootDir(), 'test', 'sections');   // USER project root — bare-name advisory covers product sections too
+      let secFiles = [];
+      try { secFiles = fs.readdirSync(secDir).filter((f) => /^T.*\.test\.sh$/.test(f)).sort(); } catch { secFiles = []; }
+      for (const f of secFiles) {
+        let head = [];
+        try { head = fs.readFileSync(path.join(secDir, f), 'utf8').split('\n').slice(0, 5); } catch { head = []; }
+        for (const l of head) {
+          const m = l.match(/^#\s*gos-map:fn\s+(\S+)/);
+          if (m && !m[1].includes('#')) bareNameAdvisories.push(`${f.replace(/\.test\.sh$/, '')}: gos-map:fn ${m[1]} — must be fully-qualified (path#fn:name); bare names silently mis-bind under multi-file byName first-win (D-17/DI-10)`);
+        }
       }
     }
+    return { ok: failures.length === 0, refused: null, failures, lines, checked, semanticPass, idleAdvisories, bareNameAdvisories, nothingToCheck };
+  } finally {
+    console.log = realLog;
   }
-  const jsonMode = args.includes('--json');
-  if (jsonMode) {
-    // Machine-readable verdict: failures are OBJECT-ONLY ({code, verdict, evidence[], fix});
-    // machine consumers key by `code`, humans get the 3-part block below.
-    for (const f of failures) {
-      if (typeof f === 'string') throw new Error(`gate --json: raw string failure post-switch (D-66): "${String(f).slice(0, 80)}" — wrap it with core.gateFail()`);
-    }
-    console.log(JSON.stringify({ verdict: failures.length ? 'fail' : 'pass', failures, advisories: [...idleAdvisories, ...bareNameAdvisories], checked }, null, 2));
-    process.exit(failures.length ? 1 : 0);
-  }
-  for (const a of bareNameAdvisories) console.log(`⚠ DI-10 bare-name annotation: ${a}`);
+}
+
+// CLI renderer: replays the captured stdout lines in compute order, then the
+// verdict block — red renders the failure set on stderr exactly as the
+// pre-split command did. Returns the exit code; the caller owns exiting.
+function renderGateReport(v) {
+  for (const line of v.lines) console.log(line);
+  if (v.nothingToCheck) return 0;
+  for (const a of v.bareNameAdvisories) console.log(`⚠ DI-10 bare-name annotation: ${a}`);
   // B-3 [R1-F11+R3-F9]: table-driven downgrade banner — LAST line whenever any
   // semantic_checks-table check emitted ✓ (even if other checks failed).
   const emitSemanticDowngradeBanner = () => {
-    if (semanticPass > 0) console.log(`⚠ ${core.CONTRACTS.semantic_checks.banner}`);
+    if (v.semanticPass > 0) console.log(`⚠ ${core.CONTRACTS.semantic_checks.banner}`);
   };
-  if (failures.length) {
-    console.error(`\n${core.CONTRACTS.gate_verdicts.gateFailedPrefix} (${failures.length}):`);
-    console.error(renderGateFailures(failures));
+  if (v.failures.length) {
+    console.error(`\n${core.CONTRACTS.gate_verdicts.gateFailedPrefix} (${v.failures.length}):`);
+    console.error(renderGateFailures(v.failures));
     emitSemanticDowngradeBanner();
-    process.exit(1);
+    return 1;
   }
   console.log(`\n${core.CONTRACTS.gate_verdicts.allPass}`);
   emitSemanticDowngradeBanner();
+  return 0;
+}
+
+function cmdGate(args) {
+  // gos gate trust <name>: hash registration must work on unmanaged trees too
+  // (setup seeding runs before any `gos init`).
+  if (args[0] === 'trust') { cmdGateTrust(args); return; }
+ // gate --exempt <section> --reason "<why>": explicit,
+  // machine-local, auto-expiring exemption. --reason is MANDATORY, >=10 codepoints
+  // after sanitization (truth-waive precedent — an exemption must be auditable).
+  // Line grammar pinned `<iso8601> <section> :: <reason>` (single line, no # — a
+  // #-prefixed form would be filtered as a comment by the one-shot reader).
+  if (args[0] === '--exempt') {
+    const sec = args[1];
+    if (!sec || sec.startsWith('--')) core.die('Usage: gos gate --exempt <section-name> --reason "<why>"   (--reason mandatory, >=10 codepoints)');
+    if (/[\s#]/.test(sec)) core.die('gate --exempt: section name must be a single token without whitespace or # (line grammar: <iso8601> <section> :: <reason>)');
+    const ri = args.indexOf('--reason');
+    const rawReason = ri >= 0 ? args[ri + 1] : null;
+    const reason = rawReason == null ? '' : String(rawReason).replace(/[\r\n#]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (rawReason == null || core.cpLen(reason) < 10) {
+      core.die('gate --exempt: --reason is mandatory and must be at least 10 codepoints after sanitization (single line, no #) — one-shot exemptions must be auditable [R-35]');
+    }
+    const root = core.mapRootDir();
+    core.acquireEdgeLock();
+ // -class hardening (mirrors appendTruthReceipt): a planted symlink at
+    // the ledger path must not redirect exemption content in cloned repos.
+    const exemptPath = path.join(root, '.gos', EXEMPT_LOG_REL);
+    if (fs.existsSync(exemptPath) && !fs.lstatSync(exemptPath).isFile()) {
+      core.die(`gate exempt: ${exemptPath} is not a regular file (symlink?) — write refused (B-18)`);
+    }
+    try { fs.appendFileSync(exemptPath, `${new Date().toISOString()} ${sec} :: ${reason}\n`,
+      { flag: fs.constants.O_APPEND | fs.constants.O_CREAT | fs.constants.O_WRONLY | fs.constants.O_NOFOLLOW }); } catch (e) { core.die(`cannot write exemptions.log: ${e.message}`); }
+    console.log(`✓ exemption recorded: ${sec} — ${reason} (consumed + cleared at next gos commit — one-shot by design)`);
+    return;
+  }
+  // Flag-tolerant positional parse: `gate --audit` and `gate all --audit` both
+  // resolve the check set to `all`; flags never masquerade as check names.
+  const auditMode = args.includes('--audit');
+  const positional = args.filter((a) => !String(a).startsWith('--'));
+  const which = (positional[0] || 'all').toLowerCase();
+  const verdicts = computeGateVerdicts({ which, auditMode, strictMode: args.includes('--strict') });
+  if (verdicts.refused != null) core.die(verdicts.refused);
+  // Machine-readable verdict: failures are OBJECT-ONLY ({code, verdict, evidence[], fix});
+  // machine consumers key by `code`, humans get the 3-part block below.
+  if (args.includes('--json') && !verdicts.nothingToCheck) {
+    for (const f of verdicts.failures) {
+      if (typeof f === 'string') throw new Error(`gate --json: raw string failure post-switch (D-66): "${String(f).slice(0, 80)}" — wrap it with core.gateFail()`);
+    }
+    for (const line of verdicts.lines) console.log(line);
+    console.log(JSON.stringify({ verdict: verdicts.ok ? 'pass' : 'fail', failures: verdicts.failures, advisories: [...verdicts.idleAdvisories, ...verdicts.bareNameAdvisories], checked: verdicts.checked }, null, 2));
+    process.exit(verdicts.ok ? 0 : 1);
+  }
+  const rc = renderGateReport(verdicts);
+  if (rc !== 0) process.exit(rc);
 }
 
 // ---------------------------------------------------------------------------
@@ -1657,4 +1693,4 @@ function specCardStampCheck(state) {
   return result;
 }
 
-module.exports = { getSemanticPlanTasks, checkBidirectional, loadSemanticAllowlist, semanticAllowlisted, semanticBaselineShas, diffHitCheck, semanticDiffPhase, readExemptions, consumeExemptions, checkManifest, impactClosurePhase, semanticChecks, loadTrustStore, cmdGateTrust, cmdGate, cmdLogs, specCardFloorFailures, projectDecisionIds, stripSpecForScan, flipReconcileLeg, renderGateFailures, SPEC_CARD_FLOORS, CLI_MAX, probeSpecFloor, specGateVersionUnknownFailure };
+module.exports = { getSemanticPlanTasks, checkBidirectional, loadSemanticAllowlist, semanticAllowlisted, semanticBaselineShas, diffHitCheck, semanticDiffPhase, readExemptions, consumeExemptions, checkManifest, impactClosurePhase, semanticChecks, loadTrustStore, cmdGateTrust, cmdGate, computeGateVerdicts, renderGateReport, cmdLogs, specCardFloorFailures, projectDecisionIds, stripSpecForScan, flipReconcileLeg, renderGateFailures, SPEC_CARD_FLOORS, CLI_MAX, probeSpecFloor, specGateVersionUnknownFailure };

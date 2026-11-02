@@ -1,20 +1,50 @@
 #!/usr/bin/env bash
 # gos-map:none
-# Spawn write-channel section — the registry/claim/whitelist channel that
-# lets a runner-spawned session perform exactly its assigned stage advance
-# under the runner's live lock, and nothing else.
+# Spawn write-channel section — the registry/request/ack channel that lets a
+# runner-spawned session perform exactly its registered stage verbs under the
+# runner's live lock, and nothing else. Authoritative entries live in the
+# machine-local store dir; the repo-side .gos/cache/auto-spawn path is dead.
 # Case map (truth id -> case):
-#   channel-admit  C1  a real descendant process with a registered entry,
-#                   matching stage, live fresh holder in its ancestry, and no
-#                   prior claim: admitted (node-level, real /proc walk)
-#   channel-negative C2  the refusal matrix: no entry, redteam entry, non-
-#                   whitelisted command, stage mismatch, second claim, dead
-#                   holder, pid-reuse starttime mismatch, non-ancestor holder,
-#                   stale heartbeat, pid-1 forgery, missing spawnId
-#   cli-surface    C3  CLI integration: marker + non-whitelisted write-class
-#                   command dies with the refused banner; marker + whitelist
+#   channel-admit  C1  a real descendant process with a registered store
+#                   entry, matching stage, live fresh holder in its ancestry:
+#                   admitted (node-level, real /proc walk); budget counted in
+#                   the store entry, claim ledger written
+#   channel-negative C2  the refusal matrix: no entry, redteam entry, verb
+#                   outside the grants, truth add (verify-only), stage
+#                   mismatch, dead holder, pid-reuse starttime mismatch,
+#                   non-ancestor holder, stale heartbeat, pid-1 forgery,
+#                   missing spawnId, legacy entry checkpoint (four-verb
+#                   default), forged .gos/cache entry (inert)
+#   cli-surface    C3  CLI integration: marker + out-of-grants write-class
+#                   command dies with the refused banner; marker + whitelisted
 #                   command without a registry entry dies naming the spawn;
 #                   marker + map edge acquisition dies (outside the channel)
+#   human-gates    C4  approve/archive/push refuse under the marker
+#   sanitized-seed C5  compose form + strip rules (launcher)
+#   crash-rollback C6  crashed advance rollback (loop)
+#   req-ack        C7  the scratch channel: BUILD entry's checkpoint save,
+#                   section run and truth verify admitted through a real
+#                   request -> runner admitAndAck -> ack round trip; THINK
+#                   entry's checkpoint refused not-in-grants through the same
+#                   round trip; ack-timeout fails closed with no burn
+#   channel-forge  C8  forged request burns only its own spawn's budget (ack
+#                   idempotent on replay); forged cache entry inert through
+#                   the channel; redteam never write-admitted (empty-grant
+#                   manifest); human gates refused for every stage;
+#                   registration validates the cap ceiling and verb vocabulary
+#   odd-roots      C9  clone roots with a space, unicode chars, and a
+#                   symlinked root: registry write/read round trips in the
+#                   store-side home, the symlinked and real spelling derive
+#                   one store key (realpath-first repoKey), distinct roots
+#                   stay distinct, and seed materialization + seed-bound
+#                   compose accept the odd paths verbatim
+#   ack-bind-point C10 acks live store-side: the runner writes each verdict
+#                   into <store>/spawnreg/<spawnId>.acks/ (outside every
+#                   sandbox), the spawned side reads acks ONLY from
+#                   GOS_AUTO_ACK_DIR (ro-bound at /run/gos-acks after the
+#                   masks) — a self-written ack in the rw scratch is never
+#                   read (the channel still times out), and compose carries
+#                   the ro-bind structurally after every mask mount
 # Standalone-safe: self-provisions env when not under test/run-sections.sh.
 
 T106_STANDALONE=0
@@ -58,7 +88,7 @@ t106_teardown() {
 }
 trap t106_teardown EXIT
 
-echo "--- T106: spawn write channel (channel-admit, channel-negative, cli-surface) ---"
+echo "--- T106: spawn write channel (channel-admit, channel-negative, cli-surface, req-ack, channel-forge) ---"
 
 # The registry/lock fixture root: a plain directory standing in for the repo
 # root. The holder of .gos/.lock is THIS bash process — the node probes below
@@ -81,14 +111,11 @@ EOF
 HOLDER_JSON="$(node "$SELF" $$ 2>/dev/null)"
 echo "$HOLDER_JSON" > "$CHAN_ROOT/.gos/.lock"
 
-# A registered work spawn for stage THINK.
+# A registered work spawn for stage THINK (legacy grant-less shape: the
+# four-verb default) and a redteam spawn (never carries write authorization).
 node -e "
 const sr = require(process.env.GOS_ROOT + '/bin/lib/core/spawnreg.cjs');
 sr.writeEntry('$CHAN_ROOT', { spawnId: 'sp-work', kind: 'work', stage: 'THINK', pid: $$, wallMs: 600000 });
-" 2>/dev/null
-# A registered redteam spawn (never carries write authorization).
-node -e "
-const sr = require(process.env.GOS_ROOT + '/bin/lib/core/spawnreg.cjs');
 sr.writeEntry('$CHAN_ROOT', { spawnId: 'sp-red', kind: 'redteam', stage: 'THINK', pid: $$, wallMs: 600000 });
 " 2>/dev/null
 
@@ -117,21 +144,37 @@ OUT2="$(node "$ADMIT" "$CHAN_ROOT" gate all sp-work - - 2>&1)"
 t106_contains "window admits multiple whitelisted commands" "ADMITTED stage=THINK" "$OUT2"
 OUT3="$(node "$ADMIT" "$CHAN_ROOT" truth verify sp-work - - 2>&1)"
 t106_contains "truth verify admitted" "ADMITTED stage=THINK" "$OUT3"
-printf '%s\n' $(seq 16) > "$CHAN_ROOT/.gos/cache/auto-spawn/sp-budget.claim" 2>/dev/null
+# Budget counting lives in the store entry now: three admitted claims burned
+# three uses and wrote three ledger lines.
+node -e "
+const sr = require(process.env.GOS_ROOT + '/bin/lib/core/spawnreg.cjs');
+const fs = require('fs');
+const doc = sr.readEntry('$CHAN_ROOT', 'sp-work');
+if (!doc || doc.uses !== 3) { console.error('uses after three admits: ' + (doc && doc.uses)); process.exit(1); }
+const ledger = fs.readFileSync(sr.claimsPath('$CHAN_ROOT'), 'utf8').trim().split('\n');
+if (ledger.length !== 3) { console.error('ledger lines: ' + ledger.length); process.exit(1); }
+const last = JSON.parse(ledger[2]);
+if (last.spawnId !== 'sp-work' || last.admitted !== true) { console.error('ledger shape: ' + ledger[2]); process.exit(1); }
+" 2>&1 && t106_ok "store entry counts uses, ledger records claims" || t106_bad "store entry counts uses, ledger records claims"
+# Exhausted window: fill the entry's uses to its cap, then refuse.
 node -e "
 const sr = require(process.env.GOS_ROOT + '/bin/lib/core/spawnreg.cjs');
 sr.writeEntry('$CHAN_ROOT', { spawnId: 'sp-budget', kind: 'work', stage: 'THINK', pid: 1, wallMs: 600000 });
+const doc = sr.readEntry('$CHAN_ROOT', 'sp-budget');
+doc.uses = doc.use_cap;
+sr.saveEntryDoc('$CHAN_ROOT', doc);
 " 2>/dev/null
 t106_exit "exhausted window budget refused" "REFUSED budget-exhausted" "$(node "$ADMIT" "$CHAN_ROOT" commit THINK sp-budget - - 2>&1)"
 
 # ---------------------------------------------------------------- C2 --
 echo "C2: channel-negative (refusal matrix)"
 t106_exit "missing entry refused" "REFUSED no-entry" "$(node "$ADMIT" "$CHAN_ROOT" commit THINK sp-nobody - - 2>&1)"
-t106_exit "unset spawn id refused" "REFUSED no-entry" "$(node "$ADMIT" "$CHAN_ROOT" commit THINK - - 2>&1)"
+t106_exit "unset spawn id refused" "REFUSED no-entry" "$(node "$ADMIT" "$CHAN_ROOT" commit THINK - - - 2>&1)"
 t106_exit "redteam entry never writes" "REFUSED redteam-no-write" "$(node "$ADMIT" "$CHAN_ROOT" commit THINK sp-red - - 2>&1)"
-t106_exit "non-whitelisted command refused" "REFUSED not-whitelisted" "$(node "$ADMIT" "$CHAN_ROOT" decision add sp-work - - 2>&1)"
+t106_exit "verb outside the grants refused" "REFUSED not-in-grants" "$(node "$ADMIT" "$CHAN_ROOT" decision add sp-work - - 2>&1)"
 t106_exit "truth add refused (verify only)" "REFUSED not-whitelisted" "$(node "$ADMIT" "$CHAN_ROOT" truth add sp-work - - 2>&1)"
 t106_exit "stage mismatch refused" "REFUSED stage-mismatch" "$(node "$ADMIT" "$CHAN_ROOT" commit BUILD sp-work - - 2>&1)"
+t106_exit "legacy grant-less entry keeps the four-verb default (checkpoint outside)" "REFUSED not-in-grants" "$(node "$ADMIT" "$CHAN_ROOT" checkpoint save sp-work - - 2>&1)"
 
 node -e "
 const sr = require(process.env.GOS_ROOT + '/bin/lib/core/spawnreg.cjs');
@@ -176,6 +219,12 @@ sr.writeEntry('$CHAN_ROOT', { spawnId: 'sp-stale2', kind: 'work', stage: 'THINK'
 " 2>/dev/null
 t106_exit "stale heartbeat refused" "REFUSED stale-heartbeat" "$(node "$ADMIT" "$CHAN_ROOT" commit THINK sp-stale2 "$CHAN_ROOT/.gos/.lock" "$STALE_LOCK" 2>&1)"
 
+# Forged repo-side cache entry: a grant-everything entry planted where the
+# OLD registry lived must mean nothing — the store is the only entry source.
+printf '{"spawn_id": "sp-ghost", "kind": "work", "stage": "THINK", "grants": ["commit", "gate", "section", "truth", "checkpoint"], "use_cap": 999, "uses": 0, "window_expiry": %s}' "$(node -e 'console.log(Date.now() + 600000)')" > "$CHAN_ROOT/.gos/cache/auto-spawn/sp-ghost.json"
+t106_exit "forged .gos/cache entry inert (no store entry)" "REFUSED no-entry" "$(node "$ADMIT" "$CHAN_ROOT" commit THINK sp-ghost - - 2>&1)"
+t106_exit "forged .gos/cache entry grants nothing outside its verbs either" "REFUSED not-in-grants" "$(node "$ADMIT" "$CHAN_ROOT" decision add sp-work - - 2>&1)"
+
 # ---------------------------------------------------------------- C3 --
 echo "C3: cli-surface (marker-active CLI runs)"
 CLI_CASE="$T106_DIR/cli"
@@ -185,15 +234,15 @@ cd "$CLI_CASE/repo" || exit 1
 git init -q -b work . && git commit -q --allow-empty -m root
 printf '{"schema_version":6,"level":1,"current_stage":"THINK","completed_stages":["INTENT"],"intent":{"summary":"t106 cli fixture","confirmed":true},"task_head":"abc123def0123456789abcdef0123456789abcdef","spec_path":null,"plan_path":null,"requirements":[],"decisions":[],"observable_truths":[],"gaps":[],"checkpoints":[],"approvals":{}}' > .gos/state.json
 
-# Marker + non-whitelisted write command with a valid registered entry:
-# refused at the whitelist check, before any state work.
+# Marker + out-of-grants write command with a valid registered entry:
+# refused at the grant check, before any state work.
 cp "$CHAN_ROOT/.gos/.lock" .gos/.lock
 node -e "
 const sr = require(process.env.GOS_ROOT + '/bin/lib/core/spawnreg.cjs');
 sr.writeEntry('$CLI_CASE/repo', { spawnId: 'sp-cli', kind: 'work', stage: 'THINK', pid: 1, wallMs: 600000 });
 " 2>/dev/null
 OUT="$(GOS_AUTO_SPAWNED=1 GOS_AUTO_SPAWN_ID=sp-cli node "$GOS" decision add D-01 "x" --rationale "y" 2>&1)"; RC=$?
-t106_contains "marker + decision add refused" "spawn channel refused (not-whitelisted)" "$OUT"
+t106_contains "marker + decision add refused" "spawn channel refused (not-in-grants)" "$OUT"
 t106_exit "refusal exits non-zero" "1" "$RC"
 
 # Marker + whitelisted command but no registry entry: names the spawn.
@@ -297,10 +346,11 @@ fs.mkdirSync(path.join(world, '.gos', 'cache'), { recursive: true });
 spawnSync('git', ['init', '-q', '-b', 'work', '.'], { cwd: world });
 spawnSync('git', ['commit', '--allow-empty', '-m', 'root'], { cwd: world });
 const pre = { schema_version: 6, level: 1, current_stage: 'BUILD', completed_stages: ['INTENT'], intent: { summary: 'c6', confirmed: true }, task_head: 'abc', requirements: [], decisions: [], observable_truths: [], gaps: [], checkpoints: [], approvals: {} };
-// The crash lands mid-loop: iteration 1 sees the pre-advance state, its
-// spawn dies (group-kill shape) after writing the post state but before
-// the git commit; iteration 2 must roll back from the snapshot and
-// re-drive BUILD instead of pausing as external-mutation.
+// The baseline hash gate hashes the state file bytes as read: the fixture
+// state file and the crash-window snapshot carry identical bytes, so the
+// legit rollback still passes the gate.
+const preRaw = JSON.stringify(pre);
+fs.writeFileSync(path.join(world, '.gos', 'state.json'), preRaw);
 const post = { ...pre, current_stage: 'VERIFY', completed_stages: ['INTENT', 'BUILD'] };
 let stateNow = pre;
 let spawnN = 0;
@@ -309,7 +359,7 @@ const spawnRunner = (spec) => {
   if (spawnN === 1) {
     // Half-executed in-spawn commit: the crash-window snapshot and the
     // advanced state both landed; the labeled git commit never did.
-    fs.writeFileSync(path.join(world, '.gos', 'cache', 'state.snapshot'), JSON.stringify(pre));
+    fs.writeFileSync(path.join(world, '.gos', 'cache', 'state.snapshot'), preRaw);
     stateNow = post;
     return { status: null, stdout: '', stderr: '', error: Object.assign(new Error('spawn killed'), { killed: true }) };
   }
@@ -318,10 +368,7 @@ const spawnRunner = (spec) => {
 (async () => {
   const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
   store.create({ mode: 'on', rootDir: world, limits: { N: 3, K: 5, B: 30 } });
-  const r = await loop.createLoop({
-    rootDir: world, host: 'gos-fixture-host', env: { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' }, maxIterations: 2,
-    spawnRunner, stateReader: () => stateNow,
-  }).loop.run();
+  const r = await loop.createLoop({ rootDir: world, host: 'gos-fixture-host', env: { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' }, maxIterations: 2, spawnRunner, stateReader: () => stateNow }).loop.run();
   if (r.status === 'paused' && r.reason === 'external-mutation') problems.push('crashed advance paused as external-mutation: ' + JSON.stringify(r.detail || '').slice(0, 200));
   if (spawnN < 2) problems.push('stage was never re-driven (spawns=' + spawnN + '; result=' + r.status + '/' + r.reason + (r.detail ? ':' + String(r.detail).slice(0, 120) : '') + ')');
   const after = stateNow;
@@ -330,6 +377,399 @@ const spawnRunner = (spec) => {
 })().catch((e) => { console.error(e); process.exit(1); });
 " 2>&1)"
 t106_contains "crashed advance rolls back and re-drives" "CRASH-OK" "$CRASH_OUT"
+
+# ---------------------------------------------------------------- C7 --
+echo "C7: req/ack channel (scratch round trips with a live runner)"
+WORLD="$T106_DIR/reqroot"
+mkdir -p "$WORLD/.gos"
+cat > "$T106_DIR/spawned-helper.cjs" <<'EOF'
+const sr = require(process.env.GOS_ROOT + '/bin/lib/core/spawnreg.cjs');
+const fs = require('fs');
+const [cmdName, argvStage, spawnId] = process.argv.slice(2);
+const root = process.env.WORLD;
+let holder = null;
+try { holder = JSON.parse(fs.readFileSync(root + '/.gos/.lock', 'utf8')); } catch { /* absent */ }
+const v = sr.admitSpawnWrite(root, { cmdName, argvStage, spawnId, holder, lockPath: root + '/.gos/.lock' });
+console.log(v.ok ? 'ADMITTED stage=' + v.entry.stage + ' remaining=' + v.entry.remaining : 'REFUSED ' + v.reason);
+EOF
+cat > "$T106_DIR/run-c7.cjs" <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const { spawn } = require('child_process');
+const GR = process.env.GOS_ROOT;
+const root = process.env.WORLD;
+const sr = require(path.join(GR, 'bin/lib/core/spawnreg.cjs'));
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const problems = [];
+// The runner (this process) holds the lock; the spawned helpers are its
+// real descendants, so the holder checks inside the channel are genuine.
+fs.writeFileSync(path.join(root, '.gos', '.lock'), JSON.stringify({
+  pid: process.pid, started_at: new Date().toISOString(), boot_id: null, starttime: sr.procStartTime(process.pid),
+}));
+const HELPER = path.join(path.dirname(process.argv[1] || '.'), 'spawned-helper.cjs');
+const waitAck = (spawnId, cmdName, argvStage, opts = {}) => new Promise((resolve) => {
+  const scratch = sr.scratchPath(root, spawnId);
+  const acksDir = typeof sr.acksPath === 'function' ? sr.acksPath(root, spawnId) : path.join(scratch, '..' , `${spawnId}.acks`);
+  const child = spawn(process.execPath, [HELPER, cmdName, argvStage || '', spawnId], {
+    env: {
+      ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: spawnId,
+      GOS_AUTO_SPAWN_SCRATCH: scratch,
+      GOS_AUTO_ACK_DIR: acksDir,
+      GOS_AUTO_SPAWN_ACK_WAIT_MS: opts.ackWaitMs || '4000',
+    },
+  });
+  let out = '';
+  child.stdout.on('data', (d) => { out += d; });
+  child.stderr.on('data', (d) => { out += d; });
+  let done = false;
+  let verdict = null;
+  const startedAt = Date.now();
+  const iv = setInterval(() => {
+    if (done) return;
+    if (opts.noAck) {
+      if (Date.now() - startedAt > 6000) { done = true; try { child.kill(); } catch { /* gone */ } }
+      return;
+    }
+    let names = [];
+    try { names = fs.readdirSync(scratch); } catch { return; }
+    for (const n of names.filter((x) => x.endsWith('.req.json'))) {
+      const req = JSON.parse(fs.readFileSync(path.join(scratch, n), 'utf8'));
+      verdict = store.admitAndAck(root, spawnId, req.cmd, req.stage, { requestId: req.request_id });
+    }
+    if (!verdict && Date.now() - startedAt > 6000) { done = true; try { child.kill(); } catch { /* gone */ } }
+  }, 15);
+  child.on('close', () => { clearInterval(iv); done = true; resolve({ out: out.trim(), verdict }); });
+});
+(async () => {
+  // BUILD entry: raised cap (64) from the dispatch table, checkpoint in its
+  // grants, manifest carries grants/cap/stage ONLY.
+  const reg = store.registerSpawn({ spawnId: 'sp-build', kind: 'work', stage: 'BUILD', pid: process.pid, wallMs: 600000 }, root);
+  if (!reg.ok) problems.push('BUILD registration failed: ' + reg.reason);
+  const man = store.writeGrantManifest(root, 'sp-build');
+  if (!man.ok) problems.push('manifest write failed: ' + man.reason);
+  else {
+    const m = man.manifest;
+    if (!m.grants.includes('checkpoint')) problems.push('manifest lacks the checkpoint verb');
+    if (m.use_cap !== 64) problems.push('manifest cap not 64: ' + m.use_cap);
+    if ('uses' in m || 'kind' in m) problems.push('manifest carries non-grant fields');
+  }
+  let r = await waitAck('sp-build', 'checkpoint', 'save');
+  if (!/ADMITTED stage=BUILD/.test(r.out)) problems.push('checkpoint save not admitted through req/ack: ' + r.out);
+  if (!r.verdict || r.verdict.admitted !== true || r.verdict.remaining !== 63) problems.push('checkpoint verdict/remaining wrong: ' + JSON.stringify(r.verdict));
+  r = await waitAck('sp-build', 'section', 'run');
+  if (!/ADMITTED stage=BUILD/.test(r.out)) problems.push('section run not admitted through req/ack: ' + r.out);
+  r = await waitAck('sp-build', 'truth', 'verify');
+  if (!/ADMITTED stage=BUILD/.test(r.out)) problems.push('truth verify not admitted through req/ack: ' + r.out);
+  const eb = sr.readEntry(root, 'sp-build');
+  if (!eb || eb.uses !== 3) problems.push('BUILD uses after three admits: ' + (eb && eb.uses));
+
+  // THINK entry: the same verb is refused not-in-grants through the same
+  // round trip, and the refusal burns the spawn's own budget.
+  store.registerSpawn({ spawnId: 'sp-think', kind: 'work', stage: 'THINK', pid: process.pid, wallMs: 600000 }, root);
+  r = await waitAck('sp-think', 'checkpoint', 'save');
+  if (!/REFUSED not-in-grants/.test(r.out)) problems.push('THINK checkpoint not refused not-in-grants via req/ack: ' + r.out);
+  const et = sr.readEntry(root, 'sp-think');
+  if (!et || et.uses !== 1) problems.push('THINK refused request did not burn its own budget: ' + (et && et.uses));
+
+  // No runner answering: the spawned side fails closed on ack timeout and
+  // nothing burns (budget burns only on runner-side settlement).
+  store.registerSpawn({ spawnId: 'sp-silent', kind: 'work', stage: 'THINK', pid: process.pid, wallMs: 600000 }, root);
+  r = await waitAck('sp-silent', 'commit', 'think', { ackWaitMs: '250', noAck: true });
+  if (!/REFUSED ack-timeout/.test(r.out)) problems.push('ack timeout did not fail closed: ' + r.out);
+  if (r.verdict) problems.push('no-ack case still produced a verdict');
+  const es = sr.readEntry(root, 'sp-silent');
+  if (!es || es.uses !== 0) problems.push('ack-timeout case burned budget: ' + (es && es.uses));
+  const silentScratch = sr.scratchPath(root, 'sp-silent');
+  if (fs.readdirSync(silentScratch).some((n) => n.endsWith('.ack.json'))) problems.push('ack file exists without a runner');
+  const silentAcks = sr.acksPath(root, 'sp-silent');
+  if (typeof silentAcks === 'string' && (!fs.existsSync(silentAcks) || fs.readdirSync(silentAcks).length !== 0)) {
+    problems.push('silent spawn acks dir not empty-store-side');
+  }
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'REQACK-OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+REQACK_OUT="$(WORLD="$WORLD" node "$T106_DIR/run-c7.cjs" 2>&1 | tail -n 1)"
+t106_contains "req/ack: BUILD checkpoint+section+truth admitted, THINK not-in-grants, timeout fails closed" "REQACK-OK" "$REQACK_OUT"
+
+# ---------------------------------------------------------------- C8 --
+echo "C8: channel-forge (forged requests, redteam, human gates, registration bounds)"
+cat > "$T106_DIR/run-c8.cjs" <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const root = process.env.WORLD;
+const sr = require(path.join(GR, 'bin/lib/core/spawnreg.cjs'));
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const problems = [];
+// Forged request (hand-written into the scratch, cmd the spawn was never
+// granted): refused AND it burns that spawn's own budget; a sibling spawn's
+// budget is untouched; re-acking replays the verdict without a second burn.
+// The ack lands store-side in <spawnId>.acks/ — never in the spawn-writable
+// scratch.
+store.registerSpawn({ spawnId: 'sp-forge', kind: 'work', stage: 'BUILD', pid: process.pid, wallMs: 600000 }, root);
+store.registerSpawn({ spawnId: 'sp-innocent', kind: 'work', stage: 'THINK', pid: process.pid, wallMs: 600000 }, root);
+const scratch = sr.scratchPath(root, 'sp-forge');
+fs.writeFileSync(path.join(scratch, 'req-forged-1.req.json'), JSON.stringify({
+  request_id: 'req-forged-1', spawn_id: 'sp-forge', cmd: 'sudo', stage: null, pid: 1, ts: new Date().toISOString(),
+}));
+const v = store.admitAndAck(root, 'sp-forge', 'sudo', null, { requestId: 'req-forged-1' });
+if (v.admitted || v.reason !== 'not-in-grants') problems.push('forged sudo request verdict: ' + JSON.stringify(v));
+const ef = sr.readEntry(root, 'sp-forge');
+if (!ef || ef.uses !== 1 || v.remaining !== 63) problems.push('forged request did not burn its own budget: ' + JSON.stringify({ uses: ef && ef.uses, remaining: v.remaining }));
+const ei = sr.readEntry(root, 'sp-innocent');
+if (!ei || ei.uses !== 0) problems.push('sibling spawn budget burned by the forged request');
+if (!fs.existsSync(path.join(sr.acksPath(root, 'sp-forge'), 'req-forged-1.ack.json'))) problems.push('refused ack file missing from the store-side acks dir');
+if (fs.existsSync(path.join(scratch, 'req-forged-1.ack.json'))) problems.push('ack file leaked into the spawn-writable scratch');
+const v2 = store.admitAndAck(root, 'sp-forge', 'sudo', null, { requestId: 'req-forged-1' });
+if (!v2.replay || v2.remaining !== 63) problems.push('re-ack did not replay idempotently: ' + JSON.stringify(v2));
+const ef2 = sr.readEntry(root, 'sp-forge');
+if (!ef2 || ef2.uses !== 1) problems.push('replay burned a second use: ' + (ef2 && ef2.uses));
+
+// Forged .gos/cache entry through the channel: the runner checks the store
+// entry only — no admission, no budget anywhere.
+const cacheDir = path.join(root, '.gos', 'cache', 'auto-spawn');
+fs.mkdirSync(cacheDir, { recursive: true });
+fs.writeFileSync(path.join(cacheDir, 'sp-ghost.json'), JSON.stringify({
+  spawn_id: 'sp-ghost', kind: 'work', stage: 'BUILD',
+  grants: ['commit', 'gate', 'section', 'truth', 'checkpoint'],
+  use_cap: 999, uses: 0, window_expiry: Date.now() + 600000,
+}));
+const vg = store.admitAndAck(root, 'sp-ghost', 'checkpoint', 'save', { requestId: 'req-ghost-1' });
+if (vg.admitted || vg.reason !== 'no-entry') problems.push('forged cache entry admitted through the channel: ' + JSON.stringify(vg));
+
+// Redteam kind: never write-admitted; its manifest carries no grants.
+store.registerSpawn({ spawnId: 'sp-red2', kind: 'redteam', stage: 'THINK', pid: process.pid, wallMs: 600000 }, root);
+const vr = store.admitAndAck(root, 'sp-red2', 'commit', 'think');
+if (vr.admitted || vr.reason !== 'redteam-no-write') problems.push('redteam write admitted: ' + JSON.stringify(vr));
+const mr = store.writeGrantManifest(root, 'sp-red2');
+if (!mr.ok || mr.manifest.grants.length !== 0) problems.push('redteam manifest carries grants');
+
+// Human gates refuse for EVERY stage, hardcoded before grant evaluation.
+for (const stage of ['INTENT', 'THINK', 'PLAN', 'BUILD', 'REVIEW', 'VERIFY', 'SHIP']) {
+  const sid = 'sp-gate-' + stage.toLowerCase();
+  store.registerSpawn({ spawnId: sid, kind: 'work', stage, pid: process.pid, wallMs: 600000 }, root);
+  for (const gate of ['approve', 'archive', 'push', 'disposition']) {
+    const g = store.admitAndAck(root, sid, gate, null);
+    if (g.admitted || g.reason !== 'human-gate') problems.push(stage + ' ' + gate + ' not human-gate refused: ' + JSON.stringify(g));
+  }
+}
+
+// Registration bounds: the use-cap hard ceiling and the verb vocabulary are
+// enforced fail-closed; table defaults give BUILD 64 + checkpoint and leave
+// THINK at 16 without it.
+const over = store.registerSpawn({ spawnId: 'sp-over', kind: 'work', stage: 'BUILD', useCap: 999, wallMs: 600000 }, root);
+if (over.ok || over.reason !== 'use-cap-over-ceiling') problems.push('useCap over the ceiling accepted: ' + JSON.stringify(over.reason));
+const badg = store.registerSpawn({ spawnId: 'sp-badg', kind: 'work', stage: 'BUILD', grants: ['approve'], wallMs: 600000 }, root);
+if (badg.ok || badg.reason !== 'invalid-grants') problems.push('approve grant accepted: ' + JSON.stringify(badg.reason));
+const db = store.registerSpawn({ spawnId: 'sp-defb', kind: 'work', stage: 'BUILD', pid: process.pid, wallMs: 600000 }, root);
+if (!db.ok || db.entry.use_cap !== 64 || !db.entry.grants.includes('checkpoint')) problems.push('BUILD table defaults wrong: ' + JSON.stringify(db.entry));
+const dt = store.registerSpawn({ spawnId: 'sp-deft', kind: 'work', stage: 'THINK', pid: process.pid, wallMs: 600000 }, root);
+if (!dt.ok || dt.entry.use_cap !== 16 || dt.entry.grants.includes('checkpoint')) problems.push('THINK table defaults wrong: ' + JSON.stringify(dt.entry));
+
+// Manifest isolation: one spawn's manifest never carries another spawn's data.
+const mb = store.writeGrantManifest(root, 'sp-defb');
+if (!mb.ok) problems.push('sp-defb manifest failed');
+else if (JSON.stringify(mb.manifest).includes('sp-deft') || JSON.stringify(mb.manifest).includes('sp-innocent')) problems.push('manifest leaked sibling spawn data');
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'GUARD-OK');
+EOF
+GUARD_OUT="$(WORLD="$WORLD" node "$T106_DIR/run-c8.cjs" 2>&1 | tail -n 1)"
+t106_contains "forged request burns own budget; cache inert; redteam/gates/caps bounded" "GUARD-OK" "$GUARD_OUT"
+
+# ---------------------------------------------------------------- C10 --
+echo "C10: ack-bind-point (store-side acks; scratch acks are dead)"
+cat > "$T106_DIR/run-c10.cjs" <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const sr = require(path.join(GR, 'bin/lib/core/spawnreg.cjs'));
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const launcher = require(path.join(GR, 'bin/lib/ops/auto/launcher.cjs'));
+const { spawn } = require('child_process');
+const root = process.env.WORLD;
+const problems = [];
+fs.writeFileSync(path.join(root, '.gos', '.lock'), JSON.stringify({
+  pid: process.pid, started_at: new Date().toISOString(), boot_id: null, starttime: sr.procStartTime(process.pid),
+}));
+
+// A sandboxed session trying to self-sign: drop the request, watch the
+// scratch, and plant a perfectly-formed ADMITTED ack beside it the moment
+// the request file appears. The channel must keep waiting for the
+// runner-side ack dir and time out — the rw scratch is never an ack source.
+const selfSignProbe = (ackEnv) => new Promise((resolve) => {
+  const child = spawn(process.execPath, ['-e', `
+    const sr = require(process.env.GOS_ROOT + '/bin/lib/core/spawnreg.cjs');
+    const fs = require('fs');
+    const root = process.env.WORLD;
+    let holder = null;
+    try { holder = JSON.parse(fs.readFileSync(root + '/.gos/.lock', 'utf8')); } catch {}
+    const v = sr.admitSpawnWrite(root, { cmdName: 'commit', argvStage: 'build', spawnId: 'sp-selfack', holder, lockPath: root + '/.gos/.lock' });
+    console.log(v.ok ? 'ADMITTED' : 'REFUSED ' + v.reason);
+  `], {
+    env: {
+      ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: 'sp-selfack',
+      GOS_AUTO_SPAWN_SCRATCH: sr.scratchPath(root, 'sp-selfack'),
+      GOS_AUTO_SPAWN_ACK_WAIT_MS: '1500',
+      ...ackEnv,
+    },
+  });
+  let out = '';
+  let planted = false;
+  child.stdout.on('data', (d) => { out += d; });
+  const iv = setInterval(() => {
+    if (planted) return;
+    let names = [];
+    try { names = fs.readdirSync(sr.scratchPath(root, 'sp-selfack')); } catch { return; }
+    const req = names.find((n) => n.endsWith('.req.json'));
+    if (!req) return;
+    planted = true;
+    fs.writeFileSync(path.join(sr.scratchPath(root, 'sp-selfack'), req.slice(0, -'.req.json'.length) + '.ack.json'),
+      JSON.stringify({ admitted: true, remaining: 99, stage: 'BUILD', request_id: req.slice(0, -'.req.json'.length) }));
+  }, 10);
+  child.on('close', () => { clearInterval(iv); resolve({ out: out.trim(), planted }); });
+});
+
+(async () => {
+  // ack dir derivation + registration surface
+  if (typeof sr.acksPath !== 'function') problems.push('spawnreg exposes no acksPath');
+  else {
+    const acks = sr.acksPath(root, 'sp-selfack');
+    if (!acks || !acks.includes(path.join('spawnreg', 'sp-selfack.acks'))) problems.push('acksPath not <spawnreg>/<id>.acks: ' + acks);
+  }
+  const reg = store.registerSpawn({ spawnId: 'sp-selfack', kind: 'work', stage: 'BUILD', pid: process.pid, wallMs: 600000 }, root);
+  if (!reg.ok) problems.push('registration refused: ' + reg.reason);
+  if (reg.ok && reg.acksDir !== (typeof sr.acksPath === 'function' ? sr.acksPath(root, 'sp-selfack') : undefined)) problems.push('registerSpawn does not return the acks dir');
+  if (reg.ok && reg.acksDir && !fs.statSync(reg.acksDir).isDirectory()) problems.push('registerSpawn did not create the acks dir');
+
+  // (a) the forged scratch ack is never read: the channel times out closed
+  const ackEnv = typeof sr.acksPath === 'function' ? { GOS_AUTO_ACK_DIR: sr.acksPath(root, 'sp-selfack') } : {};
+  const probe = await selfSignProbe(ackEnv);
+  if (!probe.planted) problems.push('self-sign probe never observed its own request file');
+  if (!/REFUSED ack-timeout/.test(probe.out)) problems.push('self-written scratch ack was consumed: ' + probe.out);
+
+  // (b) structural: compose ro-binds the acks dir at /run/gos-acks AFTER
+  // every mask mount and pins GOS_AUTO_ACK_DIR there
+  if (typeof sr.acksPath !== 'function') {
+    problems.push('structural acks compose skipped: no acksPath');
+  } else {
+  const composed = launcher.compose('workspace', {
+    workspace: root,
+    env: { ...process.env },
+    engineProbe: () => ({ engine: 'bwrap', version: '0.11.0' }),
+    scratchDir: sr.scratchPath(root, 'sp-selfack'),
+    testBase: true,
+    ackDir: sr.acksPath(root, 'sp-selfack'),
+    writableRoots: [root],
+  });
+  if (!composed.ok) problems.push('ack compose refused: ' + composed.code);
+  else {
+    if (composed.env.GOS_AUTO_ACK_DIR !== '/run/gos-acks') problems.push('GOS_AUTO_ACK_DIR not pinned to /run/gos-acks');
+    const aAt = composed.argv.findIndex((_, i) => composed.argv[i] === '--ro-bind' && composed.argv[i + 2] === '/run/gos-acks');
+    if (aAt < 0) problems.push('acks dir not ro-bound at the fixed path');
+    else {
+      if (composed.argv[aAt + 1] !== sr.acksPath(root, 'sp-selfack')) problems.push('ro-bind source is not the store acks dir');
+      const ops = [];
+      const av = composed.argv;
+      for (let i = 0; i < av.length;) {
+        const t = av[i];
+        if (['--ro-bind', '--ro-bind-try', '--bind', '--bind-try', '--dev-bind'].includes(t)) { ops.push({ op: t, dest: av[i + 2], index: i }); i += 3; }
+        else if (['--tmpfs', '--proc', '--dev', '--dir'].includes(t)) { ops.push({ op: t, dest: av[i + 1], index: i }); i += 2; }
+        else i += 1;
+      }
+      let maxMask = -1;
+      for (const m of composed.meta.masks) {
+        const impl = ops.filter((o) => o.dest === m.dest && (m.kind === 'empty' ? (o.op === '--ro-bind' && o.src === '/dev/null') : o.op === '--tmpfs'));
+        if (impl.length) maxMask = Math.max(maxMask, impl[impl.length - 1].index);
+      }
+      if (aAt <= maxMask) problems.push('acks ro-bind does not land after every mask mount');
+    }
+    if (!launcher.maskOverBindHolds(composed)) problems.push('mask-over-bind invariant broken by the acks bind');
+    const ackSrc = sr.acksPath(root, 'sp-selfack');
+    if (!ackSrc.startsWith(path.join(store.storeRoot(root), 'spawnreg'))) problems.push('acks dir not inside the store spawnreg tree');
+  }
+  }
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'ACKBIND-OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+ACKBIND_OUT="$(WORLD="$WORLD" node "$T106_DIR/run-c10.cjs" 2>&1 | tail -n 1)"
+t106_contains "acks are store-side, ro-bound after masks, and scratch acks are never read" "ACKBIND-OK" "$ACKBIND_OUT"
+
+# ---------------------------------------------------------------- C9 --
+echo "C9: odd-roots (space, unicode, symlinked clone root)"
+# Unicode segment is built from escapes so file content stays ASCII.
+UNI_SEG="$(node -e "process.stdout.write('cl\u00f6ne-\u4ed3\u5e93')")"
+ODD_SPACE="$T106_DIR/odd root/spacerepo"
+ODD_UNI="$T106_DIR/$UNI_SEG/repo"
+ODD_REAL="$T106_DIR/realrepo"
+ODD_LINK="$T106_DIR/linkrepo"
+mkdir -p "$ODD_SPACE/.gos" "$ODD_UNI/.gos" "$ODD_REAL/.gos"
+git init -q "$ODD_SPACE" 2>/dev/null
+git init -q "$ODD_REAL" 2>/dev/null
+ln -s "$ODD_REAL" "$ODD_LINK"
+mkdir -p "$T106_DIR/xdg-store"
+cat > "$T106_DIR/run-c9.cjs" <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const sr = require(path.join(GR, 'bin/lib/core/spawnreg.cjs'));
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const launcher = require(path.join(GR, 'bin/lib/ops/auto/launcher.cjs'));
+const problems = [];
+const SPACE = process.env.ODD_SPACE, UNI = process.env.ODD_UNI;
+const REAL = process.env.ODD_REAL, LINK = process.env.ODD_LINK;
+
+// Registry round trips through the space and unicode roots; entries live in
+// the store-side home keyed by the odd root, never inside the repo tree.
+sr.writeEntry(SPACE, { spawnId: 'sp-odd-space', kind: 'work', stage: 'THINK', pid: 1, wallMs: 600000 });
+sr.writeEntry(UNI, { spawnId: 'sp-odd-uni', kind: 'work', stage: 'BUILD', pid: 1, wallMs: 600000 });
+const es = sr.readEntry(SPACE, 'sp-odd-space');
+const eu = sr.readEntry(UNI, 'sp-odd-uni');
+if (!es || es.stage !== 'THINK') problems.push('space-root entry round trip failed');
+if (!eu || eu.stage !== 'BUILD') problems.push('unicode-root entry round trip failed');
+if (fs.existsSync(path.join(SPACE, '.gos', 'cache', 'auto-spawn', 'sp-odd-space.json'))) {
+  problems.push('space-root entry leaked into the repo-side cache path');
+}
+
+// Symlinked root: repoKey is realpath-first, so both spellings derive one
+// store identity — write through the link, read back through the real path.
+if (store.repoKey(LINK) !== store.repoKey(REAL)) problems.push('repoKey differs across symlink and real spelling');
+if (store.repoKey(LINK) === store.repoKey(SPACE)) problems.push('distinct roots collapsed to one store key');
+sr.writeEntry(LINK, { spawnId: 'sp-odd-link', kind: 'work', stage: 'BUILD', pid: 1, wallMs: 600000 });
+const el = sr.readEntry(REAL, 'sp-odd-link');
+if (!el || el.stage !== 'BUILD') problems.push('symlink-written entry unreadable via the real root');
+if (sr.scratchPath(LINK, 'x') !== sr.scratchPath(REAL, 'x')) problems.push('scratch paths split by spelling');
+const reg = store.registerSpawn({ spawnId: 'sp-odd-reg', kind: 'work', stage: 'BUILD', pid: process.pid, wallMs: 600000 }, LINK);
+if (!reg.ok) problems.push('store registration through the symlink refused: ' + reg.reason);
+else {
+  const er = sr.readEntry(REAL, 'sp-odd-reg');
+  if (!er || er.use_cap !== 64) problems.push('registered entry not shared across spellings (store home split)');
+}
+
+// Seed materialization under odd base dirs; compose binds the odd seed dir
+// and odd workspace verbatim with the mask invariant intact. The host-config
+// seed mask appears only when the spawn home carries an opencode config, so
+// the fixture home is provisioned the same way the sanitized-seed case does.
+const files = { 'opencode.json': JSON.stringify({ model: 'glm-4.7' }), 'theme.txt': 'theme=dark' };
+const seedSpace = launcher.materializeSeedDir(files, SPACE, 'auto-seed');
+const seedUni = launcher.materializeSeedDir(files, UNI, 'auto-seed');
+for (const d of [seedSpace, seedUni]) {
+  if (fs.readFileSync(path.join(d, 'theme.txt'), 'utf8') !== 'theme=dark') problems.push('seed content lost under odd path: ' + d);
+}
+const seedHomeRoot = path.join(path.dirname(seedUni), 'seed-home');
+const seedHome = path.join(seedHomeRoot, '.config', 'opencode');
+fs.mkdirSync(seedHome, { recursive: true });
+fs.writeFileSync(path.join(seedHome, 'opencode.json'), JSON.stringify({ model: 'glm-4.7' }));
+const composed = launcher.compose('restricted', { workspace: SPACE, env: { HOME: seedHomeRoot }, seedRoots: { 'host-config': seedSpace }, writableRoots: [SPACE] });
+if (!composed.ok) problems.push('compose refused odd paths: ' + (composed.code || composed.reason));
+else {
+  const argv = composed.argv.join(' ');
+  if (!argv.includes('--ro-bind ' + seedSpace + '/opencode.json')) problems.push('odd seed bind missing from argv');
+  if (!argv.includes(SPACE)) problems.push('odd workspace missing from argv');
+  if (!launcher.maskOverBindHolds(composed)) problems.push('mask-over-bind invariant broken under odd paths');
+}
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'ODD-OK');
+EOF
+ODD_OUT="$(XDG_DATA_HOME="$T106_DIR/xdg-store" HOME="$TESTBASE/home" ODD_SPACE="$ODD_SPACE" ODD_UNI="$ODD_UNI" ODD_REAL="$ODD_REAL" ODD_LINK="$ODD_LINK" node "$T106_DIR/run-c9.cjs" 2>&1 | tail -n 1)"
+t106_contains "odd roots: store round trips, symlink shares one store key, seed+compose hold" "ODD-OK" "$ODD_OUT"
 
 echo "--- T106 summary: $PASS passed, $FAIL failed ---"
 if [ "$FAIL" -gt 0 ]; then exit 1; fi
