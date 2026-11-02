@@ -711,6 +711,10 @@ async function drive(ctx) {
   // (written by the commit path) rolls the state back; the loop re-drives
   // the stage instead of pausing as external-mutation. Shared by the
   // post-spawn mutation check and the top-of-loop identity revalidation.
+  // The snapshot path is spawn-writable, so adoption is gated on the
+  // store-side baseline hash: only the exact pre-advance bytes the runner
+  // last validated roll back — a crafted snapshot falls through to the
+  // external-mutation pause.
   const recoverCrashedAdvance = (baseIdentity, observedIdentity, stateObj) => {
     try {
       if (!baseIdentity || !observedIdentity || !stateObj) return null;
@@ -723,11 +727,14 @@ async function drive(ctx) {
       const hasAdvanceCommit = new RegExp(`chore\\(task\\): advance ${String(baseIdentity.stage).toLowerCase()}\\b`, 'i').test(subj);
       if (hasAdvanceCommit) return null;
       const snapPath = path.join(rootDir, '.gos', 'cache', 'state.snapshot');
-      const snapRaw = fs.readFileSync(snapPath, 'utf8');
-      const snap = JSON.parse(snapRaw);
+      const snapBuf = fs.readFileSync(snapPath);
+      const snap = JSON.parse(snapBuf.toString('utf8'));
       if (String(snap.current_stage || '').toUpperCase() !== String(baseIdentity.stage).toUpperCase()) return null;
+      const bl = store.readBaselineState(rootDir);
+      const snapSha = crypto.createHash('sha256').update(snapBuf).digest('hex');
+      if (!bl.ok || !bl.baselineState || bl.baselineState.sha256 !== snapSha) return null;
       const tmp = `${snapPath}.rollback-tmp-${process.pid}`;
-      fs.writeFileSync(tmp, snapRaw);
+      fs.writeFileSync(tmp, snapBuf);
       fs.renameSync(tmp, path.join(rootDir, '.gos', 'state.json'));
       console.error(`⚠ crashed advance recovered: stage ${baseIdentity.stage} moved in state but its labeled commit never landed — state rolled back from the pre-advance snapshot; the stage will be re-driven`);
       return { restored: snap };
@@ -780,6 +787,14 @@ async function drive(ctx) {
       }
     } else {
       baseline = observed;
+    }
+    // Baseline state hash, store-side: the crashed-advance recovery adopts
+    // a snapshot only on an exact byte-hash match with the pre-advance world
+    // this loop last validated. Best-effort — an unrecordable hash simply
+    // means a later recovery refuses adoption (fails closed).
+    {
+      const baselineShaNow = hashFileSha256(path.join(rootDir, '.gos', 'state.json'));
+      if (baselineShaNow != null) store.recordBaselineState(rootDir, baselineShaNow);
     }
 
     // ---- runner-side legs for the previous delegated spawn ----
@@ -951,7 +966,12 @@ async function drive(ctx) {
       const wd = await withHeartbeat(() => workers.runWaveDispatch(waveSnapshot, {
         rootDir, taskId, workBranch: loopBranch,
         spawnRunner, gitRunner,
-        env: { ...env, [APPROVALS_BASELINE_ENV]: baselineSha },
+        // Original env reference (never a spread copy — a copy would read as
+        // a full overlay and bypass the adapter's base-env sanitization);
+        // the approvals baseline rides separately.
+        env,
+        approvalsBaseline: baselineSha,
+        approvalsBaselineEnv: APPROVALS_BASELINE_ENV,
         host: opts.host, engineProbe: opts.engineProbe, breaker: b,
         ...(pin ? { pin } : {}),
         tablePath: tableFile,
@@ -1022,7 +1042,7 @@ async function drive(ctx) {
           ? [rootDir, path.join(rootDir, '.gos'), path.join(rootDir, '.gos', 'logs')]
           : [path.join(rootDir, '.gos'), path.join(rootDir, '.gos', 'logs')]
       ),
-      ...(waveEquipage ? { scratchDir: reg.scratch, testBase: true, grantManifestPath: manifest.path, requiresKernelTier: true } : {}),
+      ...(waveEquipage ? { scratchDir: reg.scratch, ackDir: reg.acksDir, testBase: true, grantManifestPath: manifest.path, requiresKernelTier: true } : {}),
       buildSpawn: stage === workers.WAVE_STAGE,
     });
     if (!composed.ok) {
@@ -1050,7 +1070,7 @@ async function drive(ctx) {
     });
     const specEnv = { ...adapterSpec.env, ...composed.env, [SPAWN_MARKER_ENV]: '1', GOS_AUTO_SPAWN_ID: spawnId, [APPROVALS_BASELINE_ENV]: baselineSha };
     const argv = composed.tier === 'bubblewrap'
-      ? ['bwrap', ...composed.argv, '--', ...adapterSpec.argv]
+      ? [composed.engine, ...composed.argv, '--', ...adapterSpec.argv]
       : adapterSpec.argv.slice();
     const spec = {
       argv,

@@ -7,8 +7,10 @@
 // escapes. Profiles are tracked JSON data under templates/auto-profiles/.
 // Class S composes extend the same frame: a runner-created per-spawn
 // scratch dir rw-bound after the masks (the store-tree carve-out), an
-// explicitly sized /tmp tmpfs, the grant manifest ro-bound at a fixed
-// path, and the runner-held git identity in every BUILD spawn env.
+// explicitly sized /tmp tmpfs, the grant manifest and the store-side ack
+// dir ro-bound at fixed paths (grants immutable, acks runner-written
+// read-only pickup), and the runner-held git identity in every BUILD spawn
+// env.
 'use strict';
 
 const core = require('../../core/index.cjs');
@@ -59,8 +61,11 @@ const DETECTOR_FLOOR_DENY = Object.freeze(['sudo', 'su -', 'su root', 'gos auto'
 // Class S compose constants. The scratch env name mirrors the channel env
 // in core/spawnreg.cjs (kept in sync by test); the spawn id rule mirrors
 // spawnreg's filename-safe id so a derived scratch can never escape the
-// spawnreg directory through path fragments.
+// spawnreg directory through path fragments. The ack dir env and fixed
+// dest mirror spawnreg's ACK_DIR_ENV the same way.
 const SCRATCH_ENV = 'GOS_AUTO_SPAWN_SCRATCH';
+const ACK_DIR_ENV = 'GOS_AUTO_ACK_DIR';
+const ACK_DIR_DEST = '/run/gos-acks';
 const SPAWN_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const GRANT_MANIFEST_DEST = '/run/gos-grants.json';
 const GRANT_MANIFEST_ENV = 'GOS_AUTO_GRANT_MANIFEST';
@@ -275,6 +280,13 @@ function composeArgv(ctx) {
     const runMounted = parseArgvOps(argv).some((o) => o.dest === '/run' && o.op !== '--dir');
     if (!runMounted) argv.push('--dir', '/run');
     argv.push('--ro-bind', ctx.grantManifest.src, ctx.grantManifest.dest);
+  }
+  // The ack dir ro-binds read-only after every mask mount: the spawned side
+  // reads its verdicts from the fixed path and can never write one there.
+  if (ctx.ackBind) {
+    const runMounted = parseArgvOps(argv).some((o) => o.dest === '/run' && o.op !== '--dir');
+    if (!runMounted) argv.push('--dir', '/run');
+    argv.push('--ro-bind', ctx.ackBind.src, ctx.ackBind.dest);
   }
   return { argv, seeds, seedsSkipped, postMaskBinds };
 }
@@ -645,6 +657,9 @@ function materializeSeedDir(files, baseDir, prefix) {
 //   testBase         boolean  pin TESTBASE at a testbed subdir of the scratch
 //   grantManifestPath string  writeGrantManifest output ro-bound at
 //                            /run/gos-grants.json
+//   ackDir         string    store-side per-spawn ack dir ro-bound at
+//                            /run/gos-acks (the channel's read-only verdict
+//                            pickup)
 //   buildSpawn       boolean  entry carries BUILD semantics (git identity env)
 //   gitIdentity      boolean  false suppresses the runner git identity env
 //   requiresKernelTier boolean refuse unless the engine resolves to bwrap
@@ -808,6 +823,21 @@ function compose(profileName, opts) {
     }
     grantManifest = { src: real, dest: GRANT_MANIFEST_DEST };
   }
+  // Ack dir (store registerSpawn acksDir): runner-written channel verdicts
+  // ro-bound read-only at the fixed ack path after the masks — the spawned
+  // side reads acks there and nowhere else.
+  let ackBind = null;
+  if (typeof o.ackDir === 'string' && o.ackDir) {
+    if (!path.isAbsolute(o.ackDir)) {
+      return { ok: false, code: 'auto.launcher.ack-dir-invalid', profile: name, ...base, detail: 'ackDir must be an absolute path' };
+    }
+    const abs = path.resolve(o.ackDir);
+    try { fs.mkdirSync(abs, { recursive: true }); }
+    catch (e) {
+      return { ok: false, code: 'auto.launcher.ack-dir-invalid', profile: name, ...base, path: abs, detail: e.message };
+    }
+    ackBind = { src: abs, dest: ACK_DIR_DEST };
+  }
   const { argv, seeds, seedsSkipped, postMaskBinds } = composeArgv({
     home: env.HOME || os.homedir(),
     workspace: o.workspace ? path.resolve(String(o.workspace)) : null,
@@ -821,6 +851,7 @@ function compose(profileName, opts) {
     scratch,
     testBase,
     grantManifest,
+    ackBind,
   });
   const injected = injectPermissionConfig(readResolvedPermissionConfig(o), load.profile.deny);
   const envOut = {
@@ -830,6 +861,7 @@ function compose(profileName, opts) {
   if (scratch) envOut[SCRATCH_ENV] = scratch;
   if (testBase) envOut[TESTBASE_ENV] = testBase;
   if (grantManifest) envOut[GRANT_MANIFEST_ENV] = GRANT_MANIFEST_DEST;
+  if (ackBind) envOut[ACK_DIR_ENV] = ACK_DIR_DEST;
   // Runner-held git identity for every BUILD spawn: the mandatory masks
   // empty ~/.gitconfig, so a spawn without injected identity vars cannot
   // commit at all. Workspace profiles carry BUILD semantics by default;
@@ -865,6 +897,7 @@ function compose(profileName, opts) {
       ...(scratch ? { scratch: { src: scratch, dest: scratch } } : {}),
       ...(testBase ? { testBase: { src: testBase, dest: testBase } } : {}),
       ...(grantManifest ? { grantManifest } : {}),
+      ...(ackBind ? { ackBind } : {}),
       ...(tmpfsSize != null ? { tmpfsSize } : {}),
       ...(postMaskBinds.length ? { postMaskBinds } : {}),
     },

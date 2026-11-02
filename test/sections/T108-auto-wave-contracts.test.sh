@@ -51,6 +51,23 @@
 #                   stamp pins the loaded file, wave spawns carry the
 #                   approvals baseline, and the advance spawn pins the
 #                   resolved model
+#   wave-env      C14 a wave spawn's env never carries credential-class
+#                   entries planted in the loop env: the driver routes its
+#                   env overlay through the sanitizer, so GH_TOKEN /
+#                   AWS_SECRET_ACCESS_KEY / GITHUB_*KEY die while benign
+#                   overlay entries (PATH-class, fixture gates) survive
+#   deny-flood    C15 a wave spawn that prints one deny line and then floods
+#                   past the capture cap still classifies deny-hit: the
+#                   driver prefers the pre-truncation streaming hits exactly
+#                   like the loop scorer, stamps denyHits telemetry, and
+#                   writes the dual-window sidecars for the wave spawn
+#   held-vs-crash C16 a held wave is not a crash: the hold writes a
+#                   store-side held record and tears the spawn down, and
+#                   reconcile never adopts it; crash pre-evidence
+#                   (preHead/preRefsText/preDirty) is store-side at wave
+#                   START, so a tampered scratch marker cannot steer
+#                   reconcile; a crashed wave whose stamp shows denyHits>0
+#                   is unattributable
 # Standalone-safe: self-provisions env when not under test/run-sections.sh.
 
 T108_STANDALONE=0
@@ -866,6 +883,239 @@ t108_contains "the loop drives BUILD waves, exits through one advance spawn, sta
 t108_contains "BUILD iteration advanced over two released waves" "ITER[advanced waves:released,released]" "$C13_OUT"
 t108_contains "stage moved past BUILD" "STAGE[REVIEW]" "$C13_OUT"
 t108_contains "run-start stamp provenance" "STAMP[/start]" "$C13_OUT"
+
+# ---------------------------------------------------------------- C14 --
+echo "C14: wave-env (credential-class entries never reach a wave spawn env)"
+cat > "$T108_DIR/c14.cjs" <<'EOF'
+const path = require('path');
+const problems = [];
+const L = require(path.join(process.env.T108_DIR, 't108-lib.cjs'));
+const repo = L.makeRepo(path.join(process.env.T108_DIR, 'c14-repo'), [[{ id: 'T108a', files: ['src/a.txt'] }]]);
+const log = [];
+// The loop env carries planted credentials (as a compromised or CI-loaded
+// environment would): the wave compose must not pass them through as an
+// unsanitized adapter env overlay.
+const planted = {
+  ...process.env,
+  GH_TOKEN: 'planted-gh-token',
+  GITHUB_ENTERPRISE_TOKEN: 'planted-ghe',
+  AWS_SECRET_ACCESS_KEY: 'planted-aws-secret',
+  GITHUB_DEPLOY_KEY: 'planted-deploy-key',
+  GOS_C14_MARKER: 'carries',
+};
+(async () => {
+  const res = await L.workers.runWaveDispatch(repo.snapshot, L.ctxFor(repo, L.makeRunner(log, { kind: 'good' }), L.makeBreaker(3, 5, 100, repo.dir), { env: planted }));
+  if (!res.ok || res.status !== 'complete') problems.push('dispatch not complete: ' + JSON.stringify({ ok: res.ok, status: res.status, reason: res.reason, detail: res.detail }));
+  if (log.length !== 1) problems.push('spawn count ' + log.length + ' != 1');
+  const spec = log[0];
+  for (const k of ['GH_TOKEN', 'GITHUB_ENTERPRISE_TOKEN', 'AWS_SECRET_ACCESS_KEY', 'GITHUB_DEPLOY_KEY']) {
+    if (spec.env[k] !== undefined) problems.push(k + ' leaked into the wave spawn env');
+  }
+  if (spec.env.GOS_C14_MARKER !== 'carries') problems.push('benign overlay entry dropped from the wave spawn env');
+  if (spec.env.GOS_ROOT !== process.env.GOS_ROOT) problems.push('loop env base lost from the wave spawn env');
+  console.log(problems.length ? 'C14-BAD ' + problems.join('; ') : 'C14-OK');
+  console.log('ENV[' + (spec.env.GH_TOKEN === undefined ? 'clean' : 'leaked') + ' marker:' + (spec.env.GOS_C14_MARKER || 'gone') + ']');
+})().catch((e) => { console.log('C14-BAD ' + e.message); process.exitCode = 1; });
+EOF
+C14_OUT="$(node "$T108_DIR/c14.cjs" 2>&1)"; RC=$?
+t108_exit "wave-env probe runs clean" "0" "$RC"
+t108_contains "credential-class env entries never reach the wave spawn" "C14-OK" "$C14_OUT"
+t108_contains "planted credentials stripped, benign overlay survives" "ENV[clean marker:carries]" "$C14_OUT"
+
+# ---------------------------------------------------------------- C15 --
+echo "C15: deny-flood (one deny line flooded out of the capture window still holds)"
+cat > "$T108_DIR/c15.cjs" <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const problems = [];
+const L = require(path.join(process.env.T108_DIR, 't108-lib.cjs'));
+const repo = L.makeRepo(path.join(process.env.T108_DIR, 'c15-repo'), [[{ id: 'T108a', files: ['src/a.txt'] }]]);
+// The spawn lands a perfect-looking wave commit, then its stream carries one
+// deny line (captured by the streaming scanner) followed by a huge benign
+// tail that pushes the line out of every captured window. The post-hoc scan
+// of the captured text finds nothing; only the pre-truncation hits hold it.
+const denyFloodRunner = async function (spec) {
+  const git = (args) => { const r = spawnSync('git', args, { cwd: spec.cwd, encoding: 'utf8' }); if (r.status !== 0) throw new Error(r.stderr); return String(r.stdout || ''); };
+  for (const p of spec.declaredFiles) {
+    const abs = path.join(spec.cwd, p);
+    fs.mkdirSync(path.dirname(abs), { recursive: true });
+    fs.writeFileSync(abs, 'wave content\n');
+  }
+  git(['add', ...spec.declaredFiles]);
+  git(['commit', '-q', '-m', 'flooded wave']);
+  return {
+    status: 0,
+    stdout: 'benign progress line\n'.repeat(60000),
+    stderr: '',
+    preTruncationDenyHits: [{ pattern: 'sudo', match: 'sudo', line: 'escalating with sudo to break out' }],
+    windowHead: { stdout: 'head-bytes-of-stream', stderr: '' },
+    windowTail: { stdout: 'tail-bytes-of-stream', stderr: '' },
+  };
+};
+(async () => {
+  const res = await L.workers.runWaveDispatch(repo.snapshot, L.ctxFor(repo, denyFloodRunner, L.makeBreaker(3, 5, 100, repo.dir)));
+  const w = res.waves[0] || {};
+  if (res.ok || res.status !== 'held') problems.push('flooded deny wave not held: ' + JSON.stringify({ status: res.status, reason: res.reason }));
+  if (w.violation !== 'deny-hit') problems.push('violation is ' + JSON.stringify(w.violation) + ' — the flooded deny line escaped scoring');
+  if (/sudo/.test(String(res.waves[0] && res.waves[0].detail)) !== true) problems.push('held detail does not name the deny pattern');
+  const st = L.store.load(repo.dir);
+  const stamps = st.ok ? st.store.stamps : {};
+  const spawnIds = Object.keys(stamps).filter((k) => stamps[k].stage === 'BUILD');
+  const stamp = spawnIds.length ? stamps[spawnIds[0]] : null;
+  if (!stamp) problems.push('wave spawn not stamped');
+  else {
+    if (stamp.denyHits !== 1) problems.push('stamp denyHits telemetry is ' + JSON.stringify(stamp.denyHits) + ' (want 1)');
+    const winDir = path.join(L.store.storeRoot(repo.dir), 'windows');
+    for (const sfx of ['head', 'tail']) {
+      if (!fs.existsSync(path.join(winDir, `${spawnIds[0]}.${sfx}.txt`))) problems.push(sfx + ' window sidecar missing for the wave spawn');
+    }
+  }
+  const recs = L.store.readWaveRecords(repo.dir);
+  if (recs.ok && recs.waves['T108fx/W1']) problems.push('deny-held wave wrote a completion record');
+  console.log(problems.length ? 'C15-BAD ' + problems.join('; ') : 'C15-OK');
+  console.log('FLOOD[' + (w.violation || res.reason) + ' denyHits:' + (stamp ? stamp.denyHits : 'none') + ']');
+})().catch((e) => { console.log('C15-BAD ' + e.message); process.exitCode = 1; });
+EOF
+C15_OUT="$(node "$T108_DIR/c15.cjs" 2>&1)"; RC=$?
+t108_exit "deny-flood probe runs clean" "0" "$RC"
+t108_contains "pre-truncation deny hits hold the wave despite the benign flood" "C15-OK" "$C15_OUT"
+t108_contains "deny hit classified with telemetry" "FLOOD[deny-hit denyHits:1]" "$C15_OUT"
+
+# ---------------------------------------------------------------- C16 --
+echo "C16: held-vs-crash (store-side held records and start evidence; scratch markers are inert)"
+cat > "$T108_DIR/c16.cjs" <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const problems = [];
+const L = require(path.join(process.env.T108_DIR, 't108-lib.cjs'));
+const spawnreg = require(path.join(process.env.GOS_ROOT, 'bin/lib/core/spawnreg.cjs'));
+const git = (cwd, args) => {
+  const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
+  if (r.status !== 0) throw new Error(`git ${args.join(' ')} rc=${r.status}: ${r.stderr}`);
+  return String(r.stdout || '');
+};
+(async () => {
+  // ---- held wave: store-side held record, no crash shape, never adopted
+  const heldRepo = L.makeRepo(path.join(process.env.T108_DIR, 'c16-held'), [[{ id: 'T108a', files: ['src/a.txt'] }]]);
+  const denyRunner = async function (spec) {
+    for (const p of spec.declaredFiles) {
+      const abs = path.join(spec.cwd, p);
+      fs.mkdirSync(path.dirname(abs), { recursive: true });
+      fs.writeFileSync(abs, 'deny wave content\n');
+    }
+    git(spec.cwd, ['add', ...spec.declaredFiles]);
+    git(spec.cwd, ['commit', '-q', '-m', 'deny wave work']);
+    return { status: 0, stdout: 'doing work\nsudo breakout attempt\n', stderr: '' };
+  };
+  const held = await L.workers.runWaveDispatch(heldRepo.snapshot, L.ctxFor(heldRepo, denyRunner, L.makeBreaker(3, 5, 100, heldRepo.dir)));
+  if (held.ok || (held.waves[0] || {}).violation !== 'deny-hit') problems.push('deny wave not held: ' + JSON.stringify({ status: held.status, v: held.waves[0] && held.waves[0].violation }));
+  if (typeof L.store.readHeldWaves !== 'function') problems.push('store exposes no readHeldWaves');
+  else {
+    const heldRead = L.store.readHeldWaves(heldRepo.dir);
+    const rec = heldRead.ok && heldRead.heldWaves['T108fx/W1'];
+    if (!rec || rec.reason !== 'deny-hit' || !rec.spawnId) problems.push('held record malformed: ' + JSON.stringify(rec));
+  }
+  // the held spawn is torn down: no scratch survives to masquerade as a crash
+  const startReadHeld = typeof L.store.readWaveStarts === 'function' ? L.store.readWaveStarts(heldRepo.dir) : { ok: false };
+  const heldSpawnId = startReadHeld.ok && startReadHeld.waveStarts['T108fx/W1'] ? startReadHeld.waveStarts['T108fx/W1'].spawnId : null;
+  if (heldSpawnId && fs.existsSync(spawnreg.scratchPath(heldRepo.dir, heldSpawnId))) problems.push('held wave left its scratch (crash shape)');
+  const recsHeld = L.store.readWaveRecords(heldRepo.dir);
+  if (recsHeld.ok && recsHeld.waves['T108fx/W1']) problems.push('held wave wrote a completion record');
+  const recHeld = await L.workers.reconcileWaves(heldRepo.snapshot, L.ctxFor(heldRepo, L.throwingRunner(), L.makeBreaker(3, 5, 100, heldRepo.dir)));
+  const rh1 = (recHeld.waves || []).find((w) => w.wave === 1);
+  if (recHeld.ok || !rh1 || rh1.action === 'adopted' || rh1.action === 'adopted-noop') problems.push('reconcile adopted (or mis-reported) the held wave: ' + JSON.stringify(rh1));
+  else if (rh1.action !== 'held') problems.push('held wave reconcile action is ' + rh1.action + ' (want held)');
+
+  // ---- crash: store-side start evidence; a tampered scratch marker is inert
+  const repo = L.makeRepo(path.join(process.env.T108_DIR, 'c16-crash'), [
+    [{ id: 'T108a', files: ['src/a.txt'] }],
+    [{ id: 'T108b', files: ['src/b.txt'] }],
+  ]);
+  const crashGit = (args, cwd) => {
+    if (args[0] === 'rev-list') return { status: 128, stdout: '', stderr: 'simulated crash mid-check' };
+    return spawnSync('git', args, { cwd: cwd || repo.dir, encoding: 'utf8' });
+  };
+  const crashed = await L.workers.runWaveDispatch(repo.snapshot, L.ctxFor(repo, L.makeRunner([], { kind: 'good' }), L.makeBreaker(3, 5, 100, repo.dir), { gitRunner: crashGit }));
+  if (crashed.ok || crashed.reason !== 'git-failed') problems.push('crash simulation not paused: ' + JSON.stringify(crashed.reason));
+  const landed = L.headOf(repo.dir);
+  // tamper: rewrite the scratch marker (pre-crash evidence forged) and plant
+  // a wave-2 marker that never ran — reconcile must read neither
+  if (typeof L.store.readWaveStarts !== 'function') problems.push('store exposes no readWaveStarts');
+  const startRead = L.store.readWaveStarts(repo.dir);
+  const w1 = startRead.ok ? startRead.waveStarts['T108fx/W1'] : null;
+  if (!w1 || !w1.spawnId || !/^[0-9a-f]{7,64}$/.test(w1.preHead) || typeof w1.preRefsText !== 'string' || !Array.isArray(w1.preDirty)) {
+    problems.push('wave-start record malformed: ' + JSON.stringify(w1));
+  }
+  if (w1 && w1.spawnId) {
+    const scratch = spawnreg.scratchPath(repo.dir, w1.spawnId);
+    fs.mkdirSync(scratch, { recursive: true });
+    fs.writeFileSync(path.join(scratch, 'wave.json'), JSON.stringify({
+      task: 'T108fx', wave: 1, spawnId: w1.spawnId,
+      preHead: '0000000000000000000000000000000000000000',
+      preRefsText: 'refs/heads/evil 0000000000000000000000000000000000000000',
+      preDirty: ['src/smuggled.txt'], startedAtIso: '2000-01-01T00:00:00.000Z',
+    }));
+    fs.writeFileSync(path.join(scratch, 'wave2.json'), JSON.stringify({
+      task: 'T108fx', wave: 2, spawnId: 'never-ran',
+      preHead: '0000000000000000000000000000000000000001', preRefsText: '', preDirty: [],
+      startedAtIso: '2000-01-01T00:00:00.000Z',
+    }));
+    const stray = spawnreg.scratchPath(repo.dir, 'never-ran');
+    fs.mkdirSync(stray, { recursive: true });
+    fs.writeFileSync(path.join(stray, 'wave.json'), JSON.stringify({
+      task: 'T108fx', wave: 2, spawnId: 'never-ran',
+      preHead: '0000000000000000000000000000000000000002', preRefsText: 'forged', preDirty: [],
+      startedAtIso: '2000-01-01T00:00:00.000Z',
+    }));
+  }
+  const rec1 = await L.workers.reconcileWaves(repo.snapshot, L.ctxFor(repo, L.throwingRunner(), L.makeBreaker(3, 5, 100, repo.dir)));
+  const r1w1 = (rec1.waves || []).find((w) => w.wave === 1);
+  const r1w2 = (rec1.waves || []).find((w) => w.wave === 2);
+  if (!rec1.ok || !r1w1 || r1w1.action !== 'adopted' || r1w1.head !== landed) {
+    problems.push('tampered marker changed the crash verdict: ' + JSON.stringify({ ok: rec1.ok, w1: r1w1 }));
+  }
+  if (!r1w2 || r1w2.action !== 'not-started') problems.push('planted wave-2 marker was consumed by reconcile: ' + JSON.stringify(r1w2));
+
+  // ---- deny-stamped crash start: adoption refused on the stamp's telemetry
+  let rec2 = null;
+  if (typeof L.store.recordWaveStart === 'function' && typeof L.store.stampStream === 'function') {
+    const denySpawn = 'T108fx-W2-denyprobe';
+    const sr2 = L.store.recordWaveStart(repo.dir, {
+      task: 'T108fx', wave: 2, spawnId: denySpawn,
+      preHead: L.headOf(repo.dir), preRefsText: '', preDirty: [],
+    });
+    if (!sr2.ok) problems.push('manual wave-start record refused: ' + sr2.reason);
+    const st2 = L.store.stampStream(denySpawn, 'BUILD', L.sha256Text('deny stream'), new Date().toISOString(), repo.dir, { denyHits: 2 });
+    if (!st2.ok) problems.push('deny stamp refused: ' + st2.reason);
+    for (const p of ['src/b.txt']) {
+      const abs = path.join(repo.dir, p);
+      fs.mkdirSync(path.dirname(abs), { recursive: true });
+      fs.writeFileSync(abs, 'a perfectly attributable wave 2 commit\n');
+    }
+    git(repo.dir, ['add', 'src/b.txt']);
+    git(repo.dir, ['commit', '-q', '-m', 'wave 2 work']);
+    rec2 = await L.workers.reconcileWaves(repo.snapshot, L.ctxFor(repo, L.throwingRunner(), L.makeBreaker(3, 5, 100, repo.dir)));
+    const r2w2 = (rec2.waves || []).find((w) => w.wave === 2);
+    if (rec2.ok || !r2w2 || r2w2.action === 'adopted') problems.push('deny-stamped crash start was adopted: ' + JSON.stringify(r2w2));
+    else if (r2w2.action !== 'unattributable') problems.push('deny-stamped reconcile action is ' + r2w2.action + ' (want unattributable)');
+    const recs2 = L.store.readWaveRecords(repo.dir);
+    if (recs2.ok && recs2.waves['T108fx/W2']) problems.push('deny-stamped wave wrote a completion record');
+  } else {
+    problems.push('store lacks recordWaveStart/stampStream surface');
+  }
+  console.log(problems.length ? 'C16-BAD ' + problems.join('; ') : 'C16-OK');
+  console.log('HELD[' + (rh1 && rh1.action) + '] ADOPT[' + (r1w1 && r1w1.action) + ':' + String(r1w1 && r1w1.head).slice(0, 10) + '] W2[' + (r1w2 && r1w2.action) + '] DENY[' + ((rec2 || {}).waves ? ((rec2.waves || []).find((w) => w.wave === 2) || {}).action : 'n/a') + ']');
+})().catch((e) => { console.log('C16-BAD ' + e.message); process.exitCode = 1; });
+EOF
+C16_OUT="$(node "$T108_DIR/c16.cjs" 2>&1)"; RC=$?
+t108_exit "held-vs-crash probe runs clean" "0" "$RC"
+t108_contains "held waves never adopted; start evidence is store-side; tampered scratch markers are inert" "C16-OK" "$C16_OUT"
+t108_contains "held wave reconcile action" "HELD[held]" "$C16_OUT"
+t108_contains "crashed wave still adopted from store evidence" "ADOPT[adopted:" "$C16_OUT"
+t108_contains "planted wave-2 marker inert" "W2[not-started]" "$C16_OUT"
+t108_contains "deny-stamped crash start unattributable" "DENY[unattributable]" "$C16_OUT"
 
 echo "--- T108 summary: $PASS passed, $FAIL failed ---"
 if [ "$FAIL" -gt 0 ]; then exit 1; fi

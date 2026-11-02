@@ -254,6 +254,43 @@ function validateStoreShape(st) {
       }
     }
   }
+  // Optional wave start records (additive): runner-written pre-spawn evidence
+  // for the crash-recovery window — never read from the spawn-writable
+  // scratch.
+  if (st.waveStarts != null) {
+    if (!isPlainObject(st.waveStarts)) errs.push('waveStarts: object required');
+    else {
+      for (const k of Object.keys(st.waveStarts)) {
+        const v = st.waveStarts[k];
+        if (!WAVE_KEY_RE.test(k) || !isPlainObject(v)
+          || typeof v.spawnId !== 'string' || !SPAWN_ID_FILE_RE.test(v.spawnId)
+          || typeof v.preHead !== 'string' || !GIT_SHA_RE.test(v.preHead)
+          || typeof v.preRefsText !== 'string'
+          || !Array.isArray(v.preDirty) || !v.preDirty.every((p) => typeof p === 'string')
+          || typeof v.startedAtIso !== 'string' || !ISO_RE.test(v.startedAtIso)) {
+          errs.push(`waveStarts: entry ${k} needs filename-safe spawnId, git preHead, string preRefsText, string[] preDirty, ISO startedAtIso`);
+          break;
+        }
+      }
+    }
+  }
+  // Optional held-wave records (additive): a held wave is a runner verdict,
+  // never a crash — reconcile must be able to tell them apart.
+  if (st.heldWaves != null) {
+    if (!isPlainObject(st.heldWaves)) errs.push('heldWaves: object required');
+    else {
+      for (const k of Object.keys(st.heldWaves)) {
+        const v = st.heldWaves[k];
+        if (!WAVE_KEY_RE.test(k) || !isPlainObject(v)
+          || typeof v.reason !== 'string' || !v.reason
+          || typeof v.spawnId !== 'string' || !SPAWN_ID_FILE_RE.test(v.spawnId)
+          || typeof v.heldAtIso !== 'string' || !ISO_RE.test(v.heldAtIso)) {
+          errs.push(`heldWaves: entry ${k} needs non-empty reason, filename-safe spawnId, ISO heldAtIso`);
+          break;
+        }
+      }
+    }
+  }
   // Optional dispatch-table stamp (additive): the sha256 of the dispatch
   // table file as of the last runner-released edit, plus when/by-whom.
   if (st.dispatchTable != null) {
@@ -262,6 +299,16 @@ function validateStoreShape(st) {
       || typeof st.dispatchTable.rolledAtIso !== 'string' || !ISO_RE.test(st.dispatchTable.rolledAtIso)
       || typeof st.dispatchTable.rolledByWave !== 'string' || !st.dispatchTable.rolledByWave) {
       errs.push('dispatchTable: hex64 sha256 + ISO rolledAtIso + non-empty rolledByWave required');
+    }
+  }
+  // Optional baseline-state record (additive): the sha256 of the state file
+  // bytes as the loop last read and validated them — the crashed-advance
+  // recovery gate against crafted spawn-writable snapshots.
+  if (st.baselineState != null) {
+    if (!isPlainObject(st.baselineState)
+      || typeof st.baselineState.sha256 !== 'string' || !HEX64_RE.test(st.baselineState.sha256)
+      || typeof st.baselineState.recordedAtIso !== 'string' || !ISO_RE.test(st.baselineState.recordedAtIso)) {
+      errs.push('baselineState: hex64 sha256 + ISO recordedAtIso required');
     }
   }
   return errs;
@@ -1180,6 +1227,7 @@ function registerSpawn(rec, rootDir) {
   }
   const scratch = spawnreg.scratchPath(rootDir, rec.spawnId);
   if (scratch == null) return paused('unwritable', null, 'no XDG data home resolvable', 'auto.store.unwritable');
+  const acksDir = spawnreg.acksPath(rootDir, rec.spawnId);
   const doc = spawnreg.saveEntryDoc(rootDir, {
     spawn_id: rec.spawnId,
     kind,
@@ -1190,10 +1238,13 @@ function registerSpawn(rec, rootDir) {
     window_expiry: Date.now() + (rec.wallMs || 3600000),
     pid: rec.pid,
   });
-  try { fs.mkdirSync(scratch, { recursive: true }); } catch (e) {
+  try {
+    fs.mkdirSync(scratch, { recursive: true });
+    if (acksDir != null) fs.mkdirSync(acksDir, { recursive: true });
+  } catch (e) {
     return { ok: false, status: 'error', reason: 'unwritable', path: scratch, detail: e.message, guidance: guidanceFor('auto.store.unwritable', { path: scratch }) };
   }
-  return { ok: true, path: spawnreg.entryPath(rootDir, rec.spawnId), scratch, entry: doc };
+  return { ok: true, path: spawnreg.entryPath(rootDir, rec.spawnId), scratch, acksDir, entry: doc };
 }
 
 // Drop the entry, its manifest, and its scratch when the spawn exits.
@@ -1225,13 +1276,15 @@ function writeGrantManifest(rootDir, spawnId) {
   return { ok: true, path: file, manifest };
 }
 
-// Ack-file helper: the verdict payload lands beside its request as
-// <requestId>.ack.json inside the spawn's scratch dir. Best-effort — a
-// missing scratch just means the spawned side will time out closed.
-const writeAckFile = (scratch, requestId, payload) => {
+// Ack-file helper: the verdict payload lands in the spawn's store-side ack
+// dir (<storeRoot>/spawnreg/<spawnId>.acks/<requestId>.ack.json) — outside
+// every sandbox, runner-written, ro-bound into the spawn at /run/gos-acks.
+// Best-effort — a missing dir just means the spawned side will time out
+// closed.
+const writeAckFile = (acksDir, requestId, payload) => {
   try {
-    fs.mkdirSync(scratch, { recursive: true });
-    fs.writeFileSync(path.join(scratch, `${requestId}.ack.json`), JSON.stringify(payload));
+    fs.mkdirSync(acksDir, { recursive: true });
+    fs.writeFileSync(path.join(acksDir, `${requestId}.ack.json`), JSON.stringify(payload));
     return true;
   } catch { return false; }
 };
@@ -1246,8 +1299,8 @@ const writeAckFile = (scratch, requestId, payload) => {
 // anchor — only the store-side ledger can.
 function admitAndAck(rootDir, spawnId, cmdName, argvStage, opts = {}) {
   const requestId = typeof opts.requestId === 'string' && opts.requestId ? opts.requestId : null;
-  const scratch = spawnreg.scratchPath(rootDir, spawnId);
-  const ackFile = requestId && scratch != null ? path.join(scratch, `${requestId}.ack.json`) : null;
+  const acksDir = spawnreg.acksPath(rootDir, spawnId);
+  const ackFile = requestId && acksDir != null ? path.join(acksDir, `${requestId}.ack.json`) : null;
   if (requestId) {
     const prior = spawnreg.findClaimByRequestId(rootDir, requestId);
     if (prior) {
@@ -1257,7 +1310,7 @@ function admitAndAck(rootDir, spawnId, cmdName, argvStage, opts = {}) {
         remaining: prior.remaining == null ? null : Number(prior.remaining),
         replay: true,
       };
-      if (ackFile) writeAckFile(scratch, requestId, { request_id: requestId, ...out, stage: prior.stage || null, ts: new Date().toISOString() });
+      if (ackFile) writeAckFile(acksDir, requestId, { request_id: requestId, ...out, stage: prior.stage || null, ts: new Date().toISOString() });
       return out;
     }
   }
@@ -1265,7 +1318,7 @@ function admitAndAck(rootDir, spawnId, cmdName, argvStage, opts = {}) {
   if (!entry) {
     spawnreg.appendClaim(rootDir, { request_id: requestId, spawnId, cmd: cmdName, admitted: false, reason: 'no-entry', remaining: null, stage: null, ts: new Date().toISOString() });
     const refused = { admitted: false, reason: 'no-entry', detail: `no live registry entry for spawn ${spawnId || '(unset)'}`, remaining: null };
-    if (ackFile) writeAckFile(scratch, requestId, { request_id: requestId, ...refused, stage: null, ts: new Date().toISOString() });
+    if (ackFile) writeAckFile(acksDir, requestId, { request_id: requestId, ...refused, stage: null, ts: new Date().toISOString() });
     return refused;
   }
   const verdict = spawnreg.judgeClaim(entry, cmdName, argvStage);
@@ -1277,7 +1330,7 @@ function admitAndAck(rootDir, spawnId, cmdName, argvStage, opts = {}) {
     out = { admitted: verdict.admitted === true, reason: verdict.admitted ? undefined : verdict.reason, detail: verdict.admitted ? undefined : verdict.detail, remaining: settled.remaining };
   }
   if (ackFile) {
-    writeAckFile(scratch, requestId, { request_id: requestId, ...out, stage: entry.stage, ts: new Date().toISOString() });
+    writeAckFile(acksDir, requestId, { request_id: requestId, ...out, stage: entry.stage, ts: new Date().toISOString() });
   }
   return out;
 }
@@ -1421,6 +1474,73 @@ function readWaveRecords(rootDir) {
   return { ok: true, path: cur.path, waves: isPlainObject(cur.store.waves) ? cur.store.waves : {} };
 }
 
+// Record (or overwrite on re-entry) one wave's pre-spawn start evidence:
+// the refs/dirty world the runner validated BEFORE the spawn ran. The
+// record is store-side so crash recovery never trusts spawn-writable
+// scratch content for attribution.
+function recordWaveStart(rootDir, rec) {
+  if (!isPlainObject(rec)) return { ok: false, status: 'error', reason: 'invalid-wave-start' };
+  if (typeof rec.task !== 'string' || !rec.task) return { ok: false, status: 'error', reason: 'invalid-wave-start', detail: 'task required' };
+  if (!Number.isInteger(rec.wave) || rec.wave < 1) return { ok: false, status: 'error', reason: 'invalid-wave-start', detail: 'wave must be an integer >= 1' };
+  if (typeof rec.spawnId !== 'string' || !SPAWN_ID_FILE_RE.test(rec.spawnId)) {
+    return { ok: false, status: 'error', reason: 'invalid-wave-start', detail: 'spawnId must be filename-safe' };
+  }
+  if (typeof rec.preHead !== 'string' || !GIT_SHA_RE.test(rec.preHead)) {
+    return { ok: false, status: 'error', reason: 'invalid-wave-start', detail: 'preHead must be a git commit hash' };
+  }
+  if (typeof rec.preRefsText !== 'string') return { ok: false, status: 'error', reason: 'invalid-wave-start', detail: 'preRefsText must be a string' };
+  if (!Array.isArray(rec.preDirty) || !rec.preDirty.every((p) => typeof p === 'string')) {
+    return { ok: false, status: 'error', reason: 'invalid-wave-start', detail: 'preDirty must be a string array' };
+  }
+  const key = `${rec.task}/W${rec.wave}`;
+  const r = mutate(rootDir, (st) => {
+    if (!isPlainObject(st.waveStarts)) st.waveStarts = {};
+    st.waveStarts[key] = {
+      spawnId: rec.spawnId,
+      preHead: rec.preHead,
+      preRefsText: rec.preRefsText,
+      preDirty: rec.preDirty.slice(),
+      startedAtIso: new Date().toISOString(),
+    };
+    return st;
+  });
+  return r.ok ? { ok: true, path: r.path, record: r.store.waveStarts[key] } : r;
+}
+
+// Read-only view of every wave start record.
+function readWaveStarts(rootDir) {
+  const cur = load(rootDir);
+  if (!cur.ok) return cur;
+  return { ok: true, path: cur.path, waveStarts: isPlainObject(cur.store.waveStarts) ? cur.store.waveStarts : {} };
+}
+
+// Record one held wave: a runner verdict (contract violation), never a
+// crash shape. Reconciliation distinguishes held from crashed waves by this
+// record and never adopts a held wave's commit.
+function recordHeldWave(rootDir, rec) {
+  if (!isPlainObject(rec)) return { ok: false, status: 'error', reason: 'invalid-held-wave' };
+  if (typeof rec.task !== 'string' || !rec.task) return { ok: false, status: 'error', reason: 'invalid-held-wave', detail: 'task required' };
+  if (!Number.isInteger(rec.wave) || rec.wave < 1) return { ok: false, status: 'error', reason: 'invalid-held-wave', detail: 'wave must be an integer >= 1' };
+  if (typeof rec.reason !== 'string' || !rec.reason) return { ok: false, status: 'error', reason: 'invalid-held-wave', detail: 'reason required' };
+  if (typeof rec.spawnId !== 'string' || !SPAWN_ID_FILE_RE.test(rec.spawnId)) {
+    return { ok: false, status: 'error', reason: 'invalid-held-wave', detail: 'spawnId must be filename-safe' };
+  }
+  const key = `${rec.task}/W${rec.wave}`;
+  const r = mutate(rootDir, (st) => {
+    if (!isPlainObject(st.heldWaves)) st.heldWaves = {};
+    st.heldWaves[key] = { reason: rec.reason, spawnId: rec.spawnId, heldAtIso: new Date().toISOString() };
+    return st;
+  });
+  return r.ok ? { ok: true, path: r.path, record: r.store.heldWaves[key] } : r;
+}
+
+// Read-only view of every held-wave record.
+function readHeldWaves(rootDir) {
+  const cur = load(rootDir);
+  if (!cur.ok) return cur;
+  return { ok: true, path: cur.path, heldWaves: isPlainObject(cur.store.heldWaves) ? cur.store.heldWaves : {} };
+}
+
 // Roll the dispatch-table stamp. Two provenance shapes: a red-team-passed,
 // runner-released wave edit records its wave key '<task>/W<n>'; a run start
 // records '<runTag>/start' — the loop stamps the table it loaded before any
@@ -1450,6 +1570,28 @@ function readDispatchTableStamp(rootDir) {
   const cur = load(rootDir);
   if (!cur.ok) return cur;
   return { ok: true, path: cur.path, stamp: isPlainObject(cur.store.dispatchTable) ? cur.store.dispatchTable : null };
+}
+
+// Record the loop's baseline state hash: the sha256 of the state file bytes
+// as the runner last read and validated them. The crashed-advance recovery
+// adopts a snapshot only on an exact hash match, so a crafted snapshot from
+// a spawn-writable path can never ride the rollback.
+function recordBaselineState(rootDir, sha256) {
+  if (typeof sha256 !== 'string' || !HEX64_RE.test(sha256)) {
+    return { ok: false, status: 'error', reason: 'invalid-baseline-state', detail: 'sha256 must be the hex64 hash of the state file bytes' };
+  }
+  const r = mutate(rootDir, (st) => {
+    st.baselineState = { sha256, recordedAtIso: new Date().toISOString() };
+    return st;
+  });
+  return r.ok ? { ok: true, path: r.path, baselineState: r.store.baselineState } : r;
+}
+
+// Read-only view of the current baseline-state record (null when absent).
+function readBaselineState(rootDir) {
+  const cur = load(rootDir);
+  if (!cur.ok) return cur;
+  return { ok: true, path: cur.path, baselineState: isPlainObject(cur.store.baselineState) ? cur.store.baselineState : null };
 }
 
 // ---- teardown ----
@@ -1515,7 +1657,13 @@ module.exports = {
   prunePins,
   recordWaveCompletion,
   readWaveRecords,
+  recordWaveStart,
+  readWaveStarts,
+  recordHeldWave,
+  readHeldWaves,
   rollDispatchTableStamp,
   readDispatchTableStamp,
+  recordBaselineState,
+  readBaselineState,
   purgeStore,
 };

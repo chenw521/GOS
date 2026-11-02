@@ -38,6 +38,13 @@
 #                   one store key (realpath-first repoKey), distinct roots
 #                   stay distinct, and seed materialization + seed-bound
 #                   compose accept the odd paths verbatim
+#   ack-bind-point C10 acks live store-side: the runner writes each verdict
+#                   into <store>/spawnreg/<spawnId>.acks/ (outside every
+#                   sandbox), the spawned side reads acks ONLY from
+#                   GOS_AUTO_ACK_DIR (ro-bound at /run/gos-acks after the
+#                   masks) — a self-written ack in the rw scratch is never
+#                   read (the channel still times out), and compose carries
+#                   the ro-bind structurally after every mask mount
 # Standalone-safe: self-provisions env when not under test/run-sections.sh.
 
 T106_STANDALONE=0
@@ -339,10 +346,11 @@ fs.mkdirSync(path.join(world, '.gos', 'cache'), { recursive: true });
 spawnSync('git', ['init', '-q', '-b', 'work', '.'], { cwd: world });
 spawnSync('git', ['commit', '--allow-empty', '-m', 'root'], { cwd: world });
 const pre = { schema_version: 6, level: 1, current_stage: 'BUILD', completed_stages: ['INTENT'], intent: { summary: 'c6', confirmed: true }, task_head: 'abc', requirements: [], decisions: [], observable_truths: [], gaps: [], checkpoints: [], approvals: {} };
-// The crash lands mid-loop: iteration 1 sees the pre-advance state, its
-// spawn dies (group-kill shape) after writing the post state but before
-// the git commit; iteration 2 must roll back from the snapshot and
-// re-drive BUILD instead of pausing as external-mutation.
+// The baseline hash gate hashes the state file bytes as read: the fixture
+// state file and the crash-window snapshot carry identical bytes, so the
+// legit rollback still passes the gate.
+const preRaw = JSON.stringify(pre);
+fs.writeFileSync(path.join(world, '.gos', 'state.json'), preRaw);
 const post = { ...pre, current_stage: 'VERIFY', completed_stages: ['INTENT', 'BUILD'] };
 let stateNow = pre;
 let spawnN = 0;
@@ -351,7 +359,7 @@ const spawnRunner = (spec) => {
   if (spawnN === 1) {
     // Half-executed in-spawn commit: the crash-window snapshot and the
     // advanced state both landed; the labeled git commit never did.
-    fs.writeFileSync(path.join(world, '.gos', 'cache', 'state.snapshot'), JSON.stringify(pre));
+    fs.writeFileSync(path.join(world, '.gos', 'cache', 'state.snapshot'), preRaw);
     stateNow = post;
     return { status: null, stdout: '', stderr: '', error: Object.assign(new Error('spawn killed'), { killed: true }) };
   }
@@ -401,10 +409,13 @@ fs.writeFileSync(path.join(root, '.gos', '.lock'), JSON.stringify({
 const HELPER = path.join(path.dirname(process.argv[1] || '.'), 'spawned-helper.cjs');
 const waitAck = (spawnId, cmdName, argvStage, opts = {}) => new Promise((resolve) => {
   const scratch = sr.scratchPath(root, spawnId);
+  const acksDir = typeof sr.acksPath === 'function' ? sr.acksPath(root, spawnId) : path.join(scratch, '..' , `${spawnId}.acks`);
   const child = spawn(process.execPath, [HELPER, cmdName, argvStage || '', spawnId], {
     env: {
       ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: spawnId,
-      GOS_AUTO_SPAWN_SCRATCH: scratch, GOS_AUTO_SPAWN_ACK_WAIT_MS: opts.ackWaitMs || '4000',
+      GOS_AUTO_SPAWN_SCRATCH: scratch,
+      GOS_AUTO_ACK_DIR: acksDir,
+      GOS_AUTO_SPAWN_ACK_WAIT_MS: opts.ackWaitMs || '4000',
     },
   });
   let out = '';
@@ -470,6 +481,10 @@ const waitAck = (spawnId, cmdName, argvStage, opts = {}) => new Promise((resolve
   if (!es || es.uses !== 0) problems.push('ack-timeout case burned budget: ' + (es && es.uses));
   const silentScratch = sr.scratchPath(root, 'sp-silent');
   if (fs.readdirSync(silentScratch).some((n) => n.endsWith('.ack.json'))) problems.push('ack file exists without a runner');
+  const silentAcks = sr.acksPath(root, 'sp-silent');
+  if (typeof silentAcks === 'string' && (!fs.existsSync(silentAcks) || fs.readdirSync(silentAcks).length !== 0)) {
+    problems.push('silent spawn acks dir not empty-store-side');
+  }
   console.log(problems.length ? 'BAD ' + problems.join('; ') : 'REQACK-OK');
 })().catch((e) => { console.error(e); process.exit(1); });
 EOF
@@ -489,6 +504,8 @@ const problems = [];
 // Forged request (hand-written into the scratch, cmd the spawn was never
 // granted): refused AND it burns that spawn's own budget; a sibling spawn's
 // budget is untouched; re-acking replays the verdict without a second burn.
+// The ack lands store-side in <spawnId>.acks/ — never in the spawn-writable
+// scratch.
 store.registerSpawn({ spawnId: 'sp-forge', kind: 'work', stage: 'BUILD', pid: process.pid, wallMs: 600000 }, root);
 store.registerSpawn({ spawnId: 'sp-innocent', kind: 'work', stage: 'THINK', pid: process.pid, wallMs: 600000 }, root);
 const scratch = sr.scratchPath(root, 'sp-forge');
@@ -501,7 +518,8 @@ const ef = sr.readEntry(root, 'sp-forge');
 if (!ef || ef.uses !== 1 || v.remaining !== 63) problems.push('forged request did not burn its own budget: ' + JSON.stringify({ uses: ef && ef.uses, remaining: v.remaining }));
 const ei = sr.readEntry(root, 'sp-innocent');
 if (!ei || ei.uses !== 0) problems.push('sibling spawn budget burned by the forged request');
-if (!fs.existsSync(path.join(scratch, 'req-forged-1.ack.json'))) problems.push('refused ack file missing');
+if (!fs.existsSync(path.join(sr.acksPath(root, 'sp-forge'), 'req-forged-1.ack.json'))) problems.push('refused ack file missing from the store-side acks dir');
+if (fs.existsSync(path.join(scratch, 'req-forged-1.ack.json'))) problems.push('ack file leaked into the spawn-writable scratch');
 const v2 = store.admitAndAck(root, 'sp-forge', 'sudo', null, { requestId: 'req-forged-1' });
 if (!v2.replay || v2.remaining !== 63) problems.push('re-ack did not replay idempotently: ' + JSON.stringify(v2));
 const ef2 = sr.readEntry(root, 'sp-forge');
@@ -556,6 +574,124 @@ console.log(problems.length ? 'BAD ' + problems.join('; ') : 'GUARD-OK');
 EOF
 GUARD_OUT="$(WORLD="$WORLD" node "$T106_DIR/run-c8.cjs" 2>&1 | tail -n 1)"
 t106_contains "forged request burns own budget; cache inert; redteam/gates/caps bounded" "GUARD-OK" "$GUARD_OUT"
+
+# ---------------------------------------------------------------- C10 --
+echo "C10: ack-bind-point (store-side acks; scratch acks are dead)"
+cat > "$T106_DIR/run-c10.cjs" <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const sr = require(path.join(GR, 'bin/lib/core/spawnreg.cjs'));
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const launcher = require(path.join(GR, 'bin/lib/ops/auto/launcher.cjs'));
+const { spawn } = require('child_process');
+const root = process.env.WORLD;
+const problems = [];
+fs.writeFileSync(path.join(root, '.gos', '.lock'), JSON.stringify({
+  pid: process.pid, started_at: new Date().toISOString(), boot_id: null, starttime: sr.procStartTime(process.pid),
+}));
+
+// A sandboxed session trying to self-sign: drop the request, watch the
+// scratch, and plant a perfectly-formed ADMITTED ack beside it the moment
+// the request file appears. The channel must keep waiting for the
+// runner-side ack dir and time out — the rw scratch is never an ack source.
+const selfSignProbe = (ackEnv) => new Promise((resolve) => {
+  const child = spawn(process.execPath, ['-e', `
+    const sr = require(process.env.GOS_ROOT + '/bin/lib/core/spawnreg.cjs');
+    const fs = require('fs');
+    const root = process.env.WORLD;
+    let holder = null;
+    try { holder = JSON.parse(fs.readFileSync(root + '/.gos/.lock', 'utf8')); } catch {}
+    const v = sr.admitSpawnWrite(root, { cmdName: 'commit', argvStage: 'build', spawnId: 'sp-selfack', holder, lockPath: root + '/.gos/.lock' });
+    console.log(v.ok ? 'ADMITTED' : 'REFUSED ' + v.reason);
+  `], {
+    env: {
+      ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: 'sp-selfack',
+      GOS_AUTO_SPAWN_SCRATCH: sr.scratchPath(root, 'sp-selfack'),
+      GOS_AUTO_SPAWN_ACK_WAIT_MS: '1500',
+      ...ackEnv,
+    },
+  });
+  let out = '';
+  let planted = false;
+  child.stdout.on('data', (d) => { out += d; });
+  const iv = setInterval(() => {
+    if (planted) return;
+    let names = [];
+    try { names = fs.readdirSync(sr.scratchPath(root, 'sp-selfack')); } catch { return; }
+    const req = names.find((n) => n.endsWith('.req.json'));
+    if (!req) return;
+    planted = true;
+    fs.writeFileSync(path.join(sr.scratchPath(root, 'sp-selfack'), req.slice(0, -'.req.json'.length) + '.ack.json'),
+      JSON.stringify({ admitted: true, remaining: 99, stage: 'BUILD', request_id: req.slice(0, -'.req.json'.length) }));
+  }, 10);
+  child.on('close', () => { clearInterval(iv); resolve({ out: out.trim(), planted }); });
+});
+
+(async () => {
+  // ack dir derivation + registration surface
+  if (typeof sr.acksPath !== 'function') problems.push('spawnreg exposes no acksPath');
+  else {
+    const acks = sr.acksPath(root, 'sp-selfack');
+    if (!acks || !acks.includes(path.join('spawnreg', 'sp-selfack.acks'))) problems.push('acksPath not <spawnreg>/<id>.acks: ' + acks);
+  }
+  const reg = store.registerSpawn({ spawnId: 'sp-selfack', kind: 'work', stage: 'BUILD', pid: process.pid, wallMs: 600000 }, root);
+  if (!reg.ok) problems.push('registration refused: ' + reg.reason);
+  if (reg.ok && reg.acksDir !== (typeof sr.acksPath === 'function' ? sr.acksPath(root, 'sp-selfack') : undefined)) problems.push('registerSpawn does not return the acks dir');
+  if (reg.ok && reg.acksDir && !fs.statSync(reg.acksDir).isDirectory()) problems.push('registerSpawn did not create the acks dir');
+
+  // (a) the forged scratch ack is never read: the channel times out closed
+  const ackEnv = typeof sr.acksPath === 'function' ? { GOS_AUTO_ACK_DIR: sr.acksPath(root, 'sp-selfack') } : {};
+  const probe = await selfSignProbe(ackEnv);
+  if (!probe.planted) problems.push('self-sign probe never observed its own request file');
+  if (!/REFUSED ack-timeout/.test(probe.out)) problems.push('self-written scratch ack was consumed: ' + probe.out);
+
+  // (b) structural: compose ro-binds the acks dir at /run/gos-acks AFTER
+  // every mask mount and pins GOS_AUTO_ACK_DIR there
+  if (typeof sr.acksPath !== 'function') {
+    problems.push('structural acks compose skipped: no acksPath');
+  } else {
+  const composed = launcher.compose('workspace', {
+    workspace: root,
+    env: { ...process.env },
+    engineProbe: () => ({ engine: 'bwrap', version: '0.11.0' }),
+    scratchDir: sr.scratchPath(root, 'sp-selfack'),
+    testBase: true,
+    ackDir: sr.acksPath(root, 'sp-selfack'),
+    writableRoots: [root],
+  });
+  if (!composed.ok) problems.push('ack compose refused: ' + composed.code);
+  else {
+    if (composed.env.GOS_AUTO_ACK_DIR !== '/run/gos-acks') problems.push('GOS_AUTO_ACK_DIR not pinned to /run/gos-acks');
+    const aAt = composed.argv.findIndex((_, i) => composed.argv[i] === '--ro-bind' && composed.argv[i + 2] === '/run/gos-acks');
+    if (aAt < 0) problems.push('acks dir not ro-bound at the fixed path');
+    else {
+      if (composed.argv[aAt + 1] !== sr.acksPath(root, 'sp-selfack')) problems.push('ro-bind source is not the store acks dir');
+      const ops = [];
+      const av = composed.argv;
+      for (let i = 0; i < av.length;) {
+        const t = av[i];
+        if (['--ro-bind', '--ro-bind-try', '--bind', '--bind-try', '--dev-bind'].includes(t)) { ops.push({ op: t, dest: av[i + 2], index: i }); i += 3; }
+        else if (['--tmpfs', '--proc', '--dev', '--dir'].includes(t)) { ops.push({ op: t, dest: av[i + 1], index: i }); i += 2; }
+        else i += 1;
+      }
+      let maxMask = -1;
+      for (const m of composed.meta.masks) {
+        const impl = ops.filter((o) => o.dest === m.dest && (m.kind === 'empty' ? (o.op === '--ro-bind' && o.src === '/dev/null') : o.op === '--tmpfs'));
+        if (impl.length) maxMask = Math.max(maxMask, impl[impl.length - 1].index);
+      }
+      if (aAt <= maxMask) problems.push('acks ro-bind does not land after every mask mount');
+    }
+    if (!launcher.maskOverBindHolds(composed)) problems.push('mask-over-bind invariant broken by the acks bind');
+    const ackSrc = sr.acksPath(root, 'sp-selfack');
+    if (!ackSrc.startsWith(path.join(store.storeRoot(root), 'spawnreg'))) problems.push('acks dir not inside the store spawnreg tree');
+  }
+  }
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'ACKBIND-OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+ACKBIND_OUT="$(WORLD="$WORLD" node "$T106_DIR/run-c10.cjs" 2>&1 | tail -n 1)"
+t106_contains "acks are store-side, ro-bound after masks, and scratch acks are never read" "ACKBIND-OK" "$ACKBIND_OUT"
 
 # ---------------------------------------------------------------- C9 --
 echo "C9: odd-roots (space, unicode, symlinked clone root)"

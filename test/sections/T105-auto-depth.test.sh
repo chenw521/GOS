@@ -1457,10 +1457,20 @@ const entry = plansnap.buildEntryCheck(e);
 if (!entry || entry.ok !== false || entry.reason !== 'zero-wave') problems.push('BUILD entry not refused: ' + JSON.stringify(entry && entry.reason));
 if (!String((entry && entry.guidance && entry.guidance.fix) || '').includes('PLAN')) problems.push('entry guidance does not name PLAN');
 if (!plansnap.buildEntryCheck({ tasks: e.tasks, audit: [] }).ok) problems.push('legacy meta-less snapshot refused at BUILD entry');
+// (f) single-wave plan: freezes with wave:1 stamped on every task and
+// passes the BUILD entry check (a one-wave plan is a wave plan, not a
+// wedge at the door)
+writePlan('# Plan\n### Wave 1\n\n#### T1: solo\n- **Covers**: D-1\n- **Files**: test/solo.sh\n');
+const f = freeze();
+if (!f || f.ok === false) problems.push('single-wave freeze refused: ' + JSON.stringify(f && f.reason));
+const fv = ((f || {}).meta || {}).waveValidation || {};
+if (fv.ok !== true || fv.waves !== 1) problems.push('single-wave waveValidation not ok/1: ' + JSON.stringify(fv));
+if (!f.tasks || f.tasks.length !== 1 || f.tasks[0].wave !== 1) problems.push('single-wave task not stamped wave 1: ' + JSON.stringify(f.tasks));
+if (!plansnap.buildEntryCheck(f).ok) problems.push('single-wave BUILD entry refused');
 console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
 EOF
 PS_OUT="$(node run-ps.cjs 2>&1 | tail -n 1)"
-t105_eq "T14: plansnap — frozen tasks carry wave; gapped/duplicate/unsafe refuse at freeze; zero-wave freezes but refuses BUILD entry with PLAN guidance" "OK" "$PS_OUT"
+t105_eq "T14: plansnap — frozen tasks carry wave; gapped/duplicate/unsafe refuse at freeze; zero-wave freezes but refuses BUILD entry with PLAN guidance; single-wave freezes wave 1 and enters BUILD" "OK" "$PS_OUT"
 
 echo "--- T105 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]

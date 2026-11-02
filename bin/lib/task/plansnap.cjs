@@ -63,12 +63,13 @@ function parsePlanMd() {
 
 function buildPlanSnapshotTasks(parsed) {
   const tasks = [];
-  // Frozen entries carry `wave` only when the plan declares more than one
-  // wave: single-wave and heading-less plans keep the legacy entry shape
-  // (tasks implicitly wave 1 / unassigned — snapshot.meta.waveValidation is
-  // the authority consumers branch on).
+  // Frozen entries carry `wave` whenever the plan declares any wave heading:
+  // single-wave plans stamp wave 1 on their tasks (a one-wave plan is a wave
+  // plan), heading-less plans keep the legacy entry shape (tasks implicitly
+  // unassigned — snapshot.meta.waveValidation is the authority consumers
+  // branch on).
   const waves = new Set((parsed || []).map((t) => (t.wave >= 1 ? t.wave : 0)));
-  const stampWave = waves.size > 1;
+  const stampWave = [...waves].some((w) => w >= 1);
   for (const t of (parsed || [])) {
     const files = String(t.files == null ? '' : t.files).split(',').map((s) => s.trim()).filter(Boolean);
     for (const f of files) {

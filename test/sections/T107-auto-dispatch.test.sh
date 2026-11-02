@@ -827,8 +827,11 @@ if (notS.ok || notS.reason !== 'not-script-step') problems.push('pinned-leg step
 
 const c = workers.composeScriptSpawn(step, ctx);
 let tail = [];
-if (!c.ok) problems.push('class-S compose refused: ' + (c.code || c.reason) + ' ' + (c.detail || ''));
+if (!c.ok) problems.push('class-S compose refused: ' + c.code + c.reason + ' ' + (c.detail || ''));
 if (c.ok) {
+  // argv[0] must resolve to the sandbox engine: consumers feed the argv to
+  // the spawn runner verbatim, so a bare frame would die ENOENT on '--'
+  if (c.argv[0] !== 'bwrap') problems.push('Class S argv[0] is not the engine: ' + JSON.stringify(c.argv[0]));
   const term = c.argv.indexOf('--');
   if (term < 0) problems.push('argv lacks the -- terminator');
   else {

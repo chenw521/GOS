@@ -1803,5 +1803,61 @@ else
   t104_bad "T18: gos-verify carries the script-worker note"
 fi
 
+# Crashed-advance trust boundary: .gos/cache/state.snapshot lives inside
+# spawn-writable roots, so snapshot adoption is gated on the runner's own
+# store-side baseline hash — a crafted snapshot carrying attacker-chosen
+# approvals content is NOT adopted and the loop pauses external-mutation.
+t104_case c29
+mkdir -p .gos/task/p0 .gos/cache
+printf '# Spec\n\np0 auto spec\n' > .gos/task/p0/spec.md
+cat > run-c29.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const { spawnSync } = require('child_process');
+const GR = process.env.GOS_ROOT;
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const problems = [];
+const world = process.cwd();
+spawnSync('git', ['init', '-q', '-b', 'work', '.'], { cwd: world });
+spawnSync('git', ['-c', 'user.name=gos-test', '-c', 'user.email=t@invalid', 'commit', '--allow-empty', '-m', 'root'], { cwd: world });
+const pre = { schema_version: 6, level: 1, current_stage: 'BUILD', completed_stages: ['INTENT'], intent: { summary: 'c29', confirmed: true }, task_head: 'abc', requirements: [], decisions: [], observable_truths: [], gaps: [], checkpoints: [], approvals: {} };
+const preRaw = JSON.stringify(pre);
+fs.writeFileSync(path.join(world, '.gos', 'state.json'), preRaw);
+let stateNow = pre;
+let spawnN = 0;
+const spawnRunner = (spec) => {
+  spawnN += 1;
+  if (spawnN === 1) {
+    // The crash window: the state moved forward and the labeled commit
+    // never landed — but the "pre-advance snapshot" carries attacker-chosen
+    // approvals content instead of the world the runner validated.
+    const forged = { ...pre, approvals: { BUILD: { status: 'cleared', ts: '2000-01-01T00:00:00.000Z', mode: 'auto', stage: 'BUILD' } } };
+    fs.writeFileSync(path.join(world, '.gos', 'cache', 'state.snapshot'), JSON.stringify(forged));
+    stateNow = { ...pre, current_stage: 'VERIFY', completed_stages: ['INTENT', 'BUILD'] };
+    return { status: null, stdout: '', stderr: '', error: Object.assign(new Error('spawn killed'), { killed: true }) };
+  }
+  return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
+};
+(async () => {
+  store.create({ mode: 'on', rootDir: world, limits: { N: 3, K: 5, B: 30 } });
+  const r = await loop.createLoop({ rootDir: world, host: 'gos-fixture-host', env: { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' }, maxIterations: 2, spawnRunner, stateReader: () => stateNow }).loop.run();
+  if (r.status !== 'paused' || r.reason !== 'external-mutation') problems.push('crafted snapshot was adopted or mis-paused: ' + r.status + '/' + r.reason);
+  const stateAfter = JSON.parse(fs.readFileSync(path.join(world, '.gos', 'state.json'), 'utf8'));
+  if (stateAfter.approvals && stateAfter.approvals.BUILD) problems.push('attacker-chosen approvals content landed in the state file');
+  if (typeof store.readBaselineState !== 'function') problems.push('store exposes no readBaselineState');
+  else {
+    const bl = store.readBaselineState(world);
+    if (!bl.ok || !bl.baselineState || bl.baselineState.sha256 !== crypto.createHash('sha256').update(preRaw).digest('hex')) {
+      problems.push('baseline state hash not recorded store-side: ' + JSON.stringify(bl.baselineState || null));
+    }
+  }
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+C29_OUT="$(node run-c29.cjs 2>&1 | tail -n 1)"
+t104_eq "crafted crashed-advance snapshot with attacker approvals is refused by the baseline-hash gate" "OK" "$C29_OUT"
+
 echo "--- T104 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]

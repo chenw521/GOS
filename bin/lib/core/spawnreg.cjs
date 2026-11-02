@@ -26,9 +26,13 @@ const HEARTBEAT_FRESH_MS = 120000;
 const SPAWN_ID_FILE_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
 // Channel env: GOS_AUTO_SPAWN_SCRATCH is the rw scratch dir the runner mounts
-// into the sandbox (request drop + ack pickup); GOS_AUTO_SPAWN_ACK_WAIT_MS
-// bounds the spawned side's wait for the runner's ack before failing closed.
+// into the sandbox (request drop); GOS_AUTO_ACK_DIR is the runner-written,
+// store-side ack dir ro-bound at /run/gos-acks — the ONLY place the spawned
+// side reads verdicts from. The scratch is never an ack source: a sandboxed
+// session could self-sign there. GOS_AUTO_SPAWN_ACK_WAIT_MS bounds the
+// spawned side's wait for the runner's ack before failing closed.
 const SCRATCH_ENV = 'GOS_AUTO_SPAWN_SCRATCH';
+const ACK_DIR_ENV = 'GOS_AUTO_ACK_DIR';
 const ACK_WAIT_ENV = 'GOS_AUTO_SPAWN_ACK_WAIT_MS';
 const ACK_WAIT_DEFAULT_MS = 5000;
 const ACK_WAIT_MAX_MS = 60000;
@@ -96,6 +100,14 @@ function scratchPath(rootDir, spawnId) {
   return dir == null ? null : path.join(dir, `${spawnId}.scratch`);
 }
 
+// Per-spawn ack dir: runner-written verdict files live store-side (outside
+// every sandbox); the launcher ro-binds this dir into the sandbox at
+// /run/gos-acks so the spawned side can read — never write — its acks.
+function acksPath(rootDir, spawnId) {
+  const dir = spawnregDir(rootDir);
+  return dir == null ? null : path.join(dir, `${spawnId}.acks`);
+}
+
 function claimsPath(rootDir) {
   const dir = spawnregDir(rootDir);
   return dir == null ? null : path.join(dir, CLAIMS_FILE);
@@ -136,7 +148,8 @@ function writeEntry(root, rec) {
   });
 }
 
-// Runner-side teardown: the entry, its manifest, and its scratch die together.
+// Runner-side teardown: the entry, its manifest, its scratch, and its ack
+// dir die together.
 function removeEntry(root, spawnId) {
   const dir = spawnregDir(root);
   if (dir == null || !spawnId || !SPAWN_ID_FILE_RE.test(spawnId)) return;
@@ -144,6 +157,7 @@ function removeEntry(root, spawnId) {
     try { fs.unlinkSync(p); } catch { /* absent */ }
   }
   try { fs.rmSync(path.join(dir, `${spawnId}.scratch`), { recursive: true, force: true }); } catch { /* absent */ }
+  try { fs.rmSync(path.join(dir, `${spawnId}.acks`), { recursive: true, force: true }); } catch { /* absent */ }
 }
 
 function readEntry(root, spawnId) {
@@ -337,6 +351,16 @@ function channelScratchDir() {
   return v;
 }
 
+// Ack pickup dir: the runner-written, store-side dir ro-bound into the
+// sandbox. Unset means no ack can ever arrive (the channel fails closed on
+// timeout); a relative value is malformed and refuses immediately.
+function channelAckDir() {
+  const v = process.env[ACK_DIR_ENV];
+  if (v == null || v === '') return null;
+  if (!path.isAbsolute(v)) return { invalid: true, value: v };
+  return v;
+}
+
 function ackWaitMs() {
   const v = Number(process.env[ACK_WAIT_ENV]);
   if (Number.isFinite(v) && v >= 0) return Math.min(v, ACK_WAIT_MAX_MS);
@@ -347,15 +371,19 @@ function sleepMs(ms) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
-// One-shot channel round trip: drop a request file, wait bounded for the
-// runner's ack, fail closed on timeout. A malformed or absent ack is a
-// timeout — the channel admits nothing without the runner's answer.
+// One-shot channel round trip: drop a request file into the rw scratch,
+// wait bounded for the runner's ack from the ro-bound ack dir, fail closed
+// on timeout. The ack file is read ONLY from the ack dir — the scratch is
+// spawn-writable, so a self-written ack there must never count. A missing
+// ack dir env or a malformed/absent ack is a timeout — the channel admits
+// nothing without the runner's answer.
 function admitViaChannel(scratch, opts) {
   const hv = holderVerdict(opts.holder, opts.lockPath);
   if (hv) return hv;
   const requestId = `req-${Date.now().toString(36)}-${process.pid.toString(36)}-${crypto.randomBytes(4).toString('hex')}`;
   const reqFile = path.join(scratch, `${requestId}.req.json`);
-  const ackFile = path.join(scratch, `${requestId}.ack.json`);
+  const ackDir = channelAckDir();
+  const ackFile = ackDir ? path.join(ackDir, `${requestId}.ack.json`) : null;
   const request = {
     request_id: requestId,
     spawn_id: opts.spawnId || null,
@@ -375,10 +403,14 @@ function admitViaChannel(scratch, opts) {
   const cleanupReq = () => { try { fs.unlinkSync(reqFile); } catch { /* gone */ } };
   for (;;) {
     let ack = null;
-    try { ack = JSON.parse(fs.readFileSync(ackFile, 'utf8')); } catch { ack = null; }
+    if (ackFile) {
+      try { ack = JSON.parse(fs.readFileSync(ackFile, 'utf8')); } catch { ack = null; }
+    }
     if (ack && typeof ack === 'object' && typeof ack.admitted === 'boolean') {
       cleanupReq();
-      try { fs.unlinkSync(ackFile); } catch { /* gone */ }
+      // Best-effort ack cleanup: the ro-bound dir refuses the unlink inside
+      // the sandbox (caught); an unsandboxed dev run clears its own ack.
+      try { fs.unlinkSync(ackFile); } catch { /* read-only mount or gone */ }
       if (ack.admitted) {
         return { ok: true, entry: { spawn_id: opts.spawnId, stage: ack.stage, remaining: ack.remaining } };
       }
@@ -437,6 +469,10 @@ function admitSpawnWrite(root, opts) {
   if (scratch && scratch.invalid) {
     return { ok: false, reason: 'bad-channel', detail: `${SCRATCH_ENV} must be an absolute scratch dir path (got "${scratch.value}")` };
   }
+  const ackDir = channelAckDir();
+  if (ackDir && ackDir.invalid) {
+    return { ok: false, reason: 'bad-channel', detail: `${ACK_DIR_ENV} must be an absolute ack dir path (got "${ackDir.value}")` };
+  }
   if (scratch) return admitViaChannel(scratch, opts);
   return admitDirect(root, opts);
 }
@@ -447,6 +483,7 @@ module.exports = {
   entryPath,
   manifestPath,
   scratchPath,
+  acksPath,
   claimsPath,
   saveEntryDoc,
   writeEntry,

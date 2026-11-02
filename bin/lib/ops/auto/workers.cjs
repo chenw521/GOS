@@ -312,6 +312,7 @@ function composeScriptSpawn(step, ctx = {}) {
     writableRoots: ctx.writableRoots,
     userConfig: ctx.userConfig,
     scratchDir: reg.scratch,
+    ackDir: reg.acksDir,
     spawnId: ctx.spawnId,
     testBase: true,
     requiresKernelTier: true,
@@ -328,7 +329,9 @@ function composeScriptSpawn(step, ctx = {}) {
     spawnId: ctx.spawnId,
     kind: 'script',
     command,
-    argv: [...composed.argv, '--', ...command],
+    // Engine-first argv: consumers feed this verbatim to the spawn runner,
+    // so the sandbox engine must lead — the frame alone would die ENOENT.
+    argv: [composed.engine, ...composed.argv, '--', ...command],
     env: composed.env,
     deny: composed.deny,
     tier: composed.tier,
@@ -797,42 +800,16 @@ function currentBranchOf(git, rootDir) {
   } catch { return null; }
 }
 
-// The in-flight wave marker: crash-safety evidence the runner drops into
-// the spawn's scratch BEFORE spawning, so a resumed iterator can reconcile
-// the last pre-crash refs range without trusting anything inside the repo.
-function writeWaveMarker(scratch, data) {
-  fs.writeFileSync(path.join(scratch, WAVE_MARKER_NAME), JSON.stringify(data));
-}
+// ---- wave evidence helpers ----
 
+// No-op evidence: the spawn's own declared "nothing to do" signal, read
+// from its scratch (advisory; the release check still demands no ref moved
+// and no drift anywhere).
 function readNoopSignal(scratch) {
   try {
     const line = fs.readFileSync(path.join(scratch, WAVE_NOOP_NAME), 'utf8').split('\n')[0].trim();
     return line || 'no-op';
   } catch { return null; }
-}
-
-// Latest in-flight marker for one task wave across the spawn registry's
-// scratch dirs (only crashed/interrupted waves keep theirs — released waves
-// remove their spawn).
-function latestWaveMarker(rootDir, task, wave) {
-  const spawnreg = require('../../core/spawnreg.cjs');
-  const dir = spawnreg.spawnregDir(rootDir);
-  if (dir == null) return null;
-  let names;
-  try { names = fs.readdirSync(dir); } catch { return null; }
-  let best = null;
-  for (const name of names) {
-    if (!name.endsWith('.scratch')) continue;
-    const scratch = path.join(dir, name);
-    let doc;
-    try { doc = JSON.parse(fs.readFileSync(path.join(scratch, WAVE_MARKER_NAME), 'utf8')); }
-    catch { continue; }
-    if (!doc || typeof doc !== 'object' || doc.task !== task || doc.wave !== wave) continue;
-    if (!best || String(doc.startedAtIso || '') > String(best.doc.startedAtIso || '')) {
-      best = { doc, scratch };
-    }
-  }
-  return best ? { ...best.doc, scratch: best.scratch } : null;
 }
 
 // Frozen-world drift: the live task state's plan snapshot must equal the
@@ -1171,6 +1148,15 @@ async function runWaveDispatch(snapshot, ctx = {}) {
     }
     const teardown = () => store.removeSpawn(spawnId, rootDir);
     const failHold = async (violation, detail) => {
+      // The held record lands FIRST, store-side: without it a held wave is
+      // indistinguishable from a crashed one and reconcile could adopt its
+      // commit. The spawn then tears down — no crash-shaped evidence stays.
+      const held = store.recordHeldWave(rootDir, { task: ctx.taskId, wave: g.wave, reason: violation, spawnId });
+      if (!held.ok) {
+        teardown();
+        return endWith({ ok: false, status: 'paused', paused: true, reason: held.reason || 'held-record-failed', detail: held.detail, wave: g.wave, waves: results });
+      }
+      teardown();
       waveResult.status = 'held';
       waveResult.violation = violation;
       waveResult.detail = detail;
@@ -1195,6 +1181,7 @@ async function runWaveDispatch(snapshot, ctx = {}) {
       store,
       writableRoots: ctx.writableRoots || [rootDir, path.join(rootDir, '.gos'), path.join(rootDir, '.gos', 'logs')],
       scratchDir: reg.scratch,
+      ackDir: reg.acksDir,
       testBase: true,
       grantManifestPath: manifest.path,
     });
@@ -1214,17 +1201,30 @@ async function runWaveDispatch(snapshot, ctx = {}) {
       teardown();
       return endWith({ ok: false, status: 'paused', paused: true, reason: 'loop-module-unavailable', wave: g.wave, waves: results });
     }
+    // The adapter env overlay is a sanitized copy: credential-class entries
+    // (GH_TOKEN, AWS secrets, ...) must never ride a wave spawn even when
+    // the loop env carries them. The adapter sanitizes only its base
+    // (process.env), so the overlay sanitizes here.
+    const baselineEnvName = typeof ctx.approvalsBaselineEnv === 'string' && ctx.approvalsBaselineEnv
+      ? ctx.approvalsBaselineEnv : null;
+    const baselineSha = ctx.approvalsBaseline != null ? String(ctx.approvalsBaseline) : null;
     const adapterSpec = adapter.buildSpawnSpec({
       prompt: render.prompt,
-      env: loop.spawnEnvTemplate(ctx.env === process.env ? {} : (ctx.env || {})),
+      env: loop.spawnEnvTemplate(registry.sanitizedSpawnEnv(ctx.env === process.env ? {} : (ctx.env || {}))),
       cwd: rootDir,
     });
     const argv = composed.tier === 'bubblewrap'
-      ? ['bwrap', ...composed.argv, '--', ...adapterSpec.argv]
+      ? [composed.engine, ...composed.argv, '--', ...adapterSpec.argv]
       : adapterSpec.argv.slice();
     const spec = {
       argv,
-      env: { ...adapterSpec.env, ...composed.env, [loop.SPAWN_MARKER_ENV]: '1', GOS_AUTO_SPAWN_ID: spawnId },
+      env: {
+        ...adapterSpec.env,
+        ...composed.env,
+        [loop.SPAWN_MARKER_ENV]: '1',
+        GOS_AUTO_SPAWN_ID: spawnId,
+        ...(baselineEnvName && baselineSha != null ? { [baselineEnvName]: baselineSha } : {}),
+      },
       cwd: adapterSpec.cwd || rootDir,
       prompt: render.prompt,
       stage: WAVE_STAGE,
@@ -1254,15 +1254,17 @@ async function runWaveDispatch(snapshot, ctx = {}) {
       teardown();
       return endWith({ ok: false, status: 'paused', paused: true, reason: 'status-unreadable', wave: g.wave, waves: results });
     }
-    writeWaveMarker(reg.scratch, {
-      task: ctx.taskId,
-      wave: g.wave,
-      spawnId,
-      preHead,
-      preRefsText: preRefs.text,
-      preDirty: [...preDirty],
-      startedAtIso: new Date(now()).toISOString(),
+    // Pre-spawn evidence lands store-side (runner-written before the
+    // spawn): crash recovery reconciles from this record and never reads
+    // attribution evidence out of the spawn-writable scratch.
+    const startRec = store.recordWaveStart(rootDir, {
+      task: ctx.taskId, wave: g.wave, spawnId,
+      preHead, preRefsText: preRefs.text, preDirty: [...preDirty],
     });
+    if (!startRec.ok) {
+      teardown();
+      return endWith({ ok: false, status: 'paused', paused: true, reason: startRec.reason || 'wave-start-record-failed', detail: startRec.detail, wave: g.wave, waves: results });
+    }
 
     let result;
     try {
@@ -1276,11 +1278,22 @@ async function runWaveDispatch(snapshot, ctx = {}) {
     const bumped = store.bumpSpawn(rootDir);
     if (!bumped.ok) return endWith({ ok: false, status: 'paused', paused: true, reason: 'budget-write-failed', path: bumped.path, wave: g.wave, waves: results });
     const streamText = String(result.stdout || '');
-    const stamp = store.stampStream(spawnId, WAVE_STAGE, sha256Text(streamText), new Date(now()).toISOString(), rootDir);
+    // Escape detector: pre-truncation streaming hits win (a huge benign tail
+    // cannot push deny lines out of the captured window); the post-hoc scan
+    // stays as the floor. The same hits stamp the telemetry — one
+    // computation, the stamp and the scorer both read it.
+    const hits = (result && Array.isArray(result.preTruncationDenyHits) && result.preTruncationDenyHits.length)
+      ? result.preTruncationDenyHits
+      : launcher.scanSpawnOutput(streamText, { deny: spec.deny });
+    const stamp = store.stampStream(spawnId, WAVE_STAGE, sha256Text(streamText), new Date(now()).toISOString(), rootDir, { denyHits: hits.length });
     if (!stamp.ok) return endWith({ ok: false, status: 'paused', paused: true, reason: 'stamp-failed', detail: stamp.reason, wave: g.wave, waves: results });
+    if (result && result.windowHead && result.windowTail) {
+      try {
+        store.saveWindows(spawnId, { head: result.windowHead.stdout, tail: result.windowTail.stdout }, rootDir);
+      } catch { /* advisory capture: a failed sidecar never blocks the run */ }
+    }
 
     // process contract: deny hits 0, the spawn itself must not have failed
-    const hits = launcher.scanSpawnOutput(streamText, { deny: spec.deny });
     const runnerFailed = !!(result.error != null || (result.status != null && result.status !== 0));
     if (hits.length || runnerFailed) {
       const violation = hits.length ? 'deny-hit' : 'spawn-failed';
@@ -1344,11 +1357,13 @@ async function runWaveDispatch(snapshot, ctx = {}) {
 }
 
 // reconcileWaves(snapshot, ctx) — crash recovery. Never spawns: a wave with
-// a completion record re-runs only its release check; the last wave with a
-// spawn but no record reconciles its pre-crash refs range — a commit
-// uniquely attributable to the wave is adopted (record written from it,
-// release check re-run); waves without markers are not-started. Same ctx
-// as runWaveDispatch.
+// a completion record re-runs only its release check; a wave with a held
+// record is a runner verdict — reported held, never adopted; a wave with a
+// store-side start record (and no verdict) reconciles its pre-crash refs
+// range — a commit uniquely attributable to the wave is adopted (record
+// written from it, release check re-run), with attribution evidence read
+// ONLY from the store record, never from the spawn-writable scratch; waves
+// without a start record are not-started. Same ctx as runWaveDispatch.
 async function reconcileWaves(snapshot, ctx = {}) {
   const valid = validateWaveCtx(snapshot, ctx);
   if (!valid.ok) return valid;
@@ -1358,6 +1373,13 @@ async function reconcileWaves(snapshot, ctx = {}) {
   if (!store) return stepFail('store-unavailable', 'the trust store module could not be loaded');
   const records = store.readWaveRecords(rootDir);
   if (!records.ok) return { ...records, waves: [] };
+  const heldRead = store.readHeldWaves(rootDir);
+  if (!heldRead.ok) return { ...heldRead, waves: [] };
+  const startsRead = store.readWaveStarts(rootDir);
+  if (!startsRead.ok) return { ...startsRead, waves: [] };
+  const stampLoad = store.load(rootDir);
+  const stamps = stampLoad.ok && stampLoad.store && typeof stampLoad.store.stamps === 'object' && stampLoad.store.stamps != null ? stampLoad.store.stamps : {};
+  const spawnreg = require('../../core/spawnreg.cjs');
   const tableFile = typeof ctx.tablePath === 'string' && ctx.tablePath ? ctx.tablePath : path.join(rootDir, DISPATCH_TABLE_REL);
   const results = [];
   let ok = true;
@@ -1375,9 +1397,28 @@ async function reconcileWaves(snapshot, ctx = {}) {
       results.push({ wave: g.wave, action: 'release-checked', head: rec.head, noop: rec.noop === true });
       continue;
     }
-    const marker = latestWaveMarker(rootDir, ctx.taskId, g.wave);
-    if (!marker) {
+    // A held record is a runner verdict, not a crash: never adopted, never
+    // re-spawned here.
+    const held = heldRead.heldWaves[key];
+    if (held) {
+      ok = false;
+      results.push({ wave: g.wave, action: 'held', reason: held.reason, spawnId: held.spawnId, heldAtIso: held.heldAtIso });
+      continue;
+    }
+    const start = startsRead.waveStarts[key];
+    if (!start) {
       results.push({ wave: g.wave, action: 'not-started' });
+      continue;
+    }
+    // Deny gate: a crashed spawn whose stamped stream carries deny hits can
+    // never have its commit adopted, however attributable it looks.
+    const startStamp = stamps[start.spawnId];
+    if (startStamp && Number(startStamp.denyHits) > 0) {
+      ok = false;
+      results.push({
+        wave: g.wave, action: 'unattributable', violation: 'deny-hit',
+        detail: `the crashed wave spawn's stream stamped ${startStamp.denyHits} deny hit(s) — its commit is never adopted`,
+      });
       continue;
     }
     const postHead = readHeadOf(git, rootDir);
@@ -1391,19 +1432,19 @@ async function reconcileWaves(snapshot, ctx = {}) {
     const verdict = await evaluateWaveOutput({
       task: ctx.taskId,
       wave: g.wave,
-      spawnId: marker.spawnId,
+      spawnId: start.spawnId,
       declaredSet,
       workBranch: ctx.workBranch,
       rootDir,
       gitRunner: git,
       tableFile,
-      preHead: marker.preHead,
-      preRefsMap: refsMapFromText(marker.preRefsText),
-      preDirtySet: new Set(marker.preDirty || []),
+      preHead: start.preHead,
+      preRefsMap: refsMapFromText(start.preRefsText),
+      preDirtySet: new Set(start.preDirty || []),
       postHead,
       postRefs,
       postDirtySet: postDirty,
-      scratch: marker.scratch,
+      scratch: spawnreg.scratchPath(rootDir, start.spawnId),
       snapshot,
       ctx: { ...ctx, rootDir },
     });
@@ -1414,7 +1455,7 @@ async function reconcileWaves(snapshot, ctx = {}) {
           refsPointer: sha256Text(postRefs.text), rolledTable: verdict.rolledTable === true,
         })
         : store.recordWaveCompletion(rootDir, {
-          task: ctx.taskId, wave: g.wave, head: marker.preHead,
+          task: ctx.taskId, wave: g.wave, head: start.preHead,
           refsPointer: sha256Text(postRefs.text), noop: true, noopReason: verdict.noopReason,
         });
       if (!recW.ok) {
@@ -1422,7 +1463,7 @@ async function reconcileWaves(snapshot, ctx = {}) {
         results.push({ wave: g.wave, action: 'record-failed', reason: recW.reason, detail: recW.detail });
         continue;
       }
-      store.removeSpawn(marker.spawnId, rootDir);
+      store.removeSpawn(start.spawnId, rootDir);
       results.push(verdict.action === 'release'
         ? { wave: g.wave, action: 'adopted', head: verdict.head, rolledTable: verdict.rolledTable === true || undefined }
         : { wave: g.wave, action: 'adopted-noop', noop: true, noopReason: verdict.noopReason });
