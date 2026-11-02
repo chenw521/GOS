@@ -115,7 +115,7 @@ function isToolExecutionItem() {
 // command-execution items → commandCount (always null until the item shape
 // is recorded); absent evidence → null for both. Never throws; data only —
 // never a breaker signal.
-function extractTelemetry(outcome) {
+function extractTelemetryCodex(outcome) {
   return registryMod.extractSelfReport(outcome && outcome.events, isToolExecutionItem);
 }
 
@@ -123,8 +123,8 @@ function extractTelemetry(outcome) {
 // adapter, its fixtures and the registry matrix carry no model flag) — no
 // flag is invented, so the pin contributes no argv. Update after a dogfood
 // run records the real flag.
-function pinnedModelArgs() {
+function pinnedModelArgsCodex() {
   return [];
 }
 
-module.exports = { NAME, SPAWN_MODE, DISPLAY_ONLY, TERMINAL_TYPES, RECORDED_FIXTURES, validateFixture, spawnRefused, extractTelemetry, pinnedModelArgs, advisoryLine: registryMod.advisoryLine };
+module.exports = { NAME, SPAWN_MODE, DISPLAY_ONLY, TERMINAL_TYPES, RECORDED_FIXTURES, validateFixture, spawnRefused, extractTelemetry: extractTelemetryCodex, pinnedModelArgs: pinnedModelArgsCodex, advisoryLine: registryMod.advisoryLine };

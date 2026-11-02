@@ -189,14 +189,14 @@ function isToolUseEvent(ev) {
 // modelObserved; counted tool_use events → commandCount; absent evidence →
 // null for both. Never throws; returns data only — the payload carries no
 // classification and never feeds a breaker signal.
-function extractTelemetry(outcome) {
+function extractTelemetryOpenCode(outcome) {
   return registryMod.extractSelfReport(outcome && outcome.events, isToolUseEvent);
 }
 
 // Model pin argv: the runner-resolved model (resolve-model output per
 // dispatch slot) pinned into the spawn argv — ['--model', <id>] verbatim
 // for a non-empty string, [] otherwise.
-function pinnedModelArgs(model) {
+function pinnedModelArgsOpenCode(model) {
   return typeof model === 'string' && model.trim() !== '' ? ['--model', model] : [];
 }
 
@@ -209,7 +209,7 @@ module.exports = {
   parseEventStream,
   spawnLive,
   authFilePath,
-  extractTelemetry,
-  pinnedModelArgs,
+  extractTelemetry: extractTelemetryOpenCode,
+  pinnedModelArgs: pinnedModelArgsOpenCode,
   advisoryLine: registryMod.advisoryLine,
 };

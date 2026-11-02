@@ -96,6 +96,11 @@
 #                   pinned legs from a real worktree, and writes the
 #                   iteration record {steps:[{id,kind,verdict,detail}]}
 #                   with the host probe stub never invoked
+#   odd-table      C23  dispatch-table resolution through clone roots with
+#                   a space, unicode chars, and a symlinked root: the
+#                   fail-closed loader accepts each spelling, the symlink
+#                   and real spelling load byte-identical tables, and the
+#                   reported file keeps the requested spelling
 # Standalone-safe: self-provisions env when not under test/run-sections.sh.
 
 T107_STANDALONE=0
@@ -1094,6 +1099,51 @@ t107_exit "zero-LLM probe runs clean" "0" "$RC"
 t107_contains "VERIFY completes with zero host/LLM spawns; record names script steps and pinned legs" "ZL-OK" "$ZL_OUT"
 t107_contains "iteration record shape pinned" "RECORD[gate:P sections:S truth:P]" "$ZL_OUT"
 t107_contains "host probe never invoked" "PROBE[invoked:false]" "$ZL_OUT"
+
+# ---------------------------------------------------------------- C23 --
+echo "C23: odd-table (dispatch-table resolution through odd clone roots)"
+# Unicode segment is built from escapes so file content stays ASCII.
+UNI_SEG="$(node -e "process.stdout.write('cl\u00f6ne-\u4ed3\u5e93')")"
+ODD_SPACE="$T107_DIR/odd root"
+ODD_UNI="$T107_DIR/$UNI_SEG"
+ODD_REAL="$T107_DIR/realrepo"
+ODD_LINK="$T107_DIR/linkrepo"
+for d in "$ODD_SPACE" "$ODD_UNI" "$ODD_REAL"; do mkdir -p "$d/templates"; done
+for d in "$ODD_SPACE" "$ODD_UNI" "$ODD_REAL"; do cp "$GOS_ROOT/templates/auto-dispatch.json" "$d/templates/"; done
+ln -s "$ODD_REAL" "$ODD_LINK"
+cat > "$T107_DIR/run-c23.cjs" <<'EOF'
+const path = require('path');
+const workers = require(path.join(process.env.GOS_ROOT, 'bin/lib/ops/auto/workers.cjs'));
+const problems = [];
+const SPACE = process.env.ODD_SPACE, UNI = process.env.ODD_UNI;
+const REAL = process.env.ODD_REAL, LINK = process.env.ODD_LINK;
+const byDir = (d) => workers.loadDispatchTable({ templatesDir: path.join(d, 'templates') });
+const loads = {
+  space: byDir(SPACE),
+  uni: byDir(UNI),
+  link: byDir(LINK),
+  real: byDir(REAL),
+  pathDirect: workers.loadDispatchTable({ tablePath: path.join(SPACE, 'templates', 'auto-dispatch.json') }),
+};
+for (const [name, r] of Object.entries(loads)) {
+  if (!r.ok) problems.push(name + ' refused: ' + r.reason);
+}
+if (loads.space.ok && loads.pathDirect.ok &&
+    JSON.stringify(loads.space.table) !== JSON.stringify(loads.pathDirect.table)) {
+  problems.push('space root: templatesDir and tablePath disagree');
+}
+if (loads.link.ok && loads.real.ok) {
+  if (JSON.stringify(loads.link.table) !== JSON.stringify(loads.real.table)) problems.push('symlink and real spelling loaded different tables');
+  if (loads.link.file === loads.real.file) problems.push('file field lost the requested spelling');
+  if (loads.link.file !== path.join(LINK, 'templates', 'auto-dispatch.json')) problems.push('file field is not the requested spelling: ' + loads.link.file);
+}
+for (const [name, r] of Object.entries(loads)) {
+  if (r.ok && r.table.stages.BUILD.wave_dispatch !== true) problems.push(name + ': BUILD wave_dispatch not true');
+}
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'TABLE-OK');
+EOF
+ODD_OUT="$(ODD_SPACE="$ODD_SPACE" ODD_UNI="$ODD_UNI" ODD_REAL="$ODD_REAL" ODD_LINK="$ODD_LINK" node "$T107_DIR/run-c23.cjs" 2>&1 | tail -n 1)"
+t107_contains "odd roots load the table fail-closed; symlink spelling identical, file keeps spelling" "TABLE-OK" "$ODD_OUT"
 
 echo "--- T107 summary: $PASS passed, $FAIL failed ---"
 if [ "$FAIL" -gt 0 ]; then exit 1; fi

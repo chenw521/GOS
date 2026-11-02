@@ -32,6 +32,12 @@
 #                   the channel; redteam never write-admitted (empty-grant
 #                   manifest); human gates refused for every stage;
 #                   registration validates the cap ceiling and verb vocabulary
+#   odd-roots      C9  clone roots with a space, unicode chars, and a
+#                   symlinked root: registry write/read round trips in the
+#                   store-side home, the symlinked and real spelling derive
+#                   one store key (realpath-first repoKey), distinct roots
+#                   stay distinct, and seed materialization + seed-bound
+#                   compose accept the odd paths verbatim
 # Standalone-safe: self-provisions env when not under test/run-sections.sh.
 
 T106_STANDALONE=0
@@ -550,6 +556,84 @@ console.log(problems.length ? 'BAD ' + problems.join('; ') : 'GUARD-OK');
 EOF
 GUARD_OUT="$(WORLD="$WORLD" node "$T106_DIR/run-c8.cjs" 2>&1 | tail -n 1)"
 t106_contains "forged request burns own budget; cache inert; redteam/gates/caps bounded" "GUARD-OK" "$GUARD_OUT"
+
+# ---------------------------------------------------------------- C9 --
+echo "C9: odd-roots (space, unicode, symlinked clone root)"
+# Unicode segment is built from escapes so file content stays ASCII.
+UNI_SEG="$(node -e "process.stdout.write('cl\u00f6ne-\u4ed3\u5e93')")"
+ODD_SPACE="$T106_DIR/odd root/spacerepo"
+ODD_UNI="$T106_DIR/$UNI_SEG/repo"
+ODD_REAL="$T106_DIR/realrepo"
+ODD_LINK="$T106_DIR/linkrepo"
+mkdir -p "$ODD_SPACE/.gos" "$ODD_UNI/.gos" "$ODD_REAL/.gos"
+git init -q "$ODD_SPACE" 2>/dev/null
+git init -q "$ODD_REAL" 2>/dev/null
+ln -s "$ODD_REAL" "$ODD_LINK"
+mkdir -p "$T106_DIR/xdg-store"
+cat > "$T106_DIR/run-c9.cjs" <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const sr = require(path.join(GR, 'bin/lib/core/spawnreg.cjs'));
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const launcher = require(path.join(GR, 'bin/lib/ops/auto/launcher.cjs'));
+const problems = [];
+const SPACE = process.env.ODD_SPACE, UNI = process.env.ODD_UNI;
+const REAL = process.env.ODD_REAL, LINK = process.env.ODD_LINK;
+
+// Registry round trips through the space and unicode roots; entries live in
+// the store-side home keyed by the odd root, never inside the repo tree.
+sr.writeEntry(SPACE, { spawnId: 'sp-odd-space', kind: 'work', stage: 'THINK', pid: 1, wallMs: 600000 });
+sr.writeEntry(UNI, { spawnId: 'sp-odd-uni', kind: 'work', stage: 'BUILD', pid: 1, wallMs: 600000 });
+const es = sr.readEntry(SPACE, 'sp-odd-space');
+const eu = sr.readEntry(UNI, 'sp-odd-uni');
+if (!es || es.stage !== 'THINK') problems.push('space-root entry round trip failed');
+if (!eu || eu.stage !== 'BUILD') problems.push('unicode-root entry round trip failed');
+if (fs.existsSync(path.join(SPACE, '.gos', 'cache', 'auto-spawn', 'sp-odd-space.json'))) {
+  problems.push('space-root entry leaked into the repo-side cache path');
+}
+
+// Symlinked root: repoKey is realpath-first, so both spellings derive one
+// store identity — write through the link, read back through the real path.
+if (store.repoKey(LINK) !== store.repoKey(REAL)) problems.push('repoKey differs across symlink and real spelling');
+if (store.repoKey(LINK) === store.repoKey(SPACE)) problems.push('distinct roots collapsed to one store key');
+sr.writeEntry(LINK, { spawnId: 'sp-odd-link', kind: 'work', stage: 'BUILD', pid: 1, wallMs: 600000 });
+const el = sr.readEntry(REAL, 'sp-odd-link');
+if (!el || el.stage !== 'BUILD') problems.push('symlink-written entry unreadable via the real root');
+if (sr.scratchPath(LINK, 'x') !== sr.scratchPath(REAL, 'x')) problems.push('scratch paths split by spelling');
+const reg = store.registerSpawn({ spawnId: 'sp-odd-reg', kind: 'work', stage: 'BUILD', pid: process.pid, wallMs: 600000 }, LINK);
+if (!reg.ok) problems.push('store registration through the symlink refused: ' + reg.reason);
+else {
+  const er = sr.readEntry(REAL, 'sp-odd-reg');
+  if (!er || er.use_cap !== 64) problems.push('registered entry not shared across spellings (store home split)');
+}
+
+// Seed materialization under odd base dirs; compose binds the odd seed dir
+// and odd workspace verbatim with the mask invariant intact. The host-config
+// seed mask appears only when the spawn home carries an opencode config, so
+// the fixture home is provisioned the same way the sanitized-seed case does.
+const files = { 'opencode.json': JSON.stringify({ model: 'glm-4.7' }), 'theme.txt': 'theme=dark' };
+const seedSpace = launcher.materializeSeedDir(files, SPACE, 'auto-seed');
+const seedUni = launcher.materializeSeedDir(files, UNI, 'auto-seed');
+for (const d of [seedSpace, seedUni]) {
+  if (fs.readFileSync(path.join(d, 'theme.txt'), 'utf8') !== 'theme=dark') problems.push('seed content lost under odd path: ' + d);
+}
+const seedHomeRoot = path.join(path.dirname(seedUni), 'seed-home');
+const seedHome = path.join(seedHomeRoot, '.config', 'opencode');
+fs.mkdirSync(seedHome, { recursive: true });
+fs.writeFileSync(path.join(seedHome, 'opencode.json'), JSON.stringify({ model: 'glm-4.7' }));
+const composed = launcher.compose('restricted', { workspace: SPACE, env: { HOME: seedHomeRoot }, seedRoots: { 'host-config': seedSpace }, writableRoots: [SPACE] });
+if (!composed.ok) problems.push('compose refused odd paths: ' + (composed.code || composed.reason));
+else {
+  const argv = composed.argv.join(' ');
+  if (!argv.includes('--ro-bind ' + seedSpace + '/opencode.json')) problems.push('odd seed bind missing from argv');
+  if (!argv.includes(SPACE)) problems.push('odd workspace missing from argv');
+  if (!launcher.maskOverBindHolds(composed)) problems.push('mask-over-bind invariant broken under odd paths');
+}
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'ODD-OK');
+EOF
+ODD_OUT="$(XDG_DATA_HOME="$T106_DIR/xdg-store" HOME="$TESTBASE/home" ODD_SPACE="$ODD_SPACE" ODD_UNI="$ODD_UNI" ODD_REAL="$ODD_REAL" ODD_LINK="$ODD_LINK" node "$T106_DIR/run-c9.cjs" 2>&1 | tail -n 1)"
+t106_contains "odd roots: store round trips, symlink shares one store key, seed+compose hold" "ODD-OK" "$ODD_OUT"
 
 echo "--- T106 summary: $PASS passed, $FAIL failed ---"
 if [ "$FAIL" -gt 0 ]; then exit 1; fi

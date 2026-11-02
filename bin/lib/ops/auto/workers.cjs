@@ -1,6 +1,6 @@
 // ops/auto/workers — stage-dispatch table loader and worker forms for the
 // auto loop. Reads templates/auto-dispatch.json (pure data) and enforces
-// every value bound in code, mirroring launcher.loadProfile's fail-closed
+// every value bound in code, mirroring launcher.loadProfile's stepFail-closed
 // result shape: refusals carry a named `reason` and a human-readable
 // `detail` and surface before any sandbox compose consumes the table.
 // Bounds held here: the stage set is exactly the seven GOS stages, the
@@ -57,7 +57,7 @@ const WAVE_STAGE = 'BUILD';
 // Filename-safe identifier rule shared by spawn ids and pin run tags (the
 // same shape spawnreg enforces, so derived paths can never escape their
 // store directory through path fragments).
-const ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const RUNTAG_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 // Git object hashes: sha-1 repos carry 40 hex chars, sha-256 repos 64.
 const GIT_SHA_RE = /^[0-9a-f]{7,64}$/;
 
@@ -73,54 +73,54 @@ function defaultTemplatesDir() {
   return path.resolve(__dirname, '..', '..', '..', '..', 'templates');
 }
 
-function fail(reason, detail, file) {
+function stepFail(reason, detail, file) {
   return { ok: false, reason, detail, file };
 }
 
-// Validate one stage entry; returns a fail-closed result or null when the
+// Validate one stage entry; returns a stepFail-closed result or null when the
 // entry is well formed. Check order: worker presence, closed vocabularies,
 // pinned profile, dispatch unit, verbs, numeric cap, contract form.
 function validateStage(stage, entry, file) {
   if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
-    return fail('missing-worker-form', `stage ${stage}: entry is not an object`, file);
+    return stepFail('missing-worker-form', `stage ${stage}: entry is not an object`, file);
   }
   if (typeof entry.worker !== 'string' || !entry.worker) {
-    return fail('missing-worker-form', `stage ${stage}: worker field is missing`, file);
+    return stepFail('missing-worker-form', `stage ${stage}: worker field is missing`, file);
   }
   if (!WORKERS.includes(entry.worker)) {
-    return fail('unknown-worker', `stage ${stage}: worker '${entry.worker}' not in {${WORKERS.join(', ')}}`, file);
+    return stepFail('unknown-worker', `stage ${stage}: worker '${entry.worker}' not in {${WORKERS.join(', ')}}`, file);
   }
   const want = pinnedProfile(stage);
   if (entry.profile !== want) {
-    return fail('bad-profile', `stage ${stage}: profile '${entry.profile}' refused — pinned to '${want}'`, file);
+    return stepFail('bad-profile', `stage ${stage}: profile '${entry.profile}' refused — pinned to '${want}'`, file);
   }
   if (!UNITS.includes(entry.unit)) {
-    return fail('bad-unit', `stage ${stage}: unit '${entry.unit}' not in {${UNITS.join(', ')}}`, file);
+    return stepFail('bad-unit', `stage ${stage}: unit '${entry.unit}' not in {${UNITS.join(', ')}}`, file);
   }
   if (stage !== WAVE_STAGE && entry.wave_dispatch) {
-    return fail('bad-unit', `stage ${stage}: wave_dispatch is reserved for ${WAVE_STAGE}`, file);
+    return stepFail('bad-unit', `stage ${stage}: wave_dispatch is reserved for ${WAVE_STAGE}`, file);
   }
   if (!Array.isArray(entry.verbs)) {
-    return fail('unknown-verb', `stage ${stage}: verbs is not an array`, file);
+    return stepFail('unknown-verb', `stage ${stage}: verbs is not an array`, file);
   }
   for (const v of entry.verbs) {
     if (!VERBS.includes(v)) {
-      return fail('unknown-verb', `stage ${stage}: verb '${v}' not in {${VERBS.join(', ')}}`, file);
+      return stepFail('unknown-verb', `stage ${stage}: verb '${v}' not in {${VERBS.join(', ')}}`, file);
     }
   }
   const cap = entry.use_cap;
   if (!Number.isInteger(cap) || cap < 1 || cap > limits.HARD_USE_CAP_CEILING) {
-    return fail('cap-over-ceiling', `stage ${stage}: use_cap ${JSON.stringify(cap)} outside 1..${limits.HARD_USE_CAP_CEILING}`, file);
+    return stepFail('cap-over-ceiling', `stage ${stage}: use_cap ${JSON.stringify(cap)} outside 1..${limits.HARD_USE_CAP_CEILING}`, file);
   }
   const contracts = entry.contracts;
   if (!contracts || typeof contracts !== 'object' || Array.isArray(contracts)) {
-    return fail('missing-worker-form', `stage ${stage}: contracts is not an object`, file);
+    return stepFail('missing-worker-form', `stage ${stage}: contracts is not an object`, file);
   }
   if (entry.worker === 'agent' && typeof contracts.prompt !== 'string') {
-    return fail('missing-worker-form', `stage ${stage}: agent worker requires contracts.prompt as a string`, file);
+    return stepFail('missing-worker-form', `stage ${stage}: agent worker requires contracts.prompt as a string`, file);
   }
   if (entry.worker === 'script' && !Array.isArray(contracts.steps)) {
-    return fail('missing-worker-form', `stage ${stage}: script worker requires contracts.steps as an array`, file);
+    return stepFail('missing-worker-form', `stage ${stage}: script worker requires contracts.steps as an array`, file);
   }
   return null;
 }
@@ -137,28 +137,28 @@ function loadDispatchTable(opts) {
   const file = typeof o.tablePath === 'string' && o.tablePath ? o.tablePath : path.join(dir, DISPATCH_TABLE_NAME);
   let raw;
   try { raw = fs.readFileSync(file, 'utf8'); }
-  catch (e) { return fail('table-unreadable', e.message, file); }
+  catch (e) { return stepFail('table-unreadable', e.message, file); }
   let obj;
   try { obj = JSON.parse(raw); }
-  catch (e) { return fail('table-corrupt', e.message, file); }
+  catch (e) { return stepFail('table-corrupt', e.message, file); }
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
-    return fail('table-corrupt', 'root is not a JSON object', file);
+    return stepFail('table-corrupt', 'root is not a JSON object', file);
   }
   if (obj.dispatch_schema_version !== DISPATCH_SCHEMA_VERSION) {
-    return fail('schema-version', `dispatch_schema_version ${JSON.stringify(obj.dispatch_schema_version)} is not a known version (expected ${DISPATCH_SCHEMA_VERSION})`, file);
+    return stepFail('schema-version', `dispatch_schema_version ${JSON.stringify(obj.dispatch_schema_version)} is not a known version (expected ${DISPATCH_SCHEMA_VERSION})`, file);
   }
   const stages = obj.stages;
   if (!stages || typeof stages !== 'object' || Array.isArray(stages)) {
-    return fail('unknown-stage', 'stages is not an object keyed by stage name', file);
+    return stepFail('unknown-stage', 'stages is not an object keyed by stage name', file);
   }
   const keys = Object.keys(stages);
   const unknown = keys.filter((k) => !STAGES.includes(k));
   if (unknown.length) {
-    return fail('unknown-stage', `unknown stage key(s): ${unknown.join(', ')}`, file);
+    return stepFail('unknown-stage', `unknown stage key(s): ${unknown.join(', ')}`, file);
   }
   const missing = STAGES.filter((s) => !(s in stages));
   if (missing.length) {
-    return fail('unknown-stage', `missing stage key(s): ${missing.join(', ')}`, file);
+    return stepFail('unknown-stage', `missing stage key(s): ${missing.join(', ')}`, file);
   }
   for (const stage of STAGES) {
     const bad = validateStage(stage, stages[stage], file);
@@ -181,7 +181,7 @@ const DEFAULT_VERIFY_STEPS = Object.freeze([
 
 // Store dependency is lazy (store.cjs requires this module at load): the
 // require happens at call time so both load orders stay cycle-free.
-function getStore() {
+function storeOf() {
   try { return require('./store.cjs'); }
   catch { return null; }
 }
@@ -217,7 +217,7 @@ function copyStep(step) {
 }
 
 // resolveWorkerPlan(stage, table?) -> { ok, stage, source, steps } where
-// each step carries its execution class, or a fail-closed refusal. Steps
+// each step carries its execution class, or a stepFail-closed refusal. Steps
 // derive from the entry's contracts.steps when it declares any; VERIFY
 // falls back to the builtin default; every other script stage resolves to
 // no steps (SHIP's delivery stays runner-side). Agent stages refuse —
@@ -225,20 +225,20 @@ function copyStep(step) {
 // cannot be determined refuses the whole plan.
 function resolveWorkerPlan(stage, table) {
   const name = String(stage || '').toUpperCase();
-  if (!STAGES.includes(name)) return fail('unknown-stage', `unknown stage ${JSON.stringify(stage)}`);
+  if (!STAGES.includes(name)) return stepFail('unknown-stage', `unknown stage ${JSON.stringify(stage)}`);
   let stages = stagesOf(table);
   if (!stages) {
     const load = loadDispatchTable();
-    if (!load.ok) return fail('dispatch-table-unavailable', load.detail, load.file);
+    if (!load.ok) return stepFail('dispatch-table-unavailable', load.detail, load.file);
     stages = load.table.stages;
   }
   const entry = stages[name];
-  if (!entry || typeof entry !== 'object') return fail('unknown-stage', `stage ${name} is missing from the dispatch table`);
+  if (!entry || typeof entry !== 'object') return stepFail('unknown-stage', `stage ${name} is missing from the dispatch table`);
   if (entry.worker === 'agent') {
-    return fail('agent-worker', `${name} runs an agent worker — execution-class plans apply to script stages only`);
+    return stepFail('agent-worker', `${name} runs an agent worker — execution-class plans apply to script stages only`);
   }
   if (entry.worker !== 'script') {
-    return fail('unknown-worker', `stage ${name}: worker '${entry.worker}' has no execution class`);
+    return stepFail('unknown-worker', `stage ${name}: worker '${entry.worker}' has no execution class`);
   }
   const declared = entry.contracts && Array.isArray(entry.contracts.steps) ? entry.contracts.steps : null;
   if (declared && declared.length) {
@@ -246,7 +246,7 @@ function resolveWorkerPlan(stage, table) {
     for (const s of declared) {
       const kind = classifyStep(s);
       if (!kind) {
-        return fail('no-clear-class', `step ${s && s.id ? s.id : JSON.stringify(s)} declares neither exactly one fixed command (Class S) nor one pinned module leg (Class P)`);
+        return stepFail('no-clear-class', `step ${s && s.id ? s.id : JSON.stringify(s)} declares neither exactly one fixed command (Class S) nor one pinned module leg (Class P)`);
       }
       steps.push(copyStep({ ...s, kind }));
     }
@@ -278,26 +278,26 @@ function dispatchNeedsHost(entry) {
 // fixed command — no adapter, no prompt, no model, no git identity.
 function composeScriptSpawn(step, ctx = {}) {
   if (classifyStep(step) !== 'S') {
-    return fail('not-script-step', `step ${step && step.id ? step.id : '(unidentified)'} does not carry a fixed command (Class S)`);
+    return stepFail('not-script-step', `step ${step && step.id ? step.id : '(unidentified)'} does not carry a fixed command (Class S)`);
   }
   const command = step.command.map(String);
   if (command.includes('opencode')) {
-    return fail('host-adapter-forbidden', 'a Class S spawn runs fixed repo-authored argv — the host adapter can never appear in it');
+    return stepFail('host-adapter-forbidden', 'a Class S spawn runs fixed repo-authored argv — the host adapter can never appear in it');
   }
   const stage = String(ctx.stage || '').toUpperCase();
-  if (!STAGES.includes(stage)) return fail('unknown-stage', `unknown stage ${JSON.stringify(ctx.stage)}`);
+  if (!STAGES.includes(stage)) return stepFail('unknown-stage', `unknown stage ${JSON.stringify(ctx.stage)}`);
   const load = stagesOf(ctx.table) ? ctx.table : loadDispatchTable();
-  if (!load.ok) return fail('dispatch-table-unavailable', load.detail, load.file);
+  if (!load.ok) return stepFail('dispatch-table-unavailable', load.detail, load.file);
   const entry = load.table.stages[stage];
-  if (!entry) return fail('unknown-stage', `stage ${stage} is missing from the dispatch table`);
+  if (!entry) return stepFail('unknown-stage', `stage ${stage} is missing from the dispatch table`);
   if (entry.worker !== 'script') {
-    return fail('agent-worker', `${stage} runs an agent worker — Class S spawns apply to script stages only`);
+    return stepFail('agent-worker', `${stage} runs an agent worker — Class S spawns apply to script stages only`);
   }
-  if (typeof ctx.spawnId !== 'string' || !ID_RE.test(ctx.spawnId)) {
-    return fail('invalid-spawn-id', 'spawnId must be filename-safe (letters, digits, dot, dash, underscore)');
+  if (typeof ctx.spawnId !== 'string' || !RUNTAG_RE.test(ctx.spawnId)) {
+    return stepFail('invalid-spawn-id', 'spawnId must be filename-safe (letters, digits, dot, dash, underscore)');
   }
-  const store = getStore();
-  if (!store) return fail('store-unavailable', 'the trust store module could not be loaded');
+  const store = storeOf();
+  if (!store) return stepFail('store-unavailable', 'the trust store module could not be loaded');
   const reg = store.registerSpawn({ spawnId: ctx.spawnId, kind: 'script', stage, wallMs: ctx.wallMs }, ctx.rootDir);
   if (!reg.ok) return { ok: false, reason: reg.reason, detail: reg.detail, spawnId: ctx.spawnId };
   const manifest = store.writeGrantManifest(ctx.rootDir, ctx.spawnId);
@@ -366,18 +366,18 @@ function newRunTag() {
 // store. The worktree is materialized inside the machine-local store so no
 // sandbox ever sees it as writable.
 function materializePin(rootDir, opts = {}) {
-  const store = getStore();
-  if (!store) return fail('store-unavailable', 'the trust store module could not be loaded');
+  const store = storeOf();
+  if (!store) return stepFail('store-unavailable', 'the trust store module could not be loaded');
   const commit = opts.loopStartCommit;
   if (typeof commit !== 'string' || !GIT_SHA_RE.test(commit)) {
-    return fail('pin-commit-invalid', 'loopStartCommit must be a git commit hash (7-64 hex chars)');
+    return stepFail('pin-commit-invalid', 'loopStartCommit must be a git commit hash (7-64 hex chars)');
   }
   const runTag = typeof opts.runTag === 'string' && opts.runTag ? opts.runTag : newRunTag();
-  if (!ID_RE.test(runTag)) {
-    return fail('pin-run-tag-invalid', 'runTag must be filename-safe (letters, digits, dot, dash, underscore)');
+  if (!RUNTAG_RE.test(runTag)) {
+    return stepFail('pin-run-tag-invalid', 'runTag must be filename-safe (letters, digits, dot, dash, underscore)');
   }
   const root = store.storeRoot(rootDir);
-  if (root == null) return fail('store-unavailable', 'no machine-local data home resolvable for the pin worktree');
+  if (root == null) return stepFail('store-unavailable', 'no machine-local data home resolvable for the pin worktree');
   // Pin worktrees live under <storeRoot>/pin-worktrees/<runTag> — inside
   // the machine-local store (masked from every sandbox), never inside the
   // repo working tree. The store module owns the directory name.
@@ -389,20 +389,20 @@ function materializePin(rootDir, opts = {}) {
     try { git(['worktree', 'prune'], rootDir); } catch { /* best effort */ }
   };
   try { fs.mkdirSync(dir, { recursive: true }); }
-  catch (e) { return fail('pin-dir-unwritable', e.message); }
+  catch (e) { return stepFail('pin-dir-unwritable', e.message); }
   let add;
   try { add = git(['worktree', 'add', '--detach', wtPath, commit], rootDir); }
-  catch (e) { return fail('pin-worktree-add-failed', e.message); }
+  catch (e) { return stepFail('pin-worktree-add-failed', e.message); }
   if (!add || add.status !== 0) {
-    return fail('pin-worktree-add-failed', String((add && (add.stderr || add.stdout)) || 'git worktree add failed').trim());
+    return stepFail('pin-worktree-add-failed', String((add && (add.stderr || add.stdout)) || 'git worktree add failed').trim());
   }
   let tree;
   try { tree = git(['rev-parse', `${commit}^{tree}`], rootDir); }
-  catch (e) { sweep(); return fail('pin-tree-unresolved', e.message); }
+  catch (e) { sweep(); return stepFail('pin-tree-unresolved', e.message); }
   const treeSha = tree && tree.status === 0 ? String(tree.stdout || '').trim() : '';
   if (!GIT_SHA_RE.test(treeSha)) {
     sweep();
-    return fail('pin-tree-unresolved', String((tree && (tree.stderr || tree.stdout)) || 'rev-parse failed').trim());
+    return stepFail('pin-tree-unresolved', String((tree && (tree.stderr || tree.stdout)) || 'rev-parse failed').trim());
   }
   const rec = store.recordPin(rootDir, { runTag, path: wtPath, treeSha, loopStartCommit: commit });
   if (!rec.ok) {
@@ -417,23 +417,23 @@ function materializePin(rootDir, opts = {}) {
 // input, never a caller-held copy); a pin carrying only path+treeSha is
 // verified directly.
 function pinnedRecordFor(pin, opts) {
-  if (!pin || typeof pin !== 'object') return fail('pin-invalid', 'pin must be an object carrying a runTag or a path+treeSha pair');
+  if (!pin || typeof pin !== 'object') return stepFail('pin-invalid', 'pin must be an object carrying a runTag or a path+treeSha pair');
   if (typeof pin.runTag === 'string' && pin.runTag) {
-    if (!ID_RE.test(pin.runTag)) return fail('pin-invalid', 'runTag must be filename-safe');
-    const store = getStore();
-    if (!store) return fail('store-unavailable', 'the trust store module could not be loaded');
+    if (!RUNTAG_RE.test(pin.runTag)) return stepFail('pin-invalid', 'runTag must be filename-safe');
+    const store = storeOf();
+    if (!store) return stepFail('store-unavailable', 'the trust store module could not be loaded');
     const rootDir = opts && typeof opts.rootDir === 'string' && opts.rootDir ? opts.rootDir : pin.rootDir;
-    if (!rootDir) return fail('pin-invalid', 'a runTag lookup requires rootDir (pin.rootDir or opts.rootDir)');
+    if (!rootDir) return stepFail('pin-invalid', 'a runTag lookup requires rootDir (pin.rootDir or opts.rootDir)');
     const pins = store.readPins(rootDir);
     if (!pins.ok) return { ok: false, reason: pins.reason, detail: pins.detail };
     const rec = pins.pins[pin.runTag];
-    if (!rec) return fail('pin-unknown', `no pinned worktree recorded for run tag ${pin.runTag}`);
+    if (!rec) return stepFail('pin-unknown', `no pinned worktree recorded for run tag ${pin.runTag}`);
     return { ok: true, record: rec, runTag: pin.runTag };
   }
   if (typeof pin.path === 'string' && path.isAbsolute(pin.path) && typeof pin.treeSha === 'string' && GIT_SHA_RE.test(pin.treeSha)) {
     return { ok: true, record: { path: pin.path, treeSha: pin.treeSha }, runTag: null };
   }
-  return fail('pin-invalid', 'pin carries neither a runTag nor a path+treeSha pair');
+  return stepFail('pin-invalid', 'pin carries neither a runTag nor a path+treeSha pair');
 }
 
 // loadPinnedModule(pin, relPath, opts?) — re-verify the recorded tree hash
@@ -446,26 +446,26 @@ function loadPinnedModule(pin, relPath, opts = {}) {
   if (!r.ok) return r;
   const rec = r.record;
   if (typeof relPath !== 'string' || !relPath || path.isAbsolute(relPath) || relPath.split(/[\\/]/).includes('..')) {
-    return fail('pin-module-invalid', 'relPath must be a relative path inside the pinned worktree');
+    return stepFail('pin-module-invalid', 'relPath must be a relative path inside the pinned worktree');
   }
   const git = gitRunnerOf(opts, rec.path);
   let v;
   try { v = git(['rev-parse', 'HEAD^{tree}'], rec.path); }
-  catch (e) { return fail('pin-tampered', e.message); }
+  catch (e) { return stepFail('pin-tampered', e.message); }
   if (!v || v.status !== 0) {
-    return fail('pin-tampered', `pinned worktree HEAD unresolvable: ${String((v && (v.stderr || v.stdout)) || 'git failed').trim()}`);
+    return stepFail('pin-tampered', `pinned worktree HEAD unresolvable: ${String((v && (v.stderr || v.stdout)) || 'git failed').trim()}`);
   }
   const cur = String(v.stdout || '').trim();
   if (cur !== rec.treeSha) {
-    return fail('pin-tampered', `pinned worktree tree ${cur} does not match the recorded ${rec.treeSha}`);
+    return stepFail('pin-tampered', `pinned worktree tree ${cur} does not match the recorded ${rec.treeSha}`);
   }
   const abs = path.resolve(rec.path, relPath);
   if (abs !== rec.path && !abs.startsWith(rec.path + path.sep)) {
-    return fail('pin-module-invalid', 'relPath resolves outside the pinned worktree');
+    return stepFail('pin-module-invalid', 'relPath resolves outside the pinned worktree');
   }
   let mod;
   try { mod = require(abs); }
-  catch (e) { return fail('pin-module-unloadable', e.message); }
+  catch (e) { return stepFail('pin-module-unloadable', e.message); }
   return { ok: true, path: abs, module: mod, runTag: r.runTag, treeSha: rec.treeSha };
 }
 
@@ -478,11 +478,11 @@ function runPinnedLeg(pin, relPath, fnName, args, opts = {}) {
   if (!load.ok) return load;
   const fn = load.module && load.module[fnName];
   if (typeof fn !== 'function') {
-    return fail('leg-fn-missing', `${relPath} does not export a function named ${fnName}`);
+    return stepFail('leg-fn-missing', `${relPath} does not export a function named ${fnName}`);
   }
   let verdict;
   try { verdict = fn(...(Array.isArray(args) ? args : [])); }
-  catch (e) { return fail('leg-threw', e.message); }
+  catch (e) { return stepFail('leg-threw', e.message); }
   return { ok: true, relPath, fn: fnName, runTag: load.runTag, treeSha: load.treeSha, verdict };
 }
 
@@ -499,10 +499,10 @@ function sweepWorktree(git, rootDir, wtPath) {
 // store record (idempotent: an unknown run tag sweeps any stray directory
 // and reports absent).
 function recyclePin(rootDir, runTag, opts = {}) {
-  const store = getStore();
-  if (!store) return fail('store-unavailable', 'the trust store module could not be loaded');
-  if (typeof runTag !== 'string' || !ID_RE.test(runTag)) {
-    return fail('pin-run-tag-invalid', 'runTag must be filename-safe (letters, digits, dot, dash, underscore)');
+  const store = storeOf();
+  if (!store) return stepFail('store-unavailable', 'the trust store module could not be loaded');
+  if (typeof runTag !== 'string' || !RUNTAG_RE.test(runTag)) {
+    return stepFail('pin-run-tag-invalid', 'runTag must be filename-safe (letters, digits, dot, dash, underscore)');
   }
   const pinDir = store.pinWorktreesDir(rootDir);
   const git = gitRunnerOf(opts, rootDir);
@@ -522,7 +522,7 @@ function recyclePin(rootDir, runTag, opts = {}) {
     // a plain directory without metadata removes like any stray; only a
     // path git cannot clear AND that still exists refuses
     try { fs.rmSync(rec.path, { recursive: true, force: true }); }
-    catch (e) { return fail('pin-recycle-failed', `${rec.path}: ${e.message}`); }
+    catch (e) { return stepFail('pin-recycle-failed', `${rec.path}: ${e.message}`); }
   }
   try { git(['worktree', 'prune'], rootDir); } catch { /* best effort */ }
   const drop = store.dropPin(rootDir, runTag);
@@ -533,8 +533,8 @@ function recyclePin(rootDir, runTag, opts = {}) {
 // lazyRecyclePins(rootDir, { liveRunTags, gitRunner? }) — recycle every
 // recorded pin whose run tag is not live (run-end and lazy sweeps).
 function lazyRecyclePins(rootDir, opts = {}) {
-  const store = getStore();
-  if (!store) return fail('store-unavailable', 'the trust store module could not be loaded');
+  const store = storeOf();
+  if (!store) return stepFail('store-unavailable', 'the trust store module could not be loaded');
   const pins = store.readPins(rootDir);
   if (!pins.ok) return { ok: false, reason: pins.reason, detail: pins.detail };
   const live = new Set(Array.isArray(opts.liveRunTags) ? opts.liveRunTags.map(String) : []);
@@ -585,7 +585,7 @@ const WAVE_PROMPT_TEMPLATE = [
   'Land exactly one commit on the work branch for this wave before you exit.',
   'Never touch the dispatch table, runner-critical paths, the plan snapshot, the spec, or any ref besides the work branch tip.',
   'When the wave genuinely needs no change, write a file named "noop" holding one reason line into your scratch directory, then exit.',
-  'This session is one-shot: finish the wave or fail with a clear error; never loop.',
+  'This session is one-shot: finish the wave or stepFail with a clear error; never loop.',
 ].join('\n');
 const WAVE_PROMPT_TOKENS = Object.freeze(['wave', 'taskIds']);
 
@@ -617,15 +617,15 @@ function renderWavePrompt(ctx, template) {
   const tpl = typeof template === 'string' ? template : WAVE_PROMPT_TEMPLATE;
   for (const m of tpl.matchAll(/\{([A-Za-z][A-Za-z0-9]*)\}/g)) {
     if (!WAVE_PROMPT_TOKENS.includes(m[1])) {
-      return fail('prompt-token-refused', `template carries unsanctioned token '{${m[1]}}' — only {wave} and {taskIds} may appear`);
+      return stepFail('prompt-token-refused', `template carries unsanctioned token '{${m[1]}}' — only {wave} and {taskIds} may appear`);
     }
   }
   if (!ctx || !Number.isInteger(ctx.wave) || ctx.wave < 1) {
-    return fail('invalid-wave', 'wave must be an integer >= 1');
+    return stepFail('invalid-wave', 'wave must be an integer >= 1');
   }
   if (!Array.isArray(ctx.taskIds) || !ctx.taskIds.length
     || !ctx.taskIds.every((id) => typeof id === 'string' && id)) {
-    return fail('invalid-task-ids', 'taskIds must be a non-empty array of task id strings');
+    return stepFail('invalid-task-ids', 'taskIds must be a non-empty array of task id strings');
   }
   const prompt = tpl.replaceAll('{wave}', String(ctx.wave)).replaceAll('{taskIds}', ctx.taskIds.join(','));
   return { ok: true, prompt };
@@ -633,10 +633,10 @@ function renderWavePrompt(ctx, template) {
 
 // Record the runner template in the trust store: save when absent,
 // verify-equal when present (a drifted hash means earlier waves ran under a
-// different prompt than the current template — fail closed).
+// different prompt than the current template — stepFail closed).
 function ensureWavePromptRecorded(rootDir) {
-  const store = getStore();
-  if (!store) return fail('store-unavailable', 'the trust store module could not be loaded');
+  const store = storeOf();
+  if (!store) return stepFail('store-unavailable', 'the trust store module could not be loaded');
   const loaded = store.load(rootDir);
   if (!loaded.ok) return loaded;
   const cur = loaded.store.snapshots[WAVE_PROMPT_KIND];
@@ -690,7 +690,7 @@ function specPathIn(rootDir, state) {
 // ops→task require edge.
 function waveGroupsOf(snapshot) {
   if (!snapshot || !Array.isArray(snapshot.tasks) || !snapshot.tasks.length) {
-    return fail('snapshot-empty', 'the frozen plan snapshot carries no tasks');
+    return stepFail('snapshot-empty', 'the frozen plan snapshot carries no tasks');
   }
   const v = snapshot && snapshot.meta && snapshot.meta.waveValidation;
   if (v && !v.ok) {
@@ -705,10 +705,10 @@ function waveGroupsOf(snapshot) {
   const groups = new Map();
   for (const t of snapshot.tasks) {
     if (!t || typeof t.id !== 'string' || !t.id || !Number.isInteger(t.wave) || t.wave < 1) {
-      return fail('snapshot-task-invalid', `snapshot task ${JSON.stringify(t && t.id)} carries no usable wave assignment`);
+      return stepFail('snapshot-task-invalid', `snapshot task ${JSON.stringify(t && t.id)} carries no usable wave assignment`);
     }
     if (!Array.isArray(t.files)) {
-      return fail('snapshot-task-invalid', `snapshot task ${t.id} carries no declared files array`);
+      return stepFail('snapshot-task-invalid', `snapshot task ${t.id} carries no declared files array`);
     }
     if (!groups.has(t.wave)) groups.set(t.wave, []);
     groups.get(t.wave).push(t);
@@ -863,13 +863,13 @@ function verifyPin(pin, opts = {}) {
   const git = gitRunnerOf(opts, rec.path);
   let v;
   try { v = git(['rev-parse', 'HEAD^{tree}'], rec.path); }
-  catch (e) { return fail('pin-tampered', e.message); }
+  catch (e) { return stepFail('pin-tampered', e.message); }
   if (!v || v.status !== 0) {
-    return fail('pin-tampered', 'pinned worktree HEAD unresolvable');
+    return stepFail('pin-tampered', 'pinned worktree HEAD unresolvable');
   }
   const cur = String(v.stdout || '').trim();
   if (cur !== rec.treeSha) {
-    return fail('pin-tampered', `pinned worktree tree ${cur} does not match the recorded ${rec.treeSha}`);
+    return stepFail('pin-tampered', `pinned worktree tree ${cur} does not match the recorded ${rec.treeSha}`);
   }
   return { ok: true, treeSha: cur, runTag: r.runTag };
 }
@@ -944,7 +944,7 @@ async function evaluateWaveOutput(a) {
     if (!pv.ok) return hold('frozen-edit', `pinned worktree drifted: ${pv.detail || pv.reason}`);
   }
   // dispatch-table stamp + runner-critical release gate
-  const store = getStore();
+  const store = storeOf();
   const stampRead = store.readDispatchTableStamp(a.rootDir);
   if (!stampRead.ok) return { action: 'pause', reason: stampRead.reason, detail: stampRead.detail, path: stampRead.path };
   const tableSha = sha256FileSyncSafe(a.tableFile);
@@ -1008,7 +1008,7 @@ function validateWaveCtx(snapshot, ctx) {
   if (!ctx || typeof ctx.rootDir !== 'string' || !ctx.rootDir) {
     return { ok: false, status: 'refused', reason: 'invalid-root', detail: 'ctx.rootDir required', waves: [] };
   }
-  if (typeof ctx.taskId !== 'string' || !ID_RE.test(ctx.taskId)) {
+  if (typeof ctx.taskId !== 'string' || !RUNTAG_RE.test(ctx.taskId)) {
     return { ok: false, status: 'refused', reason: 'invalid-task-id', detail: 'ctx.taskId must be filename-safe', waves: [] };
   }
   if (typeof ctx.workBranch !== 'string' || !ctx.workBranch || /\s/.test(ctx.workBranch)) {
@@ -1029,7 +1029,7 @@ function entryFrozenProblem(snapshot, ctx, rootDir, git) {
   if (fr) {
     return { ok: false, status: 'paused', paused: true, reason: 'external-mutation', detail: fr, waves: [] };
   }
-  const store = getStore();
+  const store = storeOf();
   const stampRead = store.readDispatchTableStamp(rootDir);
   if (!stampRead.ok) return { ...stampRead, waves: [] };
   if (stampRead.stamp != null) {
@@ -1098,8 +1098,8 @@ async function runWaveDispatch(snapshot, ctx = {}) {
   const rootDir = path.resolve(ctx.rootDir);
   const git = gitRunnerOf(ctx, rootDir);
   const now = typeof ctx.now === 'function' ? ctx.now : Date.now;
-  const store = getStore();
-  if (!store) return fail('store-unavailable', 'the trust store module could not be loaded');
+  const store = storeOf();
+  if (!store) return stepFail('store-unavailable', 'the trust store module could not be loaded');
 
   const recorded = ensureWavePromptRecorded(rootDir);
   if (!recorded.ok) {
@@ -1354,8 +1354,8 @@ async function reconcileWaves(snapshot, ctx = {}) {
   if (!valid.ok) return valid;
   const rootDir = path.resolve(ctx.rootDir);
   const git = gitRunnerOf(ctx, rootDir);
-  const store = getStore();
-  if (!store) return fail('store-unavailable', 'the trust store module could not be loaded');
+  const store = storeOf();
+  if (!store) return stepFail('store-unavailable', 'the trust store module could not be loaded');
   const records = store.readWaveRecords(rootDir);
   if (!records.ok) return { ...records, waves: [] };
   const tableFile = typeof ctx.tablePath === 'string' && ctx.tablePath ? ctx.tablePath : path.join(rootDir, DISPATCH_TABLE_REL);

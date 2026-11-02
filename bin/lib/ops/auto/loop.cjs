@@ -168,7 +168,7 @@ function stageExitPrompt(ctx) {
 }
 
 // sha256 of one file's bytes, null when unreadable.
-function sha256FileSync(p) {
+function hashFileSha256(p) {
   try { return crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex'); }
   catch { return null; }
 }
@@ -229,7 +229,7 @@ function defaultModelResolver(slot) {
 function verifyDispatchTableStamp(rootDir, tableFile) {
   const read = store.readDispatchTableStamp(rootDir);
   if (!read.ok) return { ok: false, ...read };
-  const live = sha256FileSync(tableFile);
+  const live = hashFileSha256(tableFile);
   if (read.stamp == null) {
     return { ok: false, reason: 'dispatch-table-drift', detail: 'no dispatch-table stamp recorded for this store' };
   }
@@ -553,7 +553,7 @@ async function drive(ctx) {
   const dispatchTable = tableLoad.table;
   const runId = crypto.randomUUID();
   const runTag = runId.slice(0, 8);
-  const tableSha = sha256FileSync(tableFile);
+  const tableSha = hashFileSha256(tableFile);
   if (tableSha == null) {
     return report({ ok: false, status: 'error', reason: 'dispatch-table-unreadable', file: tableFile }, { iterations, breaker: null });
   }

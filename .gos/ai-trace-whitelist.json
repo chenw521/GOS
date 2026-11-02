@@ -635,6 +635,12 @@
     ]
   },
   {
+    "path": "bin/lib/ops/auto/breaker.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
     "path": "bin/lib/ops/auto/launcher.cjs",
     "category": "in-flight-sweep",
     "maxHits": 1,
@@ -642,6 +648,12 @@
   },
   {
     "path": "bin/lib/ops/auto/store.cjs",
+    "category": "in-flight-sweep",
+    "maxHits": 5,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "bin/lib/ops/auto/workers.cjs",
     "category": "in-flight-sweep",
     "maxHits": 2,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
@@ -708,83 +720,79 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 74,
+        "line": 75,
         "sha256": "c038f141933b6b6f24c031f1914f9c20ccc16fd299c04b0a7a83ac7c9335f81c"
       },
       {
-        "line": 170,
+        "line": 171,
         "sha256": "3fb0dbfda6bab9ba93d53e37ba65c687980e594fddb66f18b12a9a4913f8a00c"
       },
       {
-        "line": 190,
+        "line": 191,
         "sha256": "28776075c6125071b4119585c886163cfe6844f25ca99c471f066a5e20a0b448"
       },
       {
-        "line": 197,
+        "line": 198,
         "sha256": "938ec32285ffcdf6b0a9884742b6d672d442974b400bd0e1722eb26ef7b3a4b7"
       },
       {
-        "line": 226,
+        "line": 227,
         "sha256": "873c71eb3a7dce3239349c9dad4196b00421981a7323892df06d314bd16e1afd"
       },
       {
-        "line": 234,
+        "line": 235,
         "sha256": "ec9638a2f0f2c5e6f1096d7b882bde74979df79912755ed7c2358ecdc1b0003b"
       },
       {
-        "line": 324,
+        "line": 325,
         "sha256": "2aa8581bc82dddb1e77413ade8aaaa4ed625c062b30b0b174d8eddf2add25064"
       },
       {
-        "line": 344,
+        "line": 345,
         "sha256": "dd270527073e472dd3e56dc87d782bbf2dbe804b6ea1fd6dcfcd8c942a490000"
       },
       {
-        "line": 354,
+        "line": 355,
         "sha256": "d1846688e0f770e1fb50772d65c5d3e1b39e328df5415c1b3f8fff99e535f921"
       },
       {
-        "line": 548,
+        "line": 549,
         "sha256": "7fbbd5482f6b6c9e5c52f1a597e72a178604b2c87bda40dbd326854dfac32d90"
       },
       {
-        "line": 573,
+        "line": 574,
         "sha256": "e49968e9ccfbd292bfc7d3c73575e12ff82e1719f00ff52975fc78f4613e6681"
       },
       {
-        "line": 672,
-        "sha256": "af52abb2e8bb517c35de7f3eefb9506167750108c4f946e3a1fda9f3f69c6b65"
-      },
-      {
-        "line": 717,
-        "sha256": "a7818a133d907b0b4a888f4b89e2f50e78b46866daf52527d3b2db8a8d26e9c2"
-      },
-      {
-        "line": 722,
+        "line": 685,
         "sha256": "f69cdae81003f8cdcf1de1b2a11b77fd714f66025a5d8894939329d35669756f"
       },
       {
-        "line": 770,
+        "line": 752,
         "sha256": "9e738a1abff613739e7cd9ddeb2f253493c672c18734ea82afbbb8f788f603f3"
       },
       {
-        "line": 775,
+        "line": 757,
         "sha256": "aa8d30ee0dbf4e2b2bd9f1cb75fc54495b6a76232e236aa8bc43a6079877107a"
       },
       {
-        "line": 957,
+        "line": 939,
         "sha256": "5d6c9768aabde105b966bc8ed23bab733dc648e376e2ba1dc4a9998650ec07cc"
       },
       {
-        "line": 967,
+        "line": 949,
         "sha256": "6d3196b5e6a8ffbffa3a81b00146cbe43f0993099f3a37f75cfcd87e2910a6dc"
       },
       {
-        "line": 1262,
+        "line": 1244,
         "sha256": "3471b41ccdef2d24fb7a74200e8483f22be994e0e242eed44e74ee4f33f2a2a5"
       },
       {
-        "line": 1278,
+        "line": 1277,
+        "sha256": "af52abb2e8bb517c35de7f3eefb9506167750108c4f946e3a1fda9f3f69c6b65"
+      },
+      {
+        "line": 1314,
         "sha256": "76b61f6ea9edff48418c510972f1a37168708b30c4ec1969ae883ca70632f7db"
       }
     ]
@@ -792,7 +800,7 @@
   {
     "path": "bin/lib/ops/gate.cjs",
     "category": "in-flight-sweep",
-    "maxHits": 34,
+    "maxHits": 2,
     "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
@@ -881,15 +889,15 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 263,
+        "line": 281,
         "sha256": "ba595698c5feccc15e9b3b8fc0a1cff6f2665d21d92f24060ef13949f9e536ad"
       },
       {
-        "line": 478,
+        "line": 496,
         "sha256": "8638628646a84624acfd64faf64766d6f92c2a8ccb2423e483657dbc3afed673"
       },
       {
-        "line": 591,
+        "line": 609,
         "sha256": "829ec48da19a6121f8d61b41da0dae442d73885705855f41cc81f083b6b69ae5"
       }
     ]
@@ -923,36 +931,30 @@
         "sha256": "a064e8412ae3d281e5c96fe898775d078c92db514fc636ddcf350f155ba24c66"
       },
       {
-        "line": 351,
+        "line": 376,
         "sha256": "aa8fe970ed66b9709c6d5d86d529747fc96b06d4e6b4592fe42d0b8bcddc9cc6"
       },
       {
-        "line": 367,
+        "line": 392,
         "sha256": "a4f6de1c08fe635a6d35acbfffbda8d2cf7f66d25d9d6248d5e5649b0c697f4b"
       },
       {
-        "line": 413,
+        "line": 444,
         "sha256": "4db0d21811326a7b3d419cd2248bd3285ce39ba2ad16cec26fec864218a6ca86"
       },
       {
-        "line": 476,
+        "line": 507,
         "sha256": "2cb3e3cdb36470b0e240873a3a0d4e7cbd6f5cf983787c13db2a3ed932220b94"
       },
       {
-        "line": 479,
+        "line": 510,
         "sha256": "a6069318b2995096085266d5104175719d458edc088e727dd37307ec98c61f1b"
       },
       {
-        "line": 481,
+        "line": 512,
         "sha256": "de87e2674cddab5f2dd808fed2d807f9284d03fe53a0cdb8673986b190bf0397"
       }
     ]
-  },
-  {
-    "path": "bin/lib/task/commit.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 9,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/task/context.cjs",
@@ -994,12 +996,6 @@
         "sha256": "8815a4d2e597b3020e9137c05efd61d1c0209ca65df0d2a956f177795e83a0c0"
       }
     ]
-  },
-  {
-    "path": "bin/lib/task/plansnap.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "bin/lib/task/stage.cjs",
@@ -1113,12 +1109,6 @@
     ]
   },
   {
-    "path": "test/run-sections.sh",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
-  },
-  {
     "path": "test/sections/T10-security-e2e.test.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -1132,6 +1122,24 @@
         "sha256": "70d8651708941ddfd40596ba17331471e55eabb227571a98607473cc2e4a04f3"
       }
     ]
+  },
+  {
+    "path": "test/sections/T104-auto-core.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 8,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T107-auto-dispatch.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/T108-auto-wave-contracts.test.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 6,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/T12-wiring.test.sh",
