@@ -41,6 +41,86 @@
       "anchor": null,
       "covered": false,
       "covered_by": null
+    },
+    {
+      "id": "D-50",
+      "title": "The dispatch table is tracked data, validated fail-closed",
+      "rationale": "Three consumers (loop compose, spawnreg grants, nav hints) need one truth; tracked JSON with launcher-style fail-closed shape checks; bounds live in runner code.",
+      "birth_phase": "P0",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-51",
+      "title": "Two worker forms: script workers never run an LLM, never run repo code in-process",
+      "rationale": "Class S fixed-argv sandboxed spawns; Class P pinned-worktree legs; execution-integrity pin closes the post-BUILD module-load window.",
+      "birth_phase": "P0",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-52",
+      "title": "BUILD wave dispatch under the three contracts",
+      "rationale": "Runner-side iterator over the frozen snapshot; input prompt pointers only; process deny/frozen checks; output one commit within declared files; wave-unit breaker labels.",
+      "birth_phase": "P0",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-53",
+      "title": "Trust semantics split into three named tiers",
+      "rationale": "Mechanical clearance (stamp pairing), progress release (per-stage release check), human approval (never delegated); ratify writes cleared with legacy tolerance.",
+      "birth_phase": "P0",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-54",
+      "title": "Spawn telemetry: model pin, command counts, dual-window capture",
+      "rationale": "Runner-enforced model argv; advisory self-report fields never classify; head 256KB + tail 1MB sidecars under the store; windows pruned with stamps.",
+      "birth_phase": "P0",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-55",
+      "title": "Per-stage capability floors and verb grants",
+      "rationale": "Dispatch-declared profiles and grants; store-side authoritative registry with ro-bound manifests and request/ack admission; caps bounded by the hard ceiling.",
+      "birth_phase": "P0",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-56",
+      "title": "Nav hints consume the dispatch table and the auto store",
+      "rationale": "Task facade keeps the layer graph legal; read-only store reads; hint names artifact, advance verb, human-gate refusal in marker sessions.",
+      "birth_phase": "P0",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-57",
+      "title": "One shared substrate: constants home, single spawn runner, store mutex",
+      "rationale": "SPAWN_MAX_BUFFER/DEFAULT_LIMITS/DEFAULT_WALL_SEC defined once; idle killer inherited by redteam by construction; mutate serialized fail-closed.",
+      "birth_phase": "P0",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
     }
   ],
   "observable_truths": [
@@ -117,11 +197,18 @@
       "evidence": null
     }
   ],
-  "gaps": [],
+  "gaps": [
+    {
+      "id": "G-1793589937032",
+      "type": "major",
+      "description": "Fluid back to PLAN: --reason plan snapshot must re-freeze: decision ids remapped to phase-global D-50..D-57 and T11 declares registry.cjs (gate guidance on commit build)",
+      "status": "open"
+    }
+  ],
   "activation_source": "headless",
   "task_head": "feffe37d5753571bec6ce5c329c8bee8a7670571",
   "spec_gate_version": 3,
-  "spec_sha256": "809cc9bd1997326d4c843a7b52a25cef7ad23d4b66d888cc8c9bd38c7a2687f3",
+  "spec_sha256": "fe1fe333046699945be62c57de3b9b7cdddd335e4d0a02f3043a197629ac5609",
   "plan_snapshot": {
     "tasks": [
       {
@@ -131,12 +218,13 @@
         ],
         "files": [
           ".gos/state.json"
-        ]
+        ],
+        "wave": 1
       },
       {
         "id": "T2",
         "covers": [
-          "D-8",
+          "D-57",
           "D-49"
         ],
         "files": [
@@ -146,56 +234,61 @@
           "bin/lib/ops/auto/store.cjs",
           "bin/lib/ops/auto/breaker.cjs",
           "bin/lib/ops/auto/adapters/opencode.cjs"
-        ]
+        ],
+        "wave": 1
       },
       {
         "id": "T3",
         "covers": [
-          "D-8",
-          "D-5"
+          "D-57",
+          "D-54"
         ],
         "files": [
           "bin/lib/ops/auto/spawnrun.cjs",
           "bin/lib/ops/auto/loop.cjs",
           "bin/lib/ops/auto/redteam.cjs",
           "test/sections/T105-auto-depth.test.sh"
-        ]
+        ],
+        "wave": 1
       },
       {
         "id": "T4",
         "covers": [
-          "D-8",
+          "D-57",
           "D-49"
         ],
         "files": [
           "bin/lib/ops/auto/store.cjs",
           "test/sections/T105-auto-depth.test.sh"
-        ]
+        ],
+        "wave": 1
       },
       {
         "id": "T5",
         "covers": [
-          "D-5"
+          "D-54"
         ],
         "files": [
           "bin/lib/core/sanitize.cjs",
           "test/sections/T107-auto-dispatch.test.sh"
-        ]
+        ],
+        "wave": 1
       },
       {
         "id": "T6",
         "covers": [
-          "D-4"
+          "D-53"
         ],
         "files": [
           "bin/lib/core/state.cjs",
           "test/sections/T105-auto-depth.test.sh"
-        ]
+        ],
+        "wave": 1
       },
       {
         "id": "T7",
         "covers": [
-          "D-1",
+          "D-50",
           "R-01"
         ],
         "files": [
@@ -203,91 +296,100 @@
           "bin/lib/ops/auto/workers.cjs",
           "census.json",
           "test/sections/T107-auto-dispatch.test.sh"
-        ]
+        ],
+        "wave": 2
       },
       {
         "id": "T8",
         "covers": [
-          "D-5"
+          "D-54"
         ],
         "files": [
           "bin/lib/ops/auto/store.cjs",
           "test/sections/T105-auto-depth.test.sh"
-        ]
+        ],
+        "wave": 2
       },
       {
         "id": "T9",
         "covers": [
-          "D-6",
+          "D-55",
           "D-49"
         ],
         "files": [
           "bin/lib/core/spawnreg.cjs",
           "bin/lib/ops/auto/store.cjs",
           "test/sections/T106-auto-spawn-channel.test.sh"
-        ]
+        ],
+        "wave": 2
       },
       {
         "id": "T10",
         "covers": [
-          "D-2",
-          "D-3",
-          "D-6"
+          "D-51",
+          "D-52",
+          "D-55"
         ],
         "files": [
           "bin/lib/ops/auto/launcher.cjs",
           "test/sections/T107-auto-dispatch.test.sh"
-        ]
+        ],
+        "wave": 2
       },
       {
         "id": "T11",
         "covers": [
-          "D-5"
+          "D-54"
         ],
         "files": [
           "bin/lib/ops/auto/adapters/opencode.cjs",
           "bin/lib/ops/auto/adapters/codex.cjs",
+          "bin/lib/ops/auto/adapters/registry.cjs",
           "test/sections/T105-auto-depth.test.sh"
-        ]
+        ],
+        "wave": 2
       },
       {
         "id": "T12",
         "covers": [
-          "D-2"
+          "D-51"
         ],
         "files": [
           "bin/lib/ops/gate.cjs",
           "test/run-sections.sh",
           "test/sections/T107-auto-dispatch.test.sh"
-        ]
+        ],
+        "wave": 3
       },
       {
         "id": "T13",
         "covers": [
-          "D-2",
-          "D-1"
+          "D-51",
+          "D-50"
         ],
         "files": [
           "bin/lib/ops/auto/workers.cjs",
           "bin/lib/ops/auto/store.cjs",
           "test/sections/T107-auto-dispatch.test.sh"
-        ]
+        ],
+        "wave": 3
       },
       {
         "id": "T14",
         "covers": [
-          "D-3"
+          "D-52"
         ],
         "files": [
           "bin/lib/task/plansnap.cjs",
           "bin/lib/task/commit.cjs",
           "test/sections/T105-auto-depth.test.sh"
-        ]
+        ],
+        "wave": 3
       },
       {
         "id": "T15",
         "covers": [
-          "D-3",
+          "D-52",
           "R-01"
         ],
         "files": [
@@ -295,40 +397,43 @@
           "bin/lib/ops/auto/breaker.cjs",
           "bin/lib/ops/auto/store.cjs",
           "test/sections/T108-auto-wave-contracts.test.sh"
-        ]
+        ],
+        "wave": 3
       },
       {
         "id": "T16",
         "covers": [
-          "D-1",
-          "D-2",
-          "D-3",
-          "D-5",
+          "D-50",
+          "D-51",
+          "D-52",
+          "D-54",
           "R-01"
         ],
         "files": [
           "bin/lib/ops/auto/loop.cjs",
           "test/sections/T108-auto-wave-contracts.test.sh",
           "test/sections/T104-auto-core.test.sh"
-        ]
+        ],
+        "wave": 3
       },
       {
         "id": "T17",
         "covers": [
-          "D-4",
+          "D-53",
           "R-01"
         ],
         "files": [
           "bin/lib/ops/auto/ratify.cjs",
           "bin/lib/task/commit.cjs",
           "test/sections/T105-auto-depth.test.sh"
-        ]
+        ],
+        "wave": 3
       },
       {
         "id": "T18",
         "covers": [
-          "D-4",
-          "D-7"
+          "D-53",
+          "D-56"
         ],
         "files": [
           "bin/lib/ops/auto/cli.cjs",
@@ -336,13 +441,14 @@
           "README.md",
           "skills/gos-verify/SKILL.md",
           "test/sections/T104-auto-core.test.sh"
-        ]
+        ],
+        "wave": 4
       },
       {
         "id": "T19",
         "covers": [
-          "D-7",
-          "D-5"
+          "D-56",
+          "D-54"
         ],
         "files": [
           "bin/lib/nav/status.cjs",
@@ -351,7 +457,8 @@
           "bin/lib/core/locales/zh.cjs",
           ".gos/codebase/require-allowlist.json",
           "test/sections/T26-nav-hints.test.sh"
-        ]
+        ],
+        "wave": 4
       },
       {
         "id": "T20",
@@ -366,9 +473,21 @@
           "census.json",
           "test/sections/T106-auto-spawn-channel.test.sh",
           "test/sections/T107-auto-dispatch.test.sh"
-        ]
+        ],
+        "wave": 5
       }
     ],
-    "audit": []
+    "audit": [
+      {
+        "at": "2026-11-02T03:25:42.657Z",
+        "what": "snapshot-force"
+      }
+    ],
+    "meta": {
+      "waveValidation": {
+        "ok": true,
+        "waves": 5
+      }
+    }
   }
 }

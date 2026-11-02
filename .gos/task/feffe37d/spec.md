@@ -89,11 +89,11 @@ split out first (they are the only bundle with no design coupling).
 deepen: any option — ask for another dig round.
 
 Subsumed by the intent (no separate card): default-profile capability gap
-(a6fbd2db — per-stage floors are D-6 below), spawn quality (0f528c0e — the
-three contracts are D-3), feral spawns (3c36cb07 — dispatch discipline and
-grants are D-3/D-6).
+(a6fbd2db — per-stage floors are D-55 below), spawn quality (0f528c0e — the
+three contracts are D-52), feral spawns (3c36cb07 — dispatch discipline and
+grants are D-52/D-55).
 
-### D-1: The dispatch table is tracked data, validated fail-closed
+### D-50: The dispatch table is tracked data, validated fail-closed
 
 | Option | Premise | Pros | Cons | Activates |
 |:--|:--|:--|:--|:--|
@@ -134,7 +134,7 @@ for non-BUILD agent stages and {workspace} for BUILD (a table cannot grant
 {stage, stage-wave}, `worker`/`model_slot` ∈ registry-known names, human
 gates remain hardcoded refusals no table entry can list.
 
-### D-2: Two worker forms — script workers never run an LLM, and never run repo code in-process
+### D-51: Two worker forms — script workers never run an LLM, and never run repo code in-process
 
 | Option | Premise | Pros | Cons | Activates |
 |:--|:--|:--|:--|:--|
@@ -167,7 +167,7 @@ Semantics — execution classes, one integrity rule:
   contract: one runner-created scratch dir per spawn, rw-bound after the
   masks; `TESTBASE` redirected to it (the section runner's base guard
   learns to accept an env-pinned TESTBASE, literal-path fallback kept);
-  git identity env injected (D-3); tmpfs sized explicitly, never default.
+  git identity env injected (D-52); tmpfs sized explicitly, never default.
   Stream telemetry stamps it like any spawn. The trust store stays
   masked inside (mandatory masks unchanged).
 - **Class P (pinned runner-side legs)**: steps that must read the trust
@@ -190,7 +190,7 @@ Semantics — execution classes, one integrity rule:
   its loop keeps the legacy leg shapes for its own run, dispatch-driven
   script spawning proves itself via fixtures, and the pin may roll
   forward after a red-team-passed runner-critical wave (the same rolling
-  semantics as the dispatch-table stamp, D-3).
+  semantics as the dispatch-table stamp, D-52).
 - A step with no clear class refuses to run (fail-closed dispatch entry).
 
 Script-worker verdicts come from return values and exit codes, never
@@ -200,7 +200,7 @@ Class-P-pinned for their orchestration code). Host negotiation moves
 into dispatch consumption: iterations whose entry declares no agent
 worker never probe the host (R2-F10).
 
-### D-3: BUILD wave dispatch under the three contracts
+### D-52: BUILD wave dispatch under the three contracts
 
 | Option | Premise | Pros | Cons | Activates |
 |:--|:--|:--|:--|:--|
@@ -232,7 +232,7 @@ The three contracts (agent BUILD spawns only):
   source is runner-held; repo-derived inputs are parsed ids.
 - **Process (behavioral assertions)**: deny hits = 0 (streaming detector,
   unchanged); advisory telemetry ceilings rendered but never
-  classifying (D-5); frozen files untouched (spec_sha256, plan snapshot
+  classifying (D-54); frozen files untouched (spec_sha256, plan snapshot
   hashes, and the dispatch-table stamp re-verified after every wave);
   the pinned worktree hash unchanged.
 - **Output (artifacts)**: per wave — exactly ONE new commit on the work
@@ -291,7 +291,7 @@ commits is expected (existing rc0-no-advance scoring does not apply inside
 wave iterations — the iterator attributes progress by the wave commit,
 not a stage advance).
 
-### D-4: Trust semantics split into three named tiers
+### D-53: Trust semantics split into three named tiers
 
 | Option | Premise | Pros | Cons | Activates |
 |:--|:--|:--|:--|:--|
@@ -344,12 +344,12 @@ today with no pairing at all. Three closures land with the rename:
 Locale texts, status/resume renders, the SHIP delivery ledger, and
 README's auto section all switch to the new vocabulary.
 
-### D-5: Spawn telemetry — model pin, command counts, dual-window capture
+### D-54: Spawn telemetry — model pin, command counts, dual-window capture
 
 | Option | Premise | Pros | Cons | Activates |
 |:--|:--|:--|:--|:--|
 | Telemetry + dual window | the adapter already accepts spawn args (`--model`) that the loop never passes, and the capture today is tail-only 64 MB with a streaming deny scan | the pin is runner-enforced argv (a spawn cannot choose its model); windows make every held delegation human-readable without retaining unbounded streams | store schema v1→v2 (additive) and a bounded sidecar dir | store stamps, the advisory trend surfaces, and the human debugging path for held stages |
-| Full-stream retention | nothing is ever lost | complete evidence | the redesign was explicitly deferred at the repair task (its D-3 ruled the minimum floor); unbounded disk per spawn | a retention policy this task would have to invent |
+| Full-stream retention | nothing is ever lost | complete evidence | the redesign was explicitly deferred at the repair task (its D-52 ruled the minimum floor); unbounded disk per spawn | a retention policy this task would have to invent |
 | Record nothing | the hash stamp already proves pairing | zero work | the dogfood failure mode (spawn did something other than assigned) is undiagnosable from the record | the status quo blind spot |
 
 why-not: Full-stream retention — re-litigates a ruled deferral; Record
@@ -372,7 +372,7 @@ these observations are HOST-SELF-REPORT: a substituted model can echo the
 pinned name and a batched tool call undercounts commands, so
 `modelObserved`/`commandCount` render as advisory trend fields (labeled
 self-report wherever shown, `unobserved` when absent) and NEVER produce a
-breaker signal; the runner-enforced channel-use budget (D-6) remains the
+breaker signal; the runner-enforced channel-use budget (D-55) remains the
 hard per-spawn counter. Capture keeps head 256 KB + tail 1 MB windows per
 spawn under the store dir (bounded count, pruned with the stamp cap); the
 stamp hashes the retained windows and total byte count. The deny scan
@@ -382,7 +382,7 @@ review texts, hint lines quoting streams) pass a strict sanitizer (ANSI/CSI
 escape stripping) and carry a spawn-output marker — never native chrome
 (R1-F7).
 
-### D-6: Per-stage capability floors and verb grants
+### D-55: Per-stage capability floors and verb grants
 
 | Option | Premise | Pros | Cons | Activates |
 |:--|:--|:--|:--|:--|
@@ -393,7 +393,7 @@ escape stripping) and carry a spawn-output marker — never native chrome
 why-not: Global widen — the rejected blunt option; Kernel per-file — wrong
 granularity for the enforcement available.
 recommendation: Dispatch-declared floors — conditional: the artifact
-contract (D-3) is the precision layer for WHAT changed; the profile is the
+contract (D-52) is the precision layer for WHAT changed; the profile is the
 coarse layer for WHERE writes can land; both must agree before a wave
 releases.
 deepen: any option — ask for another dig round.
@@ -428,9 +428,9 @@ ahead of grants. Entries without grants (legacy) keep today's four-verb
 default. Use budgets: BUILD wave entries raise the per-spawn cap
 (checkpoint saves + section runs + the exit commit); THINK/PLAN/VERIFY
 keep the current 16; every cap is bounded by the runner-side hard ceiling
-from D-1.
+from D-50.
 
-### D-7: Nav hints consume the dispatch table and the auto store
+### D-56: Nav hints consume the dispatch table and the auto store
 
 | Option | Premise | Pros | Cons | Activates |
 |:--|:--|:--|:--|:--|
@@ -447,7 +447,7 @@ stage's expected artifact and advance verb (from the dispatch table), plus
 "human gates are refused here" inside spawned sessions.
 deepen: any option — ask for another dig round.
 
-### D-8: One shared substrate (DRY + mutate serialization + odd-path fixtures)
+### D-57: One shared substrate (DRY + mutate serialization + odd-path fixtures)
 
 | Option | Premise | Pros | Cons | Activates |
 |:--|:--|:--|:--|:--|
@@ -502,7 +502,7 @@ In scope:
   plans, pinned Class-P legs, agent wave driver, three-contract
   verification (one-commit range, refs snapshots, safe-path enforcement)
 - bin/lib/ops/auto/limits.cjs (new) + bin/lib/ops/auto/spawnrun.cjs (new)
-  — D-8 substrate (single constants home + the one async spawn runner);
+  — D-57 substrate (single constants home + the one async spawn runner);
   loop/redteam/store/breaker/adapters consume
 - bin/lib/core/sanitize.cjs (new, dependency-free) — spawn-text sanitizer
   consumed by EVERY surface rendering spawn bytes (status hints, stream
@@ -513,7 +513,7 @@ In scope:
 - bin/lib/ops/auto/ratify.cjs — clearance vocabulary, provenance
   re-verification, approvals-baseline refusal, legacy tolerance
 - bin/lib/ops/auto/cli.cjs — `auto status` per-stage dispatch view,
-  clearance renders, the hint-provider export D-7 wires
+  clearance renders, the hint-provider export D-56 wires
 - bin/lib/ops/auto/launcher.cjs — post-mask grant-manifest ro-binds,
   Class S scratch dirs + tmpfs sizing, git-identity env injection
 - bin/lib/ops/auto/adapters/opencode.cjs + codex.cjs — tolerant telemetry
@@ -531,7 +531,7 @@ In scope:
 - test/run-sections.sh — TESTBASE guard accepts the env-pinned sandbox
   base (literal-path fallback kept)
 - bin/lib/nav/status.cjs + task/index facade + locales en/zh — auto-aware
-  hints (D-7), sanitized rendering
+  hints (D-56), sanitized rendering
 - codebase map ledger duties in the same PR: T46 scan-set/fnTotal/fnDist
   drift declarations for the new modules, T25 frozen-set update, and the
   require-allowlist entry for task→ops/auto if the facade needs one

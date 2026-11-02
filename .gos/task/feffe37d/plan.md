@@ -5,14 +5,14 @@
 ## Decision Inventory
 
 - [x] D-49: Scope bundles (spawn DRY, mutate serialization, odd-path fixtures) → T2, T4, T9, T20
-- [x] D-1: Tracked dispatch table, fail-closed validation → T7, T13, T16
-- [x] D-2: Script workers + pinned runner-side legs → T10, T12, T13, T16
-- [x] D-3: BUILD wave dispatch under three contracts → T10, T14, T15, T16
-- [x] D-4: Trust tiers — mechanical clearance rename + provenance → T6, T17, T18
-- [x] D-5: Spawn telemetry, dual-window capture, sanitizer → T3, T5, T8, T11, T16, T19
-- [x] D-6: Dispatch-declared capability floors + verb grants → T9, T10
-- [x] D-7: Nav hints consume dispatch table + auto store → T18, T19
-- [x] D-8: One shared substrate → T2, T3, T4
+- [x] D-50: Tracked dispatch table, fail-closed validation → T7, T13, T16
+- [x] D-51: Script workers + pinned runner-side legs → T10, T12, T13, T16
+- [x] D-52: BUILD wave dispatch under three contracts → T10, T14, T15, T16
+- [x] D-53: Trust tiers — mechanical clearance rename + provenance → T6, T17, T18
+- [x] D-54: Spawn telemetry, dual-window capture, sanitizer → T3, T5, T8, T11, T16, T19
+- [x] D-55: Dispatch-declared capability floors + verb grants → T9, T10
+- [x] D-56: Nav hints consume dispatch table + auto store → T18, T19
+- [x] D-57: One shared substrate → T2, T3, T4
 
 ## Requirement Claims
 
@@ -51,12 +51,12 @@
 - **Depends on**: none
 
 #### T2: limits.cjs — single constants home
-- **Covers**: D-8, D-49
+- **Covers**: D-57, D-49
 - **Files**: bin/lib/ops/auto/limits.cjs, bin/lib/ops/auto/loop.cjs, bin/lib/ops/auto/redteam.cjs, bin/lib/ops/auto/store.cjs, bin/lib/ops/auto/breaker.cjs, bin/lib/ops/auto/adapters/opencode.cjs
 - **Read first**: bin/lib/ops/auto/store.cjs, bin/lib/ops/auto/breaker.cjs
 - **Approach**: New dependency-free module exporting SPAWN_MAX_BUFFER,
   DEFAULT_LIMITS, DEFAULT_WALL_SEC and the runner-side hard use-cap ceiling
-  (bound for D-1 use_cap validation). The five consumers drop their local
+  (bound for D-50 use_cap validation). The five consumers drop their local
   copies and require the namespace module (sibling path, no destructuring).
 - **Done when**: `grep -rn "SPAWN_MAX_BUFFER =" bin/lib` matches exactly
   bin/lib/ops/auto/limits.cjs (same one-match check for DEFAULT_LIMITS and
@@ -64,7 +64,7 @@
 - **Depends on**: none
 
 #### T3: spawnrun.cjs — one async spawn runner
-- **Covers**: D-8, D-5
+- **Covers**: D-57, D-54
 - **Files**: bin/lib/ops/auto/spawnrun.cjs, bin/lib/ops/auto/loop.cjs, bin/lib/ops/auto/redteam.cjs, test/sections/T105-auto-depth.test.sh
 - **Read first**: bin/lib/ops/auto/loop.cjs (loopSpawnRunner), bin/lib/ops/auto/redteam.cjs
 - **Approach**: Union of the two near-duplicate runners as composable
@@ -81,7 +81,7 @@
 - **Depends on**: T2
 
 #### T4: store.mutate serialization
-- **Covers**: D-8, D-49
+- **Covers**: D-57, D-49
 - **Files**: bin/lib/ops/auto/store.cjs, test/sections/T105-auto-depth.test.sh
 - **Read first**: bin/lib/ops/auto/store.cjs (mutate path), bin/lib/core/lock.cjs (holder identity)
 - **Approach**: Wrap the read-modify-write in a mutex file inside the store
@@ -100,7 +100,7 @@
 - **Depends on**: T2
 
 #### T5: core/sanitize.cjs — spawn-text sanitizer
-- **Covers**: D-5
+- **Covers**: D-54
 - **Files**: bin/lib/core/sanitize.cjs, test/sections/T107-auto-dispatch.test.sh
 - **Read first**: bin/lib/core/fsio.cjs (module conventions), test/sections/T106-auto-spawn-channel.test.sh (standalone header pattern)
 - **Approach**: Dependency-free strict sanitizer: ANSI/CSI escape stripping
@@ -115,7 +115,7 @@
 - **Depends on**: none
 
 #### T6: state approvals enum admits cleared
-- **Covers**: D-4
+- **Covers**: D-53
 - **Files**: bin/lib/core/state.cjs, test/sections/T105-auto-depth.test.sh
 - **Read first**: bin/lib/core/state.cjs (approvals validation)
 - **Approach**: Approvals schema accepts object status `cleared` alongside
@@ -129,7 +129,7 @@
 ### Wave 2 (depends on Wave 1 — dispatch table + trust store + channel)
 
 #### T7: Dispatch table template + fail-closed loader
-- **Covers**: D-1, R-01
+- **Covers**: D-50, R-01
 - **Files**: templates/auto-dispatch.json, bin/lib/ops/auto/workers.cjs, census.json, test/sections/T107-auto-dispatch.test.sh
 - **Read first**: templates/auto-profiles/restricted.json, bin/lib/ops/auto/launcher.cjs (loadProfile fail-closed shape checks)
 - **Approach**: Extend the T107 section created in T5. New tracked
@@ -149,7 +149,7 @@
 - **Depends on**: T2
 
 #### T8: Store schema v2 — telemetry stamps + window sidecars
-- **Covers**: D-5
+- **Covers**: D-54
 - **Files**: bin/lib/ops/auto/store.cjs, test/sections/T105-auto-depth.test.sh
 - **Read first**: bin/lib/ops/auto/store.cjs (stamps, load/migrate path)
 - **Approach**: Stamp entries gain optional modelPinned, modelObserved,
@@ -165,7 +165,7 @@
 - **Depends on**: T3, T4
 
 #### T9: spawnreg — store-side registry + request/ack admission
-- **Covers**: D-6, D-49
+- **Covers**: D-55, D-49
 - **Files**: bin/lib/core/spawnreg.cjs, bin/lib/ops/auto/store.cjs, test/sections/T106-auto-spawn-channel.test.sh
 - **Read first**: bin/lib/core/spawnreg.cjs, bin/lib/core/lock.cjs (guardCwd consumption)
 - **Approach**: Authoritative entries move out of .gos/cache/auto-spawn into
@@ -189,7 +189,7 @@
 - **Depends on**: T7, T8
 
 #### T10: Launcher compose — scratch dirs, git identity, kernel tier
-- **Covers**: D-2, D-3, D-6
+- **Covers**: D-51, D-52, D-55
 - **Files**: bin/lib/ops/auto/launcher.cjs, test/sections/T107-auto-dispatch.test.sh
 - **Read first**: bin/lib/ops/auto/launcher.cjs (mask + bind order, post-mask ro-bind precedent)
 - **Approach**: One runner-created scratch dir per spawn, rw-bound after the
@@ -207,8 +207,8 @@
 - **Depends on**: T9
 
 #### T11: Adapter telemetry extractor + model pin argv
-- **Covers**: D-5
-- **Files**: bin/lib/ops/auto/adapters/opencode.cjs, bin/lib/ops/auto/adapters/codex.cjs, test/sections/T105-auto-depth.test.sh
+- **Covers**: D-54
+- **Files**: bin/lib/ops/auto/adapters/opencode.cjs, bin/lib/ops/auto/adapters/codex.cjs, bin/lib/ops/auto/adapters/registry.cjs, test/sections/T105-auto-depth.test.sh
 - **Read first**: bin/lib/ops/auto/adapters/opencode.cjs (spawn args, event parsing)
 - **Approach**: Tolerant extractor over parsed events: model field and
   tool-execution count; absent fields → null. Host-self-report contract:
@@ -227,7 +227,7 @@
 ### Wave 3 (depends on Wave 2 — worker forms, waves, loop)
 
 #### T12: Gate programmatic verdict entry + TESTBASE env pin
-- **Covers**: D-2
+- **Covers**: D-51
 - **Files**: bin/lib/ops/gate.cjs, test/run-sections.sh, test/sections/T107-auto-dispatch.test.sh
 - **Read first**: bin/lib/ops/gate.cjs (cmdGate render/exit shape)
 - **Approach**: Split compute from render in cmdGate: a programmatic entry
@@ -242,7 +242,7 @@
 - **Depends on**: none
 
 #### T13: workers.cjs — worker forms, Class S spawns, Class P pinned legs
-- **Covers**: D-2, D-1
+- **Covers**: D-51, D-50
 - **Files**: bin/lib/ops/auto/workers.cjs, bin/lib/ops/auto/store.cjs, test/sections/T107-auto-dispatch.test.sh
 - **Read first**: bin/lib/ops/auto/launcher.cjs, bin/lib/ops/gate.cjs
 - **Approach**: Script-worker command plans split steps by execution class:
@@ -268,7 +268,7 @@
 - **Depends on**: T7, T10, T12
 
 #### T14: plansnap — wave field + safe-path freeze validation
-- **Covers**: D-3
+- **Covers**: D-52
 - **Files**: bin/lib/task/plansnap.cjs, bin/lib/task/commit.cjs, test/sections/T105-auto-depth.test.sh
 - **Read first**: bin/lib/task/plansnap.cjs
 - **Approach**: Snapshot tasks carry wave; freeze-time validation enforces
@@ -282,7 +282,7 @@
 - **Depends on**: none
 
 #### T15: Wave driver + three contracts + breaker wave accounting
-- **Covers**: D-3, R-01
+- **Covers**: D-52, R-01
 - **Files**: bin/lib/ops/auto/workers.cjs, bin/lib/ops/auto/breaker.cjs, bin/lib/ops/auto/store.cjs, test/sections/T108-auto-wave-contracts.test.sh
 - **Read first**: bin/lib/task/plansnap.cjs, bin/lib/ops/auto/redteam.cjs (round machinery), bin/lib/ops/auto/breaker.cjs
 - **Approach**: Runner-side iterator over the frozen plan_snapshot (never
@@ -327,7 +327,7 @@
 - **Depends on**: T13, T14
 
 #### T16: Loop dispatch integration
-- **Covers**: D-1, D-2, D-3, D-5, R-01
+- **Covers**: D-50, D-51, D-52, D-54, R-01
 - **Files**: bin/lib/ops/auto/loop.cjs, test/sections/T108-auto-wave-contracts.test.sh, test/sections/T104-auto-core.test.sh
 - **Read first**: bin/lib/ops/auto/workers.cjs, bin/lib/ops/auto/spawnrun.cjs
 - **Approach**: Composition driven by the dispatch table — per stage: worker
@@ -346,11 +346,11 @@
   the table on fixtures (THINK restricted, BUILD workspace); an unknown
   stage or table drift mid-run pauses as external-mutation; stamp
   re-verification is observable before consumes; telemetry stamps carry the
-  D-5 fields
+  D-54 fields
 - **Depends on**: T15, T11
 
 #### T17: ratify clearance rename + provenance re-verification
-- **Covers**: D-4, R-01
+- **Covers**: D-53, R-01
 - **Files**: bin/lib/ops/auto/ratify.cjs, bin/lib/task/commit.cjs, test/sections/T105-auto-depth.test.sh
 - **Read first**: bin/lib/ops/auto/ratify.cjs, bin/lib/task/commit.cjs (ratification boundary)
 - **Approach**: ratify() writes status `cleared` (module file keeps its name
@@ -377,7 +377,7 @@
 ### Wave 4 (depends on Wave 3 — render surfaces + hints)
 
 #### T18: auto status dispatch view + clearance renders + wording surfaces
-- **Covers**: D-4, D-7
+- **Covers**: D-53, D-56
 - **Files**: bin/lib/ops/auto/cli.cjs, bin/lib/task/archive.cjs, README.md, skills/gos-verify/SKILL.md, test/sections/T104-auto-core.test.sh
 - **Read first**: bin/lib/ops/auto/cli.cjs, bin/lib/task/archive.cjs (SHIP ledger renders)
 - **Approach**: `gos auto status` prints the resolved per-stage dispatch
@@ -395,7 +395,7 @@
 - **Depends on**: T16, T17
 
 #### T19: Nav auto-aware hints via task facade
-- **Covers**: D-7, D-5
+- **Covers**: D-56, D-54
 - **Files**: bin/lib/nav/status.cjs, bin/lib/task/index.cjs, bin/lib/core/locales/en.cjs, bin/lib/core/locales/zh.cjs, .gos/codebase/require-allowlist.json, test/sections/T26-nav-hints.test.sh
 - **Read first**: bin/lib/ops/auto/cli.cjs (hint provider export), bin/lib/task/commit.cjs (facade precedent)
 - **Approach**: nav→task and task→ops/auto are legal edges (commit.cjs
