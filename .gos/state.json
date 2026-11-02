@@ -2,13 +2,14 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "VERIFY",
+  "current_stage": "SHIP",
   "completed_stages": [
     "INTENT",
     "THINK",
     "PLAN",
     "BUILD",
-    "REVIEW"
+    "REVIEW",
+    "VERIFY"
   ],
   "intent": {
     "summary": "Ship the stage-dispatch blueprint for the auto loop: per-stage worker forms (script workers for mechanical stages like VERIFY, equipped agent workers for BUILD), a three-contract system for BUILD spawns (input skill-contract prompt, process behavioral assertions, output artifacts), wave-granularity dispatch for BUILD, trust-semantics separation (mechanical clearance vs progress release vs human approval - ratify renamed to mechanical clearance), and spawn telemetry (model pin, command counts, head+tail dual-window stream capture)",
@@ -129,74 +130,134 @@
     {
       "id": "T1",
       "description": "VERIFY under auto completes with zero host/LLM spawns when no host adapter is selectable; iteration names script-spawn steps and pinned Class-P legs with verdicts",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T107\"]",
+        "output_excerpt": "✓ probe runs clean (exit 0)",
+        "artifact_path": "test/sections/T107-auto-dispatch.test.sh",
+        "replay": true
+      }
     },
     {
       "id": "T2",
       "description": "Two-wave fixture plan drives two equipped spawns with pointer-only prompts; each wave releases on one commit touching only its declared files",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T108\"]",
+        "output_excerpt": "✓ happy-path probe runs clean (exit 0)",
+        "artifact_path": "test/sections/T108-auto-wave-contracts.test.sh",
+        "replay": true
+      }
     },
     {
       "id": "T3",
       "description": "Undeclared path, frozen-artifact edit, second commit, or foreign ref move classifies contract-violation and holds the wave with the named violation",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T108\"]",
+        "output_excerpt": "✓ happy-path probe runs clean (exit 0)",
+        "artifact_path": "test/sections/T108-auto-wave-contracts.test.sh",
+        "replay": true
+      }
     },
     {
       "id": "T4",
       "description": "PENDING THINK approval converts to status cleared; legacy ratified records read as cleared; forged post-loop-start bare-string approval holds the stage",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T105\"]",
+        "output_excerpt": "✓ AB: marker commit without the approvals baseline fails closed (exit 1)",
+        "artifact_path": "test/sections/T105-auto-depth.test.sh",
+        "replay": true
+      }
     },
     {
       "id": "T5",
       "description": "Stamp telemetry fields render advisory and never produce a breaker signal; the channel use budget stays the hard refusal",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T105\"]",
+        "output_excerpt": "✓ AB: marker commit without the approvals baseline fails closed (exit 1)",
+        "artifact_path": "test/sections/T105-auto-depth.test.sh",
+        "replay": true
+      }
     },
     {
       "id": "T6",
       "description": "BUILD wave checkpoint-save and section verbs admit through the request/ack channel; the same verbs from THINK spawn refused; forged cache entries inert",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T106\"]",
+        "output_excerpt": "✓ refusal exits non-zero (exit 1)",
+        "artifact_path": "test/sections/T106-auto-spawn-channel.test.sh",
+        "replay": true
+      }
     },
     {
       "id": "T7",
       "description": "Red gate holds VERIFY with findings surfaced and no breaker count; tampered pinned-worktree hash refuses the leg; lexical tier refuses BUILD fail-closed",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T107\"]",
+        "output_excerpt": "✓ probe runs clean (exit 0)",
+        "artifact_path": "test/sections/T107-auto-dispatch.test.sh",
+        "replay": true
+      }
     },
     {
       "id": "T8",
       "description": "SPAWN_MAX_BUFFER, DEFAULT_LIMITS, DEFAULT_WALL_SEC defined exactly once under ops/auto; a stalled red-team stream dies at the idle limit",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T105\"]",
+        "output_excerpt": "✓ AB: marker commit without the approvals baseline fails closed (exit 1)",
+        "artifact_path": "test/sections/T105-auto-depth.test.sh",
+        "replay": true
+      }
     },
     {
       "id": "T9",
       "description": "Concurrent store mutators serialize with no lost update; held mutex past the wait fails store-busy; recycled-pid reclaim refused; network-FS store refuses",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T105\"]",
+        "output_excerpt": "✓ AB: marker commit without the approvals baseline fails closed (exit 1)",
+        "artifact_path": "test/sections/T105-auto-depth.test.sh",
+        "replay": true
+      }
     },
     {
       "id": "T10",
       "description": "Registry entry, seed materialization, and dispatch resolution succeed under clone roots with spaces, unicode, and a symlinked root",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T107\"]",
+        "output_excerpt": "✓ probe runs clean (exit 0)",
+        "artifact_path": "test/sections/T107-auto-dispatch.test.sh",
+        "replay": true
+      }
     },
     {
       "id": "T11",
       "description": "Marker-env status names the stage artifact, advance verb, and human-gate refusal; no store prints nothing new and creates nothing; spawn bytes sanitized",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T26\"]",
+        "output_excerpt": "✓ next at archived DONE exits 0 (exit 0)",
+        "artifact_path": "test/sections/T26-nav-hints.test.sh",
+        "replay": true
+      }
     },
     {
       "id": "T12",
       "description": "BUILD/W<n> unit labels trip K per label while three failed waves trip N; loader bounds refuse unknown stages, workers, verbs, and units with named errors",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T108\"]",
+        "output_excerpt": "✓ happy-path probe runs clean (exit 0)",
+        "artifact_path": "test/sections/T108-auto-wave-contracts.test.sh",
+        "replay": true
+      }
     }
   ],
   "gaps": [
@@ -204,7 +265,9 @@
       "id": "G-1793589937032",
       "type": "major",
       "description": "Fluid back to PLAN: --reason plan snapshot must re-freeze: decision ids remapped to phase-global D-50..D-57 and T11 declares registry.cjs (gate guidance on commit build)",
-      "status": "open"
+      "status": "fixed",
+      "resolution": "Backflow was the gate-guided snapshot re-freeze path: stage back plan -> commit plan --force (audit snapshot-force) -> BUILD re-entered and completed; the remap and registry.cjs declaration landed in commits 51f6dd5/82ef4fc",
+      "resolved_at": "2026-11-02T05:52:11.376Z"
     }
   ],
   "activation_source": "headless",
@@ -500,5 +563,6 @@
       "remaining": "",
       "at": "2026-11-02T03:25:48.490Z"
     }
-  ]
+  ],
+  "changelog_user_summary": "Auto loop now dispatches per stage from a tracked table: script workers run mechanical stages with zero LLM spawns, BUILD drives wave-by-wave under three contracts, trust tiers split into mechanical clearance and human approval, and every spawn emits pinned-model telemetry"
 }
