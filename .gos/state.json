@@ -2,7 +2,7 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "SHIP",
+  "current_stage": "DONE",
   "completed_stages": [
     "INTENT",
     "THINK",
@@ -21,10 +21,11 @@
   },
   "approvals": {
     "THINK": "2026-10-31T14:43:12.245Z",
-    "PLAN": "2026-10-31T15:55:45.661Z"
+    "PLAN": "2026-10-31T15:55:45.661Z",
+    "ARCHIVE": "2026-11-02T08:36:30.622Z"
   },
-  "spec_path": ".gos/task/feffe37d/spec.md",
-  "plan_path": ".gos/task/feffe37d/plan.md",
+  "spec_path": ".gos/archive/2026-11-02-v1.0.0-task-ship-the-stage-dispatch-bluepr/task/feffe37d/spec.md",
+  "plan_path": ".gos/archive/2026-11-02-v1.0.0-task-ship-the-stage-dispatch-bluepr/task/feffe37d/plan.md",
   "project": false,
   "requirements": [
     {
@@ -555,14 +556,7 @@
       }
     }
   },
-  "checkpoints": [
-    {
-      "stage": "BUILD",
-      "unit": "all-waves (auto at commit)",
-      "done": "T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,T16,T17,T18,T19,T20",
-      "remaining": "",
-      "at": "2026-11-02T03:25:48.490Z"
-    }
-  ],
-  "changelog_user_summary": "Auto loop now dispatches per stage from a tracked table: script workers run mechanical stages with zero LLM spawns, BUILD drives wave-by-wave under three contracts, trust tiers split into mechanical clearance and human approval, and every spawn emits pinned-model telemetry"
+  "checkpoints": [],
+  "changelog_user_summary": "Auto loop now dispatches per stage from a tracked table: script workers run mechanical stages with zero LLM spawns, BUILD drives wave-by-wave under three contracts, trust tiers split into mechanical clearance and human approval, and every spawn emits pinned-model telemetry",
+  "completed_at": "2026-11-02T08:36:38.070Z"
 }
