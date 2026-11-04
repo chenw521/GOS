@@ -88,6 +88,16 @@ function engineVersionAtLeast(version, min) {
   return true;
 }
 
+// Engine --version output carries the binary name ("bubblewrap 0.13.1");
+// capability floors compare bare dotted numerics, so the numeric token is
+// the version — anything else (empty, non-numeric) stays unknown.
+function numericVersionToken(stdout) {
+  const text = String(stdout == null ? '' : stdout).trim();
+  if (!text) return null;
+  const token = text.split(/\s+/).pop();
+  return /^\d+(\.\d+)*$/.test(token) ? token : null;
+}
+
 // Profile tokens resolve to machine-absolute paths at compose time so the
 // tracked JSON stays correct on every host.
 function resolveTokenPath(p, env) {
@@ -166,7 +176,7 @@ function probeEngine(opts) {
         ], { env, encoding: 'utf8', timeout: 15000 });
       } catch { cap = { error: new Error('capability probe failed') }; }
       if (cap && !cap.error && cap.status === 0) {
-        return { engine: c.name, tier: c.tier, version: (r.stdout || '').trim() || null, probed };
+        return { engine: c.name, tier: c.tier, version: numericVersionToken(r.stdout) || null, probed };
       }
       return {
         engine: null, tier: 'lexical',

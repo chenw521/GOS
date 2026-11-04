@@ -1,9 +1,9 @@
 {
   "current": {
-    "total": 1467,
-    "callgraph": 935,
+    "total": 1468,
+    "callgraph": 936,
     "testof_fn": 107,
-    "fn_count": 873,
+    "fn_count": 874,
     "fns": [
       "absTaskPath",
       "ackWaitMs",
@@ -487,6 +487,7 @@
       "normalizeStampsToV2",
       "normalizeTaskPaths",
       "nulNames",
+      "numericVersionToken",
       "onboarding",
       "orphanAdvisoryLine",
       "padCp",
@@ -1300,6 +1301,7 @@
       "verifyBaseline": "bin/lib/ops/auto/delivery.cjs",
       "runPrivilegedGit": "bin/lib/ops/auto/delivery.cjs",
       "engineVersionAtLeast": "bin/lib/ops/auto/launcher.cjs",
+      "numericVersionToken": "bin/lib/ops/auto/launcher.cjs",
       "resolveTokenPath": "bin/lib/ops/auto/launcher.cjs",
       "loadProfile": "bin/lib/ops/auto/launcher.cjs",
       "missingMandatoryMasks": "bin/lib/ops/auto/launcher.cjs",
@@ -1754,8 +1756,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "8be577c2a6b90428",
-    "at": "2026-11-02T05:39:00.158Z"
+    "fp": "14aeb2e30fd04f38",
+    "at": "2026-11-04T08:17:39.184Z"
   },
   "peak": {
     "total": 2065,

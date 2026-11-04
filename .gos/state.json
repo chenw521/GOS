@@ -1,38 +1,34 @@
 {
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
-  "level": 2,
+  "level": 1,
   "current_stage": "BUILD",
   "completed_stages": [
-    "THINK"
+    "INTENT"
   ],
   "intent": {
-    "summary": "Dogfood the new auto dispatch pipeline on live machinery (PR #50, main 7f6b73b): two cycles via gos auto on --profile workspace — cycle 1 small warm-up task, cycle 2 a real 2+ wave task — verifying (1) VERIFY stage spawns zero LLMs (script workers + pinned legs), (2) BUILD wave dispatch honors the three contracts (one wave one commit, refs snapshot, breaker W<n> accounting), (3) the feral failure signature is cured (history 0f528c0e/3c36cb07); every pause is classified from its report (external-mutation/delivery/breaker) before any retry; side quest: decide whether the 2026-10-31 external-mutation false-positive concern [72b7706e] is cured by the M2/M3 redesign and prune it if so",
+    "summary": "Manual-only fix (never auto-executed; zero gos auto run invocations inside the fix window): the stage-dispatch redesign stranded the registered write channel on BUILD waves — non-wave agent stages (INTENT/THINK/PLAN/REVIEW) issue the commit grant but compose without scratch/ack equipage (loop.cjs waveEquipage gating), so in-sandbox gos commit <stage> deterministically refuses no-entry via admitDirect against the sandbox-masked store registry. Fix: ship the per-spawn scratch/ack channel (and manifest equipage as consistency demands) for every work spawn, with a regression test reproducing the sandboxed no-entry refusal for a non-wave stage. Store dir ~/.local/share/gos/85af56a090a78924 is live dogfood evidence — never delete, reset, or overwrite it; any fixture store must be XDG-overridden inside tests.",
     "confirmed": true,
     "confirmation": {
       "mode": "headless-auto",
-      "ts": "2026-11-04T02:32:25.526Z"
+      "ts": "2026-11-04T07:48:33.651Z"
     }
   },
-  "approvals": {
-    "THINK": "2026-11-04T06:20:54.887Z"
-  },
-  "spec_path": ".gos/task/7f6b73bf/spec.md",
-  "plan_path": ".gos/task/7f6b73bf/plan.md",
+  "approvals": {},
+  "spec_path": ".gos/task/1a0d140f/spec.md",
+  "plan_path": ".gos/task/1a0d140f/plan.md",
   "project": false,
   "requirements": [
     {
       "id": "R-01",
-      "text": "Dogfood the new auto dispatch pipeline on live machinery (PR #50, main 7f6b73b): two cycles via gos auto on --profile...",
+      "text": "Manual-only fix (never auto-executed; zero gos auto run invocations inside the fix window): the stage-dispatch redesi...",
       "phase": null,
-      "level": 2
+      "level": 1
     }
   ],
   "decisions": [],
   "observable_truths": [],
   "gaps": [],
   "activation_source": "headless",
-  "task_head": "7f6b73bf74719c7b9ba6ed27f137767337274502",
-  "spec_gate_version": 3,
-  "spec_sha256": "d23df5b20bf4c111d846779a472ff758cb4c9b8e5598ea151fbb13e8d96a63d1"
+  "task_head": "1a0d140f05b1d4b8a625aa5473a73d56caa5eb3c"
 }

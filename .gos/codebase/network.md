@@ -9,12 +9,12 @@ Nodes = path anchors (human and machine share the same key); edges = semantic de
 
 | family | count |
 |:--|:--|
-| calls (② call sites → cmd anchors) | 726 |
+| calls (② call sites → cmd anchors) | 725 |
 | contracts (③ contract-string consumers) | 85 |
 | switch (④case↔cmdXxx) | 37 |
 | testof (⑤ section annotations → cmd) | 147 |
 | hand (hand edges from edges.json) | 1 |
-| callgraph (⑥fn↔fn, acorn) | 935 |
+| callgraph (⑥fn↔fn, acorn) | 936 |
 | testof_fn (⑦ section annotations → fn) | 107 |
 
 ### Hand-edge detail (edges.json)
@@ -813,6 +813,7 @@ graph TD
   n12 -->|"calls"| n70
   n12 -->|"calls"| n73
   n12 -->|"calls"| n80
+  n12 -->|"calls"| n82
   n12 -->|"calls"| n83
   n12 -->|"calls"| n84
   n12 -->|"calls"| n86
@@ -871,37 +872,35 @@ graph TD
   n14 -->|"calls"| n73
   n14 -->|"calls"| n76
   n14 -->|"calls"| n77
-  n14 -->|"calls"| n80
+  n14 -->|"calls"| n78
   n14 -->|"calls"| n81
   n14 -->|"calls"| n82
   n14 -->|"calls"| n83
   n14 -->|"calls"| n84
-  n14 -->|"calls"| n85
+  n14 -->|"calls"| n86
   n14 -->|"calls"| n87
+  n14 -->|"calls"| n88
   n14 -->|"calls"| n90
-  n14 -->|"calls"| n92
   n14 -->|"calls"| n95
   n14 -->|"calls"| n97
-  n14 -->|"calls"| n100
-  n14 -->|"calls"| n102
-  n14 -->|"calls"| n103
+  n14 -->|"calls"| n101
   n15 -->|"calls"| n69
   n15 -->|"calls"| n70
   n15 -->|"calls"| n73
   n15 -->|"calls"| n76
   n15 -->|"calls"| n77
+  n15 -->|"calls"| n78
   n15 -->|"calls"| n81
   n15 -->|"calls"| n82
   n15 -->|"calls"| n83
   n15 -->|"calls"| n84
-  n15 -->|"calls"| n85
+  n15 -->|"calls"| n86
   n15 -->|"calls"| n87
+  n15 -->|"calls"| n88
   n15 -->|"calls"| n90
-  n15 -->|"calls"| n92
   n15 -->|"calls"| n95
   n15 -->|"calls"| n97
-  n15 -->|"calls"| n100
-  n15 -->|"calls"| n103
+  n15 -->|"calls"| n101
   n188 -->|"calls"| n71
   n189 -->|"tested-by"| n73
   n189 -->|"tested-by"| n99

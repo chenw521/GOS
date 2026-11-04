@@ -5,6 +5,11 @@
 #   truth-five  D1  delivery adapter absent: the loop ends cleanly at SHIP with
 #           deliveryAdapter=false; the delivery probe classifies absent
 #           shapes and persists its three-state result
+#   channel-equipage D1b  every agent-stage work spawn (not only BUILD waves)
+#           composes with the registered write channel: the spec env carries
+#           GOS_AUTO_SPAWN_SCRATCH + GOS_AUTO_ACK_DIR, spec.scratch is set,
+#           and under the kernel tier the scratch rw-bind and the ack
+#           ro-bind land after every mask mount
 #   truth-six  D2  bwrap mask surface (store prefix + credential paths masked over
 #           binds), host-state poisoning isolation (deny baseline derives
 #           from the runner snapshot, seeds come from runner-held roots),
@@ -172,6 +177,56 @@ const spawnRunner = (spec) => {
 EOF
 D1_OUT="$(node run-d1.cjs 2>&1 | tail -n 1)"
 t105_eq "T5: delivery adapter absent — loop ends at SHIP; probe classifies absent shapes and persists its state" "OK" "$D1_OUT"
+
+# ---------------------------------------------------------------- D1b --
+t105_case d1b
+t105_state THINK > .gos/state.json
+export GOS_AUTO_TIMEOUT_WALL_SEC=2 GOS_AUTO_TIMEOUT_IDLE_SEC=1
+cat > run-d1b.cjs <<'EOF'
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const rootDir = process.cwd();
+const env = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
+const problems = [];
+const captured = [];
+// The spawn does no work and advances nothing (rc0-no-advance): the point is
+// the equipage the runner handed it, not the outcome.
+const spawnRunner = (spec) => {
+  captured.push(spec);
+  return { status: 0, stdout: '{"type":"result"}\n', stderr: '' };
+};
+(async () => {
+  store.create({ mode: 'on', rootDir });
+  await loop.createLoop({ rootDir, host: 'gos-fixture-host', env, maxIterations: 1, spawnRunner }).loop.run();
+  if (captured.length !== 1) problems.push('expected exactly one spawn spec, got ' + captured.length);
+  const spec = captured[0];
+  if (!spec) problems.push('no spawn spec captured');
+  else {
+    const scratch = spec.env && spec.env.GOS_AUTO_SPAWN_SCRATCH;
+    if (typeof scratch !== 'string' || !scratch.startsWith('/')) {
+      problems.push('GOS_AUTO_SPAWN_SCRATCH missing/not absolute: ' + JSON.stringify(scratch));
+    }
+    if (!spec.env || spec.env.GOS_AUTO_ACK_DIR !== '/run/gos-acks') {
+      problems.push('GOS_AUTO_ACK_DIR not pinned to /run/gos-acks: ' + JSON.stringify(spec.env && spec.env.GOS_AUTO_ACK_DIR));
+    }
+    if (typeof spec.scratch !== 'string' || !spec.scratch.startsWith(path.sep)) {
+      problems.push('spec.scratch not carried for the agent leg: ' + JSON.stringify(spec.scratch));
+    }
+    if (spec.tier === 'bubblewrap') {
+      const argv = spec.argv || [];
+      const ackAt = argv.findIndex((_, i) => argv[i] === '--ro-bind' && argv[i + 2] === '/run/gos-acks');
+      if (ackAt < 0) problems.push('ack dir not ro-bound at /run/gos-acks');
+      const scratchAt = argv.findIndex((_, i) => argv[i] === '--bind' && argv[i + 1] === scratch && argv[i + 2] === scratch);
+      if (scratchAt < 0) problems.push('scratch not rw-bound');
+    }
+  }
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+D1B_OUT="$(node run-d1b.cjs 2>&1 | tail -n 1)"
+t105_eq "channel-equipage: non-wave agent spawn carries scratch + ack channel" "OK" "$D1B_OUT"
 
 # ---------------------------------------------------------------- D2 --
 t105_case d2
