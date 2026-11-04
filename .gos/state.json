@@ -2,9 +2,10 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 1,
-  "current_stage": "BUILD",
+  "current_stage": "VERIFY",
   "completed_stages": [
-    "INTENT"
+    "INTENT",
+    "BUILD"
   ],
   "intent": {
     "summary": "Manual-only fix, round two (never auto-executed; zero gos auto run invocations inside the fix window): the runner-side ack responder exists (store.admitAndAck) but has zero callers in the live pipeline — the test suite hand-rolls its own polling interval, substituting exactly the missing piece. Wire the responder: store.serviceRequests scans a spawn's scratch for unanswered request files and answers via admitAndAck; spawnRun gains a periodic ackTick hook over the spawn lifetime; the loop's work-spawn call and the wave driver pass the tick. Regression test: a spawnRun child that drops a channel request must receive its ack before the wait budget expires. Store dir ~/.local/share/gos/85af56a090a78924 is live dogfood evidence — never delete, reset, or overwrite it.",
