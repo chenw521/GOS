@@ -2,10 +2,11 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 1,
-  "current_stage": "VERIFY",
+  "current_stage": "DONE",
   "completed_stages": [
     "INTENT",
-    "BUILD"
+    "BUILD",
+    "VERIFY"
   ],
   "intent": {
     "summary": "Manual-only fix, round three (never auto-executed; zero gos auto run invocations inside the fix window): the loop's default spawn runner forwards only idleMs/wallMs/deny and drops the ackTick option, so the round-two responder wiring never reached spawnRun on live runs — the loop kept timing out every channel request. Forward ackTick through loopSpawnRunner, export it for a regression test that drives the real default runner (not an injected substitute) through a full request/ack round trip. Store dir ~/.local/share/gos/85af56a090a78924 is live dogfood evidence — never delete, reset, or overwrite it.",
