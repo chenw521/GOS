@@ -1,9 +1,9 @@
 {
   "current": {
-    "total": 1469,
-    "callgraph": 937,
+    "total": 1472,
+    "callgraph": 940,
     "testof_fn": 107,
-    "fn_count": 875,
+    "fn_count": 877,
     "fns": [
       "absTaskPath",
       "ackWaitMs",
@@ -61,6 +61,7 @@
       "badAnchor",
       "badText",
       "baselineFile",
+      "bashCommandOf",
       "bfAdopt",
       "bfExitCode",
       "bfFatal",
@@ -706,6 +707,7 @@
       "saveSnapshot",
       "saveStore",
       "saveWindows",
+      "scanDenyLines",
       "scanSources",
       "scanSpawnOutput",
       "scopedPhaseSet",
@@ -1322,6 +1324,8 @@
       "recordDenyBaseline": "bin/lib/ops/auto/launcher.cjs",
       "globToRegExp": "bin/lib/ops/auto/launcher.cjs",
       "scanSpawnOutput": "bin/lib/ops/auto/launcher.cjs",
+      "bashCommandOf": "bin/lib/ops/auto/launcher.cjs",
+      "scanDenyLines": "bin/lib/ops/auto/launcher.cjs",
       "makeStreamDenyScanner": "bin/lib/ops/auto/launcher.cjs",
       "stripSecretsDeep": "bin/lib/ops/auto/launcher.cjs",
       "sanitizeHostConfig": "bin/lib/ops/auto/launcher.cjs",
@@ -1758,8 +1762,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "ae0987d058e8a8e4",
-    "at": "2026-11-04T09:50:24.380Z"
+    "fp": "a558c7857a2505d6",
+    "at": "2026-11-04T10:50:15.269Z"
   },
   "peak": {
     "total": 2065,

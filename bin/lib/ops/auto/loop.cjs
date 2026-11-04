@@ -1130,7 +1130,7 @@ async function drive(ctx) {
       ? result.preTruncationDenyHits
       : launcher.scanSpawnOutput(streamText, { deny: denyForScan });
     const outcome = adapter.parseEventStream(streamText);
-    const telemetry = { denyHits: hits.length };
+    const telemetry = { denyHits: hits.length, denyCommandHits: hits.filter((h) => h && h.kind === 'command').length };
     if (pinnedModel != null) telemetry.modelPinned = pinnedModel;
     if (typeof adapter.extractTelemetry === 'function') {
       const selfReport = adapter.extractTelemetry(outcome);
@@ -1341,7 +1341,7 @@ async function scriptIteration(a) {
         ? result.preTruncationDenyHits
         : launcher.scanSpawnOutput(streamText, { deny: denyForScan });
       escapeTotal += hits.length;
-      const stamp = store.stampStream(spawnId, stage, streamSha256, new Date(now()).toISOString(), rootDir, { denyHits: hits.length });
+      const stamp = store.stampStream(spawnId, stage, streamSha256, new Date(now()).toISOString(), rootDir, { denyHits: hits.length, denyCommandHits: hits.filter((h) => h && h.kind === 'command').length });
       if (!stamp.ok) {
         return { err: endWith({ ok: false, status: 'paused', paused: true, reason: 'stamp-failed', detail: stamp.reason, path: stamp.path, guidance: store.guidanceFor('auto.loop.stampFailed', { detail: String(stamp.reason) }) }) };
       }
@@ -1490,8 +1490,10 @@ async function score(ctx) {
     // exited dirty, so the advance outranks the failure signal (the dirty
     // exit rides along as a note instead of burning the retry budget).
     // Escape-detector hits are the exception — a deny violation outranks
-    // any progress the same session made.
-    const escapeDriven = hits.length > 0;
+    // any progress the same session made. Only command-kind hits carry
+    // that veto: an echo of the deny strings in config or docs is prose,
+    // not an execution attempt.
+    const escapeDriven = hits.some((h) => h && h.kind === 'command');
     const advEarly = breakerMod.detectAdvance({ preSpawnHead: iter.preSpawnHead, cwd: rootDir, gitRunner, stage: iter.stage });
     if (!escapeDriven && advEarly.ok && advEarly.advanced === true) {
       iter.head = advEarly.head;

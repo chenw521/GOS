@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add deny escape detection now classifies hits by origin so echoed permission configs and skill docs can no longer veto a landed stage advance while real bash command attempts still hold waves and trips (R-01) [2026-11-04]
 - Add the auto loop default spawn runner forwards the channel ackTick to spawnRun so live runs actually answer spawn write requests instead of timing out (R-01) [2026-11-04]
 - Add the auto runner now answers spawn write-channel requests during spawn lifetime via a store serviceRequests sweep wired into the loop, wave driver and spawnrun tick, curing the ack-timeout that stranded every in-sandbox stage advance (R-01) [2026-11-04]
 - Add auto work spawns at every stage now carry the registered scratch/ack write channel and the engine probe reads the numeric bwrap version, curing the no-entry advance refusal and the tmpfs sizing refusal on real hosts (R-01) [2026-11-04]

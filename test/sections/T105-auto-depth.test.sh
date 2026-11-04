@@ -228,6 +228,44 @@ EOF
 D1B_OUT="$(node run-d1b.cjs 2>&1 | tail -n 1)"
 t105_eq "channel-equipage: non-wave agent spawn carries scratch + ack channel" "OK" "$D1B_OUT"
 
+# ---------------------------------------------------------------- D1e --
+t105_case d1e
+t105_state THINK > .gos/state.json
+export GOS_AUTO_TIMEOUT_WALL_SEC=2 GOS_AUTO_TIMEOUT_IDLE_SEC=1
+cat > run-d1e.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const rootDir = process.cwd();
+const env = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
+const problems = [];
+const stateFile = path.join(rootDir, '.gos', 'state.json');
+const NEXT = { THINK: 'PLAN', PLAN: 'SHIP' };
+const { spawnSync } = require('child_process');
+// The spawn advances normally, but its stream carries the echo signature
+// that burned the live dogfood: the permission-config dump and skill-doc
+// prose both containing the literal deny strings.
+const echoLine = 'permission map: {"sudo":"deny","su -":"deny","gos auto":"deny"} — see docs for `gos auto on` usage';
+const spawnRunner = (spec) => {
+  if (spec.roWorkspace) return { status: 0, stdout: 'review clean\nREDTEAM-FINDINGS: 0\n', stderr: '' };
+  spawnSync('git', ['commit', '--allow-empty', '-m', `chore(task): advance ${spec.stage.toLowerCase()}`], { cwd: rootDir });
+  const st = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  st.current_stage = NEXT[spec.stage];
+  fs.writeFileSync(stateFile, JSON.stringify(st, null, 2));
+  return { status: 0, stdout: `{"type":"result"}\n${echoLine}\n`, stderr: '' };
+};
+(async () => {
+  store.create({ mode: 'on', rootDir });
+  const r = await loop.createLoop({ rootDir, host: 'gos-fixture-host', env, maxIterations: 5, spawnRunner }).loop.run();
+  if (r.status !== 'ship') problems.push('echo deny lines vetoed a landed advance: ' + r.status + ' ' + (r.reason || ''));
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+D1E_OUT="$(node run-d1e.cjs 2>&1 | tail -n 1)"
+t105_eq "echo-kind deny hits never veto a landed advance" "OK" "$D1E_OUT"
+
 # ---------------------------------------------------------------- D2 --
 t105_case d2
 t105_state THINK > .gos/state.json
@@ -973,6 +1011,18 @@ const run = (script, opts) => spawnrun.spawnRun({
   if (denied.status !== 0 || denied.error) problems.push('deny-scan child exited dirty: ' + JSON.stringify(denied.status));
   if (!(denied.preTruncationDenyHits || []).some((h) => h.pattern === 'forbidden-cmd')) problems.push('streaming deny scan missed the hit');
   if (denied.windowHead.stdout.length !== 32) problems.push('head window not bounded to headBytes');
+  // hit classification: plain-text lines are kind text; a tool_use bash
+  // command carrying the pattern is kind command; a bash event whose
+  // command is clean but whose metadata echoes the pattern never hits.
+  const launcher = require(path.join(GR, 'bin/lib/ops/auto/launcher.cjs'));
+  const textHit = launcher.scanSpawnOutput('worker mentions forbidden-cmd in prose', { deny: ['forbidden-cmd'] });
+  if (textHit.length !== 1 || textHit[0].kind !== 'text') problems.push('prose line not classified text: ' + JSON.stringify(textHit));
+  const cmdEvt = JSON.stringify({ type: 'tool_use', part: { type: 'tool', tool: 'bash', state: { status: 'completed', input: { command: 'forbidden-cmd --flag x' } } } });
+  const cmdHit = launcher.scanSpawnOutput(cmdEvt, { deny: ['forbidden-cmd'] });
+  if (cmdHit.length !== 1 || cmdHit[0].kind !== 'command') problems.push('bash command hit not classified command: ' + JSON.stringify(cmdHit));
+  const echoEvt = JSON.stringify({ type: 'tool_use', part: { type: 'tool', tool: 'bash', state: { status: 'completed', input: { command: 'ls -la' }, output: 'permission map {"forbidden-cmd":"deny"}' } } });
+  const echoHit = launcher.scanSpawnOutput(echoEvt, { deny: ['forbidden-cmd'] });
+  if (echoHit.length !== 0) problems.push('echoed metadata inside a clean bash event must not hit: ' + JSON.stringify(echoHit));
   // dual-window capture: head keeps the start, tail keeps the end
   const long = await run('for (let i = 0; i < 100; i++) process.stdout.write("L" + String(i).padStart(4, "0") + "\\n");', { windows: { headBytes: 16, tailBytes: 24 } });
   if (long.status !== 0 || long.error) problems.push('normal exit mangled');

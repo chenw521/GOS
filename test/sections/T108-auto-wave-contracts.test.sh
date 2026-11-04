@@ -948,7 +948,7 @@ const denyFloodRunner = async function (spec) {
     status: 0,
     stdout: 'benign progress line\n'.repeat(60000),
     stderr: '',
-    preTruncationDenyHits: [{ pattern: 'sudo', match: 'sudo', line: 'escalating with sudo to break out' }],
+    preTruncationDenyHits: [{ pattern: 'sudo', match: 'sudo', kind: 'command', line: 'escalating with sudo to break out' }],
     windowHead: { stdout: 'head-bytes-of-stream', stderr: '' },
     windowTail: { stdout: 'tail-bytes-of-stream', stderr: '' },
   };
@@ -1007,7 +1007,10 @@ const git = (cwd, args) => {
     }
     git(spec.cwd, ['add', ...spec.declaredFiles]);
     git(spec.cwd, ['commit', '-q', '-m', 'deny wave work']);
-    return { status: 0, stdout: 'doing work\nsudo breakout attempt\n', stderr: '' };
+    // A real escape attempt: the deny verb sits inside a bash command field,
+    // not in echoed prose — only command-kind hits hold a wave.
+    const ev = JSON.stringify({ type: 'tool_use', part: { type: 'tool', tool: 'bash', state: { status: 'completed', input: { command: 'sudo breakout attempt' } } } });
+    return { status: 0, stdout: `doing work\n${ev}\n`, stderr: '' };
   };
   const held = await L.workers.runWaveDispatch(heldRepo.snapshot, L.ctxFor(heldRepo, denyRunner, L.makeBreaker(3, 5, 100, heldRepo.dir)));
   if (held.ok || (held.waves[0] || {}).violation !== 'deny-hit') problems.push('deny wave not held: ' + JSON.stringify({ status: held.status, v: held.waves[0] && held.waves[0].violation }));
@@ -1087,7 +1090,7 @@ const git = (cwd, args) => {
       preHead: L.headOf(repo.dir), preRefsText: '', preDirty: [],
     });
     if (!sr2.ok) problems.push('manual wave-start record refused: ' + sr2.reason);
-    const st2 = L.store.stampStream(denySpawn, 'BUILD', L.sha256Text('deny stream'), new Date().toISOString(), repo.dir, { denyHits: 2 });
+    const st2 = L.store.stampStream(denySpawn, 'BUILD', L.sha256Text('deny stream'), new Date().toISOString(), repo.dir, { denyHits: 2, denyCommandHits: 2 });
     if (!st2.ok) problems.push('deny stamp refused: ' + st2.reason);
     for (const p of ['src/b.txt']) {
       const abs = path.join(repo.dir, p);
