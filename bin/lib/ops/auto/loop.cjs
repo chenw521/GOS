@@ -295,6 +295,7 @@ function loopSpawnRunner(spec, ctx) {
     idleMs: ctx && ctx.idleMs,
     wallMs: ctx && ctx.wallMs,
     deny: Array.isArray(spec.deny) ? spec.deny : undefined,
+    ackTick: ctx && typeof ctx.ackTick === 'function' ? ctx.ackTick : undefined,
   });
 }
 

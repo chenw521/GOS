@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add the auto loop default spawn runner forwards the channel ackTick to spawnRun so live runs actually answer spawn write requests instead of timing out (R-01) [2026-11-04]
 - Add the auto runner now answers spawn write-channel requests during spawn lifetime via a store serviceRequests sweep wired into the loop, wave driver and spawnrun tick, curing the ack-timeout that stranded every in-sandbox stage advance (R-01) [2026-11-04]
 - Add auto work spawns at every stage now carry the registered scratch/ack write channel and the engine probe reads the numeric bwrap version, curing the no-entry advance refusal and the tmpfs sizing refusal on real hosts (R-01) [2026-11-04]
 - Add Auto loop now dispatches per stage from a tracked table: script workers run mechanical stages with zero LLM spawns, BUILD drives wave-by-wave under three contracts, trust tiers split into mechanical clearance and human approval, and every spawn emits pinned-model telemetry (D-49/D-50/D-51/D-52/D-53/D-54/D-55/D-56/D-57/R-01) [2026-11-02]

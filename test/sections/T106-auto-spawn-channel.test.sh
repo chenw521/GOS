@@ -530,6 +530,22 @@ const runChild = (spawnId) => spawnrun.spawnRun({
   const e = sr.readEntry(root, 'sp-tick');
   if (!e || e.uses !== 1) problems.push('tick admit did not burn exactly one use: ' + (e && e.uses));
 
+  // The loop's DEFAULT runner (not an injected substitute) must forward the
+  // tick — a whitelist that drops ackTick silences the responder on live runs.
+  const loopmod = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+  const id3 = 'sp-tick3';
+  store.registerSpawn({ spawnId: id3, kind: 'work', stage: 'THINK', pid: process.pid, wallMs: 600000 }, root);
+  const r3 = await loopmod.loopSpawnRunner({
+    argv: [process.execPath, HELPER, 'commit', 'think', id3],
+    env: {
+      ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: id3,
+      GOS_AUTO_SPAWN_SCRATCH: sr.scratchPath(root, id3),
+      GOS_AUTO_ACK_DIR: sr.acksPath(root, id3),
+      GOS_AUTO_SPAWN_ACK_WAIT_MS: '4000',
+    },
+  }, { ackTick: () => store.serviceRequests(root, id3) });
+  if (!/ADMITTED stage=THINK/.test(r3.stdout || '')) problems.push('default loop runner dropped the ackTick: ' + (r3.stdout || '').slice(0, 160));
+
   // An already-answered request file left in the scratch is skipped, not
   // re-judged: the ack file is the answered marker.
   const id2 = 'sp-tick2';
