@@ -95,7 +95,15 @@ resume discipline is otherwise unenforceable):
   curation makes the gate itself drift): literals must match an exact
   family member or a declared wildcard (invalid-*, host-*, leg-*, or the
   F-unknown row); the family table used for the diff has exactly one row
-  per family name.
+  per family name. Amendment 2026-11-04 (user ruling): the 50
+  initially-unmatched literals (delivery-probe facts, ratify refusal
+  codes, store validation/IO codes, delivery-publish outcomes,
+  breaker/redteam decode failures) are DECLARED F-unknown members —
+  enumerated in g0b-diff.sh F_UNKNOWN_DECLARED. Any pause carrying one
+  of them follows the F-unknown action only: no resume, no abort,
+  attribution line, surface to user. Conservative default chosen over
+  per-domain refiling (gh-auth et al. are normal probe states;
+  misfiling them into F-infra would wrongly route D4).
 - G1 resume-gate: before any deliberate resume, assert the paused runId
   has a matching entry in store dispositions AND resume count for that
   runId ≤ 1 (count from the session log + report files).
