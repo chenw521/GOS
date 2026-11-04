@@ -2,10 +2,11 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 1,
-  "current_stage": "VERIFY",
+  "current_stage": "DONE",
   "completed_stages": [
     "INTENT",
-    "BUILD"
+    "BUILD",
+    "VERIFY"
   ],
   "intent": {
     "summary": "Manual-only fix, round five (never auto-executed; zero gos auto run invocations inside the fix window): the streaming deny scanner counts every line containing a deny pattern, so an agent echoing its own permission config or skill docs (both carry the literal deny strings) scores double-digit hits, and the escape rule that a deny violation outranks progress vetoes a genuinely landed advance into an external-mutation pause. Classify each hit: kind command when the matched text is a tool_use bash command field (a real execution attempt), kind text otherwise. Escape-driven veto in the loop and the wave deny-hit hold act only on command-kind hits; telemetry keeps counting every hit. Store dir ~/.local/share/gos/85af56a090a78924 is live dogfood evidence — never delete, reset, or overwrite it.",
