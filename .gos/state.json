@@ -2,9 +2,10 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 1,
-  "current_stage": "BUILD",
+  "current_stage": "VERIFY",
   "completed_stages": [
-    "INTENT"
+    "INTENT",
+    "BUILD"
   ],
   "intent": {
     "summary": "Manual-only fix (never auto-executed; zero gos auto run invocations inside the fix window): the stage-dispatch redesign stranded the registered write channel on BUILD waves — non-wave agent stages (INTENT/THINK/PLAN/REVIEW) issue the commit grant but compose without scratch/ack equipage (loop.cjs waveEquipage gating), so in-sandbox gos commit <stage> deterministically refuses no-entry via admitDirect against the sandbox-masked store registry. Fix: ship the per-spawn scratch/ack channel (and manifest equipage as consistency demands) for every work spawn, with a regression test reproducing the sandboxed no-entry refusal for a non-wave stage. Store dir ~/.local/share/gos/85af56a090a78924 is live dogfood evidence — never delete, reset, or overwrite it; any fixture store must be XDG-overridden inside tests.",
