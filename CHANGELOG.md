@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add auto work spawns at every stage now carry the registered scratch/ack write channel and the engine probe reads the numeric bwrap version, curing the no-entry advance refusal and the tmpfs sizing refusal on real hosts (R-01) [2026-11-04]
 - Add Auto loop now dispatches per stage from a tracked table: script workers run mechanical stages with zero LLM spawns, BUILD drives wave-by-wave under three contracts, trust tiers split into mechanical clearance and human approval, and every spawn emits pinned-model telemetry (D-49/D-50/D-51/D-52/D-53/D-54/D-55/D-56/D-57/R-01) [2026-11-02]
 - Change the READMEs around an SVG hero banner and a lean two-audience CLI shortlist: the full command surface now delegates to gos help and the COMMANDS registry, milestones carry dates reconstructed from the development ledger, and the positioning states GOS runs standalone with no interop with the tools it distilled from (R-01) [2026-10-31]
 

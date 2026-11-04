@@ -31,5 +31,6 @@
   "observable_truths": [],
   "gaps": [],
   "activation_source": "headless",
-  "task_head": "1a0d140f05b1d4b8a625aa5473a73d56caa5eb3c"
+  "task_head": "1a0d140f05b1d4b8a625aa5473a73d56caa5eb3c",
+  "changelog_user_summary": "auto work spawns at every stage now carry the registered scratch/ack write channel and the engine probe reads the numeric bwrap version, curing the no-entry advance refusal and the tmpfs sizing refusal on real hosts"
 }
