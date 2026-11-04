@@ -1,9 +1,9 @@
 {
   "current": {
-    "total": 1468,
-    "callgraph": 936,
+    "total": 1469,
+    "callgraph": 937,
     "testof_fn": 107,
-    "fn_count": 874,
+    "fn_count": 875,
     "fns": [
       "absTaskPath",
       "ackWaitMs",
@@ -728,6 +728,7 @@
       "semanticSkipEscapeActive",
       "semanticUniverse",
       "serializeEntry",
+      "serviceRequests",
       "setAutoRender",
       "setBreakLock",
       "settleClaim",
@@ -1449,6 +1450,7 @@
       "removeSpawn": "bin/lib/ops/auto/store.cjs",
       "writeGrantManifest": "bin/lib/ops/auto/store.cjs",
       "admitAndAck": "bin/lib/ops/auto/store.cjs",
+      "serviceRequests": "bin/lib/ops/auto/store.cjs",
       "pinWorktreesDir": "bin/lib/ops/auto/store.cjs",
       "recordPin": "bin/lib/ops/auto/store.cjs",
       "readPins": "bin/lib/ops/auto/store.cjs",
@@ -1756,8 +1758,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "14aeb2e30fd04f38",
-    "at": "2026-11-04T08:17:39.184Z"
+    "fp": "ae0987d058e8a8e4",
+    "at": "2026-11-04T09:27:00.001Z"
   },
   "peak": {
     "total": 2065,

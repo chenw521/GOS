@@ -976,6 +976,7 @@ function defaultWaveSpawnRunner(spec, ctx) {
     idleMs: ctx && ctx.idleMs,
     wallMs: ctx && ctx.wallMs,
     deny: Array.isArray(spec.deny) ? spec.deny : undefined,
+    ackTick: ctx && typeof ctx.ackTick === 'function' ? ctx.ackTick : undefined,
   });
 }
 
@@ -1268,7 +1269,7 @@ async function runWaveDispatch(snapshot, ctx = {}) {
 
     let result;
     try {
-      result = await (ctx.spawnRunner || defaultWaveSpawnRunner)(spec, { wallMs: ctx.wallMs, idleMs: ctx.idleMs });
+      result = await (ctx.spawnRunner || defaultWaveSpawnRunner)(spec, { wallMs: ctx.wallMs, idleMs: ctx.idleMs, ackTick: () => store.serviceRequests(rootDir, spawnId) });
     } catch (e) {
       result = { status: null, stdout: '', stderr: '', error: e instanceof Error ? e : new Error(String(e)) };
     }

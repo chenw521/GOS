@@ -1103,7 +1103,7 @@ async function drive(ctx) {
     const startedAtMs = now();
     let result;
     try {
-      result = await withHeartbeat(() => spawnRunner(spec, { wallMs: tp.wallSec * 1000, idleMs: tp.idleSec * 1000 }));
+      result = await withHeartbeat(() => spawnRunner(spec, { wallMs: tp.wallSec * 1000, idleMs: tp.idleSec * 1000, ackTick: () => store.serviceRequests(rootDir, spawnId) }));
       try { store.removeSpawn(spawnId, rootDir); } catch { /* already gone */ }
     } catch (e) {
       result = { status: null, stdout: '', stderr: '', error: e };
@@ -1322,7 +1322,7 @@ async function scriptIteration(a) {
       store.heartbeatRunLock(rootDir);
       let result;
       try {
-        result = await withHeartbeat(() => spawnRunner(spec, { wallMs: tp.wallSec * 1000, idleMs: tp.idleSec * 1000 }));
+        result = await withHeartbeat(() => spawnRunner(spec, { wallMs: tp.wallSec * 1000, idleMs: tp.idleSec * 1000, ackTick: () => store.serviceRequests(rootDir, spawnId) }));
       } catch (e) {
         result = { status: null, stdout: '', stderr: '', error: e };
       }

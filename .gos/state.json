@@ -2,28 +2,26 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 1,
-  "current_stage": "DONE",
+  "current_stage": "BUILD",
   "completed_stages": [
-    "INTENT",
-    "BUILD",
-    "VERIFY"
+    "INTENT"
   ],
   "intent": {
-    "summary": "Manual-only fix (never auto-executed; zero gos auto run invocations inside the fix window): the stage-dispatch redesign stranded the registered write channel on BUILD waves — non-wave agent stages (INTENT/THINK/PLAN/REVIEW) issue the commit grant but compose without scratch/ack equipage (loop.cjs waveEquipage gating), so in-sandbox gos commit <stage> deterministically refuses no-entry via admitDirect against the sandbox-masked store registry. Fix: ship the per-spawn scratch/ack channel (and manifest equipage as consistency demands) for every work spawn, with a regression test reproducing the sandboxed no-entry refusal for a non-wave stage. Store dir ~/.local/share/gos/85af56a090a78924 is live dogfood evidence — never delete, reset, or overwrite it; any fixture store must be XDG-overridden inside tests.",
+    "summary": "Manual-only fix, round two (never auto-executed; zero gos auto run invocations inside the fix window): the runner-side ack responder exists (store.admitAndAck) but has zero callers in the live pipeline — the test suite hand-rolls its own polling interval, substituting exactly the missing piece. Wire the responder: store.serviceRequests scans a spawn's scratch for unanswered request files and answers via admitAndAck; spawnRun gains a periodic ackTick hook over the spawn lifetime; the loop's work-spawn call and the wave driver pass the tick. Regression test: a spawnRun child that drops a channel request must receive its ack before the wait budget expires. Store dir ~/.local/share/gos/85af56a090a78924 is live dogfood evidence — never delete, reset, or overwrite it.",
     "confirmed": true,
     "confirmation": {
       "mode": "headless-auto",
-      "ts": "2026-11-04T07:48:33.651Z"
+      "ts": "2026-11-04T09:00:21.971Z"
     }
   },
   "approvals": {},
-  "spec_path": ".gos/task/1a0d140f/spec.md",
-  "plan_path": ".gos/task/1a0d140f/plan.md",
+  "spec_path": ".gos/task/33dfafde/spec.md",
+  "plan_path": ".gos/task/33dfafde/plan.md",
   "project": false,
   "requirements": [
     {
       "id": "R-01",
-      "text": "Manual-only fix (never auto-executed; zero gos auto run invocations inside the fix window): the stage-dispatch redesi...",
+      "text": "Manual-only fix, round two (never auto-executed; zero gos auto run invocations inside the fix window): the runner-sid...",
       "phase": null,
       "level": 1
     }
@@ -32,6 +30,6 @@
   "observable_truths": [],
   "gaps": [],
   "activation_source": "headless",
-  "task_head": "1a0d140f05b1d4b8a625aa5473a73d56caa5eb3c",
-  "changelog_user_summary": "auto work spawns at every stage now carry the registered scratch/ack write channel and the engine probe reads the numeric bwrap version, curing the no-entry advance refusal and the tmpfs sizing refusal on real hosts"
+  "task_head": "33dfafdec569139a326ea56752fcb06b368bb350",
+  "changelog_user_summary": "the auto runner now answers spawn write-channel requests during spawn lifetime via a store serviceRequests sweep wired into the loop, wave driver and spawnrun tick, curing the ack-timeout that stranded every in-sandbox stage advance"
 }
