@@ -2,9 +2,10 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 1,
-  "current_stage": "BUILD",
+  "current_stage": "VERIFY",
   "completed_stages": [
-    "INTENT"
+    "INTENT",
+    "BUILD"
   ],
   "intent": {
     "summary": "Manual-only fix, round six (never auto-executed; zero gos auto run invocations inside the fix window): two gaps surfaced by the live run. First, task commit probes git with a bare execFileSync — inside the sandbox the masked ~/.gitconfig reads Permission denied and git dies fatal, so hasGit flips false and the advance silently skips its commit while still moving the stage, which the runner then rolls back as a crashed advance. Probe and run git with neutralized global and system config, the same isolation the privileged delivery path already uses. Second, stamp telemetry drops the new denyCommandHits field because the stamp field whitelist never grew with it. Store dir ~/.local/share/gos/85af56a090a78924 is live dogfood evidence — never delete, reset, or overwrite it.",
