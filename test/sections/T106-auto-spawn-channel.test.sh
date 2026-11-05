@@ -27,6 +27,10 @@
 #                   request -> runner admitAndAck -> ack round trip; THINK
 #                   entry's checkpoint refused not-in-grants through the same
 #                   round trip; ack-timeout fails closed with no burn
+#   req-ack-tick  C7b the same round trip through spawnRun's ackTick hook —
+#                   the responder wiring the live loop and wave driver use:
+#                   a registered entry, a child speaking the channel, and
+#                   store.serviceRequests answering from the tick
 #   channel-forge  C8  forged request burns only its own spawn's budget (ack
 #                   idempotent on replay); forged cache entry inert through
 #                   the channel; redteam never write-admitted (empty-grant
@@ -490,6 +494,78 @@ const waitAck = (spawnId, cmdName, argvStage, opts = {}) => new Promise((resolve
 EOF
 REQACK_OUT="$(WORLD="$WORLD" node "$T106_DIR/run-c7.cjs" 2>&1 | tail -n 1)"
 t106_contains "req/ack: BUILD checkpoint+section+truth admitted, THINK not-in-grants, timeout fails closed" "REQACK-OK" "$REQACK_OUT"
+
+# ---------------------------------------------------------------- C7b --
+echo "C7b: req/ack tick (spawnRun answers channel requests via store.serviceRequests)"
+cat > "$T106_DIR/run-c7b.cjs" <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const root = process.env.WORLD;
+const sr = require(path.join(GR, 'bin/lib/core/spawnreg.cjs'));
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const spawnrun = require(path.join(GR, 'bin/lib/ops/auto/spawnrun.cjs'));
+const problems = [];
+const HELPER = path.join(path.dirname(process.argv[1] || '.'), 'spawned-helper.cjs');
+fs.writeFileSync(path.join(root, '.gos', '.lock'), JSON.stringify({
+  pid: process.pid, started_at: new Date().toISOString(), boot_id: null, starttime: sr.procStartTime(process.pid),
+}));
+const runChild = (spawnId) => spawnrun.spawnRun({
+  argv: [process.execPath, HELPER, 'commit', 'think', spawnId],
+  env: {
+    ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: spawnId,
+    GOS_AUTO_SPAWN_SCRATCH: sr.scratchPath(root, spawnId),
+    GOS_AUTO_ACK_DIR: sr.acksPath(root, spawnId),
+    GOS_AUTO_SPAWN_ACK_WAIT_MS: '4000',
+  },
+}, { ackTick: () => store.serviceRequests(root, spawnId) });
+(async () => {
+  // Missing scratch is a silent zero, never a throw.
+  const none = store.serviceRequests(root, 'sp-never-registered');
+  if (none !== 0) problems.push('serviceRequests on absent scratch must return 0, got ' + none);
+
+  store.registerSpawn({ spawnId: 'sp-tick', kind: 'work', stage: 'THINK', pid: process.pid, wallMs: 600000 }, root);
+  const r = await runChild('sp-tick');
+  if (!/ADMITTED stage=THINK/.test(r.stdout || '')) problems.push('tick round trip not admitted: ' + (r.stdout || '').slice(0, 160));
+  const e = sr.readEntry(root, 'sp-tick');
+  if (!e || e.uses !== 1) problems.push('tick admit did not burn exactly one use: ' + (e && e.uses));
+
+  // The loop's DEFAULT runner (not an injected substitute) must forward the
+  // tick — a whitelist that drops ackTick silences the responder on live runs.
+  const loopmod = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+  const id3 = 'sp-tick3';
+  store.registerSpawn({ spawnId: id3, kind: 'work', stage: 'THINK', pid: process.pid, wallMs: 600000 }, root);
+  const r3 = await loopmod.loopSpawnRunner({
+    argv: [process.execPath, HELPER, 'commit', 'think', id3],
+    env: {
+      ...process.env, GOS_AUTO_SPAWNED: '1', GOS_AUTO_SPAWN_ID: id3,
+      GOS_AUTO_SPAWN_SCRATCH: sr.scratchPath(root, id3),
+      GOS_AUTO_ACK_DIR: sr.acksPath(root, id3),
+      GOS_AUTO_SPAWN_ACK_WAIT_MS: '4000',
+    },
+  }, { ackTick: () => store.serviceRequests(root, id3) });
+  if (!/ADMITTED stage=THINK/.test(r3.stdout || '')) problems.push('default loop runner dropped the ackTick: ' + (r3.stdout || '').slice(0, 160));
+
+  // An already-answered request file left in the scratch is skipped, not
+  // re-judged: the ack file is the answered marker.
+  const id2 = 'sp-tick2';
+  store.registerSpawn({ spawnId: id2, kind: 'work', stage: 'THINK', pid: process.pid, wallMs: 600000 }, root);
+  const scratch2 = sr.scratchPath(root, id2);
+  fs.mkdirSync(scratch2, { recursive: true });
+  const reqId = 'req-c7b-static';
+  fs.writeFileSync(path.join(scratch2, `${reqId}.req.json`), JSON.stringify({ request_id: reqId, spawn_id: id2, cmd: 'gate', stage: 'all', pid: process.pid, ts: new Date().toISOString() }));
+  const served = store.serviceRequests(root, id2);
+  if (served !== 1) problems.push('first service pass must answer the pending request, got ' + served);
+  fs.writeFileSync(path.join(scratch2, `${reqId}.req.json`), JSON.stringify({ request_id: reqId, spawn_id: id2, cmd: 'gate', stage: 'all', pid: process.pid, ts: new Date().toISOString() }));
+  if (store.serviceRequests(root, id2) !== 0) problems.push('answered request must be skipped on the next pass');
+  const e2 = sr.readEntry(root, id2);
+  if (!e2 || e2.uses !== 1) problems.push('replay pass must not burn again: ' + (e2 && e2.uses));
+
+  console.log(problems.length ? 'BAD ' + problems.join('; ') : 'TICK-OK');
+})().catch((e) => { console.error(e); process.exit(1); });
+EOF
+C7B_OUT="$(WORLD="$WORLD" node "$T106_DIR/run-c7b.cjs" 2>&1 | tail -n 1)"
+t106_contains "req/ack tick: spawnRun child admitted through the live responder wiring" "TICK-OK" "$C7B_OUT"
 
 # ---------------------------------------------------------------- C8 --
 echo "C8: channel-forge (forged requests, redteam, human gates, registration bounds)"

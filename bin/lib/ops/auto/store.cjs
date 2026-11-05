@@ -32,7 +32,7 @@ const STORE_FILE = 'store.json';
 // the window hashes and byte totals describe the retained sidecar pair.
 const STAMP_TEXT_FIELDS = ['modelPinned', 'modelObserved'];
 const STAMP_HASH_FIELDS = ['headSha256', 'tailSha256'];
-const STAMP_COUNT_FIELDS = ['commandCount', 'totalBytes', 'denyHits'];
+const STAMP_COUNT_FIELDS = ['commandCount', 'totalBytes', 'denyHits', 'denyCommandHits'];
 const HEX64_RE = /^[0-9a-f]{64}$/;
 
 // Window sidecars: one directory under the store dir holding a head/tail
@@ -1335,6 +1335,32 @@ function admitAndAck(rootDir, spawnId, cmdName, argvStage, opts = {}) {
   return out;
 }
 
+// Runner-side responder sweep for one spawn: every pending request file in
+// the scratch gets one pass through admitAndAck. The ack file is the
+// answered marker — a request whose ack already exists is skipped, so a
+// replayed request reuses the ledger verdict without a second burn. An
+// absent scratch serves zero.
+function serviceRequests(rootDir, spawnId) {
+  const scratch = spawnreg.scratchPath(rootDir, spawnId);
+  if (typeof scratch !== 'string') return 0;
+  let names = [];
+  try { names = fs.readdirSync(scratch); } catch { return 0; }
+  const acksDir = spawnreg.acksPath(rootDir, spawnId);
+  let served = 0;
+  for (const n of names) {
+    if (!n.endsWith('.req.json')) continue;
+    const stem = n.slice(0, -'.req.json'.length);
+    if (acksDir != null) {
+      try { fs.statSync(path.join(acksDir, `${stem}.ack.json`)); continue; } catch { /* unanswered */ }
+    }
+    let req = null;
+    try { req = JSON.parse(fs.readFileSync(path.join(scratch, n), 'utf8')); } catch { continue; }
+    admitAndAck(rootDir, spawnId, req.cmd, req.stage, { requestId: req.request_id || stem });
+    served += 1;
+  }
+  return served;
+}
+
 // ---- pinned worktree records (Class P legs) ----
 // Pin records live as an additive store.json key (never written by older
 // writers, never fatal to older readers — validation only fires when the
@@ -1650,6 +1676,7 @@ module.exports = {
   removeSpawn,
   writeGrantManifest,
   admitAndAck,
+  serviceRequests,
   pinWorktreesDir,
   recordPin,
   readPins,

@@ -96,11 +96,22 @@ function spawnRun(spec, opts = {}) {
     // Deny lines are detected as they stream in — before the capture window
     // can truncate them away — and ride on the result for the scorer.
     const denyScanner = launcher.makeStreamDenyScanner({ deny });
+    // Channel responder tick: while the spawn lives, the runner periodically
+    // answers request files the spawned side drops into its scratch. A
+    // responder error never kills the spawn — the spawned side still fails
+    // closed on its own wait budget.
+    const ackTick = typeof o.ackTick === 'function' ? o.ackTick : null;
+    let ackTimer = null;
+    if (ackTick) {
+      ackTimer = setInterval(() => { try { ackTick(); } catch { /* responder sweep is best effort */ } }, 250);
+      if (typeof ackTimer.unref === 'function') ackTimer.unref();
+    }
     const finish = (payload) => {
       if (settled) return;
       settled = true;
       if (idleTimer) clearTimeout(idleTimer);
       if (wallTimer) clearTimeout(wallTimer);
+      if (ackTimer) clearInterval(ackTimer);
       denyScanner.flush();
       payload.preTruncationDenyHits = denyScanner.hits.slice();
       payload.totalBytes = { stdout: capOut.total, stderr: capErr.total };

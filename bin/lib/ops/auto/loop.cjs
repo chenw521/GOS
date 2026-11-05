@@ -295,6 +295,7 @@ function loopSpawnRunner(spec, ctx) {
     idleMs: ctx && ctx.idleMs,
     wallMs: ctx && ctx.wallMs,
     deny: Array.isArray(spec.deny) ? spec.deny : undefined,
+    ackTick: ctx && typeof ctx.ackTick === 'function' ? ctx.ackTick : undefined,
   });
 }
 
@@ -1001,10 +1002,11 @@ async function drive(ctx) {
     // Registered write channel for this spawn: grants and the use cap come
     // from the dispatch entry (BUILD carries the checkpoint verb and the
     // raised cap); the spawnId rides the env so in-spawn commands present it
-    // to the lock. The wave-dispatch BUILD equipage (per-spawn scratch +
-    // testbed, grants ro-bound as an immutable manifest, kernel-tier floor)
-    // ships with the dispatch world; the legacy monolithic path keeps the
-    // pre-dispatch compose shape.
+    // to the lock. The per-spawn scratch + ack channel ships with EVERY
+    // work spawn — under the kernel tier the store registry is masked from
+    // the sandbox, so an agent-stage advance would otherwise have no
+    // admission path at all. The wave-dispatch equipage adds the testbed,
+    // the grants manifest, and the kernel-tier floor on top.
     const waveEquipage = stage === workers.WAVE_STAGE && waveMode;
     const reg = store.registerSpawn({ spawnId, kind: 'work', stage, wallMs: tp.wallSec * 1000, pid: process.pid }, rootDir);
     if (!reg.ok) {
@@ -1042,7 +1044,9 @@ async function drive(ctx) {
           ? [rootDir, path.join(rootDir, '.gos'), path.join(rootDir, '.gos', 'logs')]
           : [path.join(rootDir, '.gos'), path.join(rootDir, '.gos', 'logs')]
       ),
-      ...(waveEquipage ? { scratchDir: reg.scratch, ackDir: reg.acksDir, testBase: true, grantManifestPath: manifest.path, requiresKernelTier: true } : {}),
+      scratchDir: reg.scratch,
+      ackDir: reg.acksDir,
+      ...(waveEquipage ? { testBase: true, grantManifestPath: manifest.path, requiresKernelTier: true } : {}),
       buildSpawn: stage === workers.WAVE_STAGE,
     });
     if (!composed.ok) {
@@ -1082,7 +1086,8 @@ async function drive(ctx) {
       tier: composed.tier,
       profile: entry.profile,
       deny: composed.deny.slice(),
-      ...(waveEquipage ? { scratch: reg.scratch, grantManifestPath: manifest.path } : {}),
+      scratch: reg.scratch,
+      ...(waveEquipage ? { grantManifestPath: manifest.path } : {}),
       modelPinned: pinnedModel,
       ...(stageExit ? { stageExit: true } : {}),
     };
@@ -1099,7 +1104,7 @@ async function drive(ctx) {
     const startedAtMs = now();
     let result;
     try {
-      result = await withHeartbeat(() => spawnRunner(spec, { wallMs: tp.wallSec * 1000, idleMs: tp.idleSec * 1000 }));
+      result = await withHeartbeat(() => spawnRunner(spec, { wallMs: tp.wallSec * 1000, idleMs: tp.idleSec * 1000, ackTick: () => store.serviceRequests(rootDir, spawnId) }));
       try { store.removeSpawn(spawnId, rootDir); } catch { /* already gone */ }
     } catch (e) {
       result = { status: null, stdout: '', stderr: '', error: e };
@@ -1125,7 +1130,7 @@ async function drive(ctx) {
       ? result.preTruncationDenyHits
       : launcher.scanSpawnOutput(streamText, { deny: denyForScan });
     const outcome = adapter.parseEventStream(streamText);
-    const telemetry = { denyHits: hits.length };
+    const telemetry = { denyHits: hits.length, denyCommandHits: hits.filter((h) => h && h.kind === 'command').length };
     if (pinnedModel != null) telemetry.modelPinned = pinnedModel;
     if (typeof adapter.extractTelemetry === 'function') {
       const selfReport = adapter.extractTelemetry(outcome);
@@ -1318,7 +1323,7 @@ async function scriptIteration(a) {
       store.heartbeatRunLock(rootDir);
       let result;
       try {
-        result = await withHeartbeat(() => spawnRunner(spec, { wallMs: tp.wallSec * 1000, idleMs: tp.idleSec * 1000 }));
+        result = await withHeartbeat(() => spawnRunner(spec, { wallMs: tp.wallSec * 1000, idleMs: tp.idleSec * 1000, ackTick: () => store.serviceRequests(rootDir, spawnId) }));
       } catch (e) {
         result = { status: null, stdout: '', stderr: '', error: e };
       }
@@ -1336,7 +1341,7 @@ async function scriptIteration(a) {
         ? result.preTruncationDenyHits
         : launcher.scanSpawnOutput(streamText, { deny: denyForScan });
       escapeTotal += hits.length;
-      const stamp = store.stampStream(spawnId, stage, streamSha256, new Date(now()).toISOString(), rootDir, { denyHits: hits.length });
+      const stamp = store.stampStream(spawnId, stage, streamSha256, new Date(now()).toISOString(), rootDir, { denyHits: hits.length, denyCommandHits: hits.filter((h) => h && h.kind === 'command').length });
       if (!stamp.ok) {
         return { err: endWith({ ok: false, status: 'paused', paused: true, reason: 'stamp-failed', detail: stamp.reason, path: stamp.path, guidance: store.guidanceFor('auto.loop.stampFailed', { detail: String(stamp.reason) }) }) };
       }
@@ -1485,8 +1490,10 @@ async function score(ctx) {
     // exited dirty, so the advance outranks the failure signal (the dirty
     // exit rides along as a note instead of burning the retry budget).
     // Escape-detector hits are the exception — a deny violation outranks
-    // any progress the same session made.
-    const escapeDriven = hits.length > 0;
+    // any progress the same session made. Only command-kind hits carry
+    // that veto: an echo of the deny strings in config or docs is prose,
+    // not an execution attempt.
+    const escapeDriven = hits.some((h) => h && h.kind === 'command');
     const advEarly = breakerMod.detectAdvance({ preSpawnHead: iter.preSpawnHead, cwd: rootDir, gitRunner, stage: iter.stage });
     if (!escapeDriven && advEarly.ok && advEarly.advanced === true) {
       iter.head = advEarly.head;

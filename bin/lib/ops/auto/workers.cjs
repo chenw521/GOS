@@ -976,6 +976,7 @@ function defaultWaveSpawnRunner(spec, ctx) {
     idleMs: ctx && ctx.idleMs,
     wallMs: ctx && ctx.wallMs,
     deny: Array.isArray(spec.deny) ? spec.deny : undefined,
+    ackTick: ctx && typeof ctx.ackTick === 'function' ? ctx.ackTick : undefined,
   });
 }
 
@@ -1268,7 +1269,7 @@ async function runWaveDispatch(snapshot, ctx = {}) {
 
     let result;
     try {
-      result = await (ctx.spawnRunner || defaultWaveSpawnRunner)(spec, { wallMs: ctx.wallMs, idleMs: ctx.idleMs });
+      result = await (ctx.spawnRunner || defaultWaveSpawnRunner)(spec, { wallMs: ctx.wallMs, idleMs: ctx.idleMs, ackTick: () => store.serviceRequests(rootDir, spawnId) });
     } catch (e) {
       result = { status: null, stdout: '', stderr: '', error: e instanceof Error ? e : new Error(String(e)) };
     }
@@ -1285,7 +1286,7 @@ async function runWaveDispatch(snapshot, ctx = {}) {
     const hits = (result && Array.isArray(result.preTruncationDenyHits) && result.preTruncationDenyHits.length)
       ? result.preTruncationDenyHits
       : launcher.scanSpawnOutput(streamText, { deny: spec.deny });
-    const stamp = store.stampStream(spawnId, WAVE_STAGE, sha256Text(streamText), new Date(now()).toISOString(), rootDir, { denyHits: hits.length });
+    const stamp = store.stampStream(spawnId, WAVE_STAGE, sha256Text(streamText), new Date(now()).toISOString(), rootDir, { denyHits: hits.length, denyCommandHits: hits.filter((h) => h && h.kind === 'command').length });
     if (!stamp.ok) return endWith({ ok: false, status: 'paused', paused: true, reason: 'stamp-failed', detail: stamp.reason, wave: g.wave, waves: results });
     if (result && result.windowHead && result.windowTail) {
       try {
@@ -1293,12 +1294,15 @@ async function runWaveDispatch(snapshot, ctx = {}) {
       } catch { /* advisory capture: a failed sidecar never blocks the run */ }
     }
 
-    // process contract: deny hits 0, the spawn itself must not have failed
+    // process contract: deny hits 0, the spawn itself must not have failed.
+    // Echo-kind hits (config/doc prose) are telemetry, not violations —
+    // only a command-kind hit means the spawn tried to run a denied verb.
+    const commandHits = hits.filter((h) => h && h.kind === 'command');
     const runnerFailed = !!(result.error != null || (result.status != null && result.status !== 0));
-    if (hits.length || runnerFailed) {
-      const violation = hits.length ? 'deny-hit' : 'spawn-failed';
-      const detail = hits.length
-        ? hits.map((h) => `deny '${h.pattern}': ${h.line.slice(0, 120)}`).join('; ')
+    if (commandHits.length || runnerFailed) {
+      const violation = commandHits.length ? 'deny-hit' : 'spawn-failed';
+      const detail = commandHits.length
+        ? commandHits.map((h) => `deny '${h.pattern}': ${h.line.slice(0, 120)}`).join('; ')
         : String((result.error && result.error.message) || result.stderr || 'spawn failed').slice(0, 240);
       return failHold(violation, detail);
     }
@@ -1410,14 +1414,15 @@ async function reconcileWaves(snapshot, ctx = {}) {
       results.push({ wave: g.wave, action: 'not-started' });
       continue;
     }
-    // Deny gate: a crashed spawn whose stamped stream carries deny hits can
-    // never have its commit adopted, however attributable it looks.
+    // Deny gate: a crashed spawn whose stamped stream carries command-kind
+    // deny hits can never have its commit adopted, however attributable it
+    // looks. Echo hits stay advisory telemetry.
     const startStamp = stamps[start.spawnId];
-    if (startStamp && Number(startStamp.denyHits) > 0) {
+    if (startStamp && Number(startStamp.denyCommandHits || 0) > 0) {
       ok = false;
       results.push({
         wave: g.wave, action: 'unattributable', violation: 'deny-hit',
-        detail: `the crashed wave spawn's stream stamped ${startStamp.denyHits} deny hit(s) — its commit is never adopted`,
+        detail: `the crashed wave spawn's stream stamped ${startStamp.denyCommandHits} command-kind deny hit(s) — its commit is never adopted`,
       });
       continue;
     }

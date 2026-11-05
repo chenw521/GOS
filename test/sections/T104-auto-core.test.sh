@@ -263,6 +263,12 @@ if (!ev || ev.spawnId !== 'spawn-t3' || ev.streamSha256 !== sha || ev.stampCount
 if (ok.stored.mode !== 'auto' || ok.stored.status !== 'cleared') problems.push('ratified record mode/status');
 if (ratify.advanceBlocker({ THINK: ok.stored })) problems.push('ratified still blocks');
 if (!ratify.advanceBlocker({ THINK: ratify.recordPending({ stage: 'THINK' }).approval })) problems.push('PENDING does not block');
+{
+  const cStream = '{"type":"message","text":"classification probe"}\n';
+  const cSha = crypto.createHash('sha256').update(cStream).digest('hex');
+  const cSt = store.stampStream('spawn-t3c', 'THINK', cSha, new Date().toISOString(), rootDir, { denyHits: 3, denyCommandHits: 1 });
+  if (!cSt.ok || cSt.stamp.denyCommandHits !== 1) problems.push('stamp drops denyCommandHits: ' + JSON.stringify(cSt.stamp));
+}
 console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
 EOF
 T3_RAT="$(node t3-ratify.cjs 2>&1 | tail -n 1)"

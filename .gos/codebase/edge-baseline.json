@@ -1,9 +1,9 @@
 {
   "current": {
-    "total": 1467,
-    "callgraph": 935,
+    "total": 1472,
+    "callgraph": 940,
     "testof_fn": 107,
-    "fn_count": 873,
+    "fn_count": 877,
     "fns": [
       "absTaskPath",
       "ackWaitMs",
@@ -61,6 +61,7 @@
       "badAnchor",
       "badText",
       "baselineFile",
+      "bashCommandOf",
       "bfAdopt",
       "bfExitCode",
       "bfFatal",
@@ -487,6 +488,7 @@
       "normalizeStampsToV2",
       "normalizeTaskPaths",
       "nulNames",
+      "numericVersionToken",
       "onboarding",
       "orphanAdvisoryLine",
       "padCp",
@@ -705,6 +707,7 @@
       "saveSnapshot",
       "saveStore",
       "saveWindows",
+      "scanDenyLines",
       "scanSources",
       "scanSpawnOutput",
       "scopedPhaseSet",
@@ -727,6 +730,7 @@
       "semanticSkipEscapeActive",
       "semanticUniverse",
       "serializeEntry",
+      "serviceRequests",
       "setAutoRender",
       "setBreakLock",
       "settleClaim",
@@ -1300,6 +1304,7 @@
       "verifyBaseline": "bin/lib/ops/auto/delivery.cjs",
       "runPrivilegedGit": "bin/lib/ops/auto/delivery.cjs",
       "engineVersionAtLeast": "bin/lib/ops/auto/launcher.cjs",
+      "numericVersionToken": "bin/lib/ops/auto/launcher.cjs",
       "resolveTokenPath": "bin/lib/ops/auto/launcher.cjs",
       "loadProfile": "bin/lib/ops/auto/launcher.cjs",
       "missingMandatoryMasks": "bin/lib/ops/auto/launcher.cjs",
@@ -1319,6 +1324,8 @@
       "recordDenyBaseline": "bin/lib/ops/auto/launcher.cjs",
       "globToRegExp": "bin/lib/ops/auto/launcher.cjs",
       "scanSpawnOutput": "bin/lib/ops/auto/launcher.cjs",
+      "bashCommandOf": "bin/lib/ops/auto/launcher.cjs",
+      "scanDenyLines": "bin/lib/ops/auto/launcher.cjs",
       "makeStreamDenyScanner": "bin/lib/ops/auto/launcher.cjs",
       "stripSecretsDeep": "bin/lib/ops/auto/launcher.cjs",
       "sanitizeHostConfig": "bin/lib/ops/auto/launcher.cjs",
@@ -1447,6 +1454,7 @@
       "removeSpawn": "bin/lib/ops/auto/store.cjs",
       "writeGrantManifest": "bin/lib/ops/auto/store.cjs",
       "admitAndAck": "bin/lib/ops/auto/store.cjs",
+      "serviceRequests": "bin/lib/ops/auto/store.cjs",
       "pinWorktreesDir": "bin/lib/ops/auto/store.cjs",
       "recordPin": "bin/lib/ops/auto/store.cjs",
       "readPins": "bin/lib/ops/auto/store.cjs",
@@ -1754,8 +1762,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "8be577c2a6b90428",
-    "at": "2026-11-02T05:39:00.158Z"
+    "fp": "a558c7857a2505d6",
+    "at": "2026-11-05T02:11:43.866Z"
   },
   "peak": {
     "total": 2065,

@@ -88,6 +88,16 @@ function engineVersionAtLeast(version, min) {
   return true;
 }
 
+// Engine --version output carries the binary name ("bubblewrap 0.13.1");
+// capability floors compare bare dotted numerics, so the numeric token is
+// the version — anything else (empty, non-numeric) stays unknown.
+function numericVersionToken(stdout) {
+  const text = String(stdout == null ? '' : stdout).trim();
+  if (!text) return null;
+  const token = text.split(/\s+/).pop();
+  return /^\d+(\.\d+)*$/.test(token) ? token : null;
+}
+
 // Profile tokens resolve to machine-absolute paths at compose time so the
 // tracked JSON stays correct on every host.
 function resolveTokenPath(p, env) {
@@ -166,7 +176,7 @@ function probeEngine(opts) {
         ], { env, encoding: 'utf8', timeout: 15000 });
       } catch { cap = { error: new Error('capability probe failed') }; }
       if (cap && !cap.error && cap.status === 0) {
-        return { engine: c.name, tier: c.tier, version: (r.stdout || '').trim() || null, probed };
+        return { engine: c.name, tier: c.tier, version: numericVersionToken(r.stdout) || null, probed };
       }
       return {
         engine: null, tier: 'lexical',
@@ -525,12 +535,36 @@ function scanSpawnOutput(text, opts) {
     const lp = loadProfile(DEFAULT_PROFILE);
     deny = lp.ok ? lp.profile.deny.map(String) : DETECTOR_FLOOR_DENY.slice();
   }
+  return scanDenyLines(String(text == null ? '' : text).split(/\r?\n/), deny);
+}
+
+// The bash command of a tool_use event line, or null when the line is not
+// one. Only the command field is matched in that case — tool-event lines
+// duplicate their payload in metadata echoes, and those echoes are prose,
+// not execution.
+function bashCommandOf(line) {
+  if (typeof line !== 'string' || line[0] !== '{') return null;
+  let evt = null;
+  try { evt = JSON.parse(line); } catch { return null; }
+  const part = evt && typeof evt === 'object' ? evt.part : null;
+  if (!part || typeof part !== 'object' || part.type !== 'tool' || part.tool !== 'bash') return null;
+  const input = part.state && typeof part.state === 'object' ? part.state.input : part.input;
+  return input && typeof input === 'object' && typeof input.command === 'string' ? input.command : null;
+}
+
+// Classify every hit: kind 'command' when the match sits inside a bash
+// command field (a real execution attempt), kind 'text' for every other
+// match — echoed configs, documentation prose, plain output.
+function scanDenyLines(lines, deny) {
   const hits = [];
-  for (const line of String(text == null ? '' : text).split(/\r?\n/)) {
+  for (const line of lines) {
     if (!line) continue;
+    const cmd = bashCommandOf(line);
+    const target = cmd != null ? cmd : line;
+    const kind = cmd != null ? 'command' : 'text';
     for (const pat of deny) {
-      const m = globToRegExp(pat).exec(line);
-      if (m) hits.push({ pattern: pat, match: m[0], line: line.slice(0, 240) });
+      const m = globToRegExp(pat).exec(target);
+      if (m) hits.push({ pattern: pat, match: m[0], kind, line: line.slice(0, 240) });
     }
   }
   return hits;
@@ -555,9 +589,12 @@ function makeStreamDenyScanner(opts) {
     buf = flush ? '' : lines.pop(); // keep the trailing fragment for the next chunk
     for (const line of lines) {
       if (!line) continue;
+      const cmd = bashCommandOf(line);
+      const target = cmd != null ? cmd : line;
+      const kind = cmd != null ? 'command' : 'text';
       for (const pat of deny) {
-        const m = globToRegExp(pat).exec(line);
-        if (m) seen.push({ pattern: pat, match: m[0], line: line.slice(0, 240), preTruncation: true });
+        const m = globToRegExp(pat).exec(target);
+        if (m) seen.push({ pattern: pat, match: m[0], kind, line: line.slice(0, 240), preTruncation: true });
       }
     }
   };
