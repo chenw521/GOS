@@ -1,34 +1,39 @@
 {
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
-  "level": 3,
-  "current_stage": "THINK",
+  "level": 2,
+  "current_stage": "VERIFY",
   "completed_stages": [
-    "INTENT"
+    "THINK",
+    "BUILD"
   ],
   "intent": {
-    "summary": "Store dir ~/.local/share/gos/85af56a090a78924 is live dogfood evidence — never delete, reset, or overwrite it; any fixture store must be XDG-overridden inside the sandbox. Model policy: accept the dispatch-table pinning; no model substitution. Human takeover at the advance step on pause is expected behavior, not an anomaly. Work only the files the frozen plan snapshot declares for these tasks: bin/lib/task/stage.cjs, test/sections/T51-commit-guard.test.sh. Deliver: refuse stage back when no reason is supplied (or demand an explicit reason), replacing the silent empty-reason template at bin/lib/task/stage.cjs; the matching negative assertion lands in test/sections/T51-commit-guard.test.sh.",
+    "summary": "Dogfood the new auto dispatch pipeline on live machinery (PR #50, main 7f6b73b): two cycles via gos auto on --profile workspace — cycle 1 small warm-up task, cycle 2 a real 2+ wave task — verifying (1) VERIFY stage spawns zero LLMs (script workers + pinned legs), (2) BUILD wave dispatch honors the three contracts (one wave one commit, refs snapshot, breaker W<n> accounting), (3) the feral failure signature is cured (history 0f528c0e/3c36cb07); every pause is classified from its report (external-mutation/delivery/breaker) before any retry; side quest: decide whether the 2026-10-31 external-mutation false-positive concern [72b7706e] is cured by the M2/M3 redesign and prune it if so",
     "confirmed": true,
     "confirmation": {
       "mode": "headless-auto",
-      "ts": "2026-11-05T02:32:59.349Z"
+      "ts": "2026-11-04T02:32:25.526Z"
     }
   },
-  "approvals": {},
-  "spec_path": ".gos/task/5dafe9ee/spec.md",
-  "plan_path": ".gos/task/5dafe9ee/plan.md",
+  "approvals": {
+    "THINK": "2026-11-04T06:20:54.887Z"
+  },
+  "spec_path": ".gos/task/7f6b73bf/spec.md",
+  "plan_path": ".gos/task/7f6b73bf/plan.md",
   "project": false,
   "requirements": [
     {
       "id": "R-01",
-      "text": "Store dir ~/.local/share/gos/85af56a090a78924 is live dogfood evidence — never delete, reset, or overwrite it; any fi...",
+      "text": "Dogfood the new auto dispatch pipeline on live machinery (PR #50, main 7f6b73b): two cycles via gos auto on --profile...",
       "phase": null,
-      "level": 3
+      "level": 2
     }
   ],
   "decisions": [],
   "observable_truths": [],
   "gaps": [],
   "activation_source": "headless",
-  "task_head": "5dafe9ee4be731163775544435c87fc389d67649"
+  "task_head": "7f6b73bf74719c7b9ba6ed27f137767337274502",
+  "spec_gate_version": 3,
+  "spec_sha256": "b990fad3fcf13e165e8ad8f7e04460f1abae1275f926e2a987dd3d9caaaac2d8"
 }
