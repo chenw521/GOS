@@ -96,6 +96,23 @@ assert_eq "F1 allow-empty occurrences = 1 (stage-advance exemption only)" "1" "$
 N_EXEMPT=$(grep -c "const advancing" "$GOS_ROOT/bin/lib/task/commit.cjs" || true)
 assert_eq "F2 exemption keyed on current-stage match" "1" "$N_EXEMPT"
 
+# --- M: unreadable global gitconfig must not flip the repo probe — the
+# sandbox masks ~/.gitconfig and bare git dies fatal on it; commit still lands ---
+t51_setup
+git init -q . && git commit -q --allow-empty -m root
+printf '.gos/state.json\n.gos/.lock\n.gos/cache/\n' > .gitignore
+git add .gitignore && git commit -q -m ignore
+export GIT_AUTHOR_NAME=t51 GIT_AUTHOR_EMAIL=t51@invalid GIT_COMMITTER_NAME=t51 GIT_COMMITTER_EMAIL=t51@invalid
+node "$GOS" init 1 "t51 masked gitconfig" >/dev/null 2>&1
+MH="$T51_DIR/mhome"; mkdir -p "$MH"; : > "$MH/.gitconfig"; chmod 000 "$MH/.gitconfig"
+set +e; MOUT=$(HOME="$MH" node "$GOS" commit intent 2>&1); MRC=$?; set -e
+assert_exit "M1 advance succeeds despite unreadable ~/.gitconfig" 0 "$MRC"
+if echo "$MOUT" | grep -q "not a git repo"; then assert_contains "M2 no silent skip" "never-present" "not-a-git-repo-skip"; else assert_eq "M2 no silent skip" "0" "0"; fi
+assert_contains "M3 stage advanced" "BUILD" "$(t51_state_field current_stage)"
+N_ISO=$(grep -c "GIT_CONFIG_GLOBAL" "$GOS_ROOT/bin/lib/task/commit.cjs" || true)
+if [ "$N_ISO" -lt 1 ]; then assert_eq "M4 commit isolates git from global config (sandbox EACCES fatal guard)" "1+" "0"; else assert_eq "M4 commit isolates git from global config (sandbox EACCES fatal guard)" "0" "0"; fi
+t51_teardown; t51_setup
+
 # --- G: stage-advance exemption — clean-tree FIRST advance succeeds, duplicate blocked ---
 t51_setup
 git init -q . && git commit -q --allow-empty -m root

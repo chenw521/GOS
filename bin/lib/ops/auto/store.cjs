@@ -32,7 +32,7 @@ const STORE_FILE = 'store.json';
 // the window hashes and byte totals describe the retained sidecar pair.
 const STAMP_TEXT_FIELDS = ['modelPinned', 'modelObserved'];
 const STAMP_HASH_FIELDS = ['headSha256', 'tailSha256'];
-const STAMP_COUNT_FIELDS = ['commandCount', 'totalBytes', 'denyHits'];
+const STAMP_COUNT_FIELDS = ['commandCount', 'totalBytes', 'denyHits', 'denyCommandHits'];
 const HEX64_RE = /^[0-9a-f]{64}$/;
 
 // Window sidecars: one directory under the store dir holding a head/tail

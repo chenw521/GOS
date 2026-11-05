@@ -14,6 +14,33 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
+// Git runs with global and system config neutralized: inside the auto
+// sandbox the masked ~/.gitconfig reads EACCES and bare git dies fatal on
+// the second config read, which once flipped the repo probe to not-a-repo
+// and skipped the advance commit while the stage still moved. Identity is
+// captured from the readable global config BEFORE isolation so host
+// behavior stays unchanged; when nothing is readable the environment's own
+// identity vars (injected by the runner for spawns) carry through.
+const captureIdentity = () => {
+  if (process.env.GIT_AUTHOR_NAME && process.env.GIT_AUTHOR_EMAIL) return {};
+  try {
+    const name = execFileSync('git', ['config', '--global', '--get', 'user.name'], { encoding: 'utf8' }).trim();
+    const email = execFileSync('git', ['config', '--global', '--get', 'user.email'], { encoding: 'utf8' }).trim();
+    if (name && email) {
+      return { GIT_AUTHOR_NAME: name, GIT_AUTHOR_EMAIL: email, GIT_COMMITTER_NAME: name, GIT_COMMITTER_EMAIL: email };
+    }
+  } catch { /* unreadable or unset: fall through */ }
+  return {};
+};
+const GIT_ISOLATED_ENV = {
+  ...process.env,
+  ...captureIdentity(),
+  GIT_CONFIG_GLOBAL: '/dev/null',
+  GIT_CONFIG_SYSTEM: '/dev/null',
+  GIT_TERMINAL_PROMPT: '0',
+};
+const gitRun = (args, opts) => execFileSync('git', args, { ...(opts || {}), env: GIT_ISOLATED_ENV });
+
 function semanticSkipEscapeActive(repoRoot) {
   if (process.env.GOS_SKIP_SEMANTIC !== '1') return false;
   const sb = process.env.GOS_TEST_SANDBOX;
@@ -44,7 +71,7 @@ function runCommitSemanticChecks(state, stage) {
  // ③ pending auto-anchor: zero-commit at init, commits exist now → anchor to root commit
   if (state.task_head_pending) {
     let firstSha = null;
-    try { firstSha = execFileSync('git', ['rev-list', '--max-parents=0', 'HEAD'], { encoding: 'utf8' }).trim().split('\n')[0]; } catch { /* still zero commits */ }
+    try { firstSha = gitRun(['rev-list', '--max-parents=0', 'HEAD'], { encoding: 'utf8' }).trim().split('\n')[0]; } catch { /* still zero commits */ }
     if (firstSha) {
       state.task_head = firstSha;
       state.task_head_pending = false;
@@ -63,10 +90,10 @@ function runCommitSemanticChecks(state, stage) {
     try {
       // BRE note: a bare `(...)` is a literal in POSIX BRE (escaped `\(` would
       // be a group), so these patterns anchor the line-start prefixes verbatim.
-      anchorSha = execFileSync('git', ['log', '--grep=^chore(gos): advance think', '--grep=^gos(think)', '--format=%H', '-1'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || null;
+      anchorSha = gitRun(['log', '--grep=^chore(gos): advance think', '--grep=^gos(think)', '--format=%H', '-1'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || null;
     } catch { /* non-git */ }
     if (!anchorSha) {
-      try { anchorSha = execFileSync('git', ['rev-list', '--max-parents=0', 'HEAD'], { encoding: 'utf8' }).trim().split('\n')[0]; } catch { /* no commits */ }
+      try { anchorSha = gitRun(['rev-list', '--max-parents=0', 'HEAD'], { encoding: 'utf8' }).trim().split('\n')[0]; } catch { /* no commits */ }
     }
     if (anchorSha) {
       state.task_head = anchorSha;
@@ -225,7 +252,7 @@ function cmdCommit(argv) {
   // ---- commit generator guards: hard checks run BEFORE any state mutation
   // reaches disk (archive moves, freeze fields, writeState) so a rejected
   // commit leaves the task exactly where it stood ----
-  const hasGit = (() => { try { execFileSync('git', ['rev-parse', '--is-inside-work-tree'], { stdio: 'pipe' }); return true; } catch { return false; } })();
+  const hasGit = (() => { try { gitRun(['rev-parse', '--is-inside-work-tree'], { stdio: 'pipe' }); return true; } catch { return false; } })();
   let commitSubject = null;
   let allowEmptyAdvance = false;
   if (hasGit) {
@@ -233,9 +260,9 @@ function cmdCommit(argv) {
     // produced no recordable change (duplicate run or files missed by the
     // add-list). A hollow commit would desync git history from task state.
     let stagedEmpty = true;
-    try { execFileSync('git', ['diff', '--cached', '--quiet'], { stdio: 'pipe' }); } catch { stagedEmpty = false; }
+    try { gitRun(['diff', '--cached', '--quiet'], { stdio: 'pipe' }); } catch { stagedEmpty = false; }
     let porcelain = '';
-    try { porcelain = execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); } catch { /* keep empty */ }
+    try { porcelain = gitRun(['status', '--porcelain'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); } catch { /* keep empty */ }
     // `.gos/.lock` is the CLI's own runtime concurrency lock (created with the
     // process, unlinked on exit, machine-local and gitignored in real repos).
     // It must not count as stage output — otherwise the guard can never fire
@@ -500,7 +527,7 @@ function cmdCommit(argv) {
  // [Phase D ] commit-time semantic closure report (code-enforced pre-run routing):
       // the must-check/must-run list rides along every stage commit — no skill discipline needed.
       try {
-        const changed = execFileSync('git', ['-c', 'core.quotepath=off', 'diff', 'HEAD', '--name-only', '--diff-filter=d', '-z'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 32 * 1024 * 1024 })
+        const changed = gitRun(['-c', 'core.quotepath=off', 'diff', 'HEAD', '--name-only', '--diff-filter=d', '-z'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 32 * 1024 * 1024 })
           .split('\0').map((l) => l.trim()).filter(Boolean);
  // [Phase W ] print UNCONDITIONALLY — empty-diff silence was previously masked
         // by tracked-but-uncommitted edges.json (E8 lesson regression: silence ≠ checked)
@@ -539,13 +566,13 @@ function cmdCommit(argv) {
       // never enter the index, so a group-kill cannot strand them there.
       const existingPaths = ADD_PATHS.filter((p) => fs.existsSync(p));
       const addArgs = ['add', '--', ...existingPaths, ...baselineExcludes];
-      try { execFileSync('git', addArgs, { stdio: 'pipe' }); } catch {
+      try { gitRun(addArgs, { stdio: 'pipe' }); } catch {
         // Exclusion pathspecs failing wholesale on very old gits — retry as
         // the plain tolerant sweep, keeping the old behavior as the floor.
-        for (const p of ADD_PATHS) { try { execFileSync('git', ['add', p], { stdio: 'pipe' }); } catch { /* tolerant */ } }
+        for (const p of ADD_PATHS) { try { gitRun(['add', p], { stdio: 'pipe' }); } catch { /* tolerant */ } }
       }
-      execFileSync('git', ['commit', ...(allowEmptyAdvance ? ['--allow-empty'] : []), '-m', msg], { stdio: 'pipe' });
-      const sha = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { stdio: 'pipe' }).toString().trim();
+      gitRun(['commit', ...(allowEmptyAdvance ? ['--allow-empty'] : []), '-m', msg], { stdio: 'pipe' });
+      const sha = gitRun(['rev-parse', '--short', 'HEAD'], { stdio: 'pipe' }).toString().trim();
       console.log(`${core.CONTRACTS.state_semantics.committed} ${stage}: ${sha}`);
     } catch (e) {
       console.error(`✗ git commit failed: ${String(e.message).split('\n')[0]}`);
@@ -555,7 +582,7 @@ function cmdCommit(argv) {
       }
       // A failed commit may leave the index staged (ADD_PATHS sweep or archive
       // renames): unstage so a retry starts from a clean, truthful index.
-      try { execFileSync('git', ['reset', '-q'], { stdio: 'pipe' }); } catch { /* nothing staged */ }
+      try { gitRun(['reset', '-q'], { stdio: 'pipe' }); } catch { /* nothing staged */ }
       process.exit(1);
     }
   }
