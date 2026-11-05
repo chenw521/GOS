@@ -2,10 +2,11 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 2,
-  "current_stage": "VERIFY",
+  "current_stage": "DONE",
   "completed_stages": [
     "THINK",
-    "BUILD"
+    "BUILD",
+    "VERIFY"
   ],
   "intent": {
     "summary": "Dogfood the new auto dispatch pipeline on live machinery (PR #50, main 7f6b73b): two cycles via gos auto on --profile workspace — cycle 1 small warm-up task, cycle 2 a real 2+ wave task — verifying (1) VERIFY stage spawns zero LLMs (script workers + pinned legs), (2) BUILD wave dispatch honors the three contracts (one wave one commit, refs snapshot, breaker W<n> accounting), (3) the feral failure signature is cured (history 0f528c0e/3c36cb07); every pause is classified from its report (external-mutation/delivery/breaker) before any retry; side quest: decide whether the 2026-10-31 external-mutation false-positive concern [72b7706e] is cured by the M2/M3 redesign and prune it if so",
