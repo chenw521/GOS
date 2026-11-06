@@ -272,6 +272,7 @@ EOF
 echo "C1: wave-happy (two waves, pointer-only prompts, one declared commit each)"
 cat > "$T108_DIR/c1.cjs" <<'EOF'
 const path = require('path');
+const fs = require('fs');
 const problems = [];
 const L = require(path.join(process.env.T108_DIR, 't108-lib.cjs'));
 const repo = L.makeRepo(path.join(process.env.T108_DIR, 'c1-repo'), [
@@ -332,6 +333,37 @@ const breaker = L.makeBreaker(3, 5, 100, repo.dir);
   console.log('SPAWNS[' + log.length + ']');
   console.log('PROMPT1[' + log[0].prompt.split('\n')[0] + ']');
 })().catch((e) => { console.log('C1-BAD ' + e.message); process.exitCode = 1; });
+
+// Wave compose carries the host execution surface: an exec-root ro-bind and
+// the adapter auth files must land in the wave spawn argv exactly as the
+// agent-stage compose carries them (live dogfood 2026-11-06: execvp opencode
+// ENOENT inside bwrap because the wave compose omitted both).
+(async () => {
+  const problems = [];
+  const dir = fs.mkdtempSync(path.join(process.env.T108_DIR, 't108-exec-'));
+  const repo = L.makeRepo(path.join(dir, 'repo'), [[{ id: 'T108x', files: ['src/x.txt'] }]]);
+  const log = [];
+  const breaker = L.makeBreaker(3, 5, 100, repo.dir);
+  // Real paths: the compose validates ro-bind sources with lstat and drops
+  // absent ones — the live bug class is a MISSING bind, not a rejected one.
+  // authFiles entries are string paths bound onto themselves (compose
+  // normalizes each entry to {src,dest} of the same resolved path).
+  const execRoot = path.join(dir, 'exec-root');
+  fs.mkdirSync(execRoot, { recursive: true });
+  const authSrc = path.join(dir, 'auth.json');
+  fs.writeFileSync(authSrc, '{}\n');
+  const res = await L.workers.runWaveDispatch(repo.snapshot, L.ctxFor(repo, L.makeRunner(log, { kind: 'good' }), breaker, { roBinds: [execRoot], authFiles: [authSrc] }));
+  if (!res.ok || res.status !== 'complete') problems.push('dispatch not complete: ' + JSON.stringify({ ok: res.ok, status: res.status, detail: res.detail }));
+  const spec = log[0];
+  if (!spec) problems.push('no wave spawn captured');
+  else {
+    const execAt = spec.argv.findIndex((_, ix) => spec.argv[ix] === '--ro-bind' && spec.argv[ix + 1] === execRoot && spec.argv[ix + 2] === execRoot);
+    if (execAt < 0) problems.push('exec-root ro-bind missing from the wave frame');
+    const authAt = spec.argv.findIndex((_, ix) => spec.argv[ix] === '--ro-bind' && spec.argv[ix + 1] === authSrc && spec.argv[ix + 2] === authSrc);
+    if (authAt < 0) problems.push('auth file bind missing from the wave frame');
+  }
+  console.log(problems.length ? 'EXEC-BAD ' + problems.join('; ') : 'EXEC-OK');
+})().catch((e) => { console.log('EXEC-BAD ' + e.message); process.exitCode = 1; });
 EOF
 C1_OUT="$(node "$T108_DIR/c1.cjs" 2>&1)"; RC=$?
 t108_exit "happy-path probe runs clean" "0" "$RC"
@@ -339,6 +371,7 @@ t108_contains "two waves release on one declared commit each with pointer-only p
 t108_contains "wave statuses released" "WAVES[1:released 2:released]" "$C1_OUT"
 t108_contains "exactly two spawns" "SPAWNS[2]" "$C1_OUT"
 t108_contains "prompt first line carries wave + task pointers" "GOS auto BUILD wave 1 — tasks T108a." "$C1_OUT"
+t108_contains "wave frame binds the exec root and adapter auth files" "EXEC-OK" "$C1_OUT"
 
 echo "C2: input-contract (template drift refuses before any spawn; token refusal)"
 cat > "$T108_DIR/c2.cjs" <<'EOF'
