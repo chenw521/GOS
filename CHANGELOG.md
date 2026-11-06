@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add Auto authoring-stage spawns now dispatch under a headless worker contract: canonical artifact path inlined per stage, explicit advance command, no-interactive preamble, fail-closed guard keeping state-derived strings out of prompt text (R-01) [2026-11-06]
 - Add task commit now probes and drives git under neutralized global and system config with identity captured beforehand, so the sandboxed EACCES gitconfig fatal can no longer silently skip the advance commit, and stamp telemetry keeps the denyCommandHits classification field (R-01) [2026-11-05]
 - Add deny escape detection now classifies hits by origin so echoed permission configs and skill docs can no longer veto a landed stage advance while real bash command attempts still hold waves and trips (R-01) [2026-11-04]
 - Add the auto loop default spawn runner forwards the channel ackTick to spawnRun so live runs actually answer spawn write requests instead of timing out (R-01) [2026-11-04]

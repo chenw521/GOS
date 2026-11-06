@@ -9,32 +9,92 @@
     "VERIFY"
   ],
   "intent": {
-    "summary": "Dogfood the new auto dispatch pipeline on live machinery (PR #50, main 7f6b73b): two cycles via gos auto on --profile workspace — cycle 1 small warm-up task, cycle 2 a real 2+ wave task — verifying (1) VERIFY stage spawns zero LLMs (script workers + pinned legs), (2) BUILD wave dispatch honors the three contracts (one wave one commit, refs snapshot, breaker W<n> accounting), (3) the feral failure signature is cured (history 0f528c0e/3c36cb07); every pause is classified from its report (external-mutation/delivery/breaker) before any retry; side quest: decide whether the 2026-10-31 external-mutation false-positive concern [72b7706e] is cured by the M2/M3 redesign and prune it if so",
+    "summary": "Restore THINK spawn yield in the auto loop: the dispatched THINK session must end with a hard contract — write spec.md to the task spec_path, then run node bin/gos.cjs commit think. Evidence: three consecutive sandboxed sessions (25-36 min) read extensively but never wrote the spec nor advanced (concern d4e5f6a7) while INTENT round-trips pass. Trim injected context (74+22 lessons, full skill tree) only if prompt tightening alone is insufficient. Auto-family files in scope; TDD as usual.",
     "confirmed": true,
     "confirmation": {
       "mode": "headless-auto",
-      "ts": "2026-11-04T02:32:25.526Z"
+      "ts": "2026-11-06T01:44:35.592Z"
     }
   },
   "approvals": {
-    "THINK": "2026-11-04T06:20:54.887Z"
+    "THINK": "2026-11-06T02:41:07.109Z",
+    "ARCHIVE": "2026-11-06T07:58:27.913Z"
   },
-  "spec_path": ".gos/task/7f6b73bf/spec.md",
-  "plan_path": ".gos/task/7f6b73bf/plan.md",
+  "spec_path": ".gos/archive/2026-11-06-v1.0.0-task-restore-think-spawn-yield-in-t/task/c42550ab/spec.md",
+  "plan_path": ".gos/archive/2026-11-06-v1.0.0-task-restore-think-spawn-yield-in-t/task/c42550ab/plan.md",
   "project": false,
   "requirements": [
     {
       "id": "R-01",
-      "text": "Dogfood the new auto dispatch pipeline on live machinery (PR #50, main 7f6b73b): two cycles via gos auto on --profile...",
+      "text": "Restore THINK spawn yield in the auto loop: the dispatched THINK session must end with a hard contract — write spec.m...",
       "phase": null,
       "level": 2
     }
   ],
   "decisions": [],
-  "observable_truths": [],
+  "observable_truths": [
+    {
+      "id": "T1",
+      "description": "T107 C24: unit-captured THINK contract prompt carries the canonical spec path line, the node bin/gos.cjs commit think command, all worker-preamble clauses, and the commit-gate iteration line (PLAN/REVIEW analogues asserted in the same case)",
+      "verified": true,
+      "evidence": {
+        "command": "bash test/run-sections.sh T107-auto-dispatch",
+        "output_excerpt": "76 passed, 0 failed",
+        "artifact_path": ".gos/cache/section-runs/20261106T033326Z-full26755.log",
+        "manual": true
+      }
+    },
+    {
+      "id": "T2",
+      "description": "T107 C25: the generic INTENT prompt and the BUILD stage-exit prompt render byte-identical to their pre-change strings (regression pins)",
+      "verified": true,
+      "evidence": {
+        "command": "bash test/run-sections.sh T107-auto-dispatch",
+        "output_excerpt": "76 passed, 0 failed",
+        "artifact_path": ".gos/cache/section-runs/20261106T033326Z-full26755.log",
+        "manual": true
+      }
+    },
+    {
+      "id": "T3",
+      "description": "T107 C26: promptContractGuard derives the artifact path from the task id alone across both id channels (hash and phase code); malformed ids and deviating or multi-line state paths refuse with named reasons",
+      "verified": true,
+      "evidence": {
+        "command": "bash test/run-sections.sh T107-auto-dispatch",
+        "output_excerpt": "76 passed, 0 failed",
+        "artifact_path": ".gos/cache/section-runs/20261106T033326Z-full26755.log",
+        "manual": true
+      }
+    },
+    {
+      "id": "T4",
+      "description": "T107 C27: a poisoned spec_path never reaches any composed prompt - the loop pauses pre-spawn with reason prompt-guard-failed and zero host spawns",
+      "verified": true,
+      "evidence": {
+        "command": "bash test/run-sections.sh T107-auto-dispatch",
+        "output_excerpt": "76 passed, 0 failed",
+        "artifact_path": ".gos/cache/section-runs/20261106T033326Z-full26755.log",
+        "manual": true
+      }
+    },
+    {
+      "id": "T5",
+      "description": "Full section battery green including the auto family: run log .gos/cache/section-runs/20261106T032102Z-full11468.log records Sections total: 3551 passed, 0 failed",
+      "verified": true,
+      "evidence": {
+        "command": "grep -h 'Sections total' .gos/cache/section-runs/20261106T032102Z-full11468.log",
+        "output_excerpt": "Sections total: 3551 passed, 0 failed",
+        "artifact_path": ".gos/cache/section-runs/20261106T032102Z-full11468.log",
+        "manual": true
+      }
+    }
+  ],
   "gaps": [],
   "activation_source": "headless",
-  "task_head": "7f6b73bf74719c7b9ba6ed27f137767337274502",
+  "task_head": "c42550abe54d8c4659c71d9e0ccacf262f21dffa",
   "spec_gate_version": 3,
-  "spec_sha256": "b990fad3fcf13e165e8ad8f7e04460f1abae1275f926e2a987dd3d9caaaac2d8"
+  "spec_sha256": "12ccbc97888bce008e30afa7ec0d462ca58cb4eabf1bf0bc58728efc14ad0413",
+  "changelog_user_summary": "Auto authoring-stage spawns now dispatch under a headless worker contract: canonical artifact path inlined per stage, explicit advance command, no-interactive preamble, fail-closed guard keeping state-derived strings out of prompt text",
+  "checkpoints": [],
+  "completed_at": "2026-11-06T07:58:29.963Z"
 }

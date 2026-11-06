@@ -1,9 +1,9 @@
 {
   "current": {
-    "total": 1472,
-    "callgraph": 940,
+    "total": 1475,
+    "callgraph": 943,
     "testof_fn": 107,
-    "fn_count": 877,
+    "fn_count": 880,
     "fns": [
       "absTaskPath",
       "ackWaitMs",
@@ -89,6 +89,7 @@
       "bumpSpawn",
       "canonLegacy",
       "canonV2",
+      "canonicalArtifactPath",
       "canonicalRepoRel",
       "canonicalRepoUrl",
       "captureBaseline",
@@ -189,6 +190,7 @@
       "confirmSectionList",
       "consumeExemptions",
       "contractKeysFlat",
+      "contractPrompt",
       "contractTokens",
       "convergeLocalMain",
       "copyStep",
@@ -555,6 +557,7 @@
       "projectRequirementRows",
       "projectWriteView",
       "promoteUnreleased",
+      "promptContractGuard",
       "promptSourceHash",
       "prunePins",
       "pruneStamps",
@@ -1339,6 +1342,9 @@
       "mutationBetween": "bin/lib/ops/auto/loop.cjs",
       "defaultPrompt": "bin/lib/ops/auto/loop.cjs",
       "stageExitPrompt": "bin/lib/ops/auto/loop.cjs",
+      "canonicalArtifactPath": "bin/lib/ops/auto/loop.cjs",
+      "promptContractGuard": "bin/lib/ops/auto/loop.cjs",
+      "contractPrompt": "bin/lib/ops/auto/loop.cjs",
       "hashFileSha256": "bin/lib/ops/auto/loop.cjs",
       "approvalsBaselineOf": "bin/lib/ops/auto/loop.cjs",
       "buildModeFor": "bin/lib/ops/auto/loop.cjs",
@@ -1762,8 +1768,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "a558c7857a2505d6",
-    "at": "2026-11-05T02:11:43.866Z"
+    "fp": "72aabb6c8c909fef",
+    "at": "2026-11-06T03:28:11.445Z"
   },
   "peak": {
     "total": 2065,

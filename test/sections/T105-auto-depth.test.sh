@@ -124,7 +124,7 @@ t105_case() {
 }
 
 t105_state() { # $1=current_stage
-  printf '{"schema_version":6,"level":1,"current_stage":"%s","completed_stages":["INTENT"],"intent":{"summary":"t105 fixture","confirmed":true},"task_head":"abc123def0123456789abcdef0123456789abcdef","spec_path":null,"plan_path":null,"requirements":[],"decisions":[],"observable_truths":[],"gaps":[],"checkpoints":[],"approvals":{}}' "$1"
+  printf '{"schema_version":6,"level":1,"current_stage":"%s","completed_stages":["INTENT"],"intent":{"summary":"t105 fixture","confirmed":true},"task_head":"abc123def0123456789abcdef0123456789abcde","spec_path":null,"plan_path":null,"requirements":[],"decisions":[],"observable_truths":[],"gaps":[],"checkpoints":[],"approvals":{}}' "$1"
 }
 
 # ---------------------------------------------------------------- D1 --
