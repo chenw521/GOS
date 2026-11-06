@@ -2,8 +2,10 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 2,
-  "current_stage": "INTENT",
-  "completed_stages": [],
+  "current_stage": "THINK",
+  "completed_stages": [
+    "THINK"
+  ],
   "intent": {
     "summary": "Restore THINK spawn yield in the auto loop: the dispatched THINK session must end with a hard contract — write spec.md to the task spec_path, then run node bin/gos.cjs commit think. Evidence: three consecutive sandboxed sessions (25-36 min) read extensively but never wrote the spec nor advanced (concern d4e5f6a7) while INTENT round-trips pass. Trim injected context (74+22 lessons, full skill tree) only if prompt tightening alone is insufficient. Auto-family files in scope; TDD as usual.",
     "confirmed": true,
@@ -12,7 +14,9 @@
       "ts": "2026-11-06T01:44:35.592Z"
     }
   },
-  "approvals": {},
+  "approvals": {
+    "THINK": "2026-11-06T02:41:07.109Z"
+  },
   "spec_path": ".gos/task/c42550ab/spec.md",
   "plan_path": ".gos/task/c42550ab/plan.md",
   "project": false,
@@ -28,5 +32,7 @@
   "observable_truths": [],
   "gaps": [],
   "activation_source": "headless",
-  "task_head": "c42550abe54d8c4659c71d9e0ccacf262f21dffa"
+  "task_head": "c42550abe54d8c4659c71d9e0ccacf262f21dffa",
+  "spec_gate_version": 3,
+  "spec_sha256": "12ccbc97888bce008e30afa7ec0d462ca58cb4eabf1bf0bc58728efc14ad0413"
 }
