@@ -19,10 +19,15 @@
   "approvals": {
     "THINK": "2026-11-06T09:52:16.723Z",
     "PLAN": {
-      "status": "PENDING",
-      "ts": "2026-11-06T10:04:22.018Z",
+      "status": "cleared",
+      "ts": "2026-11-06T10:05:22.814Z",
       "mode": "auto",
-      "stage": "PLAN"
+      "stage": "PLAN",
+      "evidence": {
+        "spawnId": "a7555b47-7ee7-4d86-ae7f-35b6cb2fedb5-1",
+        "streamSha256": "4f4dbcdb8fcf2f980cac20f04f61ceddf9071f83ba5c4175a425622c4ebbf3f5",
+        "stampCount": 18
+      }
     }
   },
   "spec_path": ".gos/task/a6dfc894/spec.md",
