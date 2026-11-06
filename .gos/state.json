@@ -2,9 +2,10 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "THINK",
+  "current_stage": "PLAN",
   "completed_stages": [
-    "INTENT"
+    "INTENT",
+    "THINK"
   ],
   "intent": {
     "summary": "Store dir ~/.local/share/gos/85af56a090a78924 is live dogfood evidence — never delete, reset, or overwrite it; any fixture store must be XDG-overridden inside the sandbox. Model policy: accept the dispatch-table pinning; no model substitution. Human takeover at the advance step on pause is expected behavior, not an anomaly. Work only the files the frozen plan snapshot declares for these tasks: test/sections/T55-changelog-lint.test.sh, test/sections/T57-archive-single-track.test.sh, test/sections/T61-gate-wiring.test.sh. Deliver concern b275a446 (spec id 4b55189d) collapsed two-wave assertion-debt rewrite: wave 1 rewrites T55-G1 as observable changelog-lint behavior and consumes the T57 malformed-spec_path fixture as a rejection assertion; wave 2 rewrites T61-E1 so gate wiring is observable through gate output and annotates the five structural source contracts exempt (T51-E, T51-F1, T51-F2, T61-E2, T55-L134); correct the misclassification inside the concern (counting-level 11 grep assertions reclassified to 3 rewrites plus 5 structural exemptions).",
@@ -14,7 +15,14 @@
       "ts": "2026-11-06T09:01:11.014Z"
     }
   },
-  "approvals": {},
+  "approvals": {
+    "THINK": {
+      "status": "PENDING",
+      "ts": "2026-11-06T09:17:41.899Z",
+      "mode": "auto",
+      "stage": "THINK"
+    }
+  },
   "spec_path": ".gos/task/a6dfc894/spec.md",
   "plan_path": ".gos/task/a6dfc894/plan.md",
   "project": false,
@@ -30,5 +38,7 @@
   "observable_truths": [],
   "gaps": [],
   "activation_source": "headless",
-  "task_head": "a6dfc894f22d41580ec7155faf1cef3364397b31"
+  "task_head": "a6dfc894f22d41580ec7155faf1cef3364397b31",
+  "spec_gate_version": 3,
+  "spec_sha256": "cecf271eb7f9bfa7273d41f617f356a5d6e05c4c1610983f21fc3d3cf3e4f543"
 }
