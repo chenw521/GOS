@@ -2,7 +2,7 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 2,
-  "current_stage": "VERIFY",
+  "current_stage": "DONE",
   "completed_stages": [
     "THINK",
     "BUILD",
@@ -17,10 +17,11 @@
     }
   },
   "approvals": {
-    "THINK": "2026-11-06T02:41:07.109Z"
+    "THINK": "2026-11-06T02:41:07.109Z",
+    "ARCHIVE": "2026-11-06T07:58:27.913Z"
   },
-  "spec_path": ".gos/task/c42550ab/spec.md",
-  "plan_path": ".gos/task/c42550ab/plan.md",
+  "spec_path": ".gos/archive/2026-11-06-v1.0.0-task-restore-think-spawn-yield-in-t/task/c42550ab/spec.md",
+  "plan_path": ".gos/archive/2026-11-06-v1.0.0-task-restore-think-spawn-yield-in-t/task/c42550ab/plan.md",
   "project": false,
   "requirements": [
     {
@@ -93,5 +94,7 @@
   "task_head": "c42550abe54d8c4659c71d9e0ccacf262f21dffa",
   "spec_gate_version": 3,
   "spec_sha256": "12ccbc97888bce008e30afa7ec0d462ca58cb4eabf1bf0bc58728efc14ad0413",
-  "changelog_user_summary": "Auto authoring-stage spawns now dispatch under a headless worker contract: canonical artifact path inlined per stage, explicit advance command, no-interactive preamble, fail-closed guard keeping state-derived strings out of prompt text"
+  "changelog_user_summary": "Auto authoring-stage spawns now dispatch under a headless worker contract: canonical artifact path inlined per stage, explicit advance command, no-interactive preamble, fail-closed guard keeping state-derived strings out of prompt text",
+  "checkpoints": [],
+  "completed_at": "2026-11-06T07:58:29.963Z"
 }
