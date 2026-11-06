@@ -2,7 +2,7 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 1,
-  "current_stage": "BUILD",
+  "current_stage": "DONE",
   "completed_stages": [
     "BUILD"
   ],
@@ -14,9 +14,11 @@
       "ts": "2026-11-06T10:09:25.567Z"
     }
   },
-  "approvals": {},
-  "spec_path": ".gos/task/a6dfc894/spec.md",
-  "plan_path": ".gos/task/a6dfc894/plan.md",
+  "approvals": {
+    "ARCHIVE": "2026-11-06T10:30:30.635Z"
+  },
+  "spec_path": ".gos/archive/2026-11-06-v1.0.0-task-wave-dispatch-spawns-die-insid/task/a6dfc894/spec.md",
+  "plan_path": ".gos/archive/2026-11-06-v1.0.0-task-wave-dispatch-spawns-die-insid/task/a6dfc894/plan.md",
   "project": false,
   "requirements": [
     {
@@ -43,5 +45,7 @@
   "gaps": [],
   "activation_source": "headless",
   "task_head": "a6dfc894f22d41580ec7155faf1cef3364397b31",
-  "changelog_user_summary": "Wave-dispatch spawns now carry the host execution surface in the sandbox frame: the exec-root ro-bind and adapter auth file binds reach the wave compose exactly as the agent-stage compose carries them, fixing execvp ENOENT on live hosts"
+  "changelog_user_summary": "Wave-dispatch spawns now carry the host execution surface in the sandbox frame: the exec-root ro-bind and adapter auth file binds reach the wave compose exactly as the agent-stage compose carries them, fixing execvp ENOENT on live hosts",
+  "checkpoints": [],
+  "completed_at": "2026-11-06T10:30:32.283Z"
 }
