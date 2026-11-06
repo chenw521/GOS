@@ -2,10 +2,11 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 2,
-  "current_stage": "BUILD",
+  "current_stage": "VERIFY",
   "completed_stages": [
     "THINK",
-    "BUILD"
+    "BUILD",
+    "VERIFY"
   ],
   "intent": {
     "summary": "Restore THINK spawn yield in the auto loop: the dispatched THINK session must end with a hard contract — write spec.md to the task spec_path, then run node bin/gos.cjs commit think. Evidence: three consecutive sandboxed sessions (25-36 min) read extensively but never wrote the spec nor advanced (concern d4e5f6a7) while INTENT round-trips pass. Trim injected context (74+22 lessons, full skill tree) only if prompt tightening alone is insufficient. Auto-family files in scope; TDD as usual.",
@@ -30,10 +31,67 @@
     }
   ],
   "decisions": [],
-  "observable_truths": [],
+  "observable_truths": [
+    {
+      "id": "T1",
+      "description": "T107 C24: unit-captured THINK contract prompt carries the canonical spec path line, the node bin/gos.cjs commit think command, all worker-preamble clauses, and the commit-gate iteration line (PLAN/REVIEW analogues asserted in the same case)",
+      "verified": true,
+      "evidence": {
+        "command": "bash test/run-sections.sh T107-auto-dispatch",
+        "output_excerpt": "76 passed, 0 failed",
+        "artifact_path": ".gos/cache/section-runs/20261106T033326Z-full26755.log",
+        "manual": true
+      }
+    },
+    {
+      "id": "T2",
+      "description": "T107 C25: the generic INTENT prompt and the BUILD stage-exit prompt render byte-identical to their pre-change strings (regression pins)",
+      "verified": true,
+      "evidence": {
+        "command": "bash test/run-sections.sh T107-auto-dispatch",
+        "output_excerpt": "76 passed, 0 failed",
+        "artifact_path": ".gos/cache/section-runs/20261106T033326Z-full26755.log",
+        "manual": true
+      }
+    },
+    {
+      "id": "T3",
+      "description": "T107 C26: promptContractGuard derives the artifact path from the task id alone across both id channels (hash and phase code); malformed ids and deviating or multi-line state paths refuse with named reasons",
+      "verified": true,
+      "evidence": {
+        "command": "bash test/run-sections.sh T107-auto-dispatch",
+        "output_excerpt": "76 passed, 0 failed",
+        "artifact_path": ".gos/cache/section-runs/20261106T033326Z-full26755.log",
+        "manual": true
+      }
+    },
+    {
+      "id": "T4",
+      "description": "T107 C27: a poisoned spec_path never reaches any composed prompt - the loop pauses pre-spawn with reason prompt-guard-failed and zero host spawns",
+      "verified": true,
+      "evidence": {
+        "command": "bash test/run-sections.sh T107-auto-dispatch",
+        "output_excerpt": "76 passed, 0 failed",
+        "artifact_path": ".gos/cache/section-runs/20261106T033326Z-full26755.log",
+        "manual": true
+      }
+    },
+    {
+      "id": "T5",
+      "description": "Full section battery green including the auto family: run log .gos/cache/section-runs/20261106T032102Z-full11468.log records Sections total: 3551 passed, 0 failed",
+      "verified": true,
+      "evidence": {
+        "command": "grep -h 'Sections total' .gos/cache/section-runs/20261106T032102Z-full11468.log",
+        "output_excerpt": "Sections total: 3551 passed, 0 failed",
+        "artifact_path": ".gos/cache/section-runs/20261106T032102Z-full11468.log",
+        "manual": true
+      }
+    }
+  ],
   "gaps": [],
   "activation_source": "headless",
   "task_head": "c42550abe54d8c4659c71d9e0ccacf262f21dffa",
   "spec_gate_version": 3,
-  "spec_sha256": "12ccbc97888bce008e30afa7ec0d462ca58cb4eabf1bf0bc58728efc14ad0413"
+  "spec_sha256": "12ccbc97888bce008e30afa7ec0d462ca58cb4eabf1bf0bc58728efc14ad0413",
+  "changelog_user_summary": "Auto authoring-stage spawns now dispatch under a headless worker contract: canonical artifact path inlined per stage, explicit advance command, no-interactive preamble, fail-closed guard keeping state-derived strings out of prompt text"
 }
