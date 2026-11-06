@@ -133,7 +133,7 @@ t104_case() {
 
 # Minimal task state fixture on stdout; caller redirects into .gos/state.json.
 t104_state() { # $1=current_stage $2=level (default 1) $3=extra json fields
-  printf '{"schema_version":6,"level":%s,"current_stage":"%s","completed_stages":["INTENT"],"intent":{"summary":"t104 fixture","confirmed":true},"task_head":"abc123def0123456789abcdef0123456789abcdef","spec_path":null,"plan_path":null,"requirements":[],"decisions":[],"observable_truths":[],"gaps":[],"checkpoints":[],"approvals":{}%s}' \
+  printf '{"schema_version":6,"level":%s,"current_stage":"%s","completed_stages":["INTENT"],"intent":{"summary":"t104 fixture","confirmed":true},"task_head":"abc123def0123456789abcdef0123456789abcde","spec_path":null,"plan_path":null,"requirements":[],"decisions":[],"observable_truths":[],"gaps":[],"checkpoints":[],"approvals":{}%s}' \
     "${2:-1}" "$1" "${3:-}"
 }
 
@@ -748,7 +748,7 @@ ${PLAN_W2}
 #### T13b: second fixture wave
 **Files**: src/w2.txt
 PLAN
-t104_state THINK 3 ',"spec_path":".gos/task/p0/spec.md","plan_path":".gos/task/p0/plan.md","semantic":{"allowlist":["run-c13.cjs"]}' > .gos/state.json
+t104_state THINK 3 ',"phase_name":"p0: fixture","spec_path":".gos/task/p0/spec.md","plan_path":".gos/task/p0/plan.md","semantic":{"allowlist":["run-c13.cjs"]}' > .gos/state.json
 node -e "const fs=require('fs');const p='.gos/state.json';const st=JSON.parse(fs.readFileSync(p,'utf8'));const {execSync}=require('child_process');st.task_head=execSync('git rev-parse HEAD').toString().trim();fs.writeFileSync(p,JSON.stringify(st,null,2));"
 export GOS_AUTO_TIMEOUT_WALL_SEC=5 GOS_AUTO_TIMEOUT_IDLE_SEC=2
 cat > run-c13.cjs <<'EOF'
@@ -866,7 +866,7 @@ t104_eq "T3: runner legs — in-spawn PENDING, double-zero red-team, ratificatio
 t104_case c13b
 mkdir -p .gos/task/p0
 printf '# Spec\n\np0 auto spec\n' > .gos/task/p0/spec.md
-t104_state THINK 3 ',"spec_path":".gos/task/p0/spec.md"' > .gos/state.json
+t104_state THINK 3 ',"phase_name":"p0: fixture","spec_path":".gos/task/p0/spec.md"' > .gos/state.json
 cat > run-c13b.cjs <<'EOF'
 const fs = require('fs');
 const path = require('path');
@@ -1210,7 +1210,7 @@ t104_eq "C16: loop resolves store timeouts as defaults; the env override still w
 t104_case c17
 mkdir -p .gos/task/p0 .gos/logs
 printf '# Spec\n\np0 auto spec\n' > .gos/task/p0/spec.md
-t104_state THINK 3 ',"spec_path":".gos/task/p0/spec.md"' > .gos/state.json
+t104_state THINK 3 ',"phase_name":"p0: fixture","spec_path":".gos/task/p0/spec.md"' > .gos/state.json
 cat > run-c17.cjs <<'EOF'
 const fs = require('fs');
 const path = require('path');
@@ -1341,7 +1341,7 @@ const snapshot = {
   audit: [],
   meta: { waveValidation: { ok: true, waves: 2 } },
 };
-const baseState = { schema_version: 6, level: 3, current_stage: 'THINK', completed_stages: ['INTENT'], intent: { summary: 'c19', confirmed: true }, task_head: 'abc123def0123456789abcdef0123456789abcdef', spec_path: '.gos/task/p0/spec.md', plan_path: '.gos/task/p0/plan.md', requirements: [], decisions: [], observable_truths: [], gaps: [], checkpoints: [], approvals: {} };
+const baseState = { schema_version: 6, level: 3, current_stage: 'THINK', completed_stages: ['INTENT'], intent: { summary: 'c19', confirmed: true }, phase_name: 'p0: c19', task_head: 'abc123def0123456789abcdef0123456789abcdef', spec_path: '.gos/task/p0/spec.md', plan_path: '.gos/task/p0/plan.md', requirements: [], decisions: [], observable_truths: [], gaps: [], checkpoints: [], approvals: {} };
 fs.writeFileSync(path.join(world, '.gos', 'task', 'p0', 'spec.md'), '# Spec\n\nc19 spec\n');
 function writeState(stage) {
   const st = { ...baseState, current_stage: stage, plan_snapshot: snapshot };
@@ -1428,7 +1428,7 @@ t104_eq "workspace-writing profiles grant the repo root; restricted never does" 
 t104_case c20
 mkdir -p .gos/task/p0 .gos/logs test
 printf '# Spec\n\np0 auto spec\n' > .gos/task/p0/spec.md
-t104_state THINK 3 ',"spec_path":".gos/task/p0/spec.md"' > .gos/state.json
+t104_state THINK 3 ',"phase_name":"p0: fixture","spec_path":".gos/task/p0/spec.md"' > .gos/state.json
 cat > run-c20.cjs <<'EOF'
 const fs = require('fs');
 const path = require('path');

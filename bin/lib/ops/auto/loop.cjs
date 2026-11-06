@@ -155,8 +155,8 @@ function defaultPrompt(ctx) {
 
 // BUILD stage-exit prompt: the wave driver owns the build work, so this spawn
 // exists only to land the single stage advance through the commit channel —
-// the PENDING/ratification boundary stays intact because the exit is a
-// normal marker-session spawn.
+// the PENDING/ratification boundary stays intact because the exit is
+// a normal marker-session spawn.
 function stageExitPrompt(ctx) {
   return [
     `GOS auto BUILD stage exit (task ${ctx.taskId}).`,
@@ -165,6 +165,90 @@ function stageExitPrompt(ctx) {
     'Archive and push are human gates — never attempt them.',
     'This session is one-shot: run the single advance commit or fail with a clear error; never loop.',
   ].join('\n');
+}
+
+// Worker preamble for authoring stages (THINK/PLAN/REVIEW): the spawned
+// session is a headless one-shot worker, never an interactive stage
+// session. A generic stage prompt lets the session inherit the interactive
+// protocol — decision cards, red-team attacker sub-sessions, lesson
+// archaeology — which a one-shot worker cannot complete and stalls before
+// writing the stage artifact (concern d4e5f6a7: three THINK spawns read
+// for 25-36 min and never wrote).
+const WORKER_PREAMBLE = Object.freeze([
+  'You are a headless one-shot stage worker. Nobody will answer questions:',
+  '- Do not ask questions or present choice cards; decide and proceed.',
+  '- Do not spawn attacker, red-team, or parallel helper sessions; this session completes the stage alone.',
+  '- The machine-local auto store (~/.local/share/gos) is audit evidence: never modify, delete, or "clean" it.',
+  '- Skip archaeology: no lesson enumeration, no skill-tree touring; read only what the stage output requires.',
+]);
+
+// Authoring stages under the worker contract and their file artifact kind;
+// REVIEW carries the ordered contract but authors no file artifact.
+const CONTRACT_STAGES = Object.freeze({ THINK: 'spec', PLAN: 'plan' });
+// Legal task-id shape: the union of the two production channels — hash
+// tasks (hex, 8-40) and Lv4 phase tasks (phase code, lowercase). Mirrors
+// core.currentTaskId's phase-code whitelist so a phase-code zone is never
+// refused; anything else (fallback 'task', mixed case, traversal) is not a
+// channel value and refuses.
+const CONTRACT_TASK_ID_RE = /^[a-z\d][a-z\d_-]{0,63}$/;
+
+// Canonical task-zone artifact layout: the only spelling a contract prompt
+// ever inlines.
+function canonicalArtifactPath(taskId, kind) {
+  return `.gos/task/${taskId}/${kind}.md`;
+}
+
+// Prompt-contract guard: the contract inlines the exact artifact path so
+// the worker does zero derivation, but the path derives from the task id
+// alone — state strings are spawn-writable (restricted profiles write
+// inside .gos) and never enter prompt text. A task id off the canonical
+// shape, or a state spec/plan path deviating from the canonical layout,
+// refuses the spawn instead of emitting state-derived text.
+function promptContractGuard(stage, taskId, state) {
+  if (!(stage in CONTRACT_STAGES) && stage !== 'REVIEW') return { ok: true, artifactPath: null };
+  const id = String(taskId || '');
+  // 'task' is the loop's no-id fallback constant, not a channel value — a
+  // contract spawn with no resolvable task id is a state anomaly and
+  // refuses rather than inlining a path for a zone that cannot exist.
+  if (!CONTRACT_TASK_ID_RE.test(id) || id === 'task') {
+    return { ok: false, reason: 'task-id-shape', detail: `task id ${JSON.stringify(id.slice(0, 40))} is not a canonical task id` };
+  }
+  if (stage === 'REVIEW') return { ok: true, artifactPath: null };
+  const kind = CONTRACT_STAGES[stage];
+  const canonical = canonicalArtifactPath(id, kind);
+  const statePath = store.isPlainObject(state) ? state[`${kind}_path`] : null;
+  if (typeof statePath === 'string' && statePath !== canonical) {
+    return { ok: false, reason: `${kind}-path-deviation`, detail: `state ${kind}_path deviates from the canonical task layout` };
+  }
+  return { ok: true, artifactPath: canonical };
+}
+
+// Contract prompt for authoring stages; null for every other stage (the
+// caller falls back to the generic prompt). artifactPath comes from
+// promptContractGuard, never from state strings.
+function contractPrompt(ctx) {
+  const stage = ctx && typeof ctx.stage === 'string' ? ctx.stage : '';
+  if (!(stage in CONTRACT_STAGES) && stage !== 'REVIEW') return null;
+  const artifact = ctx.artifactPath ? CONTRACT_STAGES[stage] : null;
+  const lines = [
+    `GOS auto runner session for stage ${ctx.stage} (task ${ctx.taskId}).`,
+    `Repository: ${ctx.rootDir}`,
+    '',
+    ...WORKER_PREAMBLE,
+    '',
+    'Stage contract — complete in order:',
+  ];
+  if (artifact) lines.push(`1. Write the stage ${artifact} to ${ctx.artifactPath} (this exact path).`);
+  else lines.push(`1. Run the ${ctx.stage} checks per the repo stage guidance; fix what they report.`);
+  lines.push(
+    `2. Run: node bin/gos.cjs commit ${ctx.stage.toLowerCase()}`,
+    '3. Exit. The advance commit is the only success signal.',
+    'The commit gate is the artifact oracle: fix the failures it reports and re-run the advance until it succeeds or a clear error makes progress impossible.',
+    '',
+    'Archive and push are human gates — never attempt them.',
+    'This session is one-shot: finish the contract or fail with a clear error; never loop.',
+  );
+  return lines.join('\n');
 }
 
 // sha256 of one file's bytes, null when unreadable.
@@ -997,6 +1081,24 @@ async function drive(ctx) {
     }
     const stageExit = waveMode;
 
+    // ---- prompt-contract guard (authoring stages) ----
+    // Runs before any spawn registration: a non-canonical task id or a
+    // deviating state artifact path refuses the spawn outright — state
+    // strings are spawn-writable and never enter prompt text. A runner
+    // prompt override (trusted test/host channel) skips the contract.
+    let contractArtifactPath = null;
+    if (!stageExit && opts.prompt == null) {
+      const guarded = promptContractGuard(stage, taskId, taskState);
+      if (!guarded.ok) {
+        return endWith({
+          ok: false, status: 'paused', paused: true, reason: 'prompt-guard-failed', stage,
+          detail: `${guarded.reason}: ${guarded.detail}`,
+          guidance: store.guidanceFor('auto.loop.promptGuardFailed', { detail: guarded.reason }),
+        });
+      }
+      contractArtifactPath = guarded.artifactPath;
+    }
+
     // ---- compose the spawn: entry-driven launcher profile + adapter spec ----
     const spawnId = `${runId}-${seq + 1}`;
     // Registered write channel for this spawn: grants and the use cap come
@@ -1060,7 +1162,8 @@ async function drive(ctx) {
       ? stageExitPrompt({ stage, taskId, rootDir })
       : typeof opts.prompt === 'function' ? opts.prompt({ stage, taskId, rootDir })
         : typeof opts.prompt === 'string' ? opts.prompt
-          : defaultPrompt({ stage, taskId, rootDir });
+          : contractPrompt({ stage, taskId, rootDir, artifactPath: contractArtifactPath })
+            || defaultPrompt({ stage, taskId, rootDir });
 
     // The adapter spec env carries the marker template; the launcher env
     // injects the composed permission config over it. The model pin lands in
@@ -1716,6 +1819,11 @@ module.exports = {
   identityDiff,
   defaultPrompt,
   stageExitPrompt,
+  WORKER_PREAMBLE,
+  CONTRACT_STAGES,
+  canonicalArtifactPath,
+  promptContractGuard,
+  contractPrompt,
   buildModeFor,
   defaultModelResolver,
   verifyDispatchTableStamp,
