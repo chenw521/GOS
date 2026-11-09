@@ -114,6 +114,7 @@ assert_contains "already-active message" "phase already active" "$OUT"
 
 # --- .11: full cycle → archive merges into project.json + renders views + rewrites anchor
 mkdir -p test/out && echo "412 passed, 0 failed" > test/out/t8.log
+git add test/out/t8.log
 python3 -c "
 import json; s=json.load(open('.gos/state.json'))
 s['current_stage']='DONE'
@@ -215,6 +216,7 @@ assert_contains "requires-Lv4 message" "phase add requires an Lv4 project (gos i
 OUT=$(node "$GOS" phase list 2>&1)
 assert_contains "empty list hint" "(no phases — gos phase add)" "$OUT"
 mkdir -p test/out && echo "300 passed, 0 failed" > test/out/t8.log
+git add test/out/t8.log
 python3 -c "
 import json; s=json.load(open('.gos/state.json'))
 s['current_stage']='DONE'

@@ -139,6 +139,7 @@ print('%s|%s' % (d['status'], d['covered_by']))")
 assert_eq "covered_by recorded P0:T1" "covered|P0:T1" "$COV"
 # (T2 migration: string evidence → three-element object [D-30]; artifact must exist)
 mkdir -p test/out && echo "grand e2e ok" > test/out/e2e.log
+git add test/out/e2e.log
 python3 -c "
 import json; s=json.load(open('.gos/state.json'))
 s['observable_truths']=[{'id':'T-01','description':'d','verified':True,'evidence':{'command':'bash test/run-sections.sh','output_excerpt':'308 passed, 0 failed','artifact_path':'test/out/e2e.log'}}]

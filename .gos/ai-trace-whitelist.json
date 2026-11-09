@@ -296,7 +296,7 @@
         "sha256": "f844494e3ebcc483d9e03525c5fa7e75397862b27fbed6f89e9a0c93541333ce"
       },
       {
-        "line": 1286,
+        "line": 1327,
         "sha256": "bdc502fca27a64bba42503b69d9518aa43d98cb47c79a1e9d71c515488c395f5"
       }
     ]
@@ -383,27 +383,27 @@
         "sha256": "3557c0dc2961fd2807a72c6ae7650f213c968d0281ed7b607b1d30f03d3c9975"
       },
       {
-        "line": 98,
+        "line": 105,
         "sha256": "e71ff27d8e918bd4da2a94c6a3541fb6ce096318c8cedcb7a9ffa8c6edfc1679"
       },
       {
-        "line": 103,
+        "line": 110,
         "sha256": "ad8077dd5d13511c62cd13d6879046b16ab247165665d39284fc79f3a5426596"
       },
       {
-        "line": 112,
+        "line": 119,
         "sha256": "24d64081cfd6973d2f70f1eeea16cee66cf0b3638020eff58a782f316cc44f8e"
       },
       {
-        "line": 115,
+        "line": 122,
         "sha256": "711ebc2e880f7e4d08b87ac28ceee74f55a4d3d6777bbadda58bcd8453768658"
       },
       {
-        "line": 119,
+        "line": 126,
         "sha256": "55945c4d5323ac57895accd173fec4dd2873c6d8df0e3c4a6a6ebbb832a8ace1"
       },
       {
-        "line": 125,
+        "line": 132,
         "sha256": "a0734266bbadebd690b1d7067aad2a94cc81f9aadf640b4ccac21ffc9494fb61"
       }
     ]
@@ -1086,7 +1086,7 @@
         "sha256": "a2def5f8faf996d600ac5435caccd5fbd8d7ac9b8a4898c329608fa7fdbf7e9a"
       },
       {
-        "line": 276,
+        "line": 277,
         "sha256": "70d8651708941ddfd40596ba17331471e55eabb227571a98607473cc2e4a04f3"
       }
     ]
@@ -1128,7 +1128,7 @@
         "sha256": "a2def5f8faf996d600ac5435caccd5fbd8d7ac9b8a4898c329608fa7fdbf7e9a"
       },
       {
-        "line": 99,
+        "line": 100,
         "sha256": "131f320587720a074132bb67eb67cd46bff09fd2c05b8433a615231b8c1f3f70"
       }
     ]
@@ -1143,79 +1143,79 @@
         "sha256": "955fec64f68b228a52a2a61fdc0ae21fbcc4aa57c06555ed0ecf164fc112cceb"
       },
       {
-        "line": 90,
+        "line": 91,
         "sha256": "dcf880d7b162d432730ed51376f5474216c43cd017cfccecf1d637daf4984c5d"
       },
       {
-        "line": 100,
+        "line": 101,
         "sha256": "3958a51c8be79c315875db26867accfa8afa4a63e775fe29ff287cdacb937b5e"
       },
       {
-        "line": 105,
+        "line": 106,
         "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
       },
       {
-        "line": 107,
+        "line": 108,
         "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
       },
       {
-        "line": 134,
+        "line": 135,
         "sha256": "93fc81e9f10c55748c94d9dbab13da58a6b5393c7061a2eca09b637e44705f5a"
       },
       {
-        "line": 143,
+        "line": 144,
         "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
       },
       {
-        "line": 145,
+        "line": 146,
         "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
       },
       {
-        "line": 158,
+        "line": 159,
         "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
       },
       {
-        "line": 160,
+        "line": 161,
         "sha256": "9c708f3ccb3e0fec99e2e82626e0d807c1a6f638511f5c70ca62941a49c5caaa"
       },
       {
-        "line": 182,
+        "line": 183,
         "sha256": "87c9e469bcc566c5374296bb4ab6ca6cca220187f95e07f1b021fee93ec5ce6b"
       },
       {
-        "line": 188,
+        "line": 189,
         "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
       },
       {
-        "line": 190,
+        "line": 191,
         "sha256": "651f122a1b984500eee72f31511166a8ac303335a52fcf6b6c2a024c94374995"
       },
       {
-        "line": 194,
+        "line": 195,
         "sha256": "cdf567cfa8d89112f184e2ddaa0165ebbd4787cdb86247a162bc62d86c3beb36"
       },
       {
-        "line": 222,
+        "line": 223,
         "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
       },
       {
-        "line": 240,
+        "line": 241,
         "sha256": "9210bf2e54b81d68141d403315e877e6a615e1d441dad852861f6183cab50623"
       },
       {
-        "line": 285,
+        "line": 286,
         "sha256": "4a24d7d9f6a2c857b4a1153847f05cff5dc7fac98dca274fe43f33c9f64f8a40"
       },
       {
-        "line": 299,
+        "line": 300,
         "sha256": "81d36cc396da07225d6a12e9bf4c8dbce4d537e8faa2b507624245f99a040d82"
       },
       {
-        "line": 301,
+        "line": 302,
         "sha256": "75e400981ec3a19b30b4117faf55c91bc1ffe7d757af122866261694d114f6b0"
       },
       {
-        "line": 338,
+        "line": 339,
         "sha256": "c3279c86a04c48b98deef6ab60f51abc6706263f71ea3c828f9c574d837f160c"
       }
     ]
@@ -1249,35 +1249,35 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 44,
+        "line": 45,
         "sha256": "59b0cb28eef6338fc03bd03cfec92857daa3e182c13fde64959379fa37d4be68"
       },
       {
-        "line": 71,
+        "line": 72,
         "sha256": "7543fae477f48ce617565a2fc7083f4d5bc633cfb6b75b887f2fe95b3eb84861"
       },
       {
-        "line": 75,
+        "line": 76,
         "sha256": "ed147cc4874ae015e3f234aee4e52a4fd42a225e0e50516ea681c8f28af21a04"
       },
       {
-        "line": 79,
+        "line": 80,
         "sha256": "cfcb8ec0f6a8d821c39370815aa4af1c1a6a8619ddc6d123fe9c372e42f0fb73"
       },
       {
-        "line": 91,
+        "line": 92,
         "sha256": "9dd983aace01edc2cc7db2a08a98e1f3a5a3261f11bd5029abf193a77a4e3c96"
       },
       {
-        "line": 118,
+        "line": 119,
         "sha256": "8f2df1bc70f48821ec0b91ed94bd061b6dec061b259b8cef6f23018edeea7774"
       },
       {
-        "line": 129,
+        "line": 130,
         "sha256": "6bf071e034b5d391684cdb9cc65af7513961a7b02fd092dd33ebcc23afbef13f"
       },
       {
-        "line": 137,
+        "line": 138,
         "sha256": "655c9f0893dd00016139f03c2fa4f4c6faa97ae1db3985fbac5d0822d70178f0"
       }
     ]
@@ -1328,11 +1328,11 @@
         "sha256": "fd1afa9b4d5881726aaacac914c83aa001d62fbd7b03d01eb2bcea12ae8df503"
       },
       {
-        "line": 233,
+        "line": 234,
         "sha256": "4031955c8d283e0ff3f2551e360ab8a87b3199fb787c0fe4cbf123d00bc0f910"
       },
       {
-        "line": 251,
+        "line": 252,
         "sha256": "d2638c91e6862c54b75745b678fc46a034fa20f2d3ce42a557a810881d402cb7"
       }
     ]

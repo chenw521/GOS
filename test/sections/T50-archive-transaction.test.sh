@@ -28,6 +28,7 @@ seed_ship() {
   node "$GOS" stage build >/dev/null 2>&1
   TID="$(printf '%s' "$SPEC" | sed 's|.*\.gos/task/||; s|/spec.md$||')"
   echo "receipt-body" > ".gos/task/$TID/receipt.md"
+  git add ".gos/task/$TID/receipt.md"
   node "$GOS" truth add "T50 truth $1" >/dev/null 2>&1
   node "$GOS" truth verify T1 --command '["echo","ok50"]' --excerpt 'exit code 0' --artifact ".gos/task/$TID/receipt.md" >/dev/null 2>&1
   node "$GOS" approve archive >/dev/null 2>&1

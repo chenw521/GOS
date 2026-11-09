@@ -33,6 +33,7 @@ assert_contains "A1 fail-closed message points at truth verify re-record" "truth
 
 # --- A2: hand-edited fake excerpt (misses all three feature regexes) → exit 1 ---
 mkdir -p out && echo "fixture" > out/a14.log
+git add out/a14.log
 python3 -c "
 import json; s=json.load(open('.gos/state.json'))
 s['observable_truths']=[{'id':'T-01','description':'fake excerpt','verified':True,
@@ -52,14 +53,14 @@ set +e; OUT=$(node "$GOS" gate truths 2>&1); RC=$?; set -e
 assert_exit "A3 valid object → gate truths exit 0" 0 "$RC"
 assert_contains "A3 ✓ line emitted" "✓ truths" "$OUT"
 
-# --- A4: artifact_path missing on disk → exit 1 (pathExists) ---
+# --- A4: artifact_path outside the zones and not in the git index → exit 1 ---
 python3 -c "
 import json; s=json.load(open('.gos/state.json'))
 s['observable_truths'][0]['evidence']['artifact_path']='out/gone.log'
 json.dump(s,open('.gos/state.json','w'),indent=2)"
 set +e; OUT=$(node "$GOS" gate truths 2>&1); RC=$?; set -e
-assert_exit "A4 artifact missing on disk → exit 1" 1 "$RC"
-assert_contains "A4 names disk existence" "not found on disk" "$OUT"
+assert_exit "A4 untracked artifact → exit 1" 1 "$RC"
+assert_contains "A4 names the staging cure" "git add out/gone.log" "$OUT"
 
 # --- A4b: machine-local zones (.gos/archive/ .gos/logs/ .gos/cache/) are
 # clone-absent by design ( + census audit) — the on-disk leg is an
@@ -347,6 +348,7 @@ set +e; OUT=$(node "$GOS" commit verify 2>&1); RC=$?; set -e
 assert_exit "H1 verified truth without evidence → commit verify exit 1" 1 "$RC"
 assert_contains "H1 message names evidence" "evidence" "$OUT"
 mkdir -p out && echo "done" > out/h.log
+git add out/h.log
 python3 -c "
 import json; s=json.load(open('.gos/state.json'))
 s['observable_truths']=[{'id':'T-01','description':'ok','verified':True,

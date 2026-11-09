@@ -93,7 +93,8 @@ git add -A >/dev/null 2>&1 && git commit -qm t92-base >/dev/null 2>&1
 # --- L3: receipts enrichment + echo path fixed to registry rel ---
 node "$GOS" truth add "counts files from stdout fixture" >/dev/null 2>&1
 node "$GOS" truth add "long description truth line feeding the eighty codepoint clip assertion of the receipts view" >/dev/null 2>&1
-touch art.txt   # evidence artifact must exist at verify time (validateEvidenceObject)
+touch art.txt   # evidence artifact must be staged at verify time (tracked or machine-local zone)
+git add art.txt
 node "$GOS" truth verify T1 --replay --command '["node","-e","console.log(\"7 files listed\")"]' --artifact art.txt > t92-echo.txt 2>&1; E1=$?
 node "$GOS" truth verify T2 --replay --command '["node","-e","console.log(\"total 165\")"]' --artifact art.txt >/dev/null 2>&1; E2=$?
 L3=$(python3 - <<'PYEOF'

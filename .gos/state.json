@@ -2,9 +2,10 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 2,
-  "current_stage": "BUILD",
+  "current_stage": "VERIFY",
   "completed_stages": [
-    "THINK"
+    "THINK",
+    "BUILD"
   ],
   "intent": {
     "summary": "Enforce the artifact-path contract at truth-verify authoring time: reject evidence artifact paths that are neither inside ARTIFACT_LOCAL_ZONES (hoisted and exported from the state validator as the single source) nor git-tracked, so the fresh-clone CI failure of issue #57 surfaces at recording time. Scope freeze: bin/lib/knowledge/truth.cjs, bin/lib/core/state.cjs (export only), test/sections/T86-truth-replay-surface.test.sh.",

@@ -23,6 +23,7 @@ echo "--- T16: truth add 续号 + manual/replay verify + receipts + manualWarnin
 
 t16_g init 2 "t16 truth family" >/dev/null 2>&1
 echo "evidence artifact body" > art.txt
+git add art.txt
 
 # --- .1: truth add continuous numbering — first→ , second→
 OUT=$(t16_g truth add "first truth" 2>&1); RC=$?

@@ -61,6 +61,7 @@ assert_eq "banner text lives only in CONTRACTS table (not in cmdGate)" "1" "$OCC
 # (T2 migration: string evidence → three-element object [D-30]; artifact must exist)
 node "$GOS" init 3 "semantic contracts" >/dev/null 2>&1
 mkdir -p test/out && echo "45 passed, 0 failed" > test/out/t13.log
+git add test/out/t13.log
 python3 -c "
 import json; s=json.load(open('.gos/state.json'))
 s['decisions']=[{'id':'D-01','title':'semantic gates','covered':True}]

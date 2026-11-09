@@ -39,6 +39,7 @@ assert_eq "stdout line 1 is '{' (banner-free)" "{" "$FIRST"
 # Evidence artifact must exist on disk
 node "$GOS" init 3 "auth" >/dev/null 2>&1
 mkdir -p test/out && echo "308 passed, 0 failed" > test/out/t9.log
+git add test/out/t9.log
 python3 -c "
 import json; s=json.load(open('.gos/state.json'))
 s['decisions']=[{'id':'D-01','title':'JWT','covered':True}]
