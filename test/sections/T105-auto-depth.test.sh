@@ -1430,6 +1430,32 @@ if (a1 !== 'self-report: model other-m (pinned pinned-m), commands 3 (cap 5) —
 const a2 = codex.advisoryLine({ modelPinned: 'm', modelObserved: 'm', commandCount: 9, cap: 5 });
 if (a2 !== 'self-report: model m (pinned m), commands 9 (cap 5) — advisory only') problems.push('over-ceiling line wrong: ' + a2);
 if (opencode.advisoryLine({}) !== null) problems.push('all-absent not null');
+// (f) terminal semantics: a bare step_finish close after tool rounds is a
+// truncated session, not a success — opencode emits step_finish per tool
+// round, so a clean close needs an explicit closer or a final model turn
+// (text after the last tool execution). Live evidence 2026-11-09: two wave
+// workers exited right after a completed tool step and read as rc0-clean.
+const truncStream = opencode.parseEventStream([
+  '{"type":"message","text":"starting"}',
+  '{"type":"tool_use","part":{"tool":"bash","command":"grep -n x"}}',
+  '{"type":"step_finish","part":{"type":"step-finish"}}',
+].join('\n') + '\n');
+if (truncStream.ok || !truncStream.failure || truncStream.failure.class !== 'stream-truncated-after-tool-step') {
+  problems.push('truncated stream misclassified: ' + JSON.stringify(truncStream.failure && truncStream.failure.class));
+}
+const textFinalStream = opencode.parseEventStream([
+  '{"type":"tool_use","part":{"tool":"bash","command":"grep -n x"}}',
+  '{"type":"text","part":{"type":"text","text":"wave complete"}}',
+  '{"type":"step_finish","part":{"type":"step-finish"}}',
+].join('\n') + '\n');
+if (!textFinalStream.ok) problems.push('text-final stream failed: ' + JSON.stringify(textFinalStream.failure && textFinalStream.failure.class));
+const explicitStream = opencode.parseEventStream([
+  '{"type":"tool_use","part":{"tool":"bash"}}',
+  '{"type":"result","model":"m"}',
+].join('\n') + '\n');
+if (!explicitStream.ok) problems.push('explicit result closer failed: ' + JSON.stringify(explicitStream.failure && explicitStream.failure.class));
+const textOnlyStream = opencode.parseEventStream('{"type":"message","text":"no tools needed"}\n{"type":"step_finish"}\n');
+if (!textOnlyStream.ok) problems.push('tool-free session misclassified: ' + JSON.stringify(textOnlyStream.failure && textOnlyStream.failure.class));
 if (codex.advisoryLine({ cap: 5 }) !== null) problems.push('cap-only not null');
 const a3 = opencode.advisoryLine({ modelPinned: 'm' });
 if (a3 !== 'self-report: model unobserved (pinned m) — advisory only') problems.push('pin-only line wrong: ' + a3);
