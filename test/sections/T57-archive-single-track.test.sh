@@ -5,8 +5,10 @@
 # [Unreleased] (today UTC-stamped bullet, utcToday same-source), missing file
 # blocks with the bootstrap advisory, .changes.md sealed read-only (mtime
 # frozen across archive), delta.md gains user_summary from the task-scoped
-# changelog cache (empty fallback), version warn stays git-tag sourced.
-# Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
+# changelog cache (empty fallback), version warn stays git-tag sourced, and a
+# malformed (quoted) spec_path is rejected by commit think naming the stored
+# path. Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced
+# by runner
 T57_DIR=""
 
 gos_spec() { node "$GOS" context think 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["spec"])' 2>/dev/null; }
@@ -19,10 +21,13 @@ t57_new() {
 }
 
 # state → archivable (DONE + approved + spec materialized)
+# spec_path stores the unquoted gos_spec() return (the well-formed value the
+# THINK gate and delta generation read); the quoted spelling is a malformed
+# fixture consumed by the R-suite rejection scenario below.
 t57_ready() {
   python3 -c "
 import json; s=json.load(open('.gos/state.json'))
-s['current_stage']='DONE'; s['approvals']={'ARCHIVE':'ok'}; s['spec_path']='\"$(gos_spec)\"'
+s['current_stage']='DONE'; s['approvals']={'ARCHIVE':'ok'}; s['spec_path']='$(gos_spec)'
 json.dump(s,open('.gos/state.json','w'),indent=2)"
   echo spec > "$(gos_spec)"
 }
@@ -59,6 +64,24 @@ printf '# Changelog\n\n## [Unreleased]\n\n- Test gate pass (R-01) [%s]\n' "$TODA
 set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
 assert_exit "P1 today-stamped Unreleased bullet passes archive" 0 "$RC"
 assert_contains "P1 version discipline warn on success path" "version discipline" "$OUT"
+t57_teardown
+
+# ===== R: malformed (quoted) spec_path -> commit think rejects it =====
+# The spec file exists at the real path; only the stored spec_path value is
+# malformed (embedded quotes), so the THINK artifact gate must fail on the
+# value itself and name the stored path in the refusal — an unrelated gate
+# failure cannot satisfy the path pin.
+t57_new
+SPEC="$(gos_spec)"
+echo spec > "$SPEC"
+python3 -c "
+import json; s=json.load(open('.gos/state.json'))
+s['current_stage']='THINK'; s['approvals']={'THINK':'ok'}; s['spec_path']='\"$SPEC\"'
+json.dump(s,open('.gos/state.json','w'),indent=2)"
+set +e; OUT=$(GOS_HEADLESS=1 node "$GOS" commit think 2>&1); RC=$?; set -e
+assert_exit "R1 commit think rejects malformed spec_path" 1 "$RC"
+assert_contains "R1 refusal names the spec gate" "spec file not found:" "$OUT"
+if printf '%s' "$OUT" | grep -qF "\"$SPEC\""; then echo "  ✓ R1 refusal names the quoted (never-existing) path"; PASS=$((PASS+1)); else echo "  ✗ R1 refusal does not name the quoted path"; FAIL=$((FAIL+1)); fi
 t57_teardown
 
 # ===== U: delta.md user_summary from the task-scoped changelog cache =====
