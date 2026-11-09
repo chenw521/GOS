@@ -586,6 +586,7 @@ const WAVE_PROMPT_TEMPLATE = [
   'GOS auto BUILD wave {wave} — tasks {taskIds}.',
   'Work only the files the frozen plan snapshot declares for these tasks.',
   'Land exactly one commit on the work branch for this wave before you exit.',
+  'Commit the wave as soon as its declared changes are complete and their checks pass; run exploratory or discriminating probes only after the commit — if a post-commit probe then fails, stepFail with a clear error instead of continuing.',
   'Never touch the dispatch table, runner-critical paths, the plan snapshot, the spec, or any ref besides the work branch tip.',
   'When the wave genuinely needs no change, write a file named "noop" holding one reason line into your scratch directory, then exit.',
   'This session is one-shot: finish the wave or stepFail with a clear error; never loop.',

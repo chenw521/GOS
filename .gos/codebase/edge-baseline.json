@@ -1,9 +1,9 @@
 {
   "current": {
-    "total": 1475,
-    "callgraph": 943,
+    "total": 1476,
+    "callgraph": 944,
     "testof_fn": 107,
-    "fn_count": 880,
+    "fn_count": 881,
     "fns": [
       "absTaskPath",
       "ackWaitMs",
@@ -400,6 +400,7 @@
       "isRunnerCriticalPath",
       "isSeparatorCells",
       "isTerminalEvent",
+      "isTextTurnEvent",
       "isToolExecutionItem",
       "isToolUseEvent",
       "isTracked",
@@ -1215,6 +1216,7 @@
       "extractTelemetryCodex": "bin/lib/ops/auto/adapters/codex.cjs",
       "pinnedModelArgsCodex": "bin/lib/ops/auto/adapters/codex.cjs",
       "isTerminalEvent": "bin/lib/ops/auto/adapters/opencode.cjs",
+      "isTextTurnEvent": "bin/lib/ops/auto/adapters/opencode.cjs",
       "createEventParser": "bin/lib/ops/auto/adapters/opencode.cjs",
       "parseEventStream": "bin/lib/ops/auto/adapters/opencode.cjs",
       "buildSpawnSpec": "bin/lib/ops/auto/adapters/opencode.cjs",
@@ -1768,8 +1770,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "72aabb6c8c909fef",
-    "at": "2026-11-06T10:26:05.450Z"
+    "fp": "d3825a306e8f2c05",
+    "at": "2026-11-09T02:53:59.075Z"
   },
   "peak": {
     "total": 2065,

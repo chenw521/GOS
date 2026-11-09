@@ -31,13 +31,25 @@ const SPAWN_MODE = 'opencode-run-json';
 const DEFAULT_SPAWN_TIMEOUT_MS = 60 * 60 * 1000;
 
 // Terminal event shapes: an event whose `type` is listed here, or one that
-// carries `terminal: true`, closes the stream successfully.
-const DEFAULT_TERMINAL_TYPES = ['result', 'end', 'finish', 'done', 'step_finish'];
+// carries `terminal: true`, closes the stream successfully. step_finish is
+// deliberately absent — the host CLI emits it after EVERY tool round, so it
+// proves a step, never a session close. A stream ending at a bare
+// step_finish is accepted only when the final model turn arrived (a text
+// event after the last tool execution); otherwise it classifies as a
+// truncated session (live evidence 2026-11-09: two wave workers exited
+// cleanly right after a completed tool step, swallowing commit-ready work).
+const DEFAULT_TERMINAL_TYPES = ['result', 'end', 'finish', 'done'];
 
 function isTerminalEvent(ev, terminalTypes) {
   if (!ev || typeof ev !== 'object') return false;
   if (ev.terminal === true) return true;
   return terminalTypes.includes(ev.type);
+}
+
+function isTextTurnEvent(ev) {
+  if (!ev || typeof ev !== 'object') return false;
+  if (ev.type === 'text') return true;
+  return ev.type === 'message' && typeof ev.text === 'string';
 }
 
 // ---------- outcome stream parsing ----------
@@ -74,14 +86,46 @@ function createEventParser(opts) {
     return { event: ev };
   }
 
+  // A bare step_finish close stands in for the session end the host CLI
+  // never announces: acceptable only when the final model turn arrived —
+  // a text event after the last tool execution. A tool-free session ends
+  // at its (only) reasoning turn, which needs no such witness.
+  function stepFinishCloseVerdict() {
+    const evs = state.events;
+    let lastToolIdx = -1;
+    let textAfterLastTool = false;
+    for (let i = 0; i < evs.length; i++) {
+      const ev = evs[i];
+      if (ev.type === 'tool_use') { lastToolIdx = i; textAfterLastTool = false; }
+      else if (isTextTurnEvent(ev) && lastToolIdx >= 0) textAfterLastTool = true;
+    }
+    if (lastToolIdx < 0 || textAfterLastTool) return { ok: true };
+    return {
+      ok: false,
+      failure: {
+        class: 'stream-truncated-after-tool-step',
+        key: 'auto.host.streamTruncatedAfterToolStep',
+        params: { count: evs.length },
+        message: `event stream closed at a tool step without a final model turn (truncated session; parsed ${evs.length} event(s))`,
+      },
+    };
+  }
+
   function finish() {
+    const lastEvent = state.events.length ? state.events[state.events.length - 1] : null;
     if (!state.terminal && !state.failure) {
-      state.failure = {
-        class: 'stream-no-terminal-event',
-        key: 'auto.host.streamNoTerminal',
-        params: { count: state.events.length },
-        message: `event stream ended without a terminal event (types: ${terminalTypes.join(', ')}; parsed ${state.events.length} event(s))`,
-      };
+      if (lastEvent && lastEvent.type === 'step_finish') {
+        const verdict = stepFinishCloseVerdict();
+        if (!verdict.ok) state.failure = verdict.failure;
+        else state.terminal = lastEvent;
+      } else {
+        state.failure = {
+          class: 'stream-no-terminal-event',
+          key: 'auto.host.streamNoTerminal',
+          params: { count: state.events.length },
+          message: `event stream ended without a terminal event (types: ${terminalTypes.join(', ')}; parsed ${state.events.length} event(s))`,
+        };
+      }
     }
     return {
       ok: !state.failure,

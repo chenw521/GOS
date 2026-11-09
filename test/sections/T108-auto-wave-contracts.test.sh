@@ -296,6 +296,11 @@ const breaker = L.makeBreaker(3, 5, 100, repo.dir);
     if (spec.prompt.includes('src/a.txt') || spec.prompt.includes('src/b.txt')) problems.push(`wave ${i + 1} prompt interpolates repo file paths (prose)`);
   });
   if (!log[0].prompt.includes('wave 1') || !log[0].prompt.includes('T108a')) problems.push('wave 1 prompt lacks its pointers');
+  // commit-before-probes ordering: a session death during post-completion
+  // probes must never cost commit-ready work (live evidence 2026-11-09)
+  if (!log[0].prompt.includes('run exploratory or discriminating probes only after the commit')) {
+    problems.push('wave prompt lacks the commit-before-probes ordering line');
+  }
   // one commit per wave over declared files only
   const w1 = res.waves[0], w2 = res.waves[1];
   const c1 = L.changedOf(repo.dir, w1.head), c2 = L.changedOf(repo.dir, w2.head);
