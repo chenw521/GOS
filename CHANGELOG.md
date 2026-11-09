@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add Changelog-lint and archive sections assert observable behavior over source greps: the changelog G-suite runs a core-verdict equivalence harness over discriminating fixtures, and the archive fixtures consume the malformed quoted spec_path as a commit-think rejection assertion (R-01) [2026-11-09]
 - Add Adapter streams closing at a bare step_finish now classify as truncated sessions unless the final model turn arrived, and wave prompts order the commit ahead of exploratory probes so a mid-probe session death cannot cost commit-ready work (R-01) [2026-11-09]
 - Add Wave-dispatch spawns now carry the host execution surface in the sandbox frame: the exec-root ro-bind and adapter auth file binds reach the wave compose exactly as the agent-stage compose carries them, fixing execvp ENOENT on live hosts (R-01) [2026-11-06]
 - Add Auto authoring-stage spawns now dispatch under a headless worker contract: canonical artifact path inlined per stage, explicit advance command, no-interactive preamble, fail-closed guard keeping state-derived strings out of prompt text (R-01) [2026-11-06]
