@@ -2,9 +2,10 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 2,
-  "current_stage": "THINK",
+  "current_stage": "BUILD",
   "completed_stages": [
-    "THINK"
+    "THINK",
+    "BUILD"
   ],
   "intent": {
     "summary": "Wave-spawn sessions terminate mid-turn: opencode run workers die ~2s after a completed tool step (evidence: spawns a6dfc894-W1-6f0b3b37 and a6dfc894-W2-97401b83, streams end at a completed tool result with no error/timeout/deny/buffer; sibling spawn W1-97401b83 completed). Build a reproduction harness from the captured stream shapes, isolate adapter terminal-event semantics vs host CLI run-mode termination, and fix the wave path so a mid-turn end never silently swallows completed work (concern fc0e8c90). TDD as usual; auto family in scope.",
@@ -29,10 +30,23 @@
     }
   ],
   "decisions": [],
-  "observable_truths": [],
+  "observable_truths": [
+    {
+      "id": "T1",
+      "description": "T105 case f: truncated-after-tool-step stream fails with the new class; text-final, explicit-result, and tool-free closers pass. T108: wave prompt carries the commit-before-probes line; battery 3552/0 (.gos/cache/section-runs/20261109T024637Z-full13032.log)",
+      "verified": true,
+      "evidence": {
+        "command": "bash test/run-sections.sh T105-auto-depth T108-auto-wave-contracts",
+        "output_excerpt": "0 failed",
+        "artifact_path": ".gos/cache/section-runs/20261109T024637Z-full13032.log",
+        "manual": true
+      }
+    }
+  ],
   "gaps": [],
   "activation_source": "headless",
   "task_head": "89de3805ec7b40bcaeca16472b6a85334a55ecff",
   "spec_gate_version": 3,
-  "spec_sha256": "2a32f27d8fad529c98f2d76354b7e97b1deaf09c40deb3b8f2b375823911fb63"
+  "spec_sha256": "2a32f27d8fad529c98f2d76354b7e97b1deaf09c40deb3b8f2b375823911fb63",
+  "changelog_user_summary": "Adapter streams closing at a bare step_finish now classify as truncated sessions unless the final model turn arrived, and wave prompts order the commit ahead of exploratory probes so a mid-probe session death cannot cost commit-ready work"
 }
