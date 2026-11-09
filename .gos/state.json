@@ -88,7 +88,7 @@
       "evidence": {
         "command": "[\"bash\",\"-c\",\"node bin/gos.cjs concerns list | grep -c reclassified | sed s/^/entries=/\"]",
         "output_excerpt": "entries=1",
-        "artifact_path": ".gos/concerns.md",
+        "artifact_path": ".gos/logs/truth-receipts.md",
         "replay": true
       }
     },
