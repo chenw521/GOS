@@ -2,7 +2,7 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 2,
-  "current_stage": "THINK",
+  "current_stage": "BUILD",
   "completed_stages": [
     "THINK"
   ],
@@ -34,5 +34,6 @@
   "activation_source": "headless",
   "task_head": "08526693eb02e7eb3727b28d6ce3d1762542409d",
   "spec_gate_version": 3,
-  "spec_sha256": "f3fc0a46047e6b399b5e0cdd339cf01a2a10e0a0236241a7d46d387633deb58e"
+  "spec_sha256": "f3fc0a46047e6b399b5e0cdd339cf01a2a10e0a0236241a7d46d387633deb58e",
+  "changelog_user_summary": "the artifact-path contract fix for truth-verify evidence, issue 57, enters build: the spec froze with a shared-validator predicate and the task state recovered after an advance commit landed without its stage flip, re-logged as a concern"
 }
