@@ -1,177 +1,38 @@
 {
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
-  "level": 3,
-  "current_stage": "DONE",
+  "level": 2,
+  "current_stage": "THINK",
   "completed_stages": [
-    "INTENT",
-    "THINK",
-    "PLAN",
-    "BUILD",
-    "REVIEW",
-    "VERIFY",
-    "DONE"
+    "THINK"
   ],
   "intent": {
-    "summary": "Store dir ~/.local/share/gos/85af56a090a78924 is live dogfood evidence — never delete, reset, or overwrite it; any fixture store must be XDG-overridden inside the sandbox. Model policy: accept the dispatch-table pinning; no model substitution. Human takeover at the advance step on pause is expected behavior, not an anomaly. Work only the files the frozen plan snapshot declares for these tasks: test/sections/T55-changelog-lint.test.sh, test/sections/T57-archive-single-track.test.sh, test/sections/T61-gate-wiring.test.sh. Deliver concern b275a446 (spec id 4b55189d) collapsed two-wave assertion-debt rewrite: wave 1 rewrites T55-G1 as observable changelog-lint behavior and consumes the T57 malformed-spec_path fixture as a rejection assertion; wave 2 rewrites T61-E1 so gate wiring is observable through gate output and annotates the five structural source contracts exempt (T51-E, T51-F1, T51-F2, T61-E2, T55-L134); correct the misclassification inside the concern (counting-level 11 grep assertions reclassified to 3 rewrites plus 5 structural exemptions).",
+    "summary": "Enforce the artifact-path contract at truth-verify authoring time: reject evidence artifact paths that are neither inside ARTIFACT_LOCAL_ZONES (hoisted and exported from the state validator as the single source) nor git-tracked, so the fresh-clone CI failure of issue #57 surfaces at recording time. Scope freeze: bin/lib/knowledge/truth.cjs, bin/lib/core/state.cjs (export only), test/sections/T86-truth-replay-surface.test.sh.",
     "confirmed": true,
     "confirmation": {
       "mode": "headless-auto",
-      "ts": "2026-11-06T09:01:11.014Z"
+      "ts": "2026-11-09T08:13:36.992Z"
     }
   },
   "approvals": {
-    "THINK": "2026-11-06T09:52:16.723Z",
-    "PLAN": {
-      "status": "cleared",
-      "ts": "2026-11-06T10:05:22.814Z",
-      "mode": "auto",
-      "stage": "PLAN",
-      "evidence": {
-        "spawnId": "a7555b47-7ee7-4d86-ae7f-35b6cb2fedb5-1",
-        "streamSha256": "4f4dbcdb8fcf2f980cac20f04f61ceddf9071f83ba5c4175a425622c4ebbf3f5",
-        "stampCount": 18
-      }
-    },
-    "ARCHIVE": "2026-11-09T06:26:21.341Z"
+    "THINK": "2026-11-09T09:04:21.679Z"
   },
-  "spec_path": ".gos/archive/2026-11-09-v1.0.0-task-store-dir-local-share-gos-85af/task/a6dfc894/spec.md",
-  "plan_path": ".gos/archive/2026-11-09-v1.0.0-task-store-dir-local-share-gos-85af/task/a6dfc894/plan.md",
+  "spec_path": ".gos/task/08526693/spec.md",
+  "plan_path": ".gos/task/08526693/plan.md",
   "project": false,
   "requirements": [
     {
       "id": "R-01",
-      "text": "Store dir ~/.local/share/gos/85af56a090a78924 is live dogfood evidence — never delete, reset, or overwrite it; any fi...",
+      "text": "Enforce the artifact-path contract at truth-verify authoring time: reject evidence artifact paths that are neither in...",
       "phase": null,
-      "level": 3
+      "level": 2
     }
   ],
   "decisions": [],
-  "observable_truths": [
-    {
-      "id": "T1",
-      "description": "T55 same-source proof is behavioral: the G-suite runs a core-verdict equivalence harness over the four failure-class fixtures plus a clean file, and no assertion in the file greps changelog.cjs source for the validator wiring (Z1 zero-CJK scan remains, carrying its exemption marker)",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\"test/run-sections.sh\",\"T55\"]",
-        "output_excerpt": "✓ S1 duplicate title rc (exit 1)",
-        "artifact_path": ".gos/cache/section-runs",
-        "replay": true
-      }
-    },
-    {
-      "id": "T2",
-      "description": "T57 feeds the malformed spec_path to the rejection surface: the happy-path fixture carries a well-formed spec_path, and the R-suite feeds the quoted form to GOS_HEADLESS=1 commit think asserting exit 1 plus the spec-not-found message naming the malformed path",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\"test/run-sections.sh\",\"T57\"]",
-        "output_excerpt": "✓ G1 missing CHANGELOG.md blocks archive (exit 1)",
-        "artifact_path": ".gos/cache/section-runs",
-        "replay": true
-      }
-    },
-    {
-      "id": "T3",
-      "description": "T61 gate wiring is observable through gate output: on a malformed-entry CHANGELOG.md, gate all --audit exits 1 with the violation class token plus a CHANGELOG.md:<n> locator; the 'changelog', 'lint' source grep is gone and E2 carries the exemption marker",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\"test/run-sections.sh\",\"T61\"]",
-        "output_excerpt": "✓ A1 stateless --audit exit 0 (exit 0)",
-        "artifact_path": ".gos/cache/section-runs",
-        "replay": true
-      }
-    },
-    {
-      "id": "T4",
-      "description": "Concern ledger reclassified and verifiable: the corrected entry states 3 behavior rewrites plus 5 structural exemptions scoped to exactly the five named sites, the concerns hash sidecar verifies, and no b275a446 line remains",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\"-c\",\"node bin/gos.cjs concerns list | grep -c reclassified | sed s/^/entries=/\"]",
-        "output_excerpt": "entries=1",
-        "artifact_path": ".gos/logs/truth-receipts.md",
-        "replay": true
-      }
-    },
-    {
-      "id": "T5",
-      "description": "Test-side only, suite green: all three sections pass under the section runner with fixture isolation, and the task wave commits touch only the three declared test files plus bookkeeping — zero changes under bin/, hooks/, scripts/ in the task waves",
-      "verified": true,
-      "evidence": {
-        "command": "[\"node\",\"-e\",\"const m=require(\\\"./.gos/cache/run-manifest.json\\\");console.log(\\\"sections=\\\"+m.sections_run.length+\\\" failed=\\\"+m.failed_sections.length)\"]",
-        "output_excerpt": "sections=109 failed=0",
-        "artifact_path": ".gos/cache/run-manifest.json",
-        "replay": true
-      }
-    }
-  ],
+  "observable_truths": [],
   "gaps": [],
   "activation_source": "headless",
-  "task_head": "a6dfc894f22d41580ec7155faf1cef3364397b31",
+  "task_head": "08526693eb02e7eb3727b28d6ce3d1762542409d",
   "spec_gate_version": 3,
-  "spec_sha256": "cecf271eb7f9bfa7273d41f617f356a5d6e05c4c1610983f21fc3d3cf3e4f543",
-  "plan_snapshot": {
-    "tasks": [
-      {
-        "id": "T1",
-        "covers": [
-          "R-01"
-        ],
-        "files": [
-          "test/sections/T55-changelog-lint.test.sh"
-        ],
-        "wave": 1
-      },
-      {
-        "id": "T2",
-        "covers": [
-          "R-01"
-        ],
-        "files": [
-          "test/sections/T57-archive-single-track.test.sh"
-        ],
-        "wave": 1
-      },
-      {
-        "id": "T3",
-        "covers": [
-          "R-01"
-        ],
-        "files": [
-          "test/sections/T61-gate-wiring.test.sh"
-        ],
-        "wave": 2
-      },
-      {
-        "id": "T4",
-        "covers": [
-          "R-01"
-        ],
-        "files": [
-          "test/sections/T55-changelog-lint.test.sh",
-          ".gos/concerns.md"
-        ],
-        "wave": 2
-      }
-    ],
-    "audit": [],
-    "meta": {
-      "waveValidation": {
-        "ok": true,
-        "waves": 2
-      }
-    }
-  },
-  "semantic": {
-    "allowlist": [
-      "bin/lib/ops/auto/adapters/opencode.cjs",
-      "bin/lib/ops/auto/loop.cjs",
-      "bin/lib/ops/auto/workers.cjs",
-      "test/sections/T105-auto-depth.test.sh",
-      "test/sections/T108-auto-wave-contracts.test.sh",
-      "test/sections/T46-module-structure.test.sh"
-    ]
-  },
-  "checkpoints": [],
-  "changelog_user_summary": "gate wiring is now observed through audit output and the assertion-debt ledger entry is reclassified: the gate section fails a malformed-entry changelog carrying the lint verdict token and file:line locator, and the concern ledger records three shipped behavior rewrites plus five structural exemptions scoped to the named sites (R-01)",
-  "completed_at": "2026-11-09T06:28:12.441Z"
+  "spec_sha256": "f3fc0a46047e6b399b5e0cdd339cf01a2a10e0a0236241a7d46d387633deb58e"
 }
