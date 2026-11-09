@@ -100,8 +100,25 @@ process.exit(g.semanticAllowlisted("docs/other.md", a) ? 1 : 0);
 ' "$GOS_ROOT"; D_RC2=$?
 assert_exit "D3 allowlist stays narrow (random doc not matched)" 0 "$D_RC2"
 
-# ===== E: same-source proof — gate consumes the changelog lint CLI, not a copy =====
-if grep -qF "'changelog', 'lint'" "$GOS_ROOT/bin/lib/ops/gate.cjs"; then echo "  ✓ E1 gate invokes the changelog lint command (single implementation)"; PASS=$((PASS+1)); else echo "  ✗ E1 subprocess wiring to changelog lint missing"; FAIL=$((FAIL+1)); fi
+# ===== E: same-source proof — the gate surfaces the real changelog lint verdict =====
+# Wiring is observed end to end: the fixture's only failure is one malformed
+# [Unreleased] entry, and the audit gate must fail carrying the lint verdict's
+# class token, file:line locator, and entry text — deep lint output only the
+# real lint implementation produces. The gate surfaces the lint tail, so the
+# fixture stays at a single violation to keep the locator visible.
+t61_bare
+node "$GOS" paths --markdown >/dev/null 2>&1
+printf '# Log\n\n## [Unreleased]\n\n- Rescale the frobnicator axis (D-42) [%s]\n' "$TODAY" > CHANGELOG.md
+set +e; OUT=$(node "$GOS" gate all --audit 2>&1); RC=$?; set -e
+assert_exit "E1a entry violation fails the audit gate" 1 "$RC"
+assert_contains "E1b lint violation class token surfaced" "structure:" "$OUT"
+assert_contains "E1c file:line locator surfaced" "CHANGELOG.md:5" "$OUT"
+assert_contains "E1d offending entry text surfaced" "frobnicator" "$OUT"
+t61_teardown
+# E2 pins a static wiring fact: the CHANGELOG.md allowlist entry must sit in
+# BOTH sources — the runtime default in gate.cjs and the contract copy in
+# state.cjs. The dual-source sync has no CLI surface to observe, so the
+# assertion stays at source level by design (structural source contract).
 if grep -qF "'CHANGELOG.md'" "$GOS_ROOT/bin/lib/ops/gate.cjs" && grep -qF "'CHANGELOG.md'" "$GOS_ROOT/bin/lib/core/state.cjs"; then echo "  ✓ E2 allowlist entry present in both sources"; PASS=$((PASS+1)); else echo "  ✗ E2 allowlist dual-source sync broken"; FAIL=$((FAIL+1)); fi
 
 # ===== F: --audit WITH a state behaves exactly like plain gate all =====
