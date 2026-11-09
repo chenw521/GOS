@@ -2,11 +2,12 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "BUILD",
+  "current_stage": "REVIEW",
   "completed_stages": [
     "INTENT",
     "THINK",
-    "PLAN"
+    "PLAN",
+    "BUILD"
   ],
   "intent": {
     "summary": "Store dir ~/.local/share/gos/85af56a090a78924 is live dogfood evidence — never delete, reset, or overwrite it; any fixture store must be XDG-overridden inside the sandbox. Model policy: accept the dispatch-table pinning; no model substitution. Human takeover at the advance step on pause is expected behavior, not an anomaly. Work only the files the frozen plan snapshot declares for these tasks: test/sections/T55-changelog-lint.test.sh, test/sections/T57-archive-single-track.test.sh, test/sections/T61-gate-wiring.test.sh. Deliver concern b275a446 (spec id 4b55189d) collapsed two-wave assertion-debt rewrite: wave 1 rewrites T55-G1 as observable changelog-lint behavior and consumes the T57 malformed-spec_path fixture as a rejection assertion; wave 2 rewrites T61-E1 so gate wiring is observable through gate output and annotates the five structural source contracts exempt (T51-E, T51-F1, T51-F2, T61-E2, T55-L134); correct the misclassification inside the concern (counting-level 11 grep assertions reclassified to 3 rewrites plus 5 structural exemptions).",
@@ -99,5 +100,24 @@
         "waves": 2
       }
     }
-  }
+  },
+  "semantic": {
+    "allowlist": [
+      "bin/lib/ops/auto/adapters/opencode.cjs",
+      "bin/lib/ops/auto/loop.cjs",
+      "bin/lib/ops/auto/workers.cjs",
+      "test/sections/T105-auto-depth.test.sh",
+      "test/sections/T108-auto-wave-contracts.test.sh",
+      "test/sections/T46-module-structure.test.sh"
+    ]
+  },
+  "checkpoints": [
+    {
+      "stage": "BUILD",
+      "unit": "all-waves (auto at commit)",
+      "done": "T1,T2,T3,T4",
+      "remaining": "",
+      "at": "2026-11-09T03:56:15.076Z"
+    }
+  ]
 }
