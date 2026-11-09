@@ -2,7 +2,7 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 2,
-  "current_stage": "BUILD",
+  "current_stage": "DONE",
   "completed_stages": [
     "THINK",
     "BUILD"
@@ -16,10 +16,11 @@
     }
   },
   "approvals": {
-    "THINK": "2026-11-09T02:26:02.408Z"
+    "THINK": "2026-11-09T02:26:02.408Z",
+    "ARCHIVE": "2026-11-09T02:58:28.731Z"
   },
-  "spec_path": ".gos/task/89de3805/spec.md",
-  "plan_path": ".gos/task/89de3805/plan.md",
+  "spec_path": ".gos/archive/2026-11-09-v1.0.0-task-wave-spawn-sessions-terminate-/task/89de3805/spec.md",
+  "plan_path": ".gos/archive/2026-11-09-v1.0.0-task-wave-spawn-sessions-terminate-/task/89de3805/plan.md",
   "project": false,
   "requirements": [
     {
@@ -48,5 +49,7 @@
   "task_head": "89de3805ec7b40bcaeca16472b6a85334a55ecff",
   "spec_gate_version": 3,
   "spec_sha256": "2a32f27d8fad529c98f2d76354b7e97b1deaf09c40deb3b8f2b375823911fb63",
-  "changelog_user_summary": "Adapter streams closing at a bare step_finish now classify as truncated sessions unless the final model turn arrived, and wave prompts order the commit ahead of exploratory probes so a mid-probe session death cannot cost commit-ready work"
+  "changelog_user_summary": "Adapter streams closing at a bare step_finish now classify as truncated sessions unless the final model turn arrived, and wave prompts order the commit ahead of exploratory probes so a mid-probe session death cannot cost commit-ready work",
+  "checkpoints": [],
+  "completed_at": "2026-11-09T02:58:30.333Z"
 }
