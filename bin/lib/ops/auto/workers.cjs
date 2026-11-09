@@ -1180,6 +1180,11 @@ async function runWaveDispatch(snapshot, ctx = {}) {
       env: ctx.env || process.env,
       engineProbe: ctx.engineProbe,
       store,
+      // Host execution surface: exec-root ro-bind plus adapter auth files,
+      // supplied by the loop exactly as the agent-stage compose supplies
+      // them — the wave frame must be able to exec the host CLI.
+      roBinds: ctx.roBinds || [],
+      authFiles: ctx.authFiles || [],
       writableRoots: ctx.writableRoots || [rootDir, path.join(rootDir, '.gos'), path.join(rootDir, '.gos', 'logs')],
       scratchDir: reg.scratch,
       ackDir: reg.acksDir,

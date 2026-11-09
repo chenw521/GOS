@@ -1058,6 +1058,12 @@ async function drive(ctx) {
         approvalsBaseline: baselineSha,
         approvalsBaselineEnv: APPROVALS_BASELINE_ENV,
         host: opts.host, engineProbe: opts.engineProbe, breaker: b,
+        // Host execution surface for the wave frame: the same exec-root
+        // ro-bind and adapter auth files the agent-stage compose carries —
+        // without them the sandboxed wave worker cannot exec the host CLI
+        // at all (live dogfood 2026-11-06: execvp opencode ENOENT).
+        roBinds: hostStatus.probe && hostStatus.probe.execRoot ? [hostStatus.probe.execRoot] : [],
+        authFiles: adapter.authFilePath ? [adapter.authFilePath(env)] : [],
         ...(pin ? { pin } : {}),
         tablePath: tableFile,
         wallMs: tp.wallSec * 1000, idleMs: tp.idleSec * 1000, now, runTag,
