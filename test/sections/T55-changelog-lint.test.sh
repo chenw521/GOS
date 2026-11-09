@@ -204,6 +204,9 @@ assert_exit "X1 bare changelog usage rc" 1 "$RC"
 assert_contains "X1 usage lists lint" "lint" "$OUT"
 
 # ===== Z: product source zero CJK =====
+# Z1 pins a static source fact — the product module carries zero CJK
+# characters. The boundary has no CLI surface to observe from a sandbox, so
+# the assertion stays at source level by design (structural source contract).
 CJK_HITS="$(grep -rlP '[\x{4e00}-\x{9fff}]' "$GOS_ROOT/bin/lib/task/changelog.cjs" 2>/dev/null || true)"
 if [ -z "$CJK_HITS" ]; then echo "  ✓ Z1 module source contains zero CJK"; PASS=$((PASS+1)); else echo "  ✗ Z1 CJK found: $CJK_HITS"; FAIL=$((FAIL+1)); fi
 

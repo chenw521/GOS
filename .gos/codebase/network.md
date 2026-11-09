@@ -9,7 +9,7 @@ Nodes = path anchors (human and machine share the same key); edges = semantic de
 
 | family | count |
 |:--|:--|
-| calls (② call sites → cmd anchors) | 726 |
+| calls (② call sites → cmd anchors) | 727 |
 | contracts (③ contract-string consumers) | 85 |
 | switch (④case↔cmdXxx) | 37 |
 | testof (⑤ section annotations → cmd) | 147 |
@@ -1421,6 +1421,7 @@ graph TD
   n377 -->|"asserts"| n143
   n378 -->|"calls"| n68
   n378 -->|"calls"| n71
+  n378 -->|"calls"| n73
   n378 -->|"calls"| n76
   n378 -->|"calls"| n83
   n379 -->|"calls"| n77
