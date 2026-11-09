@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add gate wiring is now observed through audit output and the assertion-debt ledger entry is reclassified: the gate section fails a malformed-entry changelog carrying the lint verdict token and file:line locator, and the concern ledger records three shipped behavior rewrites plus five structural exemptions scoped to the named sites (R-01) [2026-11-09]
 - Add Changelog-lint and archive sections assert observable behavior over source greps: the changelog G-suite runs a core-verdict equivalence harness over discriminating fixtures, and the archive fixtures consume the malformed quoted spec_path as a commit-think rejection assertion (R-01) [2026-11-09]
 - Add Adapter streams closing at a bare step_finish now classify as truncated sessions unless the final model turn arrived, and wave prompts order the commit ahead of exploratory probes so a mid-probe session death cannot cost commit-ready work (R-01) [2026-11-09]
 - Add Wave-dispatch spawns now carry the host execution surface in the sandbox frame: the exec-root ro-bind and adapter auth file binds reach the wave compose exactly as the agent-stage compose carries them, fixing execvp ENOENT on live hosts (R-01) [2026-11-06]
