@@ -2,10 +2,11 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 2,
-  "current_stage": "VERIFY",
+  "current_stage": "DONE",
   "completed_stages": [
     "THINK",
-    "BUILD"
+    "BUILD",
+    "VERIFY"
   ],
   "intent": {
     "summary": "Enforce the artifact-path contract at truth-verify authoring time: reject evidence artifact paths that are neither inside ARTIFACT_LOCAL_ZONES (hoisted and exported from the state validator as the single source) nor git-tracked, so the fresh-clone CI failure of issue #57 surfaces at recording time. Scope freeze: bin/lib/knowledge/truth.cjs, bin/lib/core/state.cjs (export only), test/sections/T86-truth-replay-surface.test.sh.",
@@ -16,7 +17,8 @@
     }
   },
   "approvals": {
-    "THINK": "2026-11-09T09:04:21.679Z"
+    "THINK": "2026-11-09T09:04:21.679Z",
+    "ARCHIVE": "2026-11-10T02:00:02.385Z"
   },
   "spec_path": ".gos/task/08526693/spec.md",
   "plan_path": ".gos/task/08526693/plan.md",
@@ -30,11 +32,45 @@
     }
   ],
   "decisions": [],
-  "observable_truths": [],
+  "observable_truths": [
+    {
+      "id": "T1",
+      "description": "Recording evidence whose artifact path is outside the zones, not in the git index, and already on disk is rejected at argument-parse time — the replay command never executes — and the rejection text names both cures (git add and re-run, or move under a machine-local zone)",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T86\"]",
+        "output_excerpt": "✓ A1 KV line 'push URL=DISABLE' accepted as replay hit (exit 0)",
+        "artifact_path": ".gos/logs/truth-receipts.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T2",
+      "description": "After git add the same path records successfully; a zone path records without any git operation; a tracked symlink artifact is rejected as a non-regular file; a command-generated non-zone artifact is rejected after execution with the same guidance",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T86\"]",
+        "output_excerpt": "✓ A1 KV line 'push URL=DISABLE' accepted as replay hit (exit 0)",
+        "artifact_path": ".gos/logs/truth-receipts.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T3",
+      "description": "A state whose truth artifacts are zone paths or tracked regular files survives gate all in a fresh clone, and the T86 section passes with the M-suite contract cases",
+      "verified": true,
+      "evidence": {
+        "command": "[\"node\",\"-e\",\"const m=require(\\\"./.gos/cache/run-manifest.json\\\");console.log(\\\"sections=\\\"+m.sections_run.length+\\\" failed=\\\"+m.failed_sections.length)\"]",
+        "output_excerpt": "sections=1 failed=0",
+        "artifact_path": ".gos/cache/run-manifest.json",
+        "replay": true
+      }
+    }
+  ],
   "gaps": [],
   "activation_source": "headless",
   "task_head": "08526693eb02e7eb3727b28d6ce3d1762542409d",
   "spec_gate_version": 3,
   "spec_sha256": "f3fc0a46047e6b399b5e0cdd339cf01a2a10e0a0236241a7d46d387633deb58e",
-  "changelog_user_summary": "the artifact-path contract fix for truth-verify evidence, issue 57, enters build: the spec froze with a shared-validator predicate and the task state recovered after an advance commit landed without its stage flip, re-logged as a concern"
+  "changelog_user_summary": "the truth-verify evidence artifact path now holds to the fresh-clone contract at recording time: a non-zone path must be git-staged and a regular file, symlinks are refused, and the rejection text names both cures, while the shared validator predicate keeps gate and CLI from drifting apart (R-01)"
 }
