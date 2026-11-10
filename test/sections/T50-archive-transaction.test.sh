@@ -24,7 +24,7 @@ seed_ship() {
   SPEC="$(node "$GOS" context think 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["spec"])')"
   mkdir -p "$(dirname "$SPEC")"; echo "# spec" > "$SPEC"
   node "$GOS" approve think >/dev/null 2>&1
-  node "$GOS" commit think >/dev/null 2>&1
+  node "$GOS" commit build >/dev/null 2>&1
   node "$GOS" stage build >/dev/null 2>&1
   TID="$(printf '%s' "$SPEC" | sed 's|.*\.gos/task/||; s|/spec.md$||')"
   echo "receipt-body" > ".gos/task/$TID/receipt.md"

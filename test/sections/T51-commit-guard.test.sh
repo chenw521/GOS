@@ -140,13 +140,31 @@ node "$GOS" approve think >/dev/null 2>&1
 HRC=0; node "$GOS" commit think >/dev/null 2>&1 || HRC=$?
 assert_exit "H1 commit think exits 0" 0 "$HRC"
 HS=$(git show HEAD:.gos/state.json | python3 -c "import json,sys;s=json.load(sys.stdin);print('%s|%s' % (s.get('current_stage'), ','.join(s.get('completed_stages',[]))))")
-assert_contains "H2 advance rides in its own commit (THINK completed in-HEAD)" "THINK|THINK" "$HS"
+assert_contains "H2 advance rides in its own commit (destination past THINK, INTENT backfilled)" "BUILD|INTENT,THINK" "$HS"
 HN=$(git status --porcelain -- .gos/state.json | wc -l | tr -d ' ')
 assert_eq "H3 no dirty state residue after the advance commit" "0" "$HN"
 H0=$(git rev-list --count HEAD)
 set +e; node "$GOS" commit think >/dev/null 2>&1; HRC2=$?; set -e
 assert_exit "H4 same-stage re-run (settled advance) → exit 1" 1 "$HRC2"
 assert_eq "H5 no duplicate advance commit" "$H0" "$(git rev-list --count HEAD)"
+t51_teardown
+
+# --- J: destination derives from the committed stage; multi-stage jumps are
+# refused by adjacency (a jump would strand the skipped stages' artifacts) ---
+t51_setup
+git init -q . && git commit -q --allow-empty -m root
+node "$GOS" init 2 "t51 destination" >/dev/null 2>&1
+JSP=$(python3 -c "import json;print(json.load(open('.gos/state.json'))['spec_path'])")
+mkdir -p "$(dirname "$JSP")"; printf '# Spec\n\nminimal destination spec\n' > "$JSP"
+node "$GOS" approve think >/dev/null 2>&1
+set +e; node "$GOS" commit verify >/dev/null 2>&1; JRC=$?; set -e
+assert_exit "J1 multi-stage jump (verify from INTENT) refused" 1 "$JRC"
+JS=$(git show HEAD:.gos/state.json 2>/dev/null | python3 -c "import json,sys;s=json.load(sys.stdin);print(s.get('current_stage'))" 2>/dev/null || echo none)
+assert_eq "J2 refused jump leaves current_stage untouched" "INTENT" "$(t51_state_field current_stage)"
+JRC2=0; node "$GOS" commit think >/dev/null 2>&1 || JRC2=$?
+assert_exit "J3 adjacent commit think succeeds" 0 "$JRC2"
+JS2=$(git show HEAD:.gos/state.json | python3 -c "import json,sys;s=json.load(sys.stdin);print('%s|%s' % (s.get('current_stage'), ','.join(s.get('completed_stages',[]))))")
+assert_contains "J4 destination is past the committed stage with backfill" "BUILD|INTENT,THINK" "$JS2"
 t51_teardown
 
 echo "--- T51 summary: $PASS passed, $FAIL failed ---"

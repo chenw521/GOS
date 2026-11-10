@@ -306,13 +306,19 @@ function cmdCommit(argv) {
   // and committing the next stage stay legal; a stage behind the current one
   // in the task's level flow would write an advance-labeled commit for a
   // point the work history already passed. Stages outside the level flow
-  // (the level-dependent stage sets) are not this task's stages — legacy
-  // semantics keep applying to them.
+  // are not this task's stages: they get a visible warning and the legacy
+  // destination (next of current_stage) — fixtures and recovery tooling
+  // rely on that alias behavior, so it stays deterministic but loud.
+  let foreignStage = false;
   {
     const flow = nav.levelFlow(state.level ?? 0);
     const curIdx = flow.indexOf(String(state.current_stage || '').toUpperCase());
     const reqIdx = flow.indexOf(stage);
-    if (curIdx !== -1 && reqIdx !== -1 && reqIdx < curIdx) {
+    if (reqIdx === -1) {
+      foreignStage = true;
+      console.error(`⚠ stage-out-of-flow: ${stage} is not in this task's level-${state.level ?? 0} flow (${flow.join(' -> ')}) — legacy destination applies; commit one of the task's own stages for level-native semantics`);
+    }
+    if (!foreignStage && curIdx !== -1 && reqIdx < curIdx) {
       const parts = core.t('commit.stage-regression-blocked', { stage, current: String(state.current_stage || '') });
       const failure = core.gateFail('stage-regression-blocked', {
         verdict: parts.what,
@@ -324,6 +330,19 @@ function cmdCommit(argv) {
       console.error(`    why: ${parts.why}`);
       for (const e of failure.evidence) console.error(`    evidence: ${e}`);
       console.error(`    fix: ${failure.fix}`);
+      process.exit(1);
+    }
+    // Adjacency: a commit may settle the current stage (re-commit) or the
+    // next one, never a stage further ahead — a jump would skip artifact
+    // gates and leave the intermediate stages unwitnessed. --force is the
+    // explicit operator sanction for a deliberate jump (recovery tooling,
+    // fixtures); the refusal text names it.
+    if (curIdx !== -1 && reqIdx > curIdx + 1 && !forceFlag) {
+      const flow2 = flow.map((x) => x.toLowerCase()).join(' -> ');
+      console.error(`${core.CONTRACTS.state_semantics.commitBlocked} (stage adjacency):`);
+      console.error(`✗ stage-jump-blocked: committing ${stage} from current_stage ${String(state.current_stage || '').toUpperCase()} skips ${reqIdx - curIdx - 1} stage(s)`);
+      console.error(`    evidence: legal sequence is ${flow2}; commit the current or the immediately next stage only`);
+      console.error(`    fix: run the skipped stage commit(s) in flow order before ${stage.toLowerCase()} — or pass --force for a deliberate, auditable jump`);
       process.exit(1);
     }
   }
@@ -505,8 +524,33 @@ function cmdCommit(argv) {
     fs.writeFileSync(tmp, raw);
     fs.renameSync(tmp, core.SNAPSHOT_PATH);
   } catch { /* absent state file — nothing to snapshot */ }
-  if (!state.completed_stages.includes(stage)) state.completed_stages.push(stage);
-  const nxt = nav.nextStage(state);
+  // The advance destination derives from the COMMITTED stage, not from
+  // current_stage: committing <stage> means its artifacts are done and the
+  // task moves past it. Deriving from current_stage re-enters the committed
+  // stage whenever the previous one was auto-confirmed headlessly (headless
+  // init leaves current=INTENT; commit think then landed current=THINK).
+  // completed_stages is backfilled to every flow stage up to and including
+  // the committed one so the canonical invariant (completed = all stages
+  // before current) holds even when intermediate advances were skipped.
+  const flowSeq = nav.levelFlow(state.level ?? 0);
+  if (!foreignStage) {
+    // In-flow: completed_stages backfills to every flow stage up to and
+    // including the committed one, keeping the canonical invariant
+    // (completed = all stages before current) even when intermediate
+    // advances were skipped (headless INTENT auto-confirm).
+    for (const fs2 of flowSeq.slice(0, flowSeq.indexOf(stage) + 1)) {
+      if (!state.completed_stages.includes(fs2)) state.completed_stages.push(fs2);
+    }
+  } else if (!state.completed_stages.includes(stage)) {
+    state.completed_stages.push(stage);
+  }
+  // Destination derives from the COMMITTED stage for in-flow commits (the
+  // task moves past what was committed); foreign stages keep the legacy
+  // destination (next of current_stage) that fixtures and recovery tooling
+  // rely on.
+  const nxt = foreignStage
+    ? nav.nextStage(state)
+    : nav.nextStage({ ...state, current_stage: stage });
   state.current_stage = nxt;
   core.writeState(state);
 
