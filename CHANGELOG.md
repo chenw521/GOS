@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add the truth-verify evidence artifact path now holds to the fresh-clone contract at recording time: a non-zone path must be git-staged and a regular file, symlinks are refused, and the rejection text names both cures, while the shared validator predicate keeps gate and CLI from drifting apart (R-01) [2026-11-10]
+- Add the artifact-path contract fix for truth-verify evidence, issue 57, enters build: the spec froze with a shared-validator predicate and the task state recovered after an advance commit landed without its stage flip, re-logged as a concern (R-01) [2026-11-09]
 - Add gate wiring is now observed through audit output and the assertion-debt ledger entry is reclassified: the gate section fails a malformed-entry changelog carrying the lint verdict token and file:line locator, and the concern ledger records three shipped behavior rewrites plus five structural exemptions scoped to the named sites (R-01) [2026-11-09]
 - Add Changelog-lint and archive sections assert observable behavior over source greps: the changelog G-suite runs a core-verdict equivalence harness over discriminating fixtures, and the archive fixtures consume the malformed quoted spec_path as a commit-think rejection assertion (R-01) [2026-11-09]
 - Add Adapter streams closing at a bare step_finish now classify as truncated sessions unless the final model turn arrived, and wave prompts order the commit ahead of exploratory probes so a mid-probe session death cannot cost commit-ready work (R-01) [2026-11-09]

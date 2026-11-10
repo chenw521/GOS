@@ -1,9 +1,9 @@
 {
   "current": {
-    "total": 1476,
-    "callgraph": 944,
+    "total": 1478,
+    "callgraph": 946,
     "testof_fn": 107,
-    "fn_count": 881,
+    "fn_count": 883,
     "fns": [
       "absTaskPath",
       "ackWaitMs",
@@ -37,6 +37,7 @@
       "archiveDirExists",
       "archivePushHint",
       "archiveSlugParts",
+      "artifactPathError",
       "ask",
       "askConflict",
       "assertPayloadLanguageBoundary",
@@ -343,6 +344,7 @@
       "gitFail",
       "gitHeadSha",
       "gitInWorkTree",
+      "gitIndexHas",
       "gitOut",
       "gitRun",
       "gitRunnerOf",
@@ -1018,6 +1020,8 @@
       "planPathOf": "bin/lib/core/state.cjs",
       "checkInputConstraint": "bin/lib/core/state.cjs",
       "replayEvidenceHit": "bin/lib/core/state.cjs",
+      "gitIndexHas": "bin/lib/core/state.cjs",
+      "artifactPathError": "bin/lib/core/state.cjs",
       "validateEvidenceObject": "bin/lib/core/state.cjs",
       "extractRequirement": "bin/lib/core/state.cjs",
       "defaultState": "bin/lib/core/state.cjs",
@@ -1770,8 +1774,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "d3825a306e8f2c05",
-    "at": "2026-11-09T06:02:07.174Z"
+    "fp": "a289dc52ae130895",
+    "at": "2026-11-10T01:25:14.725Z"
   },
   "peak": {
     "total": 2065,

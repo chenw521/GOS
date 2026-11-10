@@ -195,10 +195,11 @@ mkdir -p src && echo x > src/a.js && echo "- change" > .changes.md
 set +e; OUT=$(node "$GOS" gate semantic 2>&1); RC=$?; set -e
 assert_exit "C1 .changes.md allowlisted → exit 0" 0 "$RC"
 
-# --- C2: truth artifact_path exempt from diff + exists → exit 0 ---
+# --- C2: truth artifact_path exempt from diff + tracked → exit 0 ---
 t17_teardown; t17_setup
 t17_plan "D-01" "src/a.js"
 mkdir -p src out && echo x > src/a.js && echo log > out/t17.log
+git add out/t17.log && echo more >> out/t17.log
 python3 -c "
 import json; s=json.load(open('.gos/state.json'))
 s['observable_truths']=[{'id':'T-01','description':'ok','verified':True,
@@ -208,14 +209,14 @@ set +e; OUT=$(node "$GOS" gate semantic 2>&1); RC=$?; set -e
 assert_exit "C2 artifact_path diff-exempt + exists → exit 0" 0 "$RC"
 assert_contains "C2 artifact existence ✓ line" "artifact" "$OUT"
 
-# --- C3: verified truth artifact_path missing on disk → exit 1 (pathExists) ---
+# --- C3: artifact_path outside the zones and not in the git index → exit 1 ---
 python3 -c "
 import json; s=json.load(open('.gos/state.json'))
 s['observable_truths'][0]['evidence']['artifact_path']='out/gone.log'
 json.dump(s,open('.gos/state.json','w'),indent=2)"
 set +e; OUT=$(node "$GOS" gate semantic 2>&1); RC=$?; set -e
 assert_exit "C3 artifact gone → exit 1" 1 "$RC"
-assert_contains "C3 names not found on disk" "not found on disk" "$OUT"
+assert_contains "C3 names the staging cure" "git add out/gone.log" "$OUT"
 
 # --- C4: state.semantic.allowlist ['**'] → exit 1 pattern too broad ---
 # (restore artifact first — validateState would die on the missing path before

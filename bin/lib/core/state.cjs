@@ -837,6 +837,62 @@ function replayEvidenceHit(stdoutText) {
   return tiers.count || tiers.path || tiers.kv || null;
 }
 
+// Machine-local artifact zones (gitignored by design — logs/cache never leave
+// the authoring machine, archive is census-audited): evidence artifacts under
+// these prefixes are receipt-logged locally and never travel with git, so a
+// fresh clone must not fail validation for their absence. Exported as the
+// single source — rejection messages render the zone list from this array,
+// never a second literal.
+const ARTIFACT_LOCAL_ZONES = ['.gos/archive/', '.gos/logs/', '.gos/cache/'];
+
+// git-index membership probe for non-zone artifact paths (exact argv form,
+// never a shell string). rc 0 with the literal path among the emitted lines →
+// staged; a `did not match any` pathspec miss → clean negative; anything else
+// (no .git, broken repo, unusable environment) → probe failure and the caller
+// degrades to the legacy existence check.
+function gitIndexHas(repoRoot, rel) {
+  try {
+    const out = execFileSync('git', ['-C', repoRoot, 'ls-files', '--error-unmatch', '--', rel],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    return { staged: out.split('\n').includes(rel) };
+  } catch (e) {
+    const errText = `${e.stderr == null ? '' : e.stderr}${e.message || ''}`;
+    if (/did not match any/i.test(errText)) return { staged: false };
+    return { staged: false, probeFailed: true };
+  }
+}
+
+// Artifact-path contract, consumed by both gate-time state validation and
+// authoring-time `truth verify` (one predicate, no drift): (1) shape —
+// relative, no `..`, no newlines; (2) zone prefix — passes with no filesystem
+// or git probe; (3) every other path must be in the git index AND be an lstat
+// regular file (a tracked symlink resolves on the authoring machine while its
+// target is absent on fresh clones); (4) a failed git probe (no .git, broken
+// repo) degrades to the legacy existence check — fail-open on environment
+// failure, fail-closed on policy violation. Returns null when the path
+// satisfies the contract, else the rejection text naming both cures: stage
+// the file and re-run, or move it under a machine-local zone.
+function artifactPathError(ap, repoRoot) {
+  if (typeof ap !== 'string' || ap.length === 0) return 'evidence.artifact_path: non-empty string required';
+  if (path.isAbsolute(ap)) return 'evidence.artifact_path: must be relative to repo root';
+  if (ap.split('/').includes('..')) return 'evidence.artifact_path: no .. segments';
+  if (/[\n\r]/.test(ap)) return 'evidence.artifact_path: newline rejected';
+  if (ARTIFACT_LOCAL_ZONES.some((z) => ap.startsWith(z))) return null;
+  const root = repoRoot || process.cwd();
+  let regular = false;
+  try { regular = fs.lstatSync(path.resolve(root, ap)).isFile(); } catch { /* absent or unreadable — handled below */ }
+  const probe = gitIndexHas(root, ap);
+  const zones = ARTIFACT_LOCAL_ZONES.join(' ');
+  if (probe.probeFailed) {
+    return regular ? null : `evidence.artifact_path: not found on disk (${CONTRACTS.semantic_checks.pathExists})`;
+  }
+  if (probe.staged) {
+    return regular ? null
+      : `evidence.artifact_path: ${ap} is tracked but not a regular file (symlink) — a fresh clone may not resolve its target; cure: replace it with a regular file (git add ${ap} and re-run), or move it under a machine-local zone (${zones})`;
+  }
+  return `evidence.artifact_path: ${ap} is not in the git index — a fresh clone would not carry it; cure: git add ${ap} and re-run, or move it under a machine-local zone (${zones})`;
+}
+
 function validateEvidenceObject(ev, repoRoot) {
   if (ev === undefined || ev === null) return CONTRACTS.state_semantics.evidenceMissing;
   if (typeof ev === 'string') return CONTRACTS.state_semantics.evidenceLegacy;
@@ -866,23 +922,8 @@ function validateEvidenceObject(ev, repoRoot) {
     if (bt2) errs.push(`evidence.output_excerpt: rejected (${bt2})`);
   }
   const ap = ev.artifact_path;
-  if (typeof ap !== 'string' || ap.length === 0) errs.push('evidence.artifact_path: non-empty string required');
-  else {
-    if (path.isAbsolute(ap)) errs.push('evidence.artifact_path: must be relative to repo root');
-    if (ap.split('/').includes('..')) errs.push('evidence.artifact_path: no .. segments');
-    if (/[\n\r]/.test(ap)) errs.push('evidence.artifact_path: newline rejected');
- // Machine-local zones (gitignored by design — / logs/cache, census
-    // audit for archive): evidence artifacts there are guaranteed on the
-    // AUTHORING machine at verify time (receipt-logged) but never travel with
-    // git — a fresh clone must not fail schema validation for their absence.
-    // NOTE: the registry archive key says tracked:true while gitignore+census
-    // say local — that divergence is DI-6 territory, so the zone list is
-    // explicit here instead of derived.
-    const ARTIFACT_LOCAL_ZONES = ['.gos/archive/', '.gos/logs/', '.gos/cache/'];
-    if (repoRoot && !fs.existsSync(path.resolve(repoRoot, ap)) && !ARTIFACT_LOCAL_ZONES.some((z) => ap.startsWith(z))) {
-      errs.push(`evidence.artifact_path: not found on disk (${CONTRACTS.semantic_checks.pathExists})`);
-    }
-  }
+  const apErr = artifactPathError(ap, repoRoot);
+  if (apErr) errs.push(apErr);
   return errs.length ? errs.join('; ') : null;
 }
 
@@ -1366,6 +1407,8 @@ module.exports = {
   extractRequirement,
   lessonsPaths,
   validateEvidenceObject,
+  artifactPathError,
+  ARTIFACT_LOCAL_ZONES,
   validatePhase,
   cpLen,
   idNum,

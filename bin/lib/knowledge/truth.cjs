@@ -91,6 +91,13 @@ function cmdTruth(args) {
     const repoRoot = core.currentRootRealpath() || process.cwd();
 
     if (replay) {
+      // pre-existing artifact paths die here, before the replay command
+      // executes; artifacts the command itself generates are vetted by the
+      // post-execution validateEvidenceObject call below.
+      if (artifact !== null && fs.existsSync(path.resolve(repoRoot, artifact))) {
+        const earlyErr = core.artifactPathError(artifact, repoRoot);
+        if (earlyErr) core.die(`truth verify: ${earlyErr}`);
+      }
       if (excerpt !== null) core.die('truth verify --replay: --excerpt is derived from actual stdout — do not pass it');
       let argv = null;
       try { argv = JSON.parse(command); } catch { /* rejected below */ }
@@ -170,8 +177,8 @@ function cmdTruth(args) {
   console.log('Usage: gos truth <add|verify|waive>');
   console.log('  add "<desc>"                    register observable truth (auto id T1/T2…)');
   console.log('  waive <id> --reason "<why>"     park a blocked truth (external dependency) — gate warns, never silently passes');
-  console.log('  verify <id> --command <c> --excerpt <e> --artifact <a>          manual evidence');
-  console.log('  verify <id> --replay --command \'<JSON argv>\' --artifact <a>    execute & capture stdout');
+  console.log('  verify <id> --command <c> --excerpt <e> --artifact <a> (tracked or machine-local zone)   manual evidence');
+  console.log('  verify <id> --replay --command \'<JSON argv>\' --artifact <a> (tracked or machine-local zone)   execute & capture stdout');
   console.log('                                              [--timeout <ms>]  exec budget 1..600000 (default 30000)');
 }
 
