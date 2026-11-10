@@ -1,67 +1,63 @@
 {
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
-  "level": 2,
-  "current_stage": "DONE",
+  "level": 1,
+  "current_stage": "VERIFY",
   "completed_stages": [
-    "THINK",
-    "BUILD",
-    "VERIFY"
+    "INTENT",
+    "BUILD"
   ],
   "intent": {
-    "summary": "Enforce the artifact-path contract at truth-verify authoring time: reject evidence artifact paths that are neither inside ARTIFACT_LOCAL_ZONES (hoisted and exported from the state validator as the single source) nor git-tracked, so the fresh-clone CI failure of issue #57 surfaces at recording time. Scope freeze: bin/lib/knowledge/truth.cjs, bin/lib/core/state.cjs (export only), test/sections/T86-truth-replay-surface.test.sh.",
+    "summary": "Commit-advance destination derives from the committed stage, not current_stage: next(stage) with an adjacency guard (reqIdx <= curIdx+1) and canonical completed_stages backfill, curing the headless INTENT-skip trap where gos commit think from current=INTENT re-entered THINK instead of advancing to BUILD (deterministic repro recorded; amplified multi-jump hole closed). Scope freeze: bin/lib/task/commit.cjs, test/sections/T51-commit-guard.test.sh.",
     "confirmed": true,
     "confirmation": {
       "mode": "headless-auto",
-      "ts": "2026-11-09T08:13:36.992Z"
+      "ts": "2026-11-10T02:38:37.398Z"
     }
   },
-  "approvals": {
-    "THINK": "2026-11-09T09:04:21.679Z",
-    "ARCHIVE": "2026-11-10T02:00:02.385Z"
-  },
-  "spec_path": ".gos/task/08526693/spec.md",
-  "plan_path": ".gos/task/08526693/plan.md",
+  "approvals": {},
+  "spec_path": ".gos/task/1a2e46f3/spec.md",
+  "plan_path": ".gos/task/1a2e46f3/plan.md",
   "project": false,
   "requirements": [
     {
       "id": "R-01",
-      "text": "Enforce the artifact-path contract at truth-verify authoring time: reject evidence artifact paths that are neither in...",
+      "text": "Commit-advance destination derives from the committed stage, not current_stage: next(stage) with an adjacency guard (...",
       "phase": null,
-      "level": 2
+      "level": 1
     }
   ],
   "decisions": [],
   "observable_truths": [
     {
       "id": "T1",
-      "description": "Recording evidence whose artifact path is outside the zones, not in the git index, and already on disk is rejected at argument-parse time — the replay command never executes — and the rejection text names both cures (git add and re-run, or move under a machine-local zone)",
+      "description": "A headless task whose INTENT was auto-confirmed commits think and lands past THINK: the committed state carries current=BUILD with completed=[INTENT,THINK] backfilled, and the echo names the real destination",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\"test/run-sections.sh\",\"T86\"]",
-        "output_excerpt": "✓ A1 KV line 'push URL=DISABLE' accepted as replay hit (exit 0)",
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T51\"]",
+        "output_excerpt": "✓ A1 no changes → exit 1 (exit 1)",
         "artifact_path": ".gos/logs/truth-receipts.md",
         "replay": true
       }
     },
     {
       "id": "T2",
-      "description": "After git add the same path records successfully; a zone path records without any git operation; a tracked symlink artifact is rejected as a non-regular file; a command-generated non-zone artifact is rejected after execution with the same guidance",
+      "description": "A multi-stage jump commit is refused with an adjacency message naming the skipped count and the --force escape, and --force sanctions the deliberate jump",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\"test/run-sections.sh\",\"T86\"]",
-        "output_excerpt": "✓ A1 KV line 'push URL=DISABLE' accepted as replay hit (exit 0)",
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T51\"]",
+        "output_excerpt": "✓ A1 no changes → exit 1 (exit 1)",
         "artifact_path": ".gos/logs/truth-receipts.md",
         "replay": true
       }
     },
     {
       "id": "T3",
-      "description": "A state whose truth artifacts are zone paths or tracked regular files survives gate all in a fresh clone, and the T86 section passes with the M-suite contract cases",
+      "description": "A stage outside the task level flow gets a visible warning and keeps the legacy destination semantics, so fixtures and recovery tooling that rely on the alias behavior stay green",
       "verified": true,
       "evidence": {
         "command": "[\"node\",\"-e\",\"const m=require(\\\"./.gos/cache/run-manifest.json\\\");console.log(\\\"sections=\\\"+m.sections_run.length+\\\" failed=\\\"+m.failed_sections.length)\"]",
-        "output_excerpt": "sections=1 failed=0",
+        "output_excerpt": "sections=109 failed=0",
         "artifact_path": ".gos/cache/run-manifest.json",
         "replay": true
       }
@@ -69,8 +65,6 @@
   ],
   "gaps": [],
   "activation_source": "headless",
-  "task_head": "08526693eb02e7eb3727b28d6ce3d1762542409d",
-  "spec_gate_version": 3,
-  "spec_sha256": "f3fc0a46047e6b399b5e0cdd339cf01a2a10e0a0236241a7d46d387633deb58e",
-  "changelog_user_summary": "the truth-verify evidence artifact path now holds to the fresh-clone contract at recording time: a non-zone path must be git-staged and a regular file, symlinks are refused, and the rejection text names both cures, while the shared validator predicate keeps gate and CLI from drifting apart (R-01)"
+  "task_head": "1a2e46f3c3cdcf38636f2b3778e5dfad4bed7b6d",
+  "changelog_user_summary": "stage advance commits now land past the committed stage: the destination derives from the committed stage with canonical completed backfill, multi-stage jumps are refused unless --force sanctions them, and out-of-flow stages warn while keeping the legacy destination, curing the headless INTENT-skip trap that left tasks half-advanced (R-01)"
 }

@@ -200,7 +200,7 @@ node "$GOS" approve plan >/dev/null 2>&1
 set +e; OUT=$(node "$GOS" gate coverage 2>&1); RC=$?; set -e
 assert_exit "D1 duplicate task id → gate coverage exit 1" 1 "$RC"
 assert_contains "D1 duplicate message" "duplicate task id" "$OUT"
-set +e; OUT=$(node "$GOS" commit plan 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" commit plan --force 2>&1); RC=$?; set -e
 assert_exit "D2 duplicate task id → commit plan exit 1" 1 "$RC"
 assert_contains "D2 duplicate message names T1" "T1" "$OUT"
 
@@ -209,7 +209,7 @@ t14_teardown; t14_setup
 node "$GOS" init 3 "empty files" >/dev/null 2>&1
 printf '# Plan\n\n### Wave 1\n\n#### T1: no files declared\n- **Covers**: D-01\n- **Files**: \n' > "$(gos_plan)"
 node "$GOS" approve plan >/dev/null 2>&1
-set +e; OUT=$(node "$GOS" commit plan 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" commit plan --force 2>&1); RC=$?; set -e
 assert_exit "D3 empty Files value = undeclared, no crash" 0 "$RC"
 D3=$(python3 -c "import json; print(json.dumps(json.load(open('.gos/state.json'))['plan_snapshot']['tasks']))")
 assert_eq "D3 snapshot files == []" '[{"id": "T1", "covers": ["D-01"], "files": [], "wave": 1}]' "$D3"
@@ -231,7 +231,7 @@ cat > "$(gos_plan)" <<'PLANEOF'
 - **Files**: ops/track.cjs
 PLANEOF
 node "$GOS" approve plan >/dev/null 2>&1
-set +e; OUT=$(node "$GOS" commit plan 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" commit plan --force 2>&1); RC=$?; set -e
 assert_exit "D4 suffixed ids parse, commit plan exit 0" 0 "$RC"
 D4=$(python3 -c "import json; print(json.dumps(json.load(open('.gos/state.json'))['plan_snapshot']['tasks']))")
 assert_eq "D4 snapshot keeps T4a/T7b with files" '[{"id": "T4a", "covers": ["D-01"], "files": ["core/lock.cjs"], "wave": 1}, {"id": "T7b", "covers": ["D-01"], "files": ["ops/track.cjs"], "wave": 1}]' "$D4"

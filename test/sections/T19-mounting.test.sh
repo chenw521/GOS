@@ -176,7 +176,7 @@ git init -q .
 printf ".gos/state.json\n.gos/cache/\n" > .gitignore
 node "$GOS" init 3 "t19 pending anchor" >/dev/null 2>&1
 git add .gitignore && git commit -q -m first
-OUT=$(node "$GOS" commit build 2>&1); RC=$?
+OUT=$(node "$GOS" commit build --force 2>&1); RC=$?
 assert_exit "pending anchor commit passes" "0" "$RC"
 assert_contains "auto-anchor banner shown" "auto-anchored" "$OUT"
 PENDING=$(python3 -c "import json;print(json.load(open('.gos/state.json')).get('task_head_pending'))")
