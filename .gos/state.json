@@ -2,10 +2,11 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 1,
-  "current_stage": "VERIFY",
+  "current_stage": "DONE",
   "completed_stages": [
     "INTENT",
-    "BUILD"
+    "BUILD",
+    "VERIFY"
   ],
   "intent": {
     "summary": "Commit-advance destination derives from the committed stage, not current_stage: next(stage) with an adjacency guard (reqIdx <= curIdx+1) and canonical completed_stages backfill, curing the headless INTENT-skip trap where gos commit think from current=INTENT re-entered THINK instead of advancing to BUILD (deterministic repro recorded; amplified multi-jump hole closed). Scope freeze: bin/lib/task/commit.cjs, test/sections/T51-commit-guard.test.sh.",
@@ -15,7 +16,9 @@
       "ts": "2026-11-10T02:38:37.398Z"
     }
   },
-  "approvals": {},
+  "approvals": {
+    "ARCHIVE": "2026-11-10T05:25:02.464Z"
+  },
   "spec_path": ".gos/task/1a2e46f3/spec.md",
   "plan_path": ".gos/task/1a2e46f3/plan.md",
   "project": false,
