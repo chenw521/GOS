@@ -235,6 +235,12 @@
       "type": "major",
       "description": "Fluid back to PLAN: discovered during PLAN",
       "status": "open"
+    },
+    {
+      "id": "G-1794391357983",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
     }
   ],
   "phase_name": "P19: live pain bugs and archive integrity",
@@ -364,7 +370,10 @@
           "test/sections/T54-*.test.sh",
           "test/sections/T55-*.test.sh",
           "test/sections/T57-*.test.sh",
-          "test/sections/T12-wiring.test.sh"
+          "test/sections/T12-wiring.test.sh",
+          "test/sections/T46-module-structure.test.sh",
+          "test/sections/T91-ledger-reconcile.test.sh",
+          "test/sections/T107-auto-dispatch.test.sh"
         ],
         "wave": 3
       },
