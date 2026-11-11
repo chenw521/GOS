@@ -6,6 +6,7 @@
 # census.json four-way reconciliation + disposition executor
 # Cases: A=real-repo pack-check green  B=sandbox baseline green
 #        b..j=mutation experiments (each must turn red / stay quiet)
+#        m1..m2=census optional axis (absent-entry tolerance, tracked-path refusal)
 #        k1..k7=dispose executor four-label matrix
 # Runs pack-check against controlled sandbox copies built via git archive;
 # the real repo itself is only read (plus gitignored machine-local anchors).
@@ -144,6 +145,31 @@ node -e '
 ' "$T66_DIR/sb-g2"
 t66_run_pack "$T66_DIR/sb-g2"
 t66_assert_labeled "g2 lifecycle entry alive when absent" 0 "$PACK_RC" "all checks passed" "$PACK_OUT"
+
+# --- m1: optional entry valid when absent (explicit flag, fresh-clone parity) ---
+t66_mksandbox "$T66_DIR/sb-m1"
+rm -rf "$T66_DIR/sb-m1/.gos/cache"   # the dir is legally absent before first runtime use
+node -e '
+  const fs = require("fs");
+  const p = process.argv[1] + "/census.json";
+  const c = JSON.parse(fs.readFileSync(p, "utf8"));
+  c.entries[".gos/cache"].optional = true;
+  fs.writeFileSync(p, JSON.stringify(c, null, 2) + "\n");
+' "$T66_DIR/sb-m1"
+t66_run_pack "$T66_DIR/sb-m1"
+t66_assert_labeled "m1 optional entry valid when absent" 0 "$PACK_RC" "all checks passed" "$PACK_OUT"
+
+# --- m2: optional on a tracked path → validator red (verdict names the entry) ---
+t66_mksandbox "$T66_DIR/sb-m2"
+node -e '
+  const fs = require("fs");
+  const p = process.argv[1] + "/census.json";
+  const c = JSON.parse(fs.readFileSync(p, "utf8"));
+  c.entries.assets.optional = true; // assets is git:true — optional needs gitignore coverage
+  fs.writeFileSync(p, JSON.stringify(c, null, 2) + "\n");
+' "$T66_DIR/sb-m2"
+t66_run_pack "$T66_DIR/sb-m2"
+t66_assert_labeled "m2 optional on tracked path rejected" 1 "$PACK_RC" "optional entry \"assets\"" "$PACK_OUT"
 
 # --- h: tracked symlink under npm:true entry → source ① red ---
 t66_mksandbox "$T66_DIR/sb-h"

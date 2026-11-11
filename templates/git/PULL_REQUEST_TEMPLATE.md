@@ -12,7 +12,8 @@
 
 ## Linked issue
 
-<!-- Link the issue this PR resolves (`Closes #N`), or explain why there is none. -->
+<!-- Link the issue this PR resolves, or explain why there is none.
+     Refer with refs #N unless the PR must close it — closing keywords belong in the PR body. -->
 
 -
 

@@ -3,8 +3,9 @@
 # aggregate push — commits in origin/main..HEAD collapse into one semantic
 # commit (tree = HEAD tree, parent = origin/main tip) pushed to refs/heads/main;
 # re-run is a no-op; missing message source refuses; permission-class push
-# failures print PR-path guidance; archive output ends with the ready-to-run
-# push line.
+# failures print PR-path guidance; archive output ends with the landing hint —
+# the plain-git `gos push` line with no remote, the branch → PR → squash flow
+# when a remote exists.
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
 T76_DIR=""
 
@@ -87,7 +88,7 @@ assert_contains "git stderr surfaced for diagnosis" "pre-receive hook declined" 
 assert_contains "PR guidance points at a feature branch" "feature branch" "$OUT"
 assert_contains "PR guidance says squash-merge" "squash" "$OUT"
 
-# --- .6: archive output ends with the ready-to-run push line
+# --- .6: no-remote archive ends with the plain-git push line
 t76_teardown
 T76_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-t76"
 mkdir -p "$T76_DIR" && cd "$T76_DIR" || exit 1
@@ -103,6 +104,33 @@ assert_exit "archive exits 0" 0 "$RC"
 LAST=$(printf '%s\n' "$OUT" | tail -1)
 assert_contains "archive output ends with ready-to-run push line" "gos push" "$LAST"
 assert_contains "push line notes message auto-derivation" "auto-derives" "$LAST"
+unset GOS_SKIP_SHIP_CHECK
+
+# --- .6b: remote-configured archive ends with the PR-flow hint
+T76_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-t76b"
+mkdir -p "$T76_DIR" && cd "$T76_DIR" || exit 1
+git init -q . && git commit -q --allow-empty -m root
+echo ".gos/state.json" > .gitignore && git add .gitignore && git commit -q -m gi
+git init -q --bare "$T76_DIR/origin.git"
+git remote add origin "$T76_DIR/origin.git"
+export GOS_SKIP_SHIP_CHECK=1
+node "$GOS" init 1 "aggregate push coupling" >/dev/null 2>&1
+SPEC=$(node "$GOS" context think 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["spec"])' 2>/dev/null)
+echo spec > "$SPEC"
+node "$GOS" approve archive >/dev/null 2>&1
+set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
+assert_exit "archive exits 0 with a remote configured" 0 "$RC"
+LAST=$(printf '%s\n' "$OUT" | tail -1)
+assert_contains "hint teaches the PR flow" "pull request" "$LAST"
+assert_contains "hint names squash-merge" "squash" "$LAST"
+assert_contains "hint guards the subject with the squash lint" "push-lint-squash.sh" "$LAST"
+assert_contains "hint teaches refs-not-closes" "refs #N" "$LAST"
+assert_contains "hint pins closing keywords to the PR body" "closing keywords belong in the PR body" "$LAST"
+if printf '%s' "$LAST" | grep -q "gos push"; then
+  echo "  ✗ remote hint must not advertise direct main landing"; FAIL=$((FAIL+1))
+else
+  echo "  ✓ remote hint leaves the direct-push path untaught"; PASS=$((PASS+1))
+fi
 unset GOS_SKIP_SHIP_CHECK
 
 # --- .7: pre-push hook rejects a multi-commit raw push to main

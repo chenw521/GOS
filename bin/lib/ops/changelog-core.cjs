@@ -356,6 +356,80 @@ function promoteUnreleased(text, tag) {
   return { ok: true, text: out.join('\n') };
 }
 
+// ---- : structural-delta predicate over two changelog snapshots
+
+// Stable identity for a version heading across parses: the tag + date pair
+// as captured by the parser (dates are compared raw, not format-validated).
+function versionSectionKey(v) {
+  return `${v.tag}\u0000${v.date}`;
+}
+
+// `opts.taskRefs` arrives pre-normalized (uppercase D-nn/R-nn tokens); the
+// defensive upper-coerce keeps a stray mixed-case input from silently
+// widening the filter. Anything that is not an array of strings is empty.
+function normalizeTaskRefs(opts) {
+  const raw = opts && Array.isArray(opts.taskRefs) ? opts.taskRefs : [];
+  return raw.map((t) => String(t).toUpperCase());
+}
+
+// Uppercase D-nn/R-nn tokens inside a bullet's well-formed parenthesized
+// trace groups. GitHub issue groups (#24) and groups that fail the
+// TRACE_WELL_FORMED_RE grammar contribute nothing — same classification
+// validateEntry applies when it collects trace groups.
+function bulletTraceTokens(entry) {
+  const tokens = new Set();
+  const groupRe = new RegExp(TRACE_GROUP_RE.source, 'g');
+  let g;
+  while ((g = groupRe.exec(String(entry))) !== null) {
+    const gr = g[1].trim();
+    if (ISSUE_REF_GROUP_RE.test(gr)) continue;
+    if (!TRACE_WELL_FORMED_RE.test(gr)) continue;
+    for (const t of gr.match(/[DR]-\d+/g) || []) tokens.add(t.toUpperCase());
+  }
+  return tokens;
+}
+
+function refsIntersectTaskRefs(entry, taskRefs) {
+  const tokens = bulletTraceTokens(entry);
+  return taskRefs.some((t) => tokens.has(t));
+}
+
+// Does `headText` carry a changelog record that `baseText` does not already
+// contain? Two satisfying shapes: (a) a bullet under [Unreleased] whose
+// trimmed text is absent from the ENTIRE base text, or (b) a newest version
+// section whose heading (tag + date) has no counterpart in base — the
+// promote path strips entry stamps when moving bullets into the new section,
+// so that section's bullets count as new without a text lookup.
+// `baseText === null` (or `opts.noBaseText === true`) selects the file-shape
+// fallback for callers without a base snapshot: ok iff [Unreleased] holds at
+// least one bullet, reason 'unreleased-nonempty' otherwise. `opts.taskRefs`,
+// when non-empty, restricts satisfaction to new bullets whose trace-ref
+// group intersects the list. Pure: no clock, no filesystem.
+function batchAddsChangelogRecord(headText, baseText, opts) {
+  const head = parseChangelog(headText);
+  if (baseText == null || (opts && opts.noBaseText === true)) {
+    return head.unreleased.length > 0
+      ? { ok: true, reason: null }
+      : { ok: false, reason: 'unreleased-nonempty' };
+  }
+  const base = String(baseText);
+  const baseHeadings = new Set(parseChangelog(base).versions.map(versionSectionKey));
+  const taskRefs = normalizeTaskRefs(opts);
+  const fresh = [];
+  for (const entry of head.unreleased) {
+    if (!base.includes(entry)) fresh.push(entry);
+  }
+  const newest = head.versions[0];
+  if (newest !== undefined && !baseHeadings.has(versionSectionKey(newest))) {
+    fresh.push(...newest.entries);
+  }
+  if (fresh.length === 0) return { ok: false, reason: 'no-new-bullet' };
+  if (taskRefs.length === 0) return { ok: true, reason: null };
+  return fresh.some((e) => refsIntersectTaskRefs(e, taskRefs))
+    ? { ok: true, reason: null }
+    : { ok: false, reason: 'task-refs-unmatched' };
+}
+
 // ---- : single changelog location resolver + shared lock
 
 const CHANGELOG_PATH_KEY = 'changelog_path';
@@ -571,6 +645,7 @@ module.exports = {
   validateStructure,
   promoteUnreleased,
   utcToday,
+  batchAddsChangelogRecord,
   neutralizeIssueTriggers,
   changelogProjectRoot,
   validateChangelogRelPath,

@@ -123,6 +123,29 @@ const COMMANDS = core.COMMANDS;   // registry truth lives in core/state (EXTRACT
 
 process.on('exit', core.releaseLock);
 
+// Value-taking options for help-flag scanning: the token immediately after
+// one of these is that option's VALUE, never a flag. Options not listed are
+// treated as valueless (boolean) flags.
+const VALUE_OPTS = new Set([
+  '--summary', '--message', '--expect', '--goal', '--reason', '--rationale',
+  '--title', '--supersedes', '--anchor', '--phase', '--task', '--refs',
+  '--type', '--contains', '--codeowner', '--repo', '--subject', '--base',
+  '--model', '--lang', '--last', '--timeout', '--stage', '--note',
+]);
+
+// True when args contain --help/-h in FLAG position: `--` ends flag parsing
+// for the rest of the argv, and a value-taking option consumes the token
+// that follows it.
+function argvHasHelpFlag(args) {
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === '--') return false;
+    if (a === '--help' || a === '-h') return true;
+    if (VALUE_OPTS.has(a)) i++;
+  }
+  return false;
+}
+
 function main() {
   const argv = process.argv.slice(2);
   const breakLock = argv.includes('--break-lock');
@@ -133,6 +156,14 @@ function main() {
  // Phase C ( , placement iron rule): registry integrity check BEFORE any
   // filesystem side effect (guardCwd below mkdirs .gos and takes the lock).
   nav.verifyCommandRegistry();
+  // help short-circuit: `gos <cmd> --help|-h` in flag position prints the
+  // command's help page BEFORE guardCwd — no lock, no .gos/, no state access.
+  // The help family itself is excluded: its native dispatch already carries
+  // full argument fidelity (--json exclusivity, <cmd>/flag-entry lookups).
+  if (cname !== 'help' && nav.KNOWN_CASES.includes(cname) && argvHasHelpFlag(args)) {
+    nav.cmdHelp([cname]);
+    return;
+  }
  // REVIEW : known reads → read; unknown/unregistered → WRITE (deny-by-default)
   let cls = nav.WRITE_CMDS.has(cname) ? 'write' : nav.EXEC_CMDS.has(cname) ? 'exec' : nav.GLOBAL_CMDS.has(cname) ? 'global' : nav.READ_CMDS.has(cname) ? 'read' : 'write';
   if (cname === 'lessons') { const sc = nav.subclassOf(cname, (args[0] || 'list').toLowerCase()); if (sc) cls = sc; } // B-19: lessons list = read-class

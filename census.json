@@ -106,7 +106,8 @@
     ".gos/cache": {
       "git": false,
       "npm": false,
-      "note": "machine-local caches (gitignored)"
+      "note": "machine-local caches (gitignored)",
+      "optional": true
     },
     ".gos/.lock": {
       "git": false,

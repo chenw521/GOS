@@ -6,6 +6,7 @@
 # never close a GitHub issue by accident .
 # Cases: A=validator acceptance N=neutralizer unit C=commit channel
 #        P=aggregate channel V=changelog add/lint E2E S=single-source static
+#        G=neutralizer byte-pin guard
 T101_DIR=""
 
 t101_new() {
@@ -141,6 +142,16 @@ for f in bin/lib/ops/changelog-core.cjs bin/lib/task/commit.cjs bin/lib/ops/push
   if grep -q 'neutralizeIssueTriggers' "$GOS_ROOT/$f"; then echo "  ✓ S1 $f wired to the shared neutralizer"; PASS=$((PASS+1));
   else echo "  ✗ S1 $f missing the shared neutralizer"; FAIL=$((FAIL+1)); fi
 done
+
+# ===== G: neutralizer guard — byte-pin on the shared choke point =====
+# Sentinel pin: hashes the trigger regex + function body slice exactly as
+# shipped; any byte change to neutralizeIssueTriggers fails here.
+G_SLICE=$(sed -n '/^const ISSUE_CLOSE_TRIGGER_RE/,/^}$/p' "$GOS_ROOT/bin/lib/ops/changelog-core.cjs")
+G_PIN=5ab04048fa1f33f8d79f3fe3736ac24760c94229824e41bab2698b8c8521c4a9
+G_GOT=$(printf '%s' "$G_SLICE" | sha256sum | cut -d' ' -f1)
+assert_eq "G1 neutralizeIssueTriggers byte-pin intact" "$G_PIN" "$G_GOT"
+assert_contains "G2 pinned slice carries the function" "function neutralizeIssueTriggers" "$G_SLICE"
+assert_contains "G3 pinned slice carries the trigger regex" "ISSUE_CLOSE_TRIGGER_RE" "$G_SLICE"
 
 echo "--- T101 summary: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]

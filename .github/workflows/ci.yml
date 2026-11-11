@@ -92,7 +92,6 @@ jobs:
           node-version: 22
       - name: Pack manifest integrity
         run: |
-          mkdir -p .gos/cache
           bash test/pack-check.sh
 
   masters:

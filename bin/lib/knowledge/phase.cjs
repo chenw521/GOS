@@ -124,6 +124,50 @@ function cmdPhase(args) {
     return;
   }
 
+  // Pending-only name rewrite. The phase name is a machine key: archive marks
+  // done phases by exact-name lookup and claim resolves name-prefix
+  // references, so the new name is refused on equality or prefix collision
+  // (either direction, case-insensitive) with ANY existing phase name in ANY
+  // status. Active phases carry state.phase_name — rewriting would orphan the
+  // in-flight state; done is audit history; parked re-opens via park --undo
+  // against the recorded name.
+  if (sub === 'rename') {
+    const { pos, opt } = decisions.decisionParseOpts(rest, ['--expect']);
+    const nArg = pos.find((a) => /^\d+$/.test(a));
+    const newName = pos.filter((a) => !/^\d+$/.test(a)).join(' ').trim();
+    if (nArg === undefined || !newName) core.die('Usage: gos phase rename <n> "<new name>" [--expect "<current name>"]');
+    const n = parseInt(nArg, 10);
+    const project = core.loadProject();
+    const phases = (project && Array.isArray(project.phases)) ? project.phases : [];
+    if (!(n >= 0 && n < phases.length)) core.die(`phase index out of range (valid: 0-${Math.max(phases.length - 1, 0)}) — see \`gos phase list\``);
+    const ph = phases[n];
+    if (ph.status === 'active') core.die(`phase ${n} (${ph.name}) ${core.CONTRACTS.command_contracts.renameRefuseActive}`);
+    if (ph.status === 'done') core.die(`phase ${n} (${ph.name}) ${core.CONTRACTS.command_contracts.renameRefuseDone}`);
+    if (ph.status === 'parked') core.die(`phase ${n} (${ph.name}) ${core.CONTRACTS.command_contracts.renameRefuseParked}`);
+    const expect = (opt['--expect'] !== undefined && opt['--expect'] !== null) ? String(opt['--expect']).trim() : '';
+    if (expect && expect !== ph.name) core.die(`phase ${n} ${core.CONTRACTS.command_contracts.renameExpectMismatch} — expected '${expect}', actual '${ph.name}'`);
+    const nbt = core.badText(newName);
+    if (nbt) core.die(`name rejected (${nbt})`);
+    if (core.cpLen(newName) > 80) core.die(`phase ${n} ${core.CONTRACTS.command_contracts.renameTooLong} (${core.cpLen(newName)}/80)`);
+    if (!/^P\d+: \S/.test(newName)) core.die(`phase ${n} ${core.CONTRACTS.command_contracts.renameBadShape}`);
+    const nn = newName.toLowerCase();
+    for (let i = 0; i < phases.length; i++) {
+      const other = phases[i];
+      if (!other || typeof other.name !== 'string' || !other.name) continue;
+      const on = other.name.toLowerCase();
+      if (nn === on || nn.startsWith(on) || on.startsWith(nn)) {
+        core.die(`phase ${n} (${ph.name}) ${core.CONTRACTS.command_contracts.renameRefuseCollision}: '${newName}' vs idx ${i} '${other.name}' (${other.status})`);
+      }
+    }
+    const oldName = ph.name;
+    ph.name = newName;
+    core.saveProject(project);
+    console.log(`${core.CONTRACTS.command_contracts.phaseRenamed}${oldName} → ${newName}`);
+    console.log('Next: gos phase list');
+    decisions.autoRenderViews(project); // D-03: views stay fresh after the mutation
+    return;
+  }
+
   if (sub === 'list') {
     const project = core.loadProject();
     const phases = (project && Array.isArray(project.phases)) ? project.phases : [];
@@ -341,9 +385,10 @@ function cmdPhase(args) {
     return;
   }
 
-  console.log('Usage: gos phase <add|amend|list|claim|unclaim|park|mark-done>');
+  console.log('Usage: gos phase <add|amend|rename|list|claim|unclaim|park|mark-done>');
   console.log('  add "P1: name" --goal "..."   add pending phase to project.json');
   console.log('  amend <n> --goal "..."        replace goal of a PENDING phase (active/done/parked refused)');
+  console.log('  rename <n> "<new name>"       rename a PENDING phase (grammar + collision guarded, prints old→new)');
   console.log('  list                          phase table');
   console.log('  claim <n> [--force]           fresh Lv3 state for phase n (DONE + prev archived required)');
   console.log('  unclaim                       revert active phase to pending (state orphaned)');
