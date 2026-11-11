@@ -674,6 +674,8 @@ function cmdGateTrust(args) {
 // --head <pr head sha>, never the merge ref).
 function changelogObligationLeg(ctx = {}) {
   const failures = [];
+  const lines = [];
+  const say = (s) => lines.push(s);
   const changelogAbs = clcore.resolveChangelogMd();
 
   // One lenient .gos/state.json read feeds both the refs filter and the
@@ -705,19 +707,19 @@ function changelogObligationLeg(ctx = {}) {
   if (!core.gitInWorkTree()) {
     const headText = readWorktree();
     if (headText === null) {
-      console.log('⚠ changelog obligation: exempt (no CHANGELOG.md yet — obligations start once the file exists)');
+      say('⚠ changelog obligation: exempt (no CHANGELOG.md yet — obligations start once the file exists)');
       return { failures };
     }
-    if (refsDegraded) console.log('⚠ changelog obligation: refs filter degraded (no task ids)');
+    if (refsDegraded) say('⚠ changelog obligation: refs filter degraded (no task ids)');
     const v = clcore.batchAddsChangelogRecord(headText, null, refsOpts);
     if (v.ok) {
-      console.log('✓ changelog obligation: [Unreleased] holds a bullet (file-shape fallback, non-git tree)');
+      say('✓ changelog obligation: [Unreleased] holds a bullet (file-shape fallback, non-git tree)');
       return { failures };
     }
     failures.push(core.gateFail('changelog-obligation', {
       verdict: `no changelog record (${v.reason}) — non-git tree, CHANGELOG.md [Unreleased] must hold a bullet`,
       evidence: [v.reason],
-      fix: core.gateCmd('node bin/gos.cjs changelog', 'add') + ' — write the batch record into CHANGELOG.md [Unreleased]',
+      fix: core.gateCmd('node bin/gos.cjs changelog add') + ' — write the batch record into CHANGELOG.md [Unreleased]',
     }));
     return { failures };
   }
@@ -781,11 +783,11 @@ function changelogObligationLeg(ctx = {}) {
 
   const b = resolveBase(baseRef);
   if (b.kind === 'unborn') {
-    console.log('⚠ changelog obligation: exempt (unborn base)');
+    say('⚠ changelog obligation: exempt (unborn base)');
     return { failures };
   }
   if (b.kind === 'zero-parent') {
-    console.log('⚠ changelog obligation: exempt (zero-parent base)');
+    say('⚠ changelog obligation: exempt (zero-parent base)');
     return { failures };
   }
   if (b.kind === 'shallow' || b.kind === 'unresolved' || !rel) {
@@ -841,28 +843,28 @@ function changelogObligationLeg(ctx = {}) {
     // working tree holds no changelog: either this batch deleted it (base
     // had one) or the file never existed (obligations start once it does)
     if (bs.text == null) {
-      console.log('⚠ changelog obligation: exempt (no CHANGELOG.md yet — obligations start once the file exists)');
+      say('⚠ changelog obligation: exempt (no CHANGELOG.md yet — obligations start once the file exists)');
       return { failures };
     }
     failures.push(core.gateFail('changelog-obligation-missing', {
       verdict: 'CHANGELOG.md is gone from the head but existed at the base — deleting it is not adding a record',
       evidence: [`${rel} present at base ${b.sha.slice(0, 10)}`, 'absent at head'],
-      fix: 'restore CHANGELOG.md and record this batch with ' + core.gateCmd('node bin/gos.cjs changelog', 'add'),
+      fix: 'restore CHANGELOG.md and record this batch with ' + core.gateCmd('node bin/gos.cjs changelog add'),
     }));
     return { failures };
   }
 
-  if (refsDegraded) console.log('⚠ changelog obligation: refs filter degraded (no task ids)');
+  if (refsDegraded) say('⚠ changelog obligation: refs filter degraded (no task ids)');
   const baseText = bs.text == null ? '' : bs.text;
   const v = clcore.batchAddsChangelogRecord(headText, baseText, refsOpts);
   if (v.ok) {
-    console.log(`✓ changelog obligation: batch adds a changelog record (base ${b.sha.slice(0, 10)}, head ${headDesc})`);
+    say(`✓ changelog obligation: batch adds a changelog record (base ${b.sha.slice(0, 10)}, head ${headDesc})`);
     return { failures };
   }
   failures.push(core.gateFail('changelog-obligation', {
     verdict: `this batch adds no changelog record (${v.reason}) — nothing new in CHANGELOG.md against base ${b.sha.slice(0, 10)}`,
     evidence: [v.reason, `base ${baseRef}`, `head ${headDesc}`],
-    fix: core.gateCmd('node bin/gos.cjs changelog', 'add') + ' — write the batch record into CHANGELOG.md [Unreleased]',
+    fix: core.gateCmd('node bin/gos.cjs changelog add') + ' — write the batch record into CHANGELOG.md [Unreleased]',
   }));
   return { failures };
 }
@@ -886,6 +888,7 @@ function cmdGateChangelogObligation(args) {
     else headRef = v;
   }
   const leg = changelogObligationLeg({ baseRef, headRef });
+  for (const l of leg.lines || []) console.log(l);
   if (leg.failures.length) {
     console.error(`\n${core.CONTRACTS.gate_verdicts.gateFailedPrefix} (${leg.failures.length}):`);
     console.error(renderGateFailures(leg.failures));
@@ -1371,7 +1374,9 @@ function computeGateVerdicts(ctx = {}) {
     // task / HEAD^1 on the stateless audit context)
     if (which === 'all') {
       checked++;
-      failures.push(...changelogObligationLeg({ auditNoState }).failures);
+      const obLeg = changelogObligationLeg({ auditNoState });
+      failures.push(...obLeg.failures);
+      lines.push(...(obLeg.lines || []));
     }
     // CJK boundary lint (repo Englishization): tracked files must be CJK-free
     // unless covered by .gos/cjk-whitelist.json. The lint is

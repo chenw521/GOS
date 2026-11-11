@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add Cure the live pain bugs and restore archive integrity: the changelog obligation becomes a structural batch delta immune to UTC midnight, closing keywords ride the PR body with the ceremony re-pointed, the commit-chain completed_at clobber is cured with disjunctive idle guards, a deficient archive payload is rebuilt with a retro-stamp, the help flag short-circuits before execution, entry renaming and census optional classes land (D-61/D-62/D-64/D-65) [2026-11-11]
+- Add The card-preflight dig floor is mechanized: decisions carry evidence objects validated at add time and enforced at spec freeze with era grandfathering (D-63) [2026-11-11]
 - Add stage advance commits now land past the committed stage: the destination derives from the committed stage with canonical completed backfill, multi-stage jumps are refused unless --force sanctions them, and out-of-flow stages warn while keeping the legacy destination, curing the headless INTENT-skip trap that left tasks half-advanced (R-01) [2026-11-10]
 - Add the truth-verify evidence artifact path now holds to the fresh-clone contract at recording time: a non-zone path must be git-staged and a regular file, symlinks are refused, and the rejection text names both cures, while the shared validator predicate keeps gate and CLI from drifting apart (R-01) [2026-11-10]
 - Add the artifact-path contract fix for truth-verify evidence, issue 57, enters build: the spec froze with a shared-validator predicate and the task state recovered after an advance commit landed without its stage flip, re-logged as a concern (R-01) [2026-11-09]

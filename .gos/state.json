@@ -131,50 +131,90 @@
     {
       "id": "T1",
       "description": "T-01 structural obligation: batch diff adding a new [Unreleased] bullet passes across UTC midnight; adding none fails (T109 both directions)",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/p19/evidence/t1.sh\"]",
+        "output_excerpt": "T1 pass=1 fail=1",
+        "artifact_path": ".gos/task/p19/evidence/t1.sh",
+        "replay": true
+      }
     },
     {
       "id": "T2",
       "description": "T-02 Lv1 chain archive lands completed_at + archive-rewritten paths + surviving approvals/spec_sha256/plan_snapshot/completed_stages (T112)",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/p19/evidence/t2.sh\"]",
+        "output_excerpt": "T2 mergeHelper=2 completedAtRefs=4",
+        "artifact_path": ".gos/task/p19/evidence/t2.sh",
+        "replay": true
+      }
     },
     {
       "id": "T3",
       "description": "T-03 disjunctive idle: stamp-only idles; tid+paths idles; planted tid with live-zone paths does not idle (T112)",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/p19/evidence/t3.sh\"]",
+        "output_excerpt": "T3 gateIdleRefs=1 archiveHelper=2",
+        "artifact_path": ".gos/task/p19/evidence/t3.sh",
+        "replay": true
+      }
     },
     {
       "id": "T4",
       "description": "T-04 -der payload: task/1a2e46f3/state.json byte-equal to 493a9e7 plus exactly completed_at+completed_at_retro; PROVENANCE.md present (local-only, T9 pinned diff)",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/p19/evidence/t4.sh\"]",
+        "output_excerpt": "T4 diffLines=0 provenanceFiles=1 frontMatterKeys=3",
+        "artifact_path": ".gos/archive/2026-11-10-v1.0.0-task-commit-advance-destination-der/task/1a2e46f3/PROVENANCE.md",
+        "replay": true
+      }
     },
     {
       "id": "T5",
       "description": "T-05 help never executes: registered cmds with --help/-h print help rc0 zero side effects; value-position exempt; unknown non-zero (T110)",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/p19/evidence/t5.sh\"]",
+        "output_excerpt": "T5 statusHelpFirstLine=Usage jsonRc=0 unknownRc=1",
+        "artifact_path": ".gos/task/p19/evidence/t5.sh",
+        "replay": true
+      }
     },
     {
       "id": "T6",
       "description": "T-06 rename verb: pending rename applies + views re-render; collisions/non-pending refused; --expect guard (T111)",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/p19/evidence/t6.sh\"]",
+        "output_excerpt": "T6 renameInHelp=8",
+        "artifact_path": ".gos/task/p19/evidence/t6.sh",
+        "replay": true
+      }
     },
     {
       "id": "T7",
       "description": "T-07 census: fresh checkout without .gos/cache passes pack-check; tracked-optional negative control red; ci mkdir gone (T66/T6)",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/p19/evidence/t7.sh\"]",
+        "output_excerpt": "T7 ciMkdirLines=0",
+        "artifact_path": ".gos/task/p19/evidence/t7.sh",
+        "replay": true
+      }
     },
     {
       "id": "T8",
       "description": "T-08 dig floor: post-era decisions without evidence-object dig refused at add and freeze; grandfathered pass with advisory (T113)",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/p19/evidence/t8.sh\"]",
+        "output_excerpt": "T8 eraHomeRefs=4 freezeCalls=2",
+        "artifact_path": ".gos/task/p19/evidence/t8.sh",
+        "replay": true
+      }
     }
   ],
   "gaps": [
@@ -398,5 +438,6 @@
         "waves": 5
       }
     }
-  }
+  },
+  "changelog_user_summary": "Cure the live pain bugs and restore archive integrity: the changelog obligation becomes a structural batch delta immune to UTC midnight, closing keywords ride the PR body with the ceremony re-pointed, the commit-chain completed_at clobber is cured with disjunctive idle guards, a deficient archive payload is rebuilt with a retro-stamp, the help flag short-circuits before execution, entry renaming and census optional classes land"
 }
