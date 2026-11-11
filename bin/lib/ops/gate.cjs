@@ -708,20 +708,20 @@ function changelogObligationLeg(ctx = {}) {
     const headText = readWorktree();
     if (headText === null) {
       say('⚠ changelog obligation: exempt (no CHANGELOG.md yet — obligations start once the file exists)');
-      return { failures };
+      return { failures, lines };
     }
     if (refsDegraded) say('⚠ changelog obligation: refs filter degraded (no task ids)');
     const v = clcore.batchAddsChangelogRecord(headText, null, refsOpts);
     if (v.ok) {
       say('✓ changelog obligation: [Unreleased] holds a bullet (file-shape fallback, non-git tree)');
-      return { failures };
+      return { failures, lines };
     }
     failures.push(core.gateFail('changelog-obligation', {
       verdict: `no changelog record (${v.reason}) — non-git tree, CHANGELOG.md [Unreleased] must hold a bullet`,
       evidence: [v.reason],
       fix: core.gateCmd('node bin/gos.cjs changelog add') + ' — write the batch record into CHANGELOG.md [Unreleased]',
     }));
-    return { failures };
+    return { failures, lines };
   }
 
   const top = core.gitToplevelRealpath();
@@ -758,7 +758,7 @@ function changelogObligationLeg(ctx = {}) {
           evidence: ['state.json: task_head absent or malformed'],
           fix: 're-claim the task (gos init) or advance its first stage commit so task_head re-anchors the diff baseline, then re-run the gate',
         }));
-        return { failures };
+        return { failures, lines };
       }
       baseRef = th;
     } else baseRef = 'HEAD^1';
@@ -784,11 +784,11 @@ function changelogObligationLeg(ctx = {}) {
   const b = resolveBase(baseRef);
   if (b.kind === 'unborn') {
     say('⚠ changelog obligation: exempt (unborn base)');
-    return { failures };
+    return { failures, lines };
   }
   if (b.kind === 'zero-parent') {
     say('⚠ changelog obligation: exempt (zero-parent base)');
-    return { failures };
+    return { failures, lines };
   }
   if (b.kind === 'shallow' || b.kind === 'unresolved' || !rel) {
     failures.push(core.gateFail('changelog-obligation-base-unresolved', {
@@ -800,7 +800,7 @@ function changelogObligationLeg(ctx = {}) {
       evidence: [String(baseRef), rel || changelogAbs],
       fix: 'fetch full history (git fetch --unshallow) or set GOS_CHANGELOG_BASE to a base commit this checkout can read',
     }));
-    return { failures };
+    return { failures, lines };
   }
 
   const bs = showPath(b.sha);
@@ -810,7 +810,7 @@ function changelogObligationLeg(ctx = {}) {
       evidence: [rel],
       fix: 'resolve the git failure above (shallow history / missing object), then re-run the check',
     }));
-    return { failures };
+    return { failures, lines };
   }
 
   let headDesc = 'working tree';
@@ -823,7 +823,7 @@ function changelogObligationLeg(ctx = {}) {
         evidence: [String(ctx.headRef)],
         fix: 'point --head at a commit that exists in this checkout (fetch the PR head sha first), or leave it unset to check the working tree',
       }));
-      return { failures };
+      return { failures, lines };
     }
     const hs = showPath(hsha);
     if (!hs.ok) {
@@ -832,7 +832,7 @@ function changelogObligationLeg(ctx = {}) {
         evidence: [rel],
         fix: 'resolve the git failure above (shallow history / missing object), then re-run the check',
       }));
-      return { failures };
+      return { failures, lines };
     }
     headText = hs.text == null ? '' : hs.text;
     headDesc = String(ctx.headRef);
@@ -844,14 +844,14 @@ function changelogObligationLeg(ctx = {}) {
     // had one) or the file never existed (obligations start once it does)
     if (bs.text == null) {
       say('⚠ changelog obligation: exempt (no CHANGELOG.md yet — obligations start once the file exists)');
-      return { failures };
+      return { failures, lines };
     }
     failures.push(core.gateFail('changelog-obligation-missing', {
       verdict: 'CHANGELOG.md is gone from the head but existed at the base — deleting it is not adding a record',
       evidence: [`${rel} present at base ${b.sha.slice(0, 10)}`, 'absent at head'],
       fix: 'restore CHANGELOG.md and record this batch with ' + core.gateCmd('node bin/gos.cjs changelog add'),
     }));
-    return { failures };
+    return { failures, lines };
   }
 
   if (refsDegraded) say('⚠ changelog obligation: refs filter degraded (no task ids)');
@@ -859,14 +859,14 @@ function changelogObligationLeg(ctx = {}) {
   const v = clcore.batchAddsChangelogRecord(headText, baseText, refsOpts);
   if (v.ok) {
     say(`✓ changelog obligation: batch adds a changelog record (base ${b.sha.slice(0, 10)}, head ${headDesc})`);
-    return { failures };
+    return { failures, lines };
   }
   failures.push(core.gateFail('changelog-obligation', {
     verdict: `this batch adds no changelog record (${v.reason}) — nothing new in CHANGELOG.md against base ${b.sha.slice(0, 10)}`,
     evidence: [v.reason, `base ${baseRef}`, `head ${headDesc}`],
     fix: core.gateCmd('node bin/gos.cjs changelog add') + ' — write the batch record into CHANGELOG.md [Unreleased]',
   }));
-  return { failures };
+  return { failures, lines };
 }
 
 // Read-mode subcommand: the CI-thin face of the obligation leg. Push jobs
