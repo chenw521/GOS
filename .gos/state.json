@@ -2,17 +2,19 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "PLAN",
+  "current_stage": "BUILD",
   "completed_stages": [
     "INTENT",
-    "THINK"
+    "THINK",
+    "PLAN"
   ],
   "intent": {
     "summary": "Cure the user-visible bugs the 2026-11-09/10 sessions lived through and restore archive integrity: changelog same-day obligation across UTC midnight (#49), changelog validator rejecting #N issue tokens that blocks closing keywords (#24), between-tasks gate false-red on DONE-resident state (concern dffa50f0), census fresh-checkout optional-entry class (concern 73cef6ab), the fromCommit archive path skipping the completed_at stamp plus the deficient -der archive payload rebuild and one-time retro-stamp, the --help short-circuit, and a phase rename verb so project.json name edits never need hand edits again.",
     "confirmed": true
   },
   "approvals": {
-    "THINK": "2026-11-11T05:04:56.774Z"
+    "THINK": "2026-11-11T05:04:56.774Z",
+    "PLAN": "2026-11-11T06:32:19.822Z"
   },
   "spec_path": null,
   "plan_path": null,
@@ -137,5 +139,170 @@
     }
   ],
   "spec_gate_version": 3,
-  "spec_sha256": "10f6ad159bb98484a99f22744f3adff766f0131201d716e6b21a7ff04b7bee8f"
+  "spec_sha256": "10f6ad159bb98484a99f22744f3adff766f0131201d716e6b21a7ff04b7bee8f",
+  "plan_snapshot": {
+    "tasks": [
+      {
+        "id": "T0",
+        "covers": [
+          "R-01"
+        ],
+        "files": [
+          ".gos/state.json"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T1",
+        "covers": [
+          "D-62",
+          "R-60"
+        ],
+        "files": [
+          "bin/lib/ops/changelog-core.cjs",
+          "test/sections/T109-changelog-structural.test.sh"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T3",
+        "covers": [
+          "D-61",
+          "R-61"
+        ],
+        "files": [
+          "bin/lib/ops/push.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh-CN.cjs",
+          ".github/PULL_REQUEST_TEMPLATE.md",
+          "test/sections/T76-*.test.sh",
+          "test/sections/T101-*.test.sh"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T4",
+        "covers": [
+          "R-64"
+        ],
+        "files": [
+          "bin/gos.cjs",
+          "test/sections/T110-help-shortcircuit.test.sh"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T5",
+        "covers": [
+          "R-65"
+        ],
+        "files": [
+          "bin/lib/knowledge/phase.cjs",
+          "bin/lib/nav/registry-consts.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh-CN.cjs",
+          "test/sections/T111-phase-rename.test.sh"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T6",
+        "covers": [
+          "R-66"
+        ],
+        "files": [
+          "census.json",
+          "test/pack-check.sh",
+          ".github/workflows/ci.yml",
+          "test/sections/T66-*.test.sh"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T7",
+        "covers": [
+          "D-64",
+          "R-62"
+        ],
+        "files": [
+          "bin/lib/task/commit.cjs",
+          "bin/lib/task/archive.cjs",
+          "bin/lib/ops/gate.cjs",
+          "test/sections/T112-completed-at-cure.test.sh",
+          "test/sections/T8-phase-archive.test.sh",
+          "test/sections/T27-*.test.sh",
+          "test/sections/T50-*.test.sh",
+          "test/sections/T61-*.test.sh"
+        ],
+        "wave": 2
+      },
+      {
+        "id": "T2",
+        "covers": [
+          "D-62",
+          "R-60"
+        ],
+        "files": [
+          "bin/lib/ops/changelog-core.cjs",
+          "bin/lib/ops/gate.cjs",
+          "bin/lib/task/archive.cjs",
+          "bin/lib/task/changelog.cjs",
+          ".github/workflows/ci.yml",
+          "test/sections/T53-*.test.sh",
+          "test/sections/T54-*.test.sh",
+          "test/sections/T55-*.test.sh",
+          "test/sections/T57-*.test.sh"
+        ],
+        "wave": 3
+      },
+      {
+        "id": "T8",
+        "covers": [
+          "D-63",
+          "R-67"
+        ],
+        "files": [
+          "bin/lib/knowledge/decisions.cjs",
+          "bin/lib/task/decision.cjs",
+          "bin/lib/task/commit.cjs",
+          "bin/lib/ops/gate.cjs",
+          "bin/lib/core/state.cjs",
+          "test/sections/T113-dig-floor.test.sh"
+        ],
+        "wave": 4
+      },
+      {
+        "id": "T9",
+        "covers": [
+          "D-65",
+          "R-63"
+        ],
+        "files": [
+          ".gos/archive/2026-11-10-v1.0.0-task-commit-advance-destination-der/task/1a2e46f3/state.json",
+          ".gos/archive/2026-11-10-v1.0.0-task-commit-advance-destination-der/task/1a2e46f3/PROVENANCE.md",
+          ".gos/concerns.md",
+          ".gos/logs/truth-receipts.md"
+        ],
+        "wave": 5
+      },
+      {
+        "id": "T10",
+        "covers": [
+          "R-01"
+        ],
+        "files": [
+          ".gos/cache/run-manifest.json",
+          "CHANGELOG.md"
+        ],
+        "wave": 5
+      }
+    ],
+    "audit": [],
+    "meta": {
+      "waveValidation": {
+        "ok": true,
+        "waves": 5
+      }
+    }
+  }
 }
