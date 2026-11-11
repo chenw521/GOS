@@ -164,7 +164,7 @@ function cmdPhase(args) {
     core.saveProject(project);
     console.log(`${core.CONTRACTS.command_contracts.phaseRenamed}${oldName} → ${newName}`);
     console.log('Next: gos phase list');
-    decisions.autoRenderViews(project); // D-03: views stay fresh after the mutation
+    decisions.autoRenderViews(project);
     return;
   }
 

@@ -727,20 +727,9 @@ function changelogObligationLeg(ctx = {}) {
   const top = core.gitToplevelRealpath();
   const rel = top ? path.relative(top, changelogAbs).split(path.sep).join('/') : null;
 
-  // Snapshot of the changelog at a resolved ref: {ok:true, text} with
-  // text=null when the path is absent from that tree; {ok:false} on any git
-  // failure (fail-closed upstream, never conflated with absence)
-  const showPath = (ref) => {
-    if (!rel) return { ok: false };
-    let ent = '';
-    try {
-      ent = execFileSync('git', ['ls-tree', ref, '--', rel], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-    } catch { return { ok: false }; }
-    if (!ent.trim()) return { ok: true, text: null };
-    try {
-      return { ok: true, text: execFileSync('git', ['show', `${ref}:${rel}`], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 32 * 1024 * 1024 }) };
-    } catch { return { ok: false }; }
-  };
+  // Shared three-state snapshot helper (changelog-core): a git failure is
+  // never conflated with absence — callers fail closed on {ok:false}
+  const showPath = (ref) => clcore.showPathSnapshot(ref, rel);
 
   // Base selection: explicit ref > GOS_CHANGELOG_BASE env > context default
   // (task_head on a live task; HEAD^1 on the stateless push/audit context)

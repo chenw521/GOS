@@ -41,7 +41,7 @@ CTX=$(node "$GOS" context think 2>&1)
 assert_contains "context think mentions gos decision add" "gos decision add" "$CTX"
 
 # --- .4: spec template teaches the command
-assert_contains "spec-template records via gos decision add" "gos decision add" "$(cat "$GOS_ROOT/templates/spec-template.md")" --dig-waiver "test fixture"
+assert_contains "spec-template records via gos decision add" "gos decision add" "$(cat "$GOS_ROOT/templates/spec-template.md")"
 
 # --- .5: contract round-trip — frozen table value + live phase add emission match
 PA=$(node "$GOS" _contract 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['command_contracts']['phaseAdded'])")

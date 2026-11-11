@@ -344,9 +344,17 @@ function cmdArchive(opts = {}) {
         return clcore.batchAddsChangelogRecord(changelogText, null, { taskRefs: shipTaskRefs });
       }
       // base snapshot: the file as it stood at task_head; absent there means
-      // every current bullet is new (the whole changelog is this batch's record)
-      const baseText = core.safeGitArgv(['show', `${th}:${rel}`]);
-      return clcore.batchAddsChangelogRecord(changelogText, baseText, { taskRefs: shipTaskRefs });
+      // every current bullet is new (the whole changelog is this batch's record).
+      // Three-state shared helper: a git failure is {ok:false} — fail closed,
+      // never conflated with absence (which would satisfy the obligation vacuously)
+      const snap = clcore.showPathSnapshot(th, rel);
+      if (!snap.ok) {
+        console.log('⚠ ship changelog check: base snapshot unreadable — failing closed');
+        return { ok: false, reason: 'base-unreadable' };
+      }
+      // absent-from-base means the whole changelog is this batch's record
+      // (empty base text), never the file-shape fallback trigger (null)
+      return clcore.batchAddsChangelogRecord(changelogText, snap.text == null ? '' : snap.text, { taskRefs: shipTaskRefs });
     })();
     if (!shipVerdict.ok) {
       console.error(`${core.CONTRACTS.state_semantics.archiveBlocked} (SHIP ritual):`);

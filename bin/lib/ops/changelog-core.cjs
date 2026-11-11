@@ -124,6 +124,22 @@ function neutralizeIssueTriggers(text) {
   return String(text == null ? '' : text).replace(ISSUE_CLOSE_TRIGGER_RE, 'refs$2$3');
 }
 
+// Snapshot of a tracked file at a resolved ref, three-state by design:
+// {ok:true, text} with text=null when the path is absent from that tree;
+// {ok:false} on any git failure (callers fail closed — a git error is
+// never conflated with absence, which would satisfy the obligation vacuously).
+function showPathSnapshot(ref, relPath) {
+  if (!relPath) return { ok: false };
+  let ent = '';
+  try {
+    ent = require('child_process').execFileSync('git', ['ls-tree', ref, '--', relPath], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  } catch { return { ok: false }; }
+  if (!ent.trim()) return { ok: true, text: null };
+  try {
+    return { ok: true, text: require('child_process').execFileSync('git', ['show', ref + ':' + relPath], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 32 * 1024 * 1024 }) };
+  } catch { return { ok: false }; }
+}
+
 // Tolerant parse of a Keep-a-Changelog-style document. Never throws; a missing
 // [Unreleased] section yields an empty array, and prose between bullets is
 // ignored. `versions` preserves file order (expected newest-first; structural
@@ -632,6 +648,7 @@ module.exports = {
   validateStructure,
   promoteUnreleased,
   utcToday,
+  showPathSnapshot,
   batchAddsChangelogRecord,
   neutralizeIssueTriggers,
   changelogProjectRoot,

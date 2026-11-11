@@ -3,7 +3,7 @@
     "total": 1522,
     "callgraph": 968,
     "testof_fn": 116,
-    "fn_count": 900,
+    "fn_count": 901,
     "fns": [
       "absTaskPath",
       "ackWaitMs",
@@ -768,6 +768,7 @@
       "shipLedgerCounts",
       "shipLedgerLines",
       "shortPath",
+      "showPathSnapshot",
       "sideSummary",
       "sidecarViolations",
       "signalForAdapterFailure",
@@ -1580,6 +1581,7 @@
       "hasMultiSentence": "bin/lib/ops/changelog-core.cjs",
       "utcToday": "bin/lib/ops/changelog-core.cjs",
       "neutralizeIssueTriggers": "bin/lib/ops/changelog-core.cjs",
+      "showPathSnapshot": "bin/lib/ops/changelog-core.cjs",
       "parseChangelog": "bin/lib/ops/changelog-core.cjs",
       "validateEntry": "bin/lib/ops/changelog-core.cjs",
       "validateStructure": "bin/lib/ops/changelog-core.cjs",
@@ -1808,8 +1810,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "f7bf6106d2917557",
-    "at": "2026-11-11T10:36:56.607Z"
+    "fp": "5486b26a0778db90",
+    "at": "2026-11-11T11:25:32.731Z"
   },
   "peak": {
     "total": 2065,

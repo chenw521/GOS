@@ -272,7 +272,7 @@ function guardCwd(cls, cmdName, breakLock, args) {
   }
   if (cmdName === 'anchor') return; // anchor fix is the designated rescue (D-10)
   if (cmdName === 'paths') return;  // Phase W (T3): registry query never requires an active task; lock still held for --markdown writes
-  if (cmdName === 'gate' && process.argv.includes('changelog-obligation')) return; // read-only batch-record check: runs on plain repos (CI parity) with no task to anchor
+  if (cmdName === 'gate' && process.argv[process.argv.indexOf('gate') + 1] === 'changelog-obligation') return; // read-only batch-record check: runs on plain repos (CI parity) with no task to anchor; subcommand-position match only
   if (!fs.existsSync(fsio.STATE_PATH)) {
     // no state HERE — but if an ancestor has .gos/state.json, we are in a subdir of a managed project
     let dir = here;

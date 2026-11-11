@@ -131,6 +131,8 @@ const VALUE_OPTS = new Set([
   '--title', '--supersedes', '--anchor', '--phase', '--task', '--refs',
   '--type', '--contains', '--codeowner', '--repo', '--subject', '--base',
   '--model', '--lang', '--last', '--timeout', '--stage', '--note',
+  '--command', '--excerpt', '--artifact', '--dig', '--dig-ruling',
+  '--dig-waiver', '--head', '--body', '--to', '--resolution',
 ]);
 
 // True when args contain --help/-h in FLAG position: `--` ends flag parsing
