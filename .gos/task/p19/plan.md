@@ -179,7 +179,7 @@
 
 #### T2: obligation cutover + consumer rewiring + CI wiring
 - **Covers**: D-62, R-60
-- **Files**: bin/lib/ops/changelog-core.cjs, bin/lib/ops/gate.cjs, bin/lib/task/archive.cjs, bin/lib/task/changelog.cjs, .github/workflows/ci.yml, test/sections/T53-*.test.sh, test/sections/T54-*.test.sh, test/sections/T55-*.test.sh, test/sections/T57-*.test.sh
+- **Files**: bin/lib/ops/changelog-core.cjs, bin/lib/ops/gate.cjs, bin/lib/task/archive.cjs, bin/lib/task/changelog.cjs, bin/lib/core/lock.cjs, bin/lib/core/state.cjs, .github/workflows/ci.yml, test/sections/T53-*.test.sh, test/sections/T54-*.test.sh, test/sections/T55-*.test.sh, test/sections/T57-*.test.sh, test/sections/T12-wiring.test.sh
 - **Read first**: T1's batchAddsChangelogRecord contract; gate.cjs:1097-1121
   (changelog-lint verdict wiring); archive.cjs:225-231 (SHIP ritual);
   T53:139 / T54 / T55 S3+G4 / T57:57 fixtures (all reference the clock

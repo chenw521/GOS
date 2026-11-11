@@ -183,6 +183,12 @@
       "type": "major",
       "description": "Fluid back to PLAN: discovered during PLAN",
       "status": "open"
+    },
+    {
+      "id": "G-1794387988772",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
     }
   ],
   "phase_name": "P19: live pain bugs and archive integrity",
@@ -305,11 +311,14 @@
           "bin/lib/ops/gate.cjs",
           "bin/lib/task/archive.cjs",
           "bin/lib/task/changelog.cjs",
+          "bin/lib/core/lock.cjs",
+          "bin/lib/core/state.cjs",
           ".github/workflows/ci.yml",
           "test/sections/T53-*.test.sh",
           "test/sections/T54-*.test.sh",
           "test/sections/T55-*.test.sh",
-          "test/sections/T57-*.test.sh"
+          "test/sections/T57-*.test.sh",
+          "test/sections/T12-wiring.test.sh"
         ],
         "wave": 3
       },
