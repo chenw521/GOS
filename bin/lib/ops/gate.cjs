@@ -5,6 +5,7 @@ const core = require('../core/index.cjs');
 const map = require('../map/index.cjs');
 const knowledge = require('../knowledge/index.cjs');
 const task = require('../task/plansnap.cjs');
+const sibArchive = require('../task/archive.cjs');  // archived-tid idle predicate (single source with the archive idempotency check)
 const sibConfig = require('./config.cjs');  // direct aspect require (acyclic)
 const sibDoctor = require('./doctor.cjs');
 const sibTrack = require('./track.cjs');    // T8 flip-reconcile leg consumes the T7b exports (manifest read, never-zones/files, census key rule)
@@ -694,13 +695,16 @@ function computeGateVerdicts(ctx = {}) {
     const auditNoState = !state || (state.current_stage === 'DONE' && auditMode);
     if (auditNoState) console.log('⚠ gate audit: no active task — task-level checks skipped, structural layer only');
    // Between-tasks idle: DONE + completed_at is the archive transaction's
-    // "this task WAS archived" marker (the same discriminator the archive
-    // idempotency path trusts), retained in state.json until the next init.
-    // In that window the coverage and semantic branches downgrade to loud
-    // advisory lines carrying the init hint — dead-task state must not feed
-    // live-task checks. Bare DONE (no completed_at) keeps every task-level
-    // check live.
-    const doneIdle = !!(state && state.current_stage === 'DONE' && state.completed_at);
+   // "this task WAS archived" marker (the same discriminator the archive
+   // idempotency path trusts), retained in state.json until the next init.
+   // The disjunctive second arm covers the stamp-lost window: the tid lives
+   // in an archive dest and the state's own paths resolve into it. In that
+   // window the coverage and semantic branches downgrade to loud advisory
+   // lines carrying the init hint — dead-task state must not feed live-task
+   // checks. Paths still pointing at the live .gos/task/<tid>/ zone keep
+   // every task-level check live (the state still needs the archive repair).
+    const doneIdle = !!(state && state.current_stage === 'DONE'
+      && (state.completed_at || sibArchive.archivedTidIdle(state)));
    // B-19 [R3-F4] lock reordering: builtin layer (incl. semantic engine + anchor
     // verification, which read project files) holds the lock; the gates.json lint and
     // custom-script layers run UNLOCKED (long user scripts must not block GOS).

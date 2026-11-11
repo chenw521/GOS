@@ -98,6 +98,84 @@ function shipLedgerLines(state) {
   ];
 }
 
+// Newest archive dest holding task/<tid> — the tid's current archive home.
+// The slug is just a name; the tid is the identity: a dest containing the id
+// marks that this task's directory already moved.
+function archivedTidHomeDir(state) {
+  const tid = core.currentTaskId(state);
+  if (!tid || !fs.existsSync(core.ARCHIVE_DIR)) return null;
+  const dirs = fs.readdirSync(core.ARCHIVE_DIR)
+    .filter((d) => fs.existsSync(path.join(core.ARCHIVE_DIR, d, 'task', tid)))
+    .sort();
+  return dirs.length ? dirs[dirs.length - 1] : null;
+}
+
+// Registered state paths resolve into .gos/archive/<home>/ — direct fields
+// must live there; nested evidence paths only disqualify when they still
+// point at the live task zone (evidence may legitimately live outside .gos).
+function statePathsResolveIntoArchiveHome(state, home) {
+  const prefix = `${path.join(path.relative('.', core.ARCHIVE_DIR), home)}${path.sep}`;
+  const tid = core.currentTaskId(state);
+  for (const f of core.STATE_PATH_FIELDS.direct) {
+    const v = state[f];
+    if (typeof v === 'string' && v && !v.startsWith(prefix)) return false;
+  }
+  if (tid) {
+    const liveZone = `.gos${path.sep}task${path.sep}${tid}${path.sep}`;
+    for (const t of state.observable_truths || []) {
+      const ap = t && t.evidence && t.evidence.artifact_path;
+      if (typeof ap === 'string' && ap && ap.startsWith(liveZone)) return false;
+    }
+  }
+  return true;
+}
+
+// Archived-idle path evidence: the tid lives in an archive dest whose layout
+// the state's own paths agree with. Consumed by the gate idle branch and the
+// tid idempotency check — a state whose paths still point at the live task
+// zone is NOT idle: it still needs the archive repair pass.
+function archivedTidIdle(state) {
+  const home = archivedTidHomeDir(state);
+  return !!home && statePathsResolveIntoArchiveHome(state, home);
+}
+
+// Half-transaction completion: an archive dest already holds task/<tid>, the
+// live task dir is gone, the state is approved but not yet stamped DONE (the
+// crash window between dest materialization and writeState — direct rerun or
+// the commit-chain catch). Registry-driven rewrites + DONE + completed_at
+// land on disk; true when the completion ran, false when no dest matched.
+function landHalfTransaction(state) {
+  const tid0 = core.currentTaskId(state);
+  const taskDir0 = tid0 ? path.join(core.GOS_DIR, 'task', tid0) : null;
+  if (state.current_stage === 'DONE' || !(state.approvals || {}).ARCHIVE || !tid0 || fs.existsSync(taskDir0)) return false;
+  const cands = fs.existsSync(core.ARCHIVE_DIR)
+    ? fs.readdirSync(core.ARCHIVE_DIR).filter((d) => {
+        const p = path.join(core.ARCHIVE_DIR, d, 'task', tid0);
+        return fs.existsSync(p);
+      }).sort()
+    : [];
+  if (!cands.length) return false;
+  const done = path.join(core.ARCHIVE_DIR, cands[cands.length - 1]);
+  const relDone = path.relative('.', done);
+  // Field-level rewrite per the registry (full-text replace forbidden)
+  for (const f of core.STATE_PATH_FIELDS.direct) {
+    const v = state[f];
+    if (typeof v === 'string' && v.includes(`.gos/task/${tid0}/`)) state[f] = v.replace(`.gos/task/${tid0}/`, `${relDone}/task/${tid0}/`);
+  }
+  for (const t of state.observable_truths || []) {
+    const ev = t && t.evidence;
+    if (ev && typeof ev.artifact_path === 'string' && ev.artifact_path.includes(`.gos/task/${tid0}/`)) ev.artifact_path = ev.artifact_path.replace(`.gos/task/${tid0}/`, `${relDone}/task/${tid0}/`);
+  }
+  state.current_stage = 'DONE';
+  state.checkpoints = [];
+  state.completed_at = new Date().toISOString();
+  core.writeState(state);
+  console.log(`✓ ship: half-transaction completed idempotently (dest was materialized, state now written) → ${relDone}`);
+  // Returning (never exiting) keeps the commit-chain caller alive: the git
+  // commit that finalizes the staged renames still has to run.
+  return true;
+}
+
 function cmdArchive(opts = {}) {
  const fromCommit = !!opts.fromCommit; // invoked from cmdCommit — gates degrade to warn+skip (never kill the commit mid-flow)
  if (!fromCommit) core.humanGateGuard('archive'); // direct invocation is the human act; the commit-chain call is not
@@ -306,20 +384,21 @@ function cmdArchive(opts = {}) {
  // DRY: slug logic lives in sibContext.archiveSlugParts (single source — the
   // context SHIP preview consumes the same function, no drift)
   const { date, slug } = sibContext.archiveSlugParts(state);
- // ---- : idempotency — DONE + completed_at (this state WAS archived) + today's slug dir present
-  // completed_at discriminates "this task already archived" from "another same-slug task archived today"
+  // ---- : idempotency — DONE + archived tid + (completed_at or paths already home)
   // tid-based idempotency: re-running archive on an already-archived task after a slug change
-  // (version bump / date rollover) is a no-op as long as an archive dest contains this task id
-  // (slug is just a name; tid is the identity)
+  // (version bump / date rollover) is a no-op while an archive dest contains this task id
+  // AND the state's own paths agree with that home — completed_at stamped, or the
+  // STATE_PATH_FIELDS rewrites already landed. A stamp whose tid never archived falls
+  // through (nothing to be idempotent about); an archived tid whose paths still point at
+  // the live .gos/task/<tid>/ zone falls through too — the full archive path below
+  // performs the repair (path rewrite + stamp) instead of no-op'ing.
   {
     const tidIdem = core.currentTaskId(state);
-    if (state.current_stage === 'DONE' && state.completed_at && tidIdem && fs.existsSync(core.ARCHIVE_DIR)) {
-      const already = fs.readdirSync(core.ARCHIVE_DIR).some((d) => fs.existsSync(path.join(core.ARCHIVE_DIR, d, 'task', tidIdem)));
-      if (already) {
-        if (fromCommit) return;
-        console.log(`${core.CONTRACTS.command_contracts.archiveIdempotent} — nothing to do (task ${tidIdem} already archived)`);
-        process.exit(0);
-      }
+    const homeIdem = archivedTidHomeDir(state);
+    if (state.current_stage === 'DONE' && tidIdem && homeIdem && (state.completed_at || statePathsResolveIntoArchiveHome(state, homeIdem))) {
+      if (fromCommit) return;
+      console.log(`${core.CONTRACTS.command_contracts.archiveIdempotent} — nothing to do (task ${tidIdem} already archived)`);
+      process.exit(0);
     }
   }
   if (state.current_stage === 'DONE' && state.completed_at && archiveDirExists(date, slug)) {
@@ -329,43 +408,12 @@ function cmdArchive(opts = {}) {
   }
   // ---- half-transaction completion (crash window: dest materialized but writeState never ran) ----
   // Scenario: the previous run crashed after Phase B and before writeState → the directory has
-  // moved, state is still SHIP.
-  // Detection: stage=SHIP + approved + task/<id>/ absent + an archive dest contains this task id →
-  // rewrite paths per the registry → land DONE → idempotent completion (no new dest, no double adoption).
-  {
-    const tid0 = core.currentTaskId(state);
-    const taskDir0 = tid0 ? path.join(core.GOS_DIR, 'task', tid0) : null;
-    if (state.current_stage !== 'DONE' && (state.approvals || {}).ARCHIVE && tid0 && !fs.existsSync(taskDir0)) {
-      const cands = fs.existsSync(core.ARCHIVE_DIR)
-        ? fs.readdirSync(core.ARCHIVE_DIR).filter((d) => {
-            const p = path.join(core.ARCHIVE_DIR, d, 'task', tid0);
-            return fs.existsSync(p);
-          }).sort()
-        : [];
-      if (cands.length) {
-        const done = path.join(core.ARCHIVE_DIR, cands[cands.length - 1]);
-        const relDone = path.relative('.', done);
-        // Field-level rewrite per the registry (full-text replace forbidden)
-        for (const f of core.STATE_PATH_FIELDS.direct) {
-          const v = state[f];
-          if (typeof v === 'string' && v.includes(`.gos/task/${tid0}/`)) state[f] = v.replace(`.gos/task/${tid0}/`, `${relDone}/task/${tid0}/`);
-        }
-        for (const t of state.observable_truths || []) {
-          const ev = t && t.evidence;
-          if (ev && typeof ev.artifact_path === 'string' && ev.artifact_path.includes(`.gos/task/${tid0}/`)) ev.artifact_path = ev.artifact_path.replace(`.gos/task/${tid0}/`, `${relDone}/task/${tid0}/`);
-        }
-        state.current_stage = 'DONE';
-        state.checkpoints = [];
-        state.completed_at = new Date().toISOString();
-        core.writeState(state);
-        console.log(`✓ ship: half-transaction completed idempotently (dest was materialized, state now written) → ${relDone}`);
-        // Return instead of exit: when invoked from the commit chain the git
-        // commit that finalizes the staged renames still has to run.
-        return;
-      }
-    }
-  }
+  // moved, state is still pre-DONE. Detection + repair live in landHalfTransaction (shared with
+  // the commit-chain catch): rewrite paths per the registry, land DONE + completed_at — no new
+  // dest, no double adoption.
+  if (landHalfTransaction(state)) return;
   // ---- pre-flight: path normalization (absolute → project_root-relative) + validate before touching files ----
+  if (process.env.GOS_TEST_BREAK_SHIP === 'pre-flight') throw new Error('GOS_TEST_BREAK_SHIP: injected pre-flight failure (nothing materialized)');
   {
     const root0 = core.currentRootRealpath();
     const norm = (v) => (typeof v === 'string' && path.isAbsolute(v) && root0 && v.startsWith(root0 + path.sep) ? path.relative(root0, v) : v);
@@ -548,6 +596,7 @@ function cmdArchive(opts = {}) {
   } catch (e) {
     rollback(e);
   }
+  if (process.env.GOS_TEST_BREAK_SHIP === 'pre-stamp') throw new Error('GOS_TEST_BREAK_SHIP: injected pre-stamp failure (dest materialized, state unstamped)');
   // delta.md: what this phase changed (compact record)
   const delta = [
     `# Delta: ${core.sanitizeEcho(state.intent.summary)}`,
@@ -658,4 +707,4 @@ function cmdArchive(opts = {}) {
 
 const sibContext = require('./context.cjs');  // home of archiveSlugParts
 
-module.exports = { archiveDirExists, cmdArchive, specDecisionTitles, shipLedgerLines };
+module.exports = { archiveDirExists, archivedTidHomeDir, archivedTidIdle, cmdArchive, landHalfTransaction, specDecisionTitles, shipLedgerLines, statePathsResolveIntoArchiveHome };
