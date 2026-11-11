@@ -237,7 +237,7 @@
 
 #### T9: -der archive repair ritual (manual, local-only)
 - **Covers**: D-65, R-63
-- **Files**: .gos/archive/2026-11-10-v1.0.0-task-commit-advance-destination-der/task/1a2e46f3/state.json, .gos/archive/2026-11-10-v1.0.0-task-commit-advance-destination-der/task/1a2e46f3/PROVENANCE.md, .gos/concerns.md, .gos/logs/truth-receipts.md
+- **Files**: .gos/archive/2026-11-10-v1.0.0-task-commit-advance-destination-der/task/1a2e46f3/state.json, .gos/archive/2026-11-10-v1.0.0-task-commit-advance-destination-der/task/1a2e46f3/PROVENANCE.md, .gos/concerns.md, .gos/logs/truth-receipts.md, .gos/task/p19/evidence/t4.sh
 - **Read first**: spec R-63; `git show 493a9e7:.gos/state.json`
 - **Approach**: snapshot = byte-faithful from `git show 493a9e7:.gos/state.json`
   plus exactly two added fields: completed_at = 2026-11-10T05:42:18Z and

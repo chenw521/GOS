@@ -241,6 +241,12 @@
       "type": "major",
       "description": "Fluid back to PLAN: discovered during PLAN",
       "status": "open"
+    },
+    {
+      "id": "G-1794393692434",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
     }
   ],
   "phase_name": "P19: live pain bugs and archive integrity",
@@ -419,7 +425,8 @@
           ".gos/archive/2026-11-10-v1.0.0-task-commit-advance-destination-der/task/1a2e46f3/state.json",
           ".gos/archive/2026-11-10-v1.0.0-task-commit-advance-destination-der/task/1a2e46f3/PROVENANCE.md",
           ".gos/concerns.md",
-          ".gos/logs/truth-receipts.md"
+          ".gos/logs/truth-receipts.md",
+          ".gos/task/p19/evidence/t4.sh"
         ],
         "wave": 5
       },
