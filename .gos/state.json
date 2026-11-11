@@ -2,11 +2,12 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "BUILD",
+  "current_stage": "REVIEW",
   "completed_stages": [
     "INTENT",
     "THINK",
-    "PLAN"
+    "PLAN",
+    "BUILD"
   ],
   "intent": {
     "summary": "Cure the user-visible bugs the 2026-11-09/10 sessions lived through and restore archive integrity: changelog same-day obligation across UTC midnight (#49), changelog validator rejecting #N issue tokens that blocks closing keywords (#24), between-tasks gate false-red on DONE-resident state (concern dffa50f0), census fresh-checkout optional-entry class (concern 73cef6ab), the fromCommit archive path skipping the completed_at stamp plus the deficient -der archive payload rebuild and one-time retro-stamp, the --help short-circuit, and a phase rename verb so project.json name edits never need hand edits again.",
@@ -455,5 +456,14 @@
       }
     }
   },
-  "changelog_user_summary": "Cure the live pain bugs and restore archive integrity: the changelog obligation becomes a structural batch delta immune to UTC midnight, closing keywords ride the PR body with the ceremony re-pointed, the commit-chain completed_at clobber is cured with disjunctive idle guards, a deficient archive payload is rebuilt with a retro-stamp, the help flag short-circuits before execution, entry renaming and census optional classes land"
+  "changelog_user_summary": "Cure the live pain bugs and restore archive integrity: the changelog obligation becomes a structural batch delta immune to UTC midnight, closing keywords ride the PR body with the ceremony re-pointed, the commit-chain completed_at clobber is cured with disjunctive idle guards, a deficient archive payload is rebuilt with a retro-stamp, the help flag short-circuits before execution, entry renaming and census optional classes land",
+  "checkpoints": [
+    {
+      "stage": "BUILD",
+      "unit": "all-waves (auto at commit)",
+      "done": "T0,T1,T3,T4,T5,T6,T7,T2,T8,T9,T10",
+      "remaining": "",
+      "at": "2026-11-11T10:42:07.580Z"
+    }
+  ]
 }
