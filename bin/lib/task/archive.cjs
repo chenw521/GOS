@@ -260,11 +260,15 @@ function cmdArchive(opts = {}) {
     }
     console.log('✓ cleanup-scan clean');
   }
-  // ---- SHIP ritual gate — today's CHANGELOG.md entry (fail-closed) + version discipline (warn) ----
-  // Single-track daily obligation: CHANGELOG.md [Unreleased] must hold a bullet
-  // stamped with today's UTC date. The stamp source is the same utcToday() the
-  // changelog writer uses, so the gate and the writer can never disagree about
-  // "today". A missing CHANGELOG.md blocks with the bootstrap advisory — the
+  // ---- SHIP ritual gate — batch changelog record (fail-closed) + version discipline (warn) ----
+  // Structural obligation: this task's batch must ADD a changelog record.
+  // The shared predicate (changelog-core.batchAddsChangelogRecord) compares
+  // the working-tree changelog against the task_head baseline snapshot — a
+  // just-written uncommitted bullet counts, and a stale-dated bullet written
+  // inside the batch counts too (the date stamp is writer metadata, not the
+  // obligation). Refs must intersect the task's own decision + requirement
+  // ids. Non-git repos use the file-shape fallback ([Unreleased] non-empty).
+  // A missing CHANGELOG.md blocks with the bootstrap advisory — the
   // next `gos changelog add` creates the file from the master template. The
   // version warn below compares the latest git tag against package.json by
   // design; CHANGELOG.md is deliberately not consulted for version truth.
@@ -293,22 +297,61 @@ function cmdArchive(opts = {}) {
         }
       }
     }
- // the obligation reads through the single root-anchored resolver
+  // the obligation reads through the single root-anchored resolver
     // a relocated changelog (gos config changelog-path) is honored here.
     let changelogText = null;
-    try { changelogText = fs.readFileSync(clcore.resolveChangelogMd(), 'utf8'); } catch { /* absent */ }
+    const changelogAbs = clcore.resolveChangelogMd();
+    try { changelogText = fs.readFileSync(changelogAbs, 'utf8'); } catch { /* absent */ }
     if (changelogText === null) {
       console.error(`${core.CONTRACTS.state_semantics.archiveBlocked} (SHIP ritual):`);
       console.error('  ✗ SHIP BLOCKED: CHANGELOG.md not found — obligations start once the file exists');
       console.error('    Run `gos changelog add --summary "<one sentence>"` first (it bootstraps CHANGELOG.md from the master template), then re-run `gos archive`.');
       process.exit(1);
     }
-    const shipToday = clcore.utcToday();
-    const stampedToday = (e) => e.endsWith(`[${shipToday}]`);
-    if (!clcore.parseChangelog(changelogText).unreleased.some(stampedToday)) {
+    const shipTaskRefs = [];
+    {
+      const seen = new Set();
+      const push = (id) => {
+        const t = String(id);
+        if (/^[DR]-\d+$/.test(t) && !seen.has(t)) { seen.add(t); shipTaskRefs.push(t); }
+      };
+      for (const d of state.decisions || []) if (d && d.id) push(d.id);
+      for (const r of state.requirements || []) if (r && r.id) push(r.id);
+    }
+    const shipVerdict = (() => {
+      if (!core.gitInWorkTree()) {
+        return clcore.batchAddsChangelogRecord(changelogText, null, { taskRefs: shipTaskRefs });
+      }
+      const th = typeof state.task_head === 'string' && /^[0-9a-f]{8,40}$/i.test(state.task_head) ? state.task_head : null;
+      if (!th) {
+        console.error(`${core.CONTRACTS.state_semantics.archiveBlocked} (SHIP ritual):`);
+        console.error('  ✗ SHIP BLOCKED: the live task carries no task_head — the changelog record check needs the batch baseline commit');
+        console.error('    Re-claim the task (`gos init`) or re-run its stage commits so task_head re-anchors the diff baseline, then re-run `gos archive`.');
+        process.exit(1);
+      }
+      if (!core.shaReachable(th)) {
+        console.error(`${core.CONTRACTS.state_semantics.archiveBlocked} (SHIP ritual):`);
+        console.error(`  ✗ SHIP BLOCKED: task_head ${th.slice(0, 10)} is unreachable in this git repo — the batch baseline snapshot cannot be read`);
+        console.error('    Fetch the full history (git fetch --unshallow) or re-anchor the task (gos init), then re-run `gos archive`.');
+        process.exit(1);
+      }
+      const top = core.gitToplevelRealpath();
+      const rel = top ? path.relative(top, changelogAbs).split(path.sep).join('/') : null;
+      if (!rel) {
+        // in a work tree yet the toplevel will not resolve — no baseline
+        // snapshot can be read; degrade loudly to the file-shape fallback
+        console.log('⚠ ship changelog check: repo toplevel unresolvable — falling back to the file-shape check ([Unreleased] non-empty)');
+        return clcore.batchAddsChangelogRecord(changelogText, null, { taskRefs: shipTaskRefs });
+      }
+      // base snapshot: the file as it stood at task_head; absent there means
+      // every current bullet is new (the whole changelog is this batch's record)
+      const baseText = core.safeGitArgv(['show', `${th}:${rel}`]);
+      return clcore.batchAddsChangelogRecord(changelogText, baseText, { taskRefs: shipTaskRefs });
+    })();
+    if (!shipVerdict.ok) {
       console.error(`${core.CONTRACTS.state_semantics.archiveBlocked} (SHIP ritual):`);
-      console.error(`  ✗ SHIP BLOCKED: no [Unreleased] bullet stamped [${shipToday}] (UTC) in CHANGELOG.md — today's entry missing`);
-      console.error('    Run `gos changelog add` to write today\'s entry, then re-run `gos archive`.');
+      console.error(`  ✗ SHIP BLOCKED: this batch adds no changelog record (${shipVerdict.reason}) — nothing new in CHANGELOG.md against the task_head baseline`);
+      console.error('    Run `gos changelog add` to write this batch\'s entry, then re-run `gos archive`.');
       process.exit(1);
     }
     let ver = 'unknown';

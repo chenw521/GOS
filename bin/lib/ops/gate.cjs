@@ -8,6 +8,7 @@ const task = require('../task/plansnap.cjs');
 const sibArchive = require('../task/archive.cjs');  // archived-tid idle predicate (single source with the archive idempotency check)
 const sibConfig = require('./config.cjs');  // direct aspect require (acyclic)
 const sibDoctor = require('./doctor.cjs');
+const clcore = require('./changelog-core.cjs');  // changelog obligation leg feeds the shared structural-delta predicate
 const sibTrack = require('./track.cjs');    // T8 flip-reconcile leg consumes the T7b exports (manifest read, never-zones/files, census key rule)
 const render = require('../render/views.cjs');
 const fs = require('fs');
@@ -654,6 +655,245 @@ function cmdGateTrust(args) {
   if (gced.length) console.log(`${core.CONTRACTS.gate_verdicts.trustGc}${gced.join(', ')}`);
 }
 
+// Changelog structural obligation (shared leg): did the base..head range add
+// a changelog record? The verdict math lives in changelog-core
+// (batchAddsChangelogRecord); this leg resolves WHICH snapshots to feed it
+// and maps context edges to named verdicts:
+//   exempt       unborn repo, zero-parent base (nothing exists before the
+//                root commit), or no CHANGELOG.md on either side — each with
+//                a loud line, never a silent skip
+//   degraded     .gos/state.json absent or carrying no decision/requirement
+//                ids → the refs filter drops with a loud line and the
+//                predicate runs unconstrained (never silently narrowed)
+//   fail-closed  deleted changelog, no-new-bullet, unmatched task refs,
+//                unresolvable base (shallow clone or bad override), missing
+//                task_head on a live task, unresolvable head ref
+// ctx: { auditNoState, baseRef, headRef }. `gate all` passes the ambient
+// audit scope; the `gate changelog-obligation` subcommand passes explicit
+// refs (CI push: --base HEAD^1; CI pull_request: --base <merge-base>
+// --head <pr head sha>, never the merge ref).
+function changelogObligationLeg(ctx = {}) {
+  const failures = [];
+  const changelogAbs = clcore.resolveChangelogMd();
+
+  // One lenient .gos/state.json read feeds both the refs filter and the
+  // task-context default; absence or corruption never kills the leg
+  let st = null;
+  try {
+    st = JSON.parse(fs.readFileSync(path.join(core.GOS_DIR, 'state.json'), 'utf8'));
+  } catch { st = null; }
+  let taskRefs = [];
+  if (st) {
+    const ids = [];
+    for (const d of (Array.isArray(st.decisions) ? st.decisions : [])) {
+      if (d && /^[DR]-\d+$/.test(String(d.id))) ids.push(String(d.id));
+    }
+    for (const r of (Array.isArray(st.requirements) ? st.requirements : [])) {
+      if (r && /^[DR]-\d+$/.test(String(r.id))) ids.push(String(r.id));
+    }
+    taskRefs = [...new Set(ids)];
+  }
+  const refsDegraded = taskRefs.length === 0;
+  const refsOpts = refsDegraded ? {} : { taskRefs };
+
+  const readWorktree = () => {
+    try { return fs.readFileSync(changelogAbs, 'utf8'); } catch { return null; }
+  };
+
+  // Non-git tree: file-shape fallback — without git history no baseline
+  // snapshot can exist, so the record check is "[Unreleased] non-empty"
+  if (!core.gitInWorkTree()) {
+    const headText = readWorktree();
+    if (headText === null) {
+      console.log('⚠ changelog obligation: exempt (no CHANGELOG.md yet — obligations start once the file exists)');
+      return { failures };
+    }
+    if (refsDegraded) console.log('⚠ changelog obligation: refs filter degraded (no task ids)');
+    const v = clcore.batchAddsChangelogRecord(headText, null, refsOpts);
+    if (v.ok) {
+      console.log('✓ changelog obligation: [Unreleased] holds a bullet (file-shape fallback, non-git tree)');
+      return { failures };
+    }
+    failures.push(core.gateFail('changelog-obligation', {
+      verdict: `no changelog record (${v.reason}) — non-git tree, CHANGELOG.md [Unreleased] must hold a bullet`,
+      evidence: [v.reason],
+      fix: core.gateCmd('node bin/gos.cjs changelog', 'add') + ' — write the batch record into CHANGELOG.md [Unreleased]',
+    }));
+    return { failures };
+  }
+
+  const top = core.gitToplevelRealpath();
+  const rel = top ? path.relative(top, changelogAbs).split(path.sep).join('/') : null;
+
+  // Snapshot of the changelog at a resolved ref: {ok:true, text} with
+  // text=null when the path is absent from that tree; {ok:false} on any git
+  // failure (fail-closed upstream, never conflated with absence)
+  const showPath = (ref) => {
+    if (!rel) return { ok: false };
+    let ent = '';
+    try {
+      ent = execFileSync('git', ['ls-tree', ref, '--', rel], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    } catch { return { ok: false }; }
+    if (!ent.trim()) return { ok: true, text: null };
+    try {
+      return { ok: true, text: execFileSync('git', ['show', `${ref}:${rel}`], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 32 * 1024 * 1024 }) };
+    } catch { return { ok: false }; }
+  };
+
+  // Base selection: explicit ref > GOS_CHANGELOG_BASE env > context default
+  // (task_head on a live task; HEAD^1 on the stateless push/audit context)
+  let baseRef = null;
+  const envBase = String(process.env.GOS_CHANGELOG_BASE || '').trim();
+  if (ctx.baseRef) baseRef = String(ctx.baseRef);
+  else if (envBase) baseRef = envBase;
+  else {
+    const liveTask = !!st && st.current_stage !== 'DONE' && !ctx.auditNoState;
+    if (liveTask) {
+      const th = typeof st.task_head === 'string' && /^[0-9a-f]{8,40}$/i.test(st.task_head) ? st.task_head : null;
+      if (!th) {
+        failures.push(core.gateFail('changelog-obligation-no-task-head', {
+          verdict: 'the live task carries no task_head — the batch baseline is missing',
+          evidence: ['state.json: task_head absent or malformed'],
+          fix: 're-claim the task (gos init) or advance its first stage commit so task_head re-anchors the diff baseline, then re-run the gate',
+        }));
+        return { failures };
+      }
+      baseRef = th;
+    } else baseRef = 'HEAD^1';
+  }
+
+  const shallow = core.safeGitArgv(['rev-parse', '--is-shallow-repository']).trim() === 'true';
+  const resolveBase = (ref) => {
+    if (ref === 'HEAD^1') {
+      const head = core.safeGitArgv(['rev-parse', '--verify', 'HEAD^{commit}']).trim();
+      if (!head) return { kind: 'unborn' };
+      const pl = core.safeGitArgv(['rev-list', '--parents', '-n', '1', 'HEAD']).trim();
+      const parents = pl ? pl.split(/\s+/).slice(1).filter(Boolean) : [];
+      if (parents.length === 0) return { kind: shallow ? 'shallow' : 'zero-parent' };
+      if (!core.shaReachable(parents[0])) return { kind: 'shallow' };
+      return { kind: 'sha', sha: parents[0] };
+    }
+    const sha = core.safeGitArgv(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]).trim();
+    if (!sha) return { kind: 'unresolved', ref };
+    if (!core.shaReachable(sha)) return { kind: 'shallow', ref };
+    return { kind: 'sha', sha };
+  };
+
+  const b = resolveBase(baseRef);
+  if (b.kind === 'unborn') {
+    console.log('⚠ changelog obligation: exempt (unborn base)');
+    return { failures };
+  }
+  if (b.kind === 'zero-parent') {
+    console.log('⚠ changelog obligation: exempt (zero-parent base)');
+    return { failures };
+  }
+  if (b.kind === 'shallow' || b.kind === 'unresolved' || !rel) {
+    failures.push(core.gateFail('changelog-obligation-base-unresolved', {
+      verdict: b.kind === 'unresolved'
+        ? `changelog obligation: base ${baseRef} does not resolve to a readable commit`
+        : b.kind === 'shallow'
+          ? `changelog obligation: base ${baseRef} unresolvable in a shallow clone — the baseline snapshot cannot be read`
+          : 'changelog obligation: repo toplevel unresolvable — the baseline snapshot cannot be read',
+      evidence: [String(baseRef), rel || changelogAbs],
+      fix: 'fetch full history (git fetch --unshallow) or set GOS_CHANGELOG_BASE to a base commit this checkout can read',
+    }));
+    return { failures };
+  }
+
+  const bs = showPath(b.sha);
+  if (!bs.ok) {
+    failures.push(core.gateFail('changelog-obligation-base-unresolved', {
+      verdict: `changelog snapshot at base ${baseRef} unreadable`,
+      evidence: [rel],
+      fix: 'resolve the git failure above (shallow history / missing object), then re-run the check',
+    }));
+    return { failures };
+  }
+
+  let headDesc = 'working tree';
+  let headText = null;
+  if (ctx.headRef) {
+    const hsha = core.safeGitArgv(['rev-parse', '--verify', '--quiet', `${ctx.headRef}^{commit}`]).trim();
+    if (!hsha || !core.shaReachable(hsha)) {
+      failures.push(core.gateFail('changelog-obligation-head-unresolved', {
+        verdict: `head ref ${ctx.headRef} does not resolve to a readable commit`,
+        evidence: [String(ctx.headRef)],
+        fix: 'point --head at a commit that exists in this checkout (fetch the PR head sha first), or leave it unset to check the working tree',
+      }));
+      return { failures };
+    }
+    const hs = showPath(hsha);
+    if (!hs.ok) {
+      failures.push(core.gateFail('changelog-obligation-head-unresolved', {
+        verdict: `changelog snapshot at head ${ctx.headRef} unreadable`,
+        evidence: [rel],
+        fix: 'resolve the git failure above (shallow history / missing object), then re-run the check',
+      }));
+      return { failures };
+    }
+    headText = hs.text == null ? '' : hs.text;
+    headDesc = String(ctx.headRef);
+  } else {
+    headText = readWorktree();
+  }
+  if (headText === null) {
+    // working tree holds no changelog: either this batch deleted it (base
+    // had one) or the file never existed (obligations start once it does)
+    if (bs.text == null) {
+      console.log('⚠ changelog obligation: exempt (no CHANGELOG.md yet — obligations start once the file exists)');
+      return { failures };
+    }
+    failures.push(core.gateFail('changelog-obligation-missing', {
+      verdict: 'CHANGELOG.md is gone from the head but existed at the base — deleting it is not adding a record',
+      evidence: [`${rel} present at base ${b.sha.slice(0, 10)}`, 'absent at head'],
+      fix: 'restore CHANGELOG.md and record this batch with ' + core.gateCmd('node bin/gos.cjs changelog', 'add'),
+    }));
+    return { failures };
+  }
+
+  if (refsDegraded) console.log('⚠ changelog obligation: refs filter degraded (no task ids)');
+  const baseText = bs.text == null ? '' : bs.text;
+  const v = clcore.batchAddsChangelogRecord(headText, baseText, refsOpts);
+  if (v.ok) {
+    console.log(`✓ changelog obligation: batch adds a changelog record (base ${b.sha.slice(0, 10)}, head ${headDesc})`);
+    return { failures };
+  }
+  failures.push(core.gateFail('changelog-obligation', {
+    verdict: `this batch adds no changelog record (${v.reason}) — nothing new in CHANGELOG.md against base ${b.sha.slice(0, 10)}`,
+    evidence: [v.reason, `base ${baseRef}`, `head ${headDesc}`],
+    fix: core.gateCmd('node bin/gos.cjs changelog', 'add') + ' — write the batch record into CHANGELOG.md [Unreleased]',
+  }));
+  return { failures };
+}
+
+// Read-mode subcommand: the CI-thin face of the obligation leg. Push jobs
+// run it with --base HEAD^1; pull_request jobs compute the merge-base and
+// pass --head <pr head sha> so the check never reads the merge ref.
+function cmdGateChangelogObligation(args) {
+  let baseRef = null;
+  let headRef = null;
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a !== '--base' && a !== '--head') {
+      core.die(`Usage: gos gate changelog-obligation [--base <ref>] [--head <ref>]   (did the base..head range add a changelog record?) — unknown argument '${a}'`);
+    }
+    const v = args[++i];
+    if (v == null || v.startsWith('--')) {
+      core.die(`gate changelog-obligation: ${a} requires a commit-ish value`);
+    }
+    if (a === '--base') baseRef = v;
+    else headRef = v;
+  }
+  const leg = changelogObligationLeg({ baseRef, headRef });
+  if (leg.failures.length) {
+    console.error(`\n${core.CONTRACTS.gate_verdicts.gateFailedPrefix} (${leg.failures.length}):`);
+    console.error(renderGateFailures(leg.failures));
+    process.exit(1);
+  }
+  console.log(`\n${core.CONTRACTS.gate_verdicts.allPass}`);
+}
+
 // Programmatic verdict entry (auto-loop legs): runs every check the CLI
 // gate runs and returns the verdict set as data — no process exit, no
 // stdout bytes (per-check ✓/⚠ lines are captured into `lines`; the CLI
@@ -1125,6 +1365,14 @@ function computeGateVerdicts(ctx = {}) {
         console.log(last || '✓ changelog lint: CHANGELOG.md clean');
       }
     }
+    // changelog structural obligation: beside the format lint, the base..head
+    // range must ADD a changelog record (shared leg with the read-mode
+    // subcommand; base = GOS_CHANGELOG_BASE env, else task_head on a live
+    // task / HEAD^1 on the stateless audit context)
+    if (which === 'all') {
+      checked++;
+      failures.push(...changelogObligationLeg({ auditNoState }).failures);
+    }
     // CJK boundary lint (repo Englishization): tracked files must be CJK-free
     // unless covered by .gos/cjk-whitelist.json. The lint is
     // fail-closed in every direction (unlisted hit / ghost whitelist entry /
@@ -1265,6 +1513,9 @@ function cmdGate(args) {
   // gos gate trust <name>: hash registration must work on unmanaged trees too
   // (setup seeding runs before any `gos init`).
   if (args[0] === 'trust') { cmdGateTrust(args); return; }
+  // gos gate changelog-obligation [--base <ref>] [--head <ref>]: read-mode
+  // structural obligation check (CI face of the shared leg above).
+  if (args[0] === 'changelog-obligation') { cmdGateChangelogObligation(args.slice(1)); return; }
  // gate --exempt <section> --reason "<why>": explicit,
   // machine-local, auto-expiring exemption. --reason is MANDATORY, >=10 codepoints
   // after sanitization (truth-waive precedent — an exemption must be auditable).

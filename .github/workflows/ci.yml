@@ -29,13 +29,43 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          # the ai-trace shrink guard diffs the whitelist against origin/main
+          # the ai-trace shrink guard diffs the whitelist against origin/main;
+          # the changelog obligation needs the push range and PR history too
           fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+      # Changelog obligation base: push → HEAD^1 (the pushed range starts at
+      # the previous main commit); pull_request → merge-base of the PR head
+      # and the base branch head (never the merge ref). Exported for every
+      # downstream gate step through GITHUB_ENV.
+      - name: Resolve changelog obligation base
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            echo "push context: obligation base = HEAD^1"
+            echo "GOS_CHANGELOG_BASE=HEAD^1" >> "$GITHUB_ENV"
+          else
+            git rev-parse --verify --quiet "$PR_HEAD_SHA^{commit}" >/dev/null \
+              || git fetch -q origin "$PR_HEAD_SHA"
+            mb="$(git merge-base "$PR_BASE_SHA" "$PR_HEAD_SHA")"
+            echo "pull_request context: obligation base = merge-base $mb"
+            echo "GOS_CHANGELOG_BASE=$mb" >> "$GITHUB_ENV"
+            echo "PR_HEAD_SHA=$PR_HEAD_SHA" >> "$GITHUB_ENV"
+          fi
       - name: gos gate all --audit
         run: node bin/gos.cjs gate all --audit
+      # Strict obligation check against the real PR head commit — the working
+      # tree holds the merge ref, which must never satisfy the obligation.
+      - name: changelog obligation vs PR head
+        if: github.event_name == 'pull_request'
+        run: node bin/gos.cjs gate changelog-obligation --base "$GOS_CHANGELOG_BASE" --head "$PR_HEAD_SHA"
+      - name: changelog obligation vs pushed range
+        if: github.event_name == 'push'
+        run: node bin/gos.cjs gate changelog-obligation --base HEAD^1
       - name: Aggregate guard self-test
         run: bash test/checks/aggregate-guard.sh --self-test
       - name: stale-verb guard (command files × KNOWN_CASES)

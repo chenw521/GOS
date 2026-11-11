@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 # gos-map:fn bin/lib/task/archive.cjs#fn:cmdArchive
 # gos-map:cmd archive
-# ship/archive single-track — daily obligation reads CHANGELOG.md
-# [Unreleased] (today UTC-stamped bullet, utcToday same-source), missing file
+# ship/archive single-track — the SHIP ritual runs the structural batch
+# predicate: CHANGELOG.md is compared against the task_head baseline (a
+# just-written uncommitted bullet counts; stale date stamps written inside
+# the batch count — the UTC-midnight rollover can no longer void a record;
+# refs must intersect the task's own decision/requirement ids), missing file
 # blocks with the bootstrap advisory, .changes.md sealed read-only (mtime
 # frozen across archive), delta.md gains user_summary from the task-scoped
-# changelog cache (empty fallback), version warn stays git-tag sourced, and a
-# malformed (quoted) spec_path is rejected by commit think naming the stored
-# path. Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced
-# by runner
+# changelog cache (empty fallback), version warn stays git-tag sourced, and
+# a malformed (quoted) spec_path is rejected by commit think naming the
+# stored path. Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers
+# sourced by runner
 T57_DIR=""
 
 gos_spec() { node "$GOS" context think 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["artifact_paths"]["spec"])' 2>/dev/null; }
@@ -18,6 +21,18 @@ t57_new() {
   mkdir -p "$T57_DIR" && cd "$T57_DIR" || exit 1
   git init -q . && git commit -q --allow-empty -m t57-seed
   node "$GOS" init 3 "t57 single track ship gate" >/dev/null 2>&1
+}
+
+# changelog committed BEFORE the task anchors, so the task_head baseline
+# already carries every bullet — the structural batch check sees no record
+# until a new one is written inside the batch
+t57_committed() {
+  T57_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-t57"
+  mkdir -p "$T57_DIR" && cd "$T57_DIR" || exit 1
+  git init -q . && git commit -q --allow-empty -m t57-seed
+  printf '# Changelog\n\n## [Unreleased]\n\n- Test committed baseline bullet (R-01) [2026-01-01]\n' > CHANGELOG.md
+  git add CHANGELOG.md && git commit -q -m t57-changelog
+  node "$GOS" init 3 "t57 ship structural" >/dev/null 2>&1
 }
 
 # state → archivable (DONE + approved + spec materialized)
@@ -40,21 +55,72 @@ TODAY="$(date -u +%F)"
 YESTERDAY="$(date -u -d yesterday +%F)"
 TODAY_CORE="$(node -e "console.log(require('$GOS_ROOT/bin/lib/ops/changelog-core.cjs').utcToday())" 2>/dev/null || true)"
 
-# ===== G: gate — fail-closed on the single-track obligation =====
+# ===== G: gate — fail-closed on the batch structural obligation =====
 t57_new
 t57_ready
 set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
 assert_exit "G1 missing CHANGELOG.md blocks archive" 1 "$RC"
 assert_contains "G1 SHIP BLOCKED prefix" "SHIP BLOCKED" "$OUT"
 assert_contains "G1 bootstrap advisory points to gos changelog add" "gos changelog add" "$OUT"
+# a bullet stamped yesterday but written inside this batch counts: the stamp
+# is writer metadata, the record is the structural delta (UTC-midnight cure)
 printf '# Changelog\n\n## [Unreleased]\n\n- Test stale stamp (R-01) [%s]\n' "$YESTERDAY" > CHANGELOG.md
 set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
-assert_exit "G2 yesterday-stamped bullet blocks archive" 1 "$RC"
-assert_contains "G2 block names the stamp obligation" "stamped" "$OUT"
-assert_contains "G2 block tells the fix command" "gos changelog add" "$OUT"
+assert_exit "G2 yesterday-stamped bullet written in the batch passes" 0 "$RC"
+assert_contains "G2 version discipline warn on success path" "version discipline" "$OUT"
+t57_teardown
+
+# ===== G3: promote-shaped new version section counts as the batch record =====
+t57_new
+t57_ready
 printf '# Changelog\n\n## [Unreleased]\n\n## [0.1.0] - %s\n\n- Test released today (R-01) [%s]\n' "$TODAY" "$TODAY" > CHANGELOG.md
 set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
-assert_exit "G3 today bullet in a version section (not Unreleased) still blocks" 1 "$RC"
+assert_exit "G3 new version section satisfies the record obligation" 0 "$RC"
+assert_contains "G3 version discipline warn on success path" "version discipline" "$OUT"
+t57_teardown
+
+# ===== N: structural baseline — task_head snapshot vs working tree =====
+# N1: every bullet already sits in the task_head baseline -> no record, blocked
+t57_committed
+t57_ready
+set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
+assert_exit "N1 no-new-bullet blocks archive" 1 "$RC"
+assert_contains "N1 SHIP BLOCKED prefix" "SHIP BLOCKED" "$OUT"
+assert_contains "N1 verdict names the no-new-bullet reason" "no-new-bullet" "$OUT"
+assert_contains "N1 fix names the writer command" "gos changelog add" "$OUT"
+t57_teardown
+
+# N2: a fresh uncommitted bullet appended on top of the baseline -> passes
+t57_committed
+t57_ready
+printf '# Changelog\n\n## [Unreleased]\n\n- Test fresh batch bullet (R-01) [%s]\n- Test committed baseline bullet (R-01) [2026-01-01]\n' "$TODAY" > CHANGELOG.md
+set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
+assert_exit "N2 fresh uncommitted bullet passes archive" 0 "$RC"
+assert_contains "N2 version discipline warn on success path" "version discipline" "$OUT"
+t57_teardown
+
+# N3: fresh bullet whose refs miss the task's id set -> blocked
+t57_committed
+t57_ready
+printf '# Changelog\n\n## [Unreleased]\n\n- Test mismatched refs bullet (D-99) [%s]\n- Test committed baseline bullet (R-01) [2026-01-01]\n' "$TODAY" > CHANGELOG.md
+set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
+assert_exit "N3 task-refs-unmatched blocks archive" 1 "$RC"
+assert_contains "N3 verdict names the unmatched refs reason" "task-refs-unmatched" "$OUT"
+t57_teardown
+
+# N4: live task without task_head -> blocked with re-claim guidance
+t57_new
+t57_ready
+printf '# Changelog\n\n## [Unreleased]\n\n- Test task head probe (R-01) [%s]\n' "$TODAY" > CHANGELOG.md
+python3 -c "
+import json
+s=json.load(open('.gos/state.json'))
+s.pop('task_head', None); s.pop('task_head_pending', None)
+json.dump(s,open('.gos/state.json','w'),indent=2)"
+set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
+assert_exit "N4 missing task_head blocks archive" 1 "$RC"
+assert_contains "N4 block names the missing baseline" "no task_head" "$OUT"
+assert_contains "N4 block carries re-claim guidance" "Re-claim the task" "$OUT"
 t57_teardown
 
 # ===== P: today-stamped [Unreleased] bullet → gate passes + version warn rides along =====

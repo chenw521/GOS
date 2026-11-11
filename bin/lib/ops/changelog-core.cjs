@@ -18,8 +18,9 @@
 // Entry format contract (bullet inside [Unreleased] or a version section):
 //   `- <CategoryVerb> <one-sentence summary> (<D-nn|R-nn refs>) [YYYY-MM-DD]`
 // The trailing bracket is a UTC date stamp ; `promoteUnreleased` strips
-// stamps when moving entries into a released version section. All date math
-// flows through `utcToday()` — the single time source shared by add and lint.
+// stamps when moving entries into a released version section. Writer-side
+// date math flows through `utcToday()` — the single time source shared by
+// add and promote.
 //
 // Forbidden entry classes (each rejected independently; all errors English):
 //   F1  bare `DI-<n>` token anywhere — internal finding ids never enter entries
@@ -37,12 +38,13 @@
 //   F7  multi-sentence entries — sentence-ending punctuation followed by more
 //       content; exactly one sentence per bullet
 //
-// Structural checks for validateStructure (the three checks):
+// Structural checks for validateStructure (format-only, clock-free):
 //   S1  exactly one top-level `# ` title
 //   S2  version dates newest-first (descending); each version heading carries
 //       a valid `YYYY-MM-DD` date
-//   S3  today's obligation — a bullet stamped with today's UTC date exists in
-//       [Unreleased] or in the latest version section
+// The former today-stamped-bullet check is retired: batch record detection
+// is a structural-delta question answered by batchAddsChangelogRecord
+// (head-vs-base comparison), not a format property of one snapshot.
 
 'use strict';
 
@@ -232,13 +234,11 @@ function validateEntry(entry) {
   return { ok: errors.length === 0, errors };
 }
 
-// The three structural checks. `todayUtc` is injectable for deterministic
-// tests; when absent it defaults to utcToday() — the same single time source
-// the add path uses .
-function validateStructure(text, opts) {
+// The two structural format checks. Snapshot validation is clock-free:
+// whether a batch added a changelog record is answered by
+// batchAddsChangelogRecord over two snapshots, never by the wall clock here.
+function validateStructure(text) {
   const errors = [];
-  const injected = opts && typeof opts.todayUtc === 'string' ? opts.todayUtc : '';
-  const today = DATE_RE.test(injected) ? injected : utcToday();
   const lines = String(text == null ? '' : text).split(/\r?\n/);
 
   const titleCount = lines.filter((l) => H1_RE.test(l)).length;
@@ -258,19 +258,6 @@ function validateStructure(text, opts) {
     if (DATE_RE.test(a.date) && DATE_RE.test(b.date) && a.date < b.date) {
       errors.push(`structure: version dates must be newest-first — [${b.tag}] (${b.date}) is newer than [${a.tag}] (${a.date}) listed above it`);
     }
-  }
-
-  const stampedToday = (e) => e.endsWith(`[${today}]`);
-  const latest = parsed.versions[0];
-  // The obligation accepts three shapes of "today is recorded": a stamped
-  // [Unreleased] entry, a stamped entry in the newest version section, or a
-  // version section whose heading is dated today — the promote path strips
-  // entry stamps on release day, and the section heading carries that date.
-  const met = parsed.unreleased.some(stampedToday)
-    || (latest !== undefined && latest.entries.some(stampedToday))
-    || (latest !== undefined && latest.date === today);
-  if (!met) {
-    errors.push(`structure: today's obligation unmet — no entry stamped '[${today}]' (UTC) in [Unreleased] or the latest version section`);
   }
 
   return { ok: errors.length === 0, errors };

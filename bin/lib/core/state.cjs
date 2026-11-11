@@ -1125,7 +1125,7 @@ const COMMANDS = {
   },
   'gate': {
     desc: 'hard gates: coverage|truths|requirements|lessons|semantic|codemap|flip|all + hash-trust-verified custom gates (--json failures: object-only {code,verdict,evidence[],fix} since P15)', class: 'exec', aliases: [], core: true,
-    subs: ['coverage', 'truths', 'requirements', 'lessons', 'semantic', 'codemap', 'flip', 'all', 'trust <name>', '<custom-gate>'],
+    subs: ['coverage', 'truths', 'requirements', 'lessons', 'semantic', 'codemap', 'flip', 'all', 'changelog-obligation [--base <ref>] [--head <ref>]', 'trust <name>', '<custom-gate>'],
     flags: [],
     usage: 'gos gate <name>',
     next: ['gos gate all', 'gos map closure <file>'],

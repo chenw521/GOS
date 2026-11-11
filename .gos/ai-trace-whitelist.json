@@ -34,9 +34,38 @@
   },
   {
     "path": "bin/gos.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 10,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 75,
+        "sha256": "a6f2fa2b40bacd9821582c02f1960a91c3e6af15f32806eae78feb3bfbfc4dff"
+      },
+      {
+        "line": 85,
+        "sha256": "6d5eac3d3ba023138107a46c9bda2ea7d838825d9bef4cdf9ac0644e359fb19a"
+      },
+      {
+        "line": 87,
+        "sha256": "d08f352ba7edab589c2845bcfad8467a46ff227844f8820bd7d81ab2875ee797"
+      },
+      {
+        "line": 95,
+        "sha256": "53fddf48b760cef83523f3be1dc46598a57ea0bc55c5c2286adbeb4ab6cc0d6d"
+      },
+      {
+        "line": 104,
+        "sha256": "dff0a3f397084b25a0dcd263e1c42f5729315fbfb10f9ed62182d5473143b01d"
+      },
+      {
+        "line": 171,
+        "sha256": "b93988fe86491dbf88c246e2eb795a5ed2f8248632ddc475d7b3c3144aca78f5"
+      },
+      {
+        "line": 259,
+        "sha256": "917879b435bf6edecc0d8608990938fee016405f06b02d829270a25e8efc49b1"
+      }
+    ]
   },
   {
     "path": "bin/lib/core/fsio.cjs",
@@ -134,18 +163,139 @@
       {
         "line": 251,
         "sha256": "e24c0860b95cc633fe482fc18f674587553b9a350ecdd030357ce7b0ada6d0dc"
-      },
-      {
-        "line": 292,
-        "sha256": "dd2f1c2a6b864313fc5e5b3e887b9f1f21ed7dad532b89d8dd9b77b19b6f5c39"
       }
     ]
   },
   {
     "path": "bin/lib/core/state.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 44,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+    "category": "frozen-string",
+    "reason": "Contract sidecar-hash table: the lessonsAnchor verdict string is a frozen product contract line asserted by suite sections.",
+    "lines": [
+      {
+        "line": 83,
+        "sha256": "20d067efbf754de09b017018edbe514de815453b2177766f9922875420d96652"
+      },
+      {
+        "line": 97,
+        "sha256": "28b61207c1b32a4de3d3bc5238feb070220bf6a4537a0e29b269dbb4674cde65"
+      },
+      {
+        "line": 141,
+        "sha256": "2d2dc804a52f9bd0f1f76cc83821714e6a0d47817463e8898bcd2455a968ac60"
+      },
+      {
+        "line": 230,
+        "sha256": "a2fb225c53471894577b9d0a057b9f7ffc24a017a937e7c77b57e014554c332a"
+      },
+      {
+        "line": 294,
+        "sha256": "dc2ce2b65f74cc6e78b3ba48befd84f8ec6cdae5175c0085214a7eb879dbbc79"
+      },
+      {
+        "line": 354,
+        "sha256": "6ca9501762993358c8e17e5ab61ad9042c1f9af942a5aa20848b3304ffb71d94"
+      },
+      {
+        "line": 384,
+        "sha256": "f723db315b7141b0357bd5561d0119be3a2f496c85a525c6cac71df06e21e31d"
+      },
+      {
+        "line": 511,
+        "sha256": "93b440665f771baf724e60de3b8936c5ce5f2792604b5beb62cae13e3a36b92c"
+      },
+      {
+        "line": 553,
+        "sha256": "15f455b3fddd67d2918917bf292e9d1099953f1830e8240367ac231054343dad"
+      },
+      {
+        "line": 556,
+        "sha256": "a5c88576155b222c784bcb44d393b927646204402537fe833c7b595ed3d33837"
+      },
+      {
+        "line": 565,
+        "sha256": "e954c22361d5f1ca9559c85e4b306ad7530f055d80961381ff1c088929fe1eb9"
+      },
+      {
+        "line": 576,
+        "sha256": "028d4fedf4ca878ee6e429044f6d33a56655a6dae0a2c1ef2e88450aac43370b"
+      },
+      {
+        "line": 594,
+        "sha256": "09e0a31484878828ac752039e7892e788b5ab304861a78edf4133ff9e47f8bcb"
+      },
+      {
+        "line": 596,
+        "sha256": "23838e953fff9008092984c53069b18e7c301a3cdf78cb4893492eccead63000"
+      },
+      {
+        "line": 605,
+        "sha256": "7fcd673dc9ddc9c9c56e250d68b08d2f407dff8f70f2e274d72d520296a99c4e"
+      },
+      {
+        "line": 606,
+        "sha256": "56eeef7fe46d604e2123d79d74b1ea6a3757d20f5463291a6144fc51153539b2"
+      },
+      {
+        "line": 607,
+        "sha256": "0907727304fb24284e10f7143433c1b61a7402a4d7bd9b8b83be59a01f9f488f"
+      },
+      {
+        "line": 608,
+        "sha256": "54bd657d19b9c1ffbb77daef7b7d337e2a450a9ca74d76bf0d7cf32ee26a6dd0"
+      },
+      {
+        "line": 609,
+        "sha256": "77a356385c92d8bb4b20d06daa63e330124291d24c02c8f2e5e2cab9f8cbff27"
+      },
+      {
+        "line": 610,
+        "sha256": "47886b3085bfb9139153a3637c0a4d26ee2a72b07b6aca75f56a9d517e791fb6"
+      },
+      {
+        "line": 611,
+        "sha256": "6da500ccb5ca91af60583218fca55a48547cb70244ffb90ac7ecc958e2af128f"
+      },
+      {
+        "line": 612,
+        "sha256": "fd471eb358fe6f87c9ce0ab4b7642f30177458e0f2a45d04e86972de0aea61fb"
+      },
+      {
+        "line": 613,
+        "sha256": "890473ae82a17ca574b665a6c76238b39535d50b6733dc82196f8065ef3625e2"
+      },
+      {
+        "line": 636,
+        "sha256": "240c812812f58b4809f741c136fa52d8c41c968e82c34a399faf7d361ac12b18"
+      },
+      {
+        "line": 664,
+        "sha256": "0951eb661c86165b2571cc369d10a7ff60c9caf9e59d76a3f6bc08cefba6724e"
+      },
+      {
+        "line": 665,
+        "sha256": "7534bfb1adb03e24ac3349f274b3c9e4d78cca372208083c10d10d2e50b9e1a3"
+      },
+      {
+        "line": 687,
+        "sha256": "fe5c20c078e2b37840e05e8d799175e0a77a46e1629b05ee03b0e335f33d1acf"
+      },
+      {
+        "line": 688,
+        "sha256": "297a8678f34ca3d871efbb7374e5c459608519a709f012e2a17797987175075b"
+      },
+      {
+        "line": 717,
+        "sha256": "a0ff656a387c7c04e75a71d5532b53b2357212b5445457b4ecda155f3cf8ac9e"
+      },
+      {
+        "line": 792,
+        "sha256": "f844494e3ebcc483d9e03525c5fa7e75397862b27fbed6f89e9a0c93541333ce"
+      },
+      {
+        "line": 1335,
+        "sha256": "bdc502fca27a64bba42503b69d9518aa43d98cb47c79a1e9d71c515488c395f5"
+      }
+    ]
   },
   {
     "path": "bin/lib/knowledge/concerns.cjs",
@@ -210,9 +360,14 @@
   },
   {
     "path": "bin/lib/knowledge/phase.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 2,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 253,
+        "sha256": "ecb6baa6f011bd679616ca0bf5a11c0b62ac00020fe38d1f3dbcada9cf81c480"
+      }
+    ]
   },
   {
     "path": "bin/lib/knowledge/truth.cjs",
@@ -475,7 +630,7 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 64,
+        "line": 66,
         "sha256": "3397302cb4cb8aa305b40ab00acb03c5a64cd090f9f2c65d42a2b4cb02448894"
       }
     ]
@@ -527,9 +682,90 @@
   },
   {
     "path": "bin/lib/ops/gate.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 34,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 77,
+        "sha256": "c038f141933b6b6f24c031f1914f9c20ccc16fd299c04b0a7a83ac7c9335f81c"
+      },
+      {
+        "line": 173,
+        "sha256": "3fb0dbfda6bab9ba93d53e37ba65c687980e594fddb66f18b12a9a4913f8a00c"
+      },
+      {
+        "line": 193,
+        "sha256": "28776075c6125071b4119585c886163cfe6844f25ca99c471f066a5e20a0b448"
+      },
+      {
+        "line": 200,
+        "sha256": "938ec32285ffcdf6b0a9884742b6d672d442974b400bd0e1722eb26ef7b3a4b7"
+      },
+      {
+        "line": 229,
+        "sha256": "873c71eb3a7dce3239349c9dad4196b00421981a7323892df06d314bd16e1afd"
+      },
+      {
+        "line": 237,
+        "sha256": "ec9638a2f0f2c5e6f1096d7b882bde74979df79912755ed7c2358ecdc1b0003b"
+      },
+      {
+        "line": 327,
+        "sha256": "2aa8581bc82dddb1e77413ade8aaaa4ed625c062b30b0b174d8eddf2add25064"
+      },
+      {
+        "line": 347,
+        "sha256": "dd270527073e472dd3e56dc87d782bbf2dbe804b6ea1fd6dcfcd8c942a490000"
+      },
+      {
+        "line": 357,
+        "sha256": "d1846688e0f770e1fb50772d65c5d3e1b39e328df5415c1b3f8fff99e535f921"
+      },
+      {
+        "line": 551,
+        "sha256": "7fbbd5482f6b6c9e5c52f1a597e72a178604b2c87bda40dbd326854dfac32d90"
+      },
+      {
+        "line": 576,
+        "sha256": "e49968e9ccfbd292bfc7d3c73575e12ff82e1719f00ff52975fc78f4613e6681"
+      },
+      {
+        "line": 926,
+        "sha256": "f69cdae81003f8cdcf1de1b2a11b77fd714f66025a5d8894939329d35669756f"
+      },
+      {
+        "line": 948,
+        "sha256": "3fd79ac83f68a6d17bcbbeb4c41d1eb44234e37a39a5c9a3cbe8de52e7bc37db"
+      },
+      {
+        "line": 996,
+        "sha256": "9e738a1abff613739e7cd9ddeb2f253493c672c18734ea82afbbb8f788f603f3"
+      },
+      {
+        "line": 1001,
+        "sha256": "aa8d30ee0dbf4e2b2bd9f1cb75fc54495b6a76232e236aa8bc43a6079877107a"
+      },
+      {
+        "line": 1183,
+        "sha256": "5d6c9768aabde105b966bc8ed23bab733dc648e376e2ba1dc4a9998650ec07cc"
+      },
+      {
+        "line": 1193,
+        "sha256": "6d3196b5e6a8ffbffa3a81b00146cbe43f0993099f3a37f75cfcd87e2910a6dc"
+      },
+      {
+        "line": 1496,
+        "sha256": "3471b41ccdef2d24fb7a74200e8483f22be994e0e242eed44e74ee4f33f2a2a5"
+      },
+      {
+        "line": 1532,
+        "sha256": "af52abb2e8bb517c35de7f3eefb9506167750108c4f946e3a1fda9f3f69c6b65"
+      },
+      {
+        "line": 1569,
+        "sha256": "76b61f6ea9edff48418c510972f1a37168708b30c4ec1969ae883ca70632f7db"
+      }
+    ]
   },
   {
     "path": "bin/lib/ops/gitseed.cjs",
@@ -613,9 +849,22 @@
   },
   {
     "path": "bin/lib/task/archive.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 5,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 402,
+        "sha256": "ba595698c5feccc15e9b3b8fc0a1cff6f2665d21d92f24060ef13949f9e536ad"
+      },
+      {
+        "line": 587,
+        "sha256": "8638628646a84624acfd64faf64766d6f92c2a8ccb2423e483657dbc3afed673"
+      },
+      {
+        "line": 701,
+        "sha256": "829ec48da19a6121f8d61b41da0dae442d73885705855f41cc81f083b6b69ae5"
+      }
+    ]
   },
   {
     "path": "bin/lib/task/changelog.cjs",
@@ -630,9 +879,46 @@
   },
   {
     "path": "bin/lib/task/commit.cjs",
-    "category": "in-flight-sweep",
-    "maxHits": 14,
-    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+    "category": "frozen-string",
+    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
+    "lines": [
+      {
+        "line": 55,
+        "sha256": "5d491c14ca7747f5773b35ff1c4bfee13f9d3dc25c3b01e22d45fc3102bd535f"
+      },
+      {
+        "line": 68,
+        "sha256": "c89ead33587de59b009e41bcfe91968b695ba56f791271c08592a75afb24d4b6"
+      },
+      {
+        "line": 116,
+        "sha256": "a064e8412ae3d281e5c96fe898775d078c92db514fc636ddcf350f155ba24c66"
+      },
+      {
+        "line": 447,
+        "sha256": "aa8fe970ed66b9709c6d5d86d529747fc96b06d4e6b4592fe42d0b8bcddc9cc6"
+      },
+      {
+        "line": 463,
+        "sha256": "a4f6de1c08fe635a6d35acbfffbda8d2cf7f66d25d9d6248d5e5649b0c697f4b"
+      },
+      {
+        "line": 534,
+        "sha256": "4db0d21811326a7b3d419cd2248bd3285ce39ba2ad16cec26fec864218a6ca86"
+      },
+      {
+        "line": 622,
+        "sha256": "2cb3e3cdb36470b0e240873a3a0d4e7cbd6f5cf983787c13db2a3ed932220b94"
+      },
+      {
+        "line": 625,
+        "sha256": "a6069318b2995096085266d5104175719d458edc088e727dd37307ec98c61f1b"
+      },
+      {
+        "line": 627,
+        "sha256": "de87e2674cddab5f2dd808fed2d807f9284d03fe53a0cdb8673986b190bf0397"
+      }
+    ]
   },
   {
     "path": "bin/lib/task/context.cjs",
@@ -798,17 +1084,6 @@
       {
         "line": 277,
         "sha256": "70d8651708941ddfd40596ba17331471e55eabb227571a98607473cc2e4a04f3"
-      }
-    ]
-  },
-  {
-    "path": "test/sections/T12-wiring.test.sh",
-    "category": "frozen-string",
-    "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
-    "lines": [
-      {
-        "line": 119,
-        "sha256": "ac5b54754427d965a1cd77f8eaed6261271ced29a77a637ec9b72ba593ec7246"
       }
     ]
   },
@@ -1341,7 +1616,7 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 242,
+        "line": 248,
         "sha256": "933a27fd36bd0cb7b717347d7cd2835cd1770d017dd0822ab1cd3015586145f3"
       }
     ]

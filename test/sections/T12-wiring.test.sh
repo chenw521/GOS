@@ -64,9 +64,10 @@ set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
 assert_exit "archive blocked without CHANGELOG.md" 1 "$RC"
 assert_contains "block message is SHIP BLOCKED" "SHIP BLOCKED" "$OUT"
 assert_contains "block message tells what to do" "gos changelog add" "$OUT"
-printf '# Changelog\n\n## [Unreleased]\n\n- Test stale stamp (R-01) [%s]\n' "$(date -u -d yesterday +%F)" > CHANGELOG.md
+printf '# Changelog\n\n## [Unreleased]\n\n' > CHANGELOG.md
 set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
-assert_exit "archive blocked without today-stamped bullet" 1 "$RC"
+assert_exit "archive blocked without a new bullet" 1 "$RC"
+assert_contains "block message names the batch record" "adds no changelog record" "$OUT"
 
 # --- .7: today's CHANGELOG.md [Unreleased] bullet → archive passes + version-discipline warn on success path
 printf '# Changelog\n\n## [Unreleased]\n\n- Test wiring ship gate (R-01) [%s]\n' "$(date -u +%F)" > CHANGELOG.md
@@ -116,7 +117,7 @@ fi
 DC=$(node "$GOS" _contract 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['decorative'].get('waveSinglePointCommit',''))")
 assert_contains "CONTRACTS.decorative freezes the rule" "during parallel waves executors never run gos commit — the main session commits once per wave after aggregation" "$DC"
 
-# --- T12.12 (T8): static grep — dispatch lock classification complete [R4-F4] ---
+# --- .12: static grep — dispatch lock classification complete ---
 WC=$(grep -o "WRITE_CMDS = new Set(\[[^]]*\]" "$GOS_ROOT/bin/lib/nav/registry-consts.cjs" || true)
 for cmd in truth lessons; do
   if echo "$WC" | grep -q "'$cmd'"; then
