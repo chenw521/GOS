@@ -807,15 +807,15 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 408,
+        "line": 410,
         "sha256": "ba595698c5feccc15e9b3b8fc0a1cff6f2665d21d92f24060ef13949f9e536ad"
       },
       {
-        "line": 593,
+        "line": 595,
         "sha256": "8638628646a84624acfd64faf64766d6f92c2a8ccb2423e483657dbc3afed673"
       },
       {
-        "line": 707,
+        "line": 709,
         "sha256": "829ec48da19a6121f8d61b41da0dae442d73885705855f41cc81f083b6b69ae5"
       }
     ]
