@@ -1948,4 +1948,54 @@ function specCardStampCheck(state) {
   return result;
 }
 
-module.exports = { getSemanticPlanTasks, checkBidirectional, loadSemanticAllowlist, semanticAllowlisted, semanticBaselineShas, diffHitCheck, semanticDiffPhase, readExemptions, consumeExemptions, checkManifest, impactClosurePhase, semanticChecks, loadTrustStore, cmdGateTrust, cmdGate, computeGateVerdicts, renderGateReport, cmdLogs, specCardFloorFailures, projectDecisionIds, stripSpecForScan, flipReconcileLeg, renderGateFailures, SPEC_CARD_FLOORS, CLI_MAX, probeSpecFloor, specGateVersionUnknownFailure };
+// ---------------------------------------------------------------------------
+// Card-preflight dig floor (freeze-time). Deliberately OUTSIDE the floor
+// registry: the probe returns the first passing floor, so a dig leg inside
+// the sequence could never block — this check reads state directly instead.
+// Era semantics: a decision stamped with a born_at after the floor era must
+// carry dig evidence; records without born_at (or born before the era)
+// grandfather with a loud advisory so legacy content never deadlocks. Spec
+// headings that own a decision id absent from state surface as prose-era
+// advisories, not refusals.
+// ---------------------------------------------------------------------------
+
+function digFloorFreezeCheck(state, specText) {
+  const era = knowledge.DIG_FLOOR_ERA;
+  const decisions = Array.isArray(state.decisions) ? state.decisions : [];
+  const known = new Set([...decisions.map((d) => d && d.id).filter(Boolean), ...projectDecisionIds()]);
+  const missing = [];
+  let dug = 0;
+  let grandfathered = 0;
+  for (const d of decisions) {
+    if (!d || !d.id) continue;
+    if (d.dig !== undefined) dug++;
+    const post = typeof d.born_at === 'string' && d.born_at > era;
+    if (!post) {
+      if (d.dig === undefined) {
+        grandfathered++;
+        console.log(`⚠ dig floor: grandfathered ${d.id} — pre-era decision`);
+      }
+      continue;
+    }
+    if (d.dig === undefined) {
+      missing.push(`decision ${d.id} (born_at ${d.born_at}) is post-era (floor era ${era}) and carries no dig evidence`);
+    } else {
+      const err = knowledge.digEvidenceErr(d.dig);
+      if (err) missing.push(`decision ${d.id} (born_at ${d.born_at}) dig evidence rejected: ${err}`);
+    }
+  }
+  const scannable = stripSpecFencesAndExempts(specText);
+  for (const sec of specSections(scannable)) {
+    const m = /^D-\d{2,3}\b/.exec(String(sec.heading || '').trim());
+    if (m && !known.has(m[0])) console.log(`⚠ dig floor: ${m[0]} lives in spec prose only — no state record to check`);
+  }
+  if (missing.length) {
+    console.error(`${core.CONTRACTS.state_semantics.commitBlocked} (dig floor):`);
+    for (const x of missing) console.error(`  ✗ dig-floor-evidence-missing: ${x}`);
+    console.error(`  fix: re-record each named decision with dig evidence — ${knowledge.digShapesHint()}`);
+    process.exit(1);
+  }
+  console.log(`✓ dig floor: ${dug} decision(s) carry dig evidence, ${grandfathered} grandfathered`);
+}
+
+module.exports = { getSemanticPlanTasks, checkBidirectional, loadSemanticAllowlist, semanticAllowlisted, semanticBaselineShas, diffHitCheck, semanticDiffPhase, readExemptions, consumeExemptions, checkManifest, impactClosurePhase, semanticChecks, loadTrustStore, cmdGateTrust, cmdGate, computeGateVerdicts, renderGateReport, cmdLogs, specCardFloorFailures, projectDecisionIds, stripSpecForScan, flipReconcileLeg, renderGateFailures, SPEC_CARD_FLOORS, CLI_MAX, probeSpecFloor, specGateVersionUnknownFailure, digFloorFreezeCheck };

@@ -111,7 +111,7 @@ t96_teardown
 t96_fresh
 node "$GOS" init 3 "t96 state boundary" >/dev/null 2>&1
 git add -f .gos/state.json && git commit -q -m track-state
-set +e; OUT=$(node "$GOS" decision add D-01 "中文决策标题必须被拒绝" --rationale "r" 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" decision add D-01 "中文决策标题必须被拒绝" --rationale "r" --dig-waiver "test fixture" 2>&1); RC=$?; set -e
 assert_exit "L2 tracked state + zh decision → exit 1" "1" "$RC"
 assert_contains "L2 bilingual: en guidance" "language boundary: state.json is git-tracked" "$OUT"
 assert_contains "L2 bilingual: zh guidance" "仅允许英文" "$OUT"
@@ -156,7 +156,7 @@ assert_contains "L5 concerns bilingual guidance" "language boundary" "$OUT"
 t96_teardown
 t96_fresh
 node "$GOS" init 3 "t96 poison state" >/dev/null 2>&1
-set +e; OUT=$(GIT_DIR="$T96_DIR/dead-git-dir" node "$GOS" decision add D-01 "毒化状态写入" --rationale "r" 2>&1); RC=$?; set -e
+set +e; OUT=$(GIT_DIR="$T96_DIR/dead-git-dir" node "$GOS" decision add D-01 "毒化状态写入" --rationale "r" --dig-waiver "test fixture" 2>&1); RC=$?; set -e
 assert_exit "L5 state: GIT_DIR poison + zh → exit 1 (fail-closed)" "1" "$RC"
 assert_contains "L5 state bilingual guidance" "language boundary" "$OUT"
 t96_teardown
@@ -167,7 +167,7 @@ set +e; OUT=$(node "$GOS" concerns add "未跟踪存储接受中文" 2>&1); RC=$
 assert_exit "L6 untracked concerns: zh accepted" "0" "$RC"
 grep -q "未跟踪存储接受中文" .gos/concerns.md && echo "  ✓ L6 zh concern line recorded"; PASS=$((PASS+1)) || { echo "  ✗ L6 zh concern line missing"; FAIL=$((FAIL+1)); }
 node "$GOS" init 3 "t96 untracked accept" >/dev/null 2>&1
-set +e; OUT=$(node "$GOS" decision add D-01 "未跟踪状态的中文决策" --rationale "中文理由" 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" decision add D-01 "未跟踪状态的中文决策" --rationale "中文理由" --dig-waiver "test fixture" 2>&1); RC=$?; set -e
 assert_exit "L6 untracked state: zh decision accepted" "0" "$RC"
 set +e; OUT=$(node "$GOS" lessons add --type project --scene t96 --lesson "未跟踪教训可以中文" 2>&1); RC=$?; set -e
 assert_exit "L6 untracked lessons: zh accepted" "0" "$RC"

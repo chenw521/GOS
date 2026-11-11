@@ -83,7 +83,7 @@ node "$GOS" commit intent >/dev/null 2>&1
 echo "spec v1" > "$(gos_spec)"
 node "$GOS" approve think >/dev/null 2>&1
 node "$GOS" commit think >/dev/null 2>&1
-node "$GOS" decision add D-01 "c" --rationale "r" >/dev/null 2>&1
+node "$GOS" decision add D-01 "c" --rationale "r" >/dev/null --dig-waiver "test fixture" 2>&1
 printf '# Plan\n\n### Wave 1\n\n#### T1: x\n- **Covers**: D-01\n- **Files**: src/a.js\n' > "$(gos_plan)"
 node "$GOS" approve plan >/dev/null 2>&1
 node "$GOS" commit plan >/dev/null 2>&1

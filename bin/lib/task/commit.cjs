@@ -268,6 +268,7 @@ function cmdCommit(argv) {
     const specText = fs.readFileSync(sp, 'utf8');
     if (state.spec_gate_version !== undefined) enforceStampedSpecFloor(state, specText);
     else stampSpecByProbe(state, specText, { blockOnNone: false });
+    ops.digFloorFreezeCheck(state, specText); // dig floor: same freeze contract, era-gated by born_at
     state.spec_sha256 = core.sha256FileSync(sp);
     core.writeState(state);
     console.log(`✓ spec re-frozen: spec_sha256 recomputed (stage ${state.current_stage} unchanged, no commit written)`);
@@ -500,6 +501,10 @@ function cmdCommit(argv) {
       if (state.spec_gate_version !== undefined) enforceStampedSpecFloor(state, specText);
       else stampSpecByProbe(state, specText, { blockOnNone: !state.spec_sha256 });
       state.spec_sha256 = core.sha256FileSync(sp); // B-22 freeze at THINK commit
+      // dig floor: runs AFTER the card floor and outside the probe
+      // sequence — the probe returns the first passing floor, so this leg
+      // reads state directly (era-gated by born_at, pre-era grandfathered).
+      ops.digFloorFreezeCheck(state, specText);
     }
   }
   if (stage === 'PLAN' && lv >= 3) {

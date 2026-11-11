@@ -110,7 +110,7 @@ t54_teardown
 
 # ===== F: trace refs — derivation (covered decisions + active reqs) and --refs =====
 t54_new
-node "$GOS" decision add D-07 "trace derivation probe" >/dev/null 2>&1
+node "$GOS" decision add D-07 "trace derivation probe" >/dev/null --dig-waiver "test fixture" 2>&1
 set +e; OUT=$(node "$GOS" changelog add --summary "probe open decision exclusion" 2>&1); RC=$?; set -e
 assert_exit "F1 open decision still adds rc" 0 "$RC"
 if grep -qE '^- Add probe open decision exclusion \(R-01\) \[' CHANGELOG.md && ! grep -q 'D-07' CHANGELOG.md; then echo "  ✓ F2 open decision excluded from derived refs"; PASS=$((PASS+1)); else echo "  ✗ F2 open decision leaked into refs"; FAIL=$((FAIL+1)); fi

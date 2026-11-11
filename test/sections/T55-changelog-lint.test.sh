@@ -293,7 +293,7 @@ t55_teardown
 
 # O8: state ids present and the fresh bullet misses them all -> unmatched refs
 t55_new
-node "$GOS" decision add D-07 "refs filter probe" >/dev/null 2>&1
+node "$GOS" decision add D-07 "refs filter probe" >/dev/null --dig-waiver "test fixture" 2>&1
 printf '# Log\n\n## [Unreleased]\n\n- Add mismatched refs bullet (D-99) [%s]\n' "$TODAY" > CHANGELOG.md
 set +e; OUT=$(node "$GOS" gate changelog-obligation 2>&1); RC=$?; set -e
 assert_exit "O8 unmatched task refs fail" 1 "$RC"

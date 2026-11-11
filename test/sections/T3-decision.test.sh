@@ -22,7 +22,7 @@ echo "--- T3: decision family (add/amend/cover/list/import) ---"
 
 # --- .1: add explicit id → state entry + frozen output + gate coverage blocks
 node "$GOS" init 3 "decisions" >/dev/null 2>&1
-OUT=$(node "$GOS" decision add D-01 "Use JSON truth store" --rationale "single source" 2>&1)
+OUT=$(node "$GOS" decision add D-01 "Use JSON truth store" --rationale "single source" --dig-waiver "test fixture" 2>&1)
 assert_contains "add D-01 output contract" "✓ Decision D-01 added: Use JSON truth store" "$OUT"
 assert_contains "add next-hint contract" "Next: gos decision list" "$OUT"
 D01=$(python3 -c "import json; s=json.load(open('.gos/state.json')); print(len(s['decisions']), s['decisions'][0]['id'], s['decisions'][0]['status'])")
@@ -31,33 +31,33 @@ set +e; OUT=$(node "$GOS" gate coverage 2>&1); RC=$?; set -e
 assert_exit "gate coverage exits 1 on uncovered D-01" 1 "$RC"
 assert_contains "gate output names D-01" "D-01" "$OUT"
 
-set +e; OUT=$(node "$GOS" decision add D-01 "another" --rationale x 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" decision add D-01 "another" --rationale x --dig-waiver "test fixture" 2>&1); RC=$?; set -e
 assert_exit "duplicate add exits 1" 1 "$RC"
 assert_contains "duplicate message + amend hint" "already exists, use: gos decision amend D-01" "$OUT"
 
 # --- .3: hostile title rejected, no side-effect file
-set +e; OUT=$(node "$GOS" decision add 'bad $(touch pwned-t3) x' --rationale x 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" decision add 'bad $(touch pwned-t3) x' --rationale x --dig-waiver "test fixture" 2>&1); RC=$?; set -e
 assert_exit "hostile title exits 1" 1 "$RC"
 if [ -e pwned-t3 ]; then echo "  ✗ hostile title executed payload"; FAIL=$((FAIL+1)); else echo "  ✓ no payload side effect (pwned-t3 absent)"; PASS=$((PASS+1)); fi
 
 LONG=$(python3 -c "print('字'*121)")
-set +e; OUT=$(node "$GOS" decision add "$LONG" --rationale x 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" decision add "$LONG" --rationale x --dig-waiver "test fixture" 2>&1); RC=$?; set -e
 assert_exit "121-codepoint title exits 1" 1 "$RC"
 
-set +e; OUT=$(node "$GOS" decision add "anchor test" --anchor 'spec.md/../etc' 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" decision add "anchor test" --anchor 'spec.md/../etc' --dig-waiver "test fixture" 2>&1); RC=$?; set -e
 assert_exit "bad anchor exits 1" 1 "$RC"
 
 # --- .5b: bad explicit id format (R- prefix)
-set +e; OUT=$(node "$GOS" decision add R-01 "wrong prefix" --rationale x 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" decision add R-01 "wrong prefix" --rationale x --dig-waiver "test fixture" 2>&1); RC=$?; set -e
 assert_exit "R- prefix id rejected" 1 "$RC"
 
 # --- .6: auto id = max(state ∪ project)+1
-node "$GOS" decision add "second decision" --rationale r2 >/dev/null 2>&1
+node "$GOS" decision add "second decision" --rationale r2 >/dev/null --dig-waiver "test fixture" 2>&1
 AUTO=$(python3 -c "import json; s=json.load(open('.gos/state.json')); print(s['decisions'][-1]['id'])")
 assert_eq "auto id continues at D-02" "D-02" "$AUTO"
 
 # --- .7: supersedes marks target + records chain
-node "$GOS" decision add "third decision" --supersedes D-01 --rationale r3 >/dev/null 2>&1
+node "$GOS" decision add "third decision" --supersedes D-01 --rationale r3 >/dev/null --dig-waiver "test fixture" 2>&1
 SUP=$(python3 -c "
 import json; s=json.load(open('.gos/state.json'))
 d1=[d for d in s['decisions'] if d['id']=='D-01'][0]
@@ -66,7 +66,7 @@ print(d1['status'], d3.get('supersedes'))")
 assert_contains "D-01 superseded + D-03.supersedes=D-01" "superseded D-01" "$SUP"
 
 # self-supersede rejected
-set +e; OUT=$(node "$GOS" decision add D-04 "self" --supersedes D-04 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" decision add D-04 "self" --supersedes D-04 --dig-waiver "test fixture" 2>&1); RC=$?; set -e
 assert_exit "self-supersede exits 1" 1 "$RC"
 
 # real cycle: pre-seed (supersedes ); adding --supersedes closes the loop
@@ -74,12 +74,12 @@ python3 -c "
 import json; s=json.load(open('.gos/state.json'))
 s['decisions'].append({'id':'D-99','title':'chain holder','rationale':'','birth_phase':'P0','status':'open','anchor':None,'covered':False,'covered_by':None,'supersedes':'D-98'})
 json.dump(s,open('.gos/state.json','w'),indent=2)"
-set +e; OUT=$(node "$GOS" decision add D-98 "cycle closer" --supersedes D-99 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" decision add D-98 "cycle closer" --supersedes D-99 --dig-waiver "test fixture" 2>&1); RC=$?; set -e
 assert_exit "supersedes cycle exits 1" 1 "$RC"
 assert_contains "cycle message" "cycle" "$OUT"
 
 # re-adding an id that sits in the chain still exits 1
-set +e; OUT=$(node "$GOS" decision add D-01 "again" --supersedes D-03 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" decision add D-01 "again" --supersedes D-03 --dig-waiver "test fixture" 2>&1); RC=$?; set -e
 assert_exit "D-01 re-add blocked (dup/cycle)" 1 "$RC"
 
 # no plan.md yet → exit 1 "task not found in current plan"
@@ -142,7 +142,7 @@ assert_contains "re-import skips duplicates with notice" "skipped" "$OUT"
 
 t3_teardown; t3_setup
 node "$GOS" init 4 "platform" --project >/dev/null 2>&1
-node "$GOS" decision add "dual store decision" --rationale "both stores" >/dev/null 2>&1
+node "$GOS" decision add "dual store decision" --rationale "both stores" >/dev/null --dig-waiver "test fixture" 2>&1
 DUAL=$(python3 -c "
 import json
 st=json.load(open('.gos/state.json')); pj=json.load(open('.gos/project/project.json'))

@@ -36,7 +36,7 @@ gos instructions think    # step-by-step guidance for current task
 ## State
 
 **Read:** `.gos/state.json` (intent, level) + `.gos/project/DECISIONS.md` (Lv4)
-**Write:** the spec at the context-supplied path + decisions via `gos decision add D-NN "<conclusion>" --rationale "..."` (Lv3+; never hand-edit state.json) + state.json (spec_path, requirements, observable_truths)
+**Write:** the spec at the context-supplied path + decisions via `gos decision add D-NN "<conclusion>" --rationale "..." --dig '{"command":"...","output_excerpt":"...","anchor":"<file>:<line>"}' (evidence object; user rulings take --dig-ruling, non-card uses take --dig-waiver)` (Lv3+; never hand-edit state.json) + state.json (spec_path, requirements, observable_truths)
 
 ## Exit Gate
 

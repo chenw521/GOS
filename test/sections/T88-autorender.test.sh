@@ -44,7 +44,7 @@ t88_seed
 node "$GOS" render >/dev/null 2>&1   # baseline: rendered views + manifest exist
 
 # --- .1: decision add auto-renders ( truth: no manual render needed)
-set +e; OUT=$(node "$GOS" decision add "auto render probe" --rationale rr 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" decision add "auto render probe" --rationale rr --dig-waiver "test fixture" 2>&1); RC=$?; set -e
 assert_exit "decision add exits 0" 0 "$RC"
 assert_contains "add output contract" "✓ Decision D-02 added: auto render probe" "$OUT"
 assert_contains "auto-render: new decision in DECISIONS.md without manual render" "auto render probe" "$(cat .gos/project/DECISIONS.md)"
@@ -90,7 +90,7 @@ assert_eq "no-change claim leaves REQUIREMENTS.md byte-identical" "$SNAP5" "$(ca
 
 # --- .6: hand-edited body → auto-render REFUSES with reconcile instructions
 printf '| D-77 | hand edit | x | P1: core | open |\n' >> .gos/project/DECISIONS.md
-set +e; OUT=$(node "$GOS" decision add "after hand edit" --rationale r 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" decision add "after hand edit" --rationale r --dig-waiver "test fixture" 2>&1); RC=$?; set -e
 assert_exit "hand-edited body → mutation auto-render refuses (exit 1)" 1 "$RC"
 assert_contains "refusal names the offending view" "DECISIONS.md" "$OUT"
 assert_contains "refusal reconcile: MANUAL region instruction" "MANUAL" "$OUT"
@@ -108,7 +108,7 @@ rm -f .gos/cache/render-backup/manifest.json
 set +e; OUT=$(node "$GOS" render 2>&1); RC=$?; set -e
 assert_exit "fresh clone: render refuses without manifest" 1 "$RC"
 assert_contains "fresh-clone refusal names the manifest" "manifest" "$OUT"
-set +e; OUT=$(node "$GOS" decision add "clone probe" --rationale r 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" decision add "clone probe" --rationale r --dig-waiver "test fixture" 2>&1); RC=$?; set -e
 assert_exit "fresh clone: mutation auto-render refuses too" 1 "$RC"
 
 # --- .9: gos render --force bypasses and re-establishes the manifest
@@ -116,7 +116,7 @@ set +e; OUT=$(node "$GOS" render --force 2>&1); RC=$?; set -e
 assert_exit "render --force bypasses the refusal" 0 "$RC"
 assert_file "manifest re-created by force render" ".gos/cache/render-backup/manifest.json"
 if grep -q 'D-77' .gos/project/DECISIONS.md; then echo "  ✗ force render must regenerate the body (hand edit gone)"; FAIL=$((FAIL+1)); else echo "  ✓ force render regenerated the body"; PASS=$((PASS+1)); fi
-set +e; OUT=$(node "$GOS" decision add "post force probe" --rationale r 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" decision add "post force probe" --rationale r --dig-waiver "test fixture" 2>&1); RC=$?; set -e
 assert_exit "auto-render clean after force reconcile" 0 "$RC"
 assert_contains "post-force mutation appears in DECISIONS.md" "post force probe" "$(cat .gos/project/DECISIONS.md)"
 
