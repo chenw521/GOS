@@ -189,6 +189,12 @@
       "type": "major",
       "description": "Fluid back to PLAN: discovered during PLAN",
       "status": "open"
+    },
+    {
+      "id": "G-1794389975095",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
     }
   ],
   "phase_name": "P19: live pain bugs and archive integrity",
@@ -330,11 +336,27 @@
         ],
         "files": [
           "bin/lib/knowledge/decisions.cjs",
-          "bin/lib/task/decision.cjs",
           "bin/lib/task/commit.cjs",
           "bin/lib/ops/gate.cjs",
           "bin/lib/core/state.cjs",
-          "test/sections/T113-dig-floor.test.sh"
+          "templates/spec-template.md",
+          "skills/gos-think/SKILL.md",
+          "test/sections/T113-dig-floor.test.sh",
+          "test/sections/T3-decision.test.sh",
+          "test/sections/T10-security-e2e.test.sh",
+          "test/sections/T106-auto-spawn-channel.test.sh",
+          "test/sections/T12-wiring.test.sh",
+          "test/sections/T14-state-b.test.sh",
+          "test/sections/T17-semantic-engine.test.sh",
+          "test/sections/T22-map-gate-impact.test.sh",
+          "test/sections/T23-concerns.test.sh",
+          "test/sections/T31-map-gate.test.sh",
+          "test/sections/T33-map-manifest.test.sh",
+          "test/sections/T39-render-park.test.sh",
+          "test/sections/T54-changelog-add.test.sh",
+          "test/sections/T55-changelog-lint.test.sh",
+          "test/sections/T88-autorender.test.sh",
+          "test/sections/T96-lang-boundary.test.sh"
         ],
         "wave": 4
       },
@@ -364,7 +386,12 @@
         "wave": 5
       }
     ],
-    "audit": [],
+    "audit": [
+      {
+        "at": "2026-11-11T09:39:54.511Z",
+        "what": "snapshot-force"
+      }
+    ],
     "meta": {
       "waveValidation": {
         "ok": true,

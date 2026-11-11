@@ -212,7 +212,7 @@
 
 #### T8: card-preflight dig floor
 - **Covers**: D-63, R-67
-- **Files**: bin/lib/knowledge/decisions.cjs, bin/lib/task/decision.cjs, bin/lib/task/commit.cjs, bin/lib/ops/gate.cjs, bin/lib/core/state.cjs, test/sections/T113-dig-floor.test.sh
+- **Files**: bin/lib/knowledge/decisions.cjs, bin/lib/task/commit.cjs, bin/lib/ops/gate.cjs, bin/lib/core/state.cjs, templates/spec-template.md, skills/gos-think/SKILL.md, test/sections/T113-dig-floor.test.sh, test/sections/T3-decision.test.sh, test/sections/T10-security-e2e.test.sh, test/sections/T106-auto-spawn-channel.test.sh, test/sections/T12-wiring.test.sh, test/sections/T14-state-b.test.sh, test/sections/T17-semantic-engine.test.sh, test/sections/T22-map-gate-impact.test.sh, test/sections/T23-concerns.test.sh, test/sections/T31-map-gate.test.sh, test/sections/T33-map-manifest.test.sh, test/sections/T39-render-park.test.sh, test/sections/T54-changelog-add.test.sh, test/sections/T55-changelog-lint.test.sh, test/sections/T88-autorender.test.sh, test/sections/T96-lang-boundary.test.sh
 - **Read first**: decisions.cjs (add/amend constructors :169 — verify state
   schema survival of NEW fields on decision objects BEFORE relying on
   them), commit.cjs THINK freeze block (:445-475),
