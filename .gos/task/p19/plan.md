@@ -85,7 +85,7 @@
 
 #### T3: ceremony re-point + neutralizer guard
 - **Covers**: D-61, R-61
-- **Files**: bin/lib/ops/push.cjs, bin/lib/core/locales/en.cjs, bin/lib/core/locales/zh-CN.cjs, .github/PULL_REQUEST_TEMPLATE.md, test/sections/T76-*.test.sh, test/sections/T101-*.test.sh
+- **Files**: bin/lib/ops/push.cjs, bin/lib/core/locales/en.cjs, bin/lib/core/locales/zh-CN.cjs, .github/PULL_REQUEST_TEMPLATE.md, templates/git/PULL_REQUEST_TEMPLATE.md, test/sections/T76-*.test.sh, test/sections/T101-*.test.sh
 - **Read first**: push.cjs:259-261 (archivePushHint), T76 + T101 fixtures
 - **Approach**: archivePushHint frozen copy teaches the PR flow (branch →
   PR → squash with `bash test/checks/push-lint-squash.sh --subject` guard)
@@ -117,7 +117,7 @@
 
 #### T5: phase rename verb
 - **Covers**: R-65
-- **Files**: bin/lib/knowledge/phase.cjs, bin/lib/nav/registry-consts.cjs, bin/lib/core/locales/en.cjs, bin/lib/core/locales/zh-CN.cjs, test/sections/T111-phase-rename.test.sh
+- **Files**: bin/lib/knowledge/phase.cjs, bin/lib/nav/registry-consts.cjs, bin/lib/core/state.cjs, bin/lib/core/locales/en.cjs, bin/lib/core/locales/zh-CN.cjs, test/sections/T111-phase-rename.test.sh
 - **Read first**: phase.cjs amend block (:104-125), claim name-prefix
   matching, archive.cjs:589 phase-by-name lookup, views.cjs:382-465
   (render surface — machine-local only), T71/T37/T2 fixtures

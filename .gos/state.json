@@ -127,8 +127,64 @@
       "covered_by": null
     }
   ],
-  "observable_truths": [],
-  "gaps": [],
+  "observable_truths": [
+    {
+      "id": "T1",
+      "description": "T-01 structural obligation: batch diff adding a new [Unreleased] bullet passes across UTC midnight; adding none fails (T109 both directions)",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T2",
+      "description": "T-02 Lv1 chain archive lands completed_at + archive-rewritten paths + surviving approvals/spec_sha256/plan_snapshot/completed_stages (T112)",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T3",
+      "description": "T-03 disjunctive idle: stamp-only idles; tid+paths idles; planted tid with live-zone paths does not idle (T112)",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T4",
+      "description": "T-04 -der payload: task/1a2e46f3/state.json byte-equal to 493a9e7 plus exactly completed_at+completed_at_retro; PROVENANCE.md present (local-only, T9 pinned diff)",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T5",
+      "description": "T-05 help never executes: registered cmds with --help/-h print help rc0 zero side effects; value-position exempt; unknown non-zero (T110)",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T6",
+      "description": "T-06 rename verb: pending rename applies + views re-render; collisions/non-pending refused; --expect guard (T111)",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T7",
+      "description": "T-07 census: fresh checkout without .gos/cache passes pack-check; tracked-optional negative control red; ci mkdir gone (T66/T6)",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T8",
+      "description": "T-08 dig floor: post-era decisions without evidence-object dig refused at add and freeze; grandfathered pass with advisory (T113)",
+      "verified": false,
+      "evidence": null
+    }
+  ],
+  "gaps": [
+    {
+      "id": "G-1794381485169",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
+    }
+  ],
   "phase_name": "P19: live pain bugs and archive integrity",
   "task_head": "493a9e769f3529e12cfbbee7d4773a61ac34655b",
   "task_head_history": [
@@ -175,6 +231,7 @@
           "bin/lib/core/locales/en.cjs",
           "bin/lib/core/locales/zh-CN.cjs",
           ".github/PULL_REQUEST_TEMPLATE.md",
+          "templates/git/PULL_REQUEST_TEMPLATE.md",
           "test/sections/T76-*.test.sh",
           "test/sections/T101-*.test.sh"
         ],
@@ -199,6 +256,7 @@
         "files": [
           "bin/lib/knowledge/phase.cjs",
           "bin/lib/nav/registry-consts.cjs",
+          "bin/lib/core/state.cjs",
           "bin/lib/core/locales/en.cjs",
           "bin/lib/core/locales/zh-CN.cjs",
           "test/sections/T111-phase-rename.test.sh"
