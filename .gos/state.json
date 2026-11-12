@@ -2,15 +2,18 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "THINK",
+  "current_stage": "PLAN",
   "completed_stages": [
-    "INTENT"
+    "INTENT",
+    "THINK"
   ],
   "intent": {
     "summary": "Milestone lifecycle mechanics and ceremony on the hierarchical model (B-double-prime): project.json is the Lv4 parent container — phase entries gain additive task_ref and completed_at snapshot fields written at mark-done/archive time, resume composes parent plus resident child state (no dedicated parent state file, state.json schema untouched, no levelless shell ever created); implement milestone close-with-parked, fix the P0 phase insertion order, close the shipped v1.0.0-dev milestone with parked P2/P3 carried over, open the publicize milestone, and re-home P2/P3 onto it unchanged (their execution stays with the phases themselves, after P23).",
     "confirmed": true
   },
-  "approvals": {},
+  "approvals": {
+    "THINK": "2026-11-12T10:35:24.879Z"
+  },
   "spec_path": null,
   "plan_path": null,
   "project": true,
@@ -22,7 +25,88 @@
       "level": 3
     }
   ],
-  "decisions": [],
+  "decisions": [
+    {
+      "id": "D-66",
+      "title": "Phase snapshots: task_ref = archive basename at archive time; mark-done stamps completed_at only",
+      "rationale": "Each done-with-work phase has exactly one archive dir; basename unique, self-locating; null task_ref = close-out that never ran; tid-only would force glob re-derivation",
+      "birth_phase": "P20: milestone lifecycle mechanics and ceremony",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null,
+      "born_at": "2026-11-12T08:06:51.211Z",
+      "dig": {
+        "command": "ls .gos/archive/ | tail -3",
+        "output_excerpt": "2026-11-12-v1.0.0-phase-p19-cure-the-user-visible-bugs-the (contains task/p19/)",
+        "anchor": "bin/lib/task/archive.cjs:735"
+      }
+    },
+    {
+      "id": "D-67",
+      "title": "Milestone: gos milestone open/close; project.json +milestone {name, opened_at}; init --project bootstrap-only",
+      "rationale": "Milestone identity in NO truth source (0 grep hits; slug prefix = PKG.version accident); consumers: gos-project close script + snapshot naming; slug -> milestone name, new archives only",
+      "birth_phase": "P20: milestone lifecycle mechanics and ceremony",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null,
+      "born_at": "2026-11-12T09:19:09.279Z",
+      "dig": {
+        "command": "grep -rn milestone_name bin/lib | wc -l; grep -rn milestone gos-project/SKILL.md | head -3",
+        "output_excerpt": "0 hits in lib; gos-project consumes via scripts/archive-milestone.sh",
+        "anchor": "bin/lib/task/context.cjs:168"
+      }
+    },
+    {
+      "id": "D-68",
+      "title": "Close-with-parked: selective wipe — parked phases + phase-owned rows survive; null-phase rows wipe",
+      "rationale": "11 live reqs (R-11..R-18,R-21..R-23) must survive verbatim; parked-born decs = 0; 15 null-phase rows all born of done work. Re-add = transcription risk 5b0059ce; bare-carry kills ids plan Covers need",
+      "birth_phase": "P20: milestone lifecycle mechanics and ceremony",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null,
+      "born_at": "2026-11-12T09:21:05.172Z",
+      "dig": {
+        "command": "count reqs by phase status from project.json",
+        "output_excerpt": "parked-owned: 11; parked-born decs: 0; null-phase reqs: 15 (R-01,R-38,R-40-44,R-60-67)",
+        "anchor": "bin/lib/task/archive.cjs:693"
+      }
+    },
+    {
+      "id": "D-69",
+      "title": "Wrapper elimination: Lv4-ness from project.json existence; init --project stops wrapper; stateless resume composes",
+      "rationale": "8 counted consumers of state.project across 4 modules; claim already sets project:true on children so task-bound routing untouched; repo-level checks re-point only, one-commit sweep (0d2eedee)",
+      "birth_phase": "P20: milestone lifecycle mechanics and ceremony",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null,
+      "born_at": "2026-11-12T09:25:15.536Z",
+      "dig": {
+        "command": "grep -rn state.project bin/lib | wc -l",
+        "output_excerpt": "8 consumers: phase.cjs:69, decisions.cjs:146, requirements.cjs:66, cmds.cjs resume",
+        "anchor": "bin/lib/nav/cmds.cjs:57"
+      }
+    },
+    {
+      "id": "D-70",
+      "title": "P0 insertion-order fix: gos phase move <from> <to> verb; one-time P0 -> index 0; names untouched",
+      "rationale": "Names are the idempotency key (21 birth_phase refs); rename cascades against D-58 ruling; array order feeds render + adjacency gate only (predecessors all done); snapshot reads monotonic after move",
+      "birth_phase": "P20: milestone lifecycle mechanics and ceremony",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null,
+      "born_at": "2026-11-12T09:29:00.818Z",
+      "dig": {
+        "command": "grep -c birth_phase P0 project.json",
+        "output_excerpt": "21 decisions reference P0 by name, zero by index",
+        "anchor": "bin/lib/knowledge/phase.cjs:241"
+      }
+    }
+  ],
   "observable_truths": [],
   "gaps": [],
   "phase_name": "P20: milestone lifecycle mechanics and ceremony",
@@ -33,5 +117,7 @@
       "at": "2026-11-12T06:28:14.505Z",
       "what": "claim"
     }
-  ]
+  ],
+  "spec_gate_version": 3,
+  "spec_sha256": "9803027427e3157738bdd794a26142861cc033b7ff2870f05f552a16125a5f31"
 }
