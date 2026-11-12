@@ -2,14 +2,16 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "SHIP",
+  "current_stage": "DONE",
   "completed_stages": [
     "INTENT",
     "THINK",
     "PLAN",
     "BUILD",
     "REVIEW",
-    "VERIFY"
+    "VERIFY",
+    "SHIP",
+    "DONE"
   ],
   "intent": {
     "summary": "Cure the user-visible bugs the 2026-11-09/10 sessions lived through and restore archive integrity: changelog same-day obligation across UTC midnight (#49), changelog validator rejecting #N issue tokens that blocks closing keywords (#24), between-tasks gate false-red on DONE-resident state (concern dffa50f0), census fresh-checkout optional-entry class (concern 73cef6ab), the fromCommit archive path skipping the completed_at stamp plus the deficient -der archive payload rebuild and one-time retro-stamp, the --help short-circuit, and a phase rename verb so project.json name edits never need hand edits again.",
@@ -17,7 +19,8 @@
   },
   "approvals": {
     "THINK": "2026-11-11T05:04:56.774Z",
-    "PLAN": "2026-11-11T06:32:19.822Z"
+    "PLAN": "2026-11-11T06:32:19.822Z",
+    "ARCHIVE": "2026-11-12T01:25:47.894Z"
   },
   "spec_path": null,
   "plan_path": null,
@@ -138,7 +141,7 @@
       "evidence": {
         "command": "[\"bash\",\".gos/task/p19/evidence/t1.sh\"]",
         "output_excerpt": "T1 pass=1 fail=1",
-        "artifact_path": ".gos/task/p19/evidence/t1.sh",
+        "artifact_path": ".gos/archive/2026-11-12-v1.0.0-phase-p19-cure-the-user-visible-bugs-the/task/p19/evidence/t1.sh",
         "replay": true
       }
     },
@@ -149,7 +152,7 @@
       "evidence": {
         "command": "[\"bash\",\".gos/task/p19/evidence/t2.sh\"]",
         "output_excerpt": "T2 mergeHelper=2 completedAtRefs=4",
-        "artifact_path": ".gos/task/p19/evidence/t2.sh",
+        "artifact_path": ".gos/archive/2026-11-12-v1.0.0-phase-p19-cure-the-user-visible-bugs-the/task/p19/evidence/t2.sh",
         "replay": true
       }
     },
@@ -160,7 +163,7 @@
       "evidence": {
         "command": "[\"bash\",\".gos/task/p19/evidence/t3.sh\"]",
         "output_excerpt": "T3 gateIdleRefs=1 archiveHelper=2",
-        "artifact_path": ".gos/task/p19/evidence/t3.sh",
+        "artifact_path": ".gos/archive/2026-11-12-v1.0.0-phase-p19-cure-the-user-visible-bugs-the/task/p19/evidence/t3.sh",
         "replay": true
       }
     },
@@ -182,7 +185,7 @@
       "evidence": {
         "command": "[\"bash\",\".gos/task/p19/evidence/t5.sh\"]",
         "output_excerpt": "T5 statusHelpFirstLine=Usage jsonRc=0 unknownRc=1",
-        "artifact_path": ".gos/task/p19/evidence/t5.sh",
+        "artifact_path": ".gos/archive/2026-11-12-v1.0.0-phase-p19-cure-the-user-visible-bugs-the/task/p19/evidence/t5.sh",
         "replay": true
       }
     },
@@ -193,7 +196,7 @@
       "evidence": {
         "command": "[\"bash\",\".gos/task/p19/evidence/t6.sh\"]",
         "output_excerpt": "T6 renameInHelp=8",
-        "artifact_path": ".gos/task/p19/evidence/t6.sh",
+        "artifact_path": ".gos/archive/2026-11-12-v1.0.0-phase-p19-cure-the-user-visible-bugs-the/task/p19/evidence/t6.sh",
         "replay": true
       }
     },
@@ -204,7 +207,7 @@
       "evidence": {
         "command": "[\"bash\",\".gos/task/p19/evidence/t7.sh\"]",
         "output_excerpt": "T7 ciMkdirLines=0",
-        "artifact_path": ".gos/task/p19/evidence/t7.sh",
+        "artifact_path": ".gos/archive/2026-11-12-v1.0.0-phase-p19-cure-the-user-visible-bugs-the/task/p19/evidence/t7.sh",
         "replay": true
       }
     },
@@ -215,7 +218,7 @@
       "evidence": {
         "command": "[\"bash\",\".gos/task/p19/evidence/t8.sh\"]",
         "output_excerpt": "T8 eraHomeRefs=4 freezeCalls=2",
-        "artifact_path": ".gos/task/p19/evidence/t8.sh",
+        "artifact_path": ".gos/archive/2026-11-12-v1.0.0-phase-p19-cure-the-user-visible-bugs-the/task/p19/evidence/t8.sh",
         "replay": true
       }
     }
@@ -459,13 +462,6 @@
     }
   },
   "changelog_user_summary": "Cure the live pain bugs and restore archive integrity: the changelog obligation becomes a structural batch delta immune to UTC midnight, closing keywords ride the PR body with the ceremony re-pointed, the commit-chain completed_at clobber is cured with disjunctive idle guards, a deficient archive payload is rebuilt with a retro-stamp, the help flag short-circuits before execution, entry renaming and census optional classes land",
-  "checkpoints": [
-    {
-      "stage": "BUILD",
-      "unit": "all-waves (auto at commit)",
-      "done": "T0,T1,T3,T4,T5,T6,T7,T2,T8,T9,T10",
-      "remaining": "",
-      "at": "2026-11-11T10:42:07.580Z"
-    }
-  ]
+  "checkpoints": [],
+  "completed_at": "2026-11-12T01:26:23.472Z"
 }
