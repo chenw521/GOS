@@ -272,6 +272,7 @@ function guardCwd(cls, cmdName, breakLock, args) {
   }
   if (cmdName === 'anchor') return; // anchor fix is the designated rescue (D-10)
   if (cmdName === 'paths') return;  // Phase W (T3): registry query never requires an active task; lock still held for --markdown writes
+  if (cmdName === 'gate' && process.argv[process.argv.indexOf('gate') + 1] === 'changelog-obligation') return; // read-only batch-record check: runs on plain repos (CI parity) with no task to anchor; subcommand-position match only
   if (!fs.existsSync(fsio.STATE_PATH)) {
     // no state HERE — but if an ancestor has .gos/state.json, we are in a subdir of a managed project
     let dir = here;
@@ -289,7 +290,7 @@ function guardCwd(cls, cmdName, breakLock, args) {
   }
   let stateL = null;
   try { stateL = JSON.parse(fs.readFileSync(fsio.STATE_PATH, 'utf8')); } catch { return; } // corrupt → schema validation handles
-  // [T4a/D-12/D-18] identity guard: the state binds to the repo it lands in via
+  // identity guard: the state binds to the repo it lands in via
   // repo_id (remote-URL hash set). The legacy path-anchor write-back is
   // REMOVED — no read-class or guard path writes state.json (T-01 byte-stability);
   // the ONE sanctioned opportunistic write is the null+remotes stamp below.

@@ -18,8 +18,9 @@
 // Entry format contract (bullet inside [Unreleased] or a version section):
 //   `- <CategoryVerb> <one-sentence summary> (<D-nn|R-nn refs>) [YYYY-MM-DD]`
 // The trailing bracket is a UTC date stamp ; `promoteUnreleased` strips
-// stamps when moving entries into a released version section. All date math
-// flows through `utcToday()` — the single time source shared by add and lint.
+// stamps when moving entries into a released version section. Writer-side
+// date math flows through `utcToday()` — the single time source shared by
+// add and promote.
 //
 // Forbidden entry classes (each rejected independently; all errors English):
 //   F1  bare `DI-<n>` token anywhere — internal finding ids never enter entries
@@ -37,12 +38,13 @@
 //   F7  multi-sentence entries — sentence-ending punctuation followed by more
 //       content; exactly one sentence per bullet
 //
-// Structural checks for validateStructure (the three checks):
+// Structural checks for validateStructure (format-only, clock-free):
 //   S1  exactly one top-level `# ` title
 //   S2  version dates newest-first (descending); each version heading carries
 //       a valid `YYYY-MM-DD` date
-//   S3  today's obligation — a bullet stamped with today's UTC date exists in
-//       [Unreleased] or in the latest version section
+// The former today-stamped-bullet check is retired: batch record detection
+// is a structural-delta question answered by batchAddsChangelogRecord
+// (head-vs-base comparison), not a format property of one snapshot.
 
 'use strict';
 
@@ -120,6 +122,22 @@ function utcToday() {
 const ISSUE_CLOSE_TRIGGER_RE = /\b(fix(?:es|ed)?|clos(?:e|es|ed)|resolv(?:e|es|ed))(\s+)(#\d+)/gi;
 function neutralizeIssueTriggers(text) {
   return String(text == null ? '' : text).replace(ISSUE_CLOSE_TRIGGER_RE, 'refs$2$3');
+}
+
+// Snapshot of a tracked file at a resolved ref, three-state by design:
+// {ok:true, text} with text=null when the path is absent from that tree;
+// {ok:false} on any git failure (callers fail closed — a git error is
+// never conflated with absence, which would satisfy the obligation vacuously).
+function showPathSnapshot(ref, relPath) {
+  if (!relPath) return { ok: false };
+  let ent = '';
+  try {
+    ent = require('child_process').execFileSync('git', ['ls-tree', ref, '--', relPath], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  } catch { return { ok: false }; }
+  if (!ent.trim()) return { ok: true, text: null };
+  try {
+    return { ok: true, text: require('child_process').execFileSync('git', ['show', ref + ':' + relPath], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 32 * 1024 * 1024 }) };
+  } catch { return { ok: false }; }
 }
 
 // Tolerant parse of a Keep-a-Changelog-style document. Never throws; a missing
@@ -232,13 +250,11 @@ function validateEntry(entry) {
   return { ok: errors.length === 0, errors };
 }
 
-// The three structural checks. `todayUtc` is injectable for deterministic
-// tests; when absent it defaults to utcToday() — the same single time source
-// the add path uses .
-function validateStructure(text, opts) {
+// The two structural format checks. Snapshot validation is clock-free:
+// whether a batch added a changelog record is answered by
+// batchAddsChangelogRecord over two snapshots, never by the wall clock here.
+function validateStructure(text) {
   const errors = [];
-  const injected = opts && typeof opts.todayUtc === 'string' ? opts.todayUtc : '';
-  const today = DATE_RE.test(injected) ? injected : utcToday();
   const lines = String(text == null ? '' : text).split(/\r?\n/);
 
   const titleCount = lines.filter((l) => H1_RE.test(l)).length;
@@ -258,19 +274,6 @@ function validateStructure(text, opts) {
     if (DATE_RE.test(a.date) && DATE_RE.test(b.date) && a.date < b.date) {
       errors.push(`structure: version dates must be newest-first — [${b.tag}] (${b.date}) is newer than [${a.tag}] (${a.date}) listed above it`);
     }
-  }
-
-  const stampedToday = (e) => e.endsWith(`[${today}]`);
-  const latest = parsed.versions[0];
-  // The obligation accepts three shapes of "today is recorded": a stamped
-  // [Unreleased] entry, a stamped entry in the newest version section, or a
-  // version section whose heading is dated today — the promote path strips
-  // entry stamps on release day, and the section heading carries that date.
-  const met = parsed.unreleased.some(stampedToday)
-    || (latest !== undefined && latest.entries.some(stampedToday))
-    || (latest !== undefined && latest.date === today);
-  if (!met) {
-    errors.push(`structure: today's obligation unmet — no entry stamped '[${today}]' (UTC) in [Unreleased] or the latest version section`);
   }
 
   return { ok: errors.length === 0, errors };
@@ -354,6 +357,80 @@ function promoteUnreleased(text, tag) {
   out.push('');
   out.push(...lines.slice(end));
   return { ok: true, text: out.join('\n') };
+}
+
+// ---- : structural-delta predicate over two changelog snapshots
+
+// Stable identity for a version heading across parses: the tag + date pair
+// as captured by the parser (dates are compared raw, not format-validated).
+function versionSectionKey(v) {
+  return `${v.tag}\u0000${v.date}`;
+}
+
+// `opts.taskRefs` arrives pre-normalized (uppercase D-nn/R-nn tokens); the
+// defensive upper-coerce keeps a stray mixed-case input from silently
+// widening the filter. Anything that is not an array of strings is empty.
+function normalizeTaskRefs(opts) {
+  const raw = opts && Array.isArray(opts.taskRefs) ? opts.taskRefs : [];
+  return raw.map((t) => String(t).toUpperCase());
+}
+
+// Uppercase D-nn/R-nn tokens inside a bullet's well-formed parenthesized
+// trace groups. GitHub issue groups (#24) and groups that fail the
+// TRACE_WELL_FORMED_RE grammar contribute nothing — same classification
+// validateEntry applies when it collects trace groups.
+function bulletTraceTokens(entry) {
+  const tokens = new Set();
+  const groupRe = new RegExp(TRACE_GROUP_RE.source, 'g');
+  let g;
+  while ((g = groupRe.exec(String(entry))) !== null) {
+    const gr = g[1].trim();
+    if (ISSUE_REF_GROUP_RE.test(gr)) continue;
+    if (!TRACE_WELL_FORMED_RE.test(gr)) continue;
+    for (const t of gr.match(/[DR]-\d+/g) || []) tokens.add(t.toUpperCase());
+  }
+  return tokens;
+}
+
+function refsIntersectTaskRefs(entry, taskRefs) {
+  const tokens = bulletTraceTokens(entry);
+  return taskRefs.some((t) => tokens.has(t));
+}
+
+// Does `headText` carry a changelog record that `baseText` does not already
+// contain? Two satisfying shapes: (a) a bullet under [Unreleased] whose
+// trimmed text is absent from the ENTIRE base text, or (b) a newest version
+// section whose heading (tag + date) has no counterpart in base — the
+// promote path strips entry stamps when moving bullets into the new section,
+// so that section's bullets count as new without a text lookup.
+// `baseText === null` (or `opts.noBaseText === true`) selects the file-shape
+// fallback for callers without a base snapshot: ok iff [Unreleased] holds at
+// least one bullet, reason 'unreleased-nonempty' otherwise. `opts.taskRefs`,
+// when non-empty, restricts satisfaction to new bullets whose trace-ref
+// group intersects the list. Pure: no clock, no filesystem.
+function batchAddsChangelogRecord(headText, baseText, opts) {
+  const head = parseChangelog(headText);
+  if (baseText == null || (opts && opts.noBaseText === true)) {
+    return head.unreleased.length > 0
+      ? { ok: true, reason: null }
+      : { ok: false, reason: 'unreleased-nonempty' };
+  }
+  const base = String(baseText);
+  const baseHeadings = new Set(parseChangelog(base).versions.map(versionSectionKey));
+  const taskRefs = normalizeTaskRefs(opts);
+  const fresh = [];
+  for (const entry of head.unreleased) {
+    if (!base.includes(entry)) fresh.push(entry);
+  }
+  const newest = head.versions[0];
+  if (newest !== undefined && !baseHeadings.has(versionSectionKey(newest))) {
+    fresh.push(...newest.entries);
+  }
+  if (fresh.length === 0) return { ok: false, reason: 'no-new-bullet' };
+  if (taskRefs.length === 0) return { ok: true, reason: null };
+  return fresh.some((e) => refsIntersectTaskRefs(e, taskRefs))
+    ? { ok: true, reason: null }
+    : { ok: false, reason: 'task-refs-unmatched' };
 }
 
 // ---- : single changelog location resolver + shared lock
@@ -571,6 +648,8 @@ module.exports = {
   validateStructure,
   promoteUnreleased,
   utcToday,
+  showPathSnapshot,
+  batchAddsChangelogRecord,
   neutralizeIssueTriggers,
   changelogProjectRoot,
   validateChangelogRelPath,

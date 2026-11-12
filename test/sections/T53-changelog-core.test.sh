@@ -46,9 +46,9 @@ function entryReject(id, entry, expectSub) {
   });
 }
 
-function structReject(id, doc, opts, expectSub) {
+function structReject(id, doc, expectSub) {
   check(id, () => {
-    const r = core.validateStructure(doc, opts);
+    const r = core.validateStructure(doc);
     if (r.ok) return 'accepted but should be rejected';
     if (!r.errors.some((m) => m.includes(expectSub))) return `no error contains '${expectSub}': ${JSON.stringify(r.errors)}`;
     collectedErrors.push(...r.errors);
@@ -123,24 +123,30 @@ entryReject('SD', '- Add shared validator (task T53) [2026-09-18]', 'malformed t
 entryReject('SE', '- Add shared validator (D-42)', 'date stamp');
 entryReject('SF', '- Add (D-42) [2026-09-18]', 'summary');
 
-// --- V: validateStructure (three checks) -----------------------------------
+// --- V: validateStructure (two format checks, clock-free) ------------------
 
 check('V0', () => {
-  const r = core.validateStructure(DOC_OK, { todayUtc: '2026-09-19' });
+  const r = core.validateStructure(DOC_OK);
   return r.ok ? true : `healthy doc rejected: ${JSON.stringify(r.errors)}`;
 });
 
 const DOC_TWO_TITLES = DOC_OK + '\n# Duplicate Title\n';
-structReject('V1', DOC_TWO_TITLES, { todayUtc: '2026-09-19' }, 'exactly one top-level');
+structReject('V1', DOC_TWO_TITLES, 'exactly one top-level');
 
 const DOC_ASC_DATES = DOC_OK.replace('2026-09-01', '2026-08-15').replace('## [1.1.0] - 2026-08-15', '## [1.1.0] - 2026-09-01');
-structReject('V2', DOC_ASC_DATES, { todayUtc: '2026-09-19' }, 'newest-first');
+structReject('V2', DOC_ASC_DATES, 'newest-first');
 
-structReject('V3', DOC_OK, { todayUtc: '2099-01-01' }, "today's obligation");
+// the clock obligation is retired: a doc whose newest stamp is stale (no
+// bullet dated today, none in any version section) still passes format checks
+check('V3', () => {
+  const stale = DOC_OK + '\n- Add stale-stamped bullet (R-06) [2020-01-01]\n';
+  const r = core.validateStructure(stale);
+  return r.ok ? true : `clock leaked back into format checks: ${JSON.stringify(r.errors)}`;
+});
 
 check('V4', () => {
-  const r = core.validateStructure(DOC_NO_UNREL, { todayUtc: '2026-09-19' });
-  return r.ok ? true : `obligation via latest version rejected: ${JSON.stringify(r.errors)}`;
+  const r = core.validateStructure(DOC_NO_UNREL);
+  return r.ok ? true : `doc without an [Unreleased] section rejected: ${JSON.stringify(r.errors)}`;
 });
 
 const DOC_PROMOTE_TODAY = [
@@ -161,19 +167,19 @@ const DOC_PROMOTE_TODAY = [
 ].join('\n');
 
 check('V4b', () => {
-  const r = core.validateStructure(DOC_PROMOTE_TODAY, { todayUtc: '2026-09-19' });
-  return r.ok ? true : `same-day promote (empty [Unreleased], stamped entries stripped, section heading dated today) rejected: ${JSON.stringify(r.errors)}`;
+  const r = core.validateStructure(DOC_PROMOTE_TODAY);
+  return r.ok ? true : `promote-shaped doc (empty [Unreleased], stamps stripped) rejected: ${JSON.stringify(r.errors)}`;
 });
 
 const DOC_BAD_DATE = DOC_OK.replace('## [1.2.0] - 2026-09-01', '## [1.2.0] - 20260901');
-structReject('V5', DOC_BAD_DATE, { todayUtc: '2026-09-19' }, 'valid date');
+structReject('V5', DOC_BAD_DATE, 'valid date');
 
+// no date input can move the verdict: the validator result is identical
+// whatever a caller passes in the (now ignored) options position
 check('V6', () => {
-  // no opts: default today must come from the same utcToday() the add path uses
-  const today = core.utcToday();
-  const doc = `# Changelog\n\n## [Unreleased]\n\n- Add fresh entry (D-42) [${today}]\n`;
-  const r = core.validateStructure(doc);
-  return r.ok ? true : `default todayUtc mismatch: ${JSON.stringify(r.errors)}`;
+  const a = core.validateStructure(DOC_OK);
+  const b = core.validateStructure(DOC_OK, { todayUtc: '2099-01-01' });
+  return JSON.stringify(a) === JSON.stringify(b) ? true : `date input changed the verdict: ${JSON.stringify(a)} vs ${JSON.stringify(b)}`;
 });
 
 // --- P: promoteUnreleased ---------------------------------------------------

@@ -292,7 +292,7 @@ node "$GOS" init 3 "lazy plan" >/dev/null 2>&1
 # REVIEW #1 fallout: this section used to truncate at E2 (phase-claim bug + set -e), so G1
 # never actually ran against the commit-embedded semantics. Realistic lazy-freeze fixture:
 # the pre-Phase-B task HAS decisions (THINK happened) — plan Covers must match them.
-node "$GOS" decision add D-01 "lazy-freeze covered decision" --rationale "r" >/dev/null 2>&1
+node "$GOS" decision add D-01 "lazy-freeze covered decision" --rationale "r" >/dev/null --dig-waiver "test fixture" 2>&1
 mkdir -p src && echo "// lazy-freeze fixture" > src/a.cjs # Files-declared file must exist & hit diff (semantic embed)
 cat > "$(gos_plan)" <<'PLANEOF'
 # Plan

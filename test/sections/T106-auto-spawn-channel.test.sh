@@ -175,7 +175,7 @@ echo "C2: channel-negative (refusal matrix)"
 t106_exit "missing entry refused" "REFUSED no-entry" "$(node "$ADMIT" "$CHAN_ROOT" commit THINK sp-nobody - - 2>&1)"
 t106_exit "unset spawn id refused" "REFUSED no-entry" "$(node "$ADMIT" "$CHAN_ROOT" commit THINK - - - 2>&1)"
 t106_exit "redteam entry never writes" "REFUSED redteam-no-write" "$(node "$ADMIT" "$CHAN_ROOT" commit THINK sp-red - - 2>&1)"
-t106_exit "verb outside the grants refused" "REFUSED not-in-grants" "$(node "$ADMIT" "$CHAN_ROOT" decision add sp-work - - 2>&1)"
+t106_exit "verb outside the grants refused" "REFUSED not-in-grants" "$(node "$ADMIT" "$CHAN_ROOT" decision add sp-work - - --dig-waiver "test fixture" 2>&1)"
 t106_exit "truth add refused (verify only)" "REFUSED not-whitelisted" "$(node "$ADMIT" "$CHAN_ROOT" truth add sp-work - - 2>&1)"
 t106_exit "stage mismatch refused" "REFUSED stage-mismatch" "$(node "$ADMIT" "$CHAN_ROOT" commit BUILD sp-work - - 2>&1)"
 t106_exit "legacy grant-less entry keeps the four-verb default (checkpoint outside)" "REFUSED not-in-grants" "$(node "$ADMIT" "$CHAN_ROOT" checkpoint save sp-work - - 2>&1)"
@@ -227,7 +227,7 @@ t106_exit "stale heartbeat refused" "REFUSED stale-heartbeat" "$(node "$ADMIT" "
 # OLD registry lived must mean nothing — the store is the only entry source.
 printf '{"spawn_id": "sp-ghost", "kind": "work", "stage": "THINK", "grants": ["commit", "gate", "section", "truth", "checkpoint"], "use_cap": 999, "uses": 0, "window_expiry": %s}' "$(node -e 'console.log(Date.now() + 600000)')" > "$CHAN_ROOT/.gos/cache/auto-spawn/sp-ghost.json"
 t106_exit "forged .gos/cache entry inert (no store entry)" "REFUSED no-entry" "$(node "$ADMIT" "$CHAN_ROOT" commit THINK sp-ghost - - 2>&1)"
-t106_exit "forged .gos/cache entry grants nothing outside its verbs either" "REFUSED not-in-grants" "$(node "$ADMIT" "$CHAN_ROOT" decision add sp-work - - 2>&1)"
+t106_exit "forged .gos/cache entry grants nothing outside its verbs either" "REFUSED not-in-grants" "$(node "$ADMIT" "$CHAN_ROOT" decision add sp-work - - --dig-waiver "test fixture" 2>&1)"
 
 # ---------------------------------------------------------------- C3 --
 echo "C3: cli-surface (marker-active CLI runs)"
@@ -245,7 +245,7 @@ node -e "
 const sr = require(process.env.GOS_ROOT + '/bin/lib/core/spawnreg.cjs');
 sr.writeEntry('$CLI_CASE/repo', { spawnId: 'sp-cli', kind: 'work', stage: 'THINK', pid: 1, wallMs: 600000 });
 " 2>/dev/null
-OUT="$(GOS_AUTO_SPAWNED=1 GOS_AUTO_SPAWN_ID=sp-cli node "$GOS" decision add D-01 "x" --rationale "y" 2>&1)"; RC=$?
+OUT="$(GOS_AUTO_SPAWNED=1 GOS_AUTO_SPAWN_ID=sp-cli node "$GOS" decision add D-01 "x" --rationale "y" --dig-waiver "test fixture" 2>&1)"; RC=$?
 t106_contains "marker + decision add refused" "spawn channel refused (not-in-grants)" "$OUT"
 t106_exit "refusal exits non-zero" "1" "$RC"
 

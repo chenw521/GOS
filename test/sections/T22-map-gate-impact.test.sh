@@ -30,7 +30,7 @@ spec v1 — fixture
 | impl b | fixture | covers map checks | fixture only | map closure reports |
 why-not: impl b — fixture discard
 SPECEOF
-  node "$GOS" decision add D-01 "core" --rationale "r" >/dev/null 2>&1
+  node "$GOS" decision add D-01 "core" --rationale "r" >/dev/null --dig-waiver "test fixture" 2>&1
   node "$GOS" approve think >/dev/null 2>&1
   node "$GOS" commit think >/dev/null 2>&1
   cat > "$(gos_plan)" <<PLANEOF

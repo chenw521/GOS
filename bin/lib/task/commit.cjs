@@ -212,6 +212,31 @@ function refusePlanFreeze(refusal) {
   process.exit(1);
 }
 
+// Post-archive merge: the chain archive's own write is the authority on the
+// archive-won fields (current_stage, completed_at, cleared checkpoints, the
+// STATE_PATH_FIELDS rewrites); re-read disk and copy those into the in-memory
+// state so the advance write below preserves them instead of clobbering the
+// stamp, the cleared checkpoints and the archive paths with this pre-archive
+// copy. Everything else (approvals, spec_sha256, plan_snapshot, decisions,
+// requirements, completed_stages backfill) stays commit-owned.
+function mergeArchiveWonFields(state) {
+  const fresh = core.readState();
+  if (!fresh) return;
+  state.current_stage = fresh.current_stage;
+  if (fresh.completed_at !== undefined) state.completed_at = fresh.completed_at;
+  if (fresh.checkpoints !== undefined) state.checkpoints = fresh.checkpoints;
+  for (const f of core.STATE_PATH_FIELDS.direct) {
+    if (fresh[f] !== undefined) state[f] = fresh[f];
+  }
+  const truths = state.observable_truths || [];
+  const freshTruths = fresh.observable_truths || [];
+  for (let i = 0; i < truths.length && i < freshTruths.length; i++) {
+    const ev = truths[i] && truths[i].evidence;
+    const freshEv = freshTruths[i] && freshTruths[i].evidence;
+    if (ev && freshEv && freshEv.artifact_path !== undefined) ev.artifact_path = freshEv.artifact_path;
+  }
+}
+
 function cmdCommit(argv) {
   // --subject "<text>": explicit commit subject (English escape hatch when the
   // intent summary cannot serve as one). Consumed BEFORE <stage> parsing so
@@ -243,6 +268,7 @@ function cmdCommit(argv) {
     const specText = fs.readFileSync(sp, 'utf8');
     if (state.spec_gate_version !== undefined) enforceStampedSpecFloor(state, specText);
     else stampSpecByProbe(state, specText, { blockOnNone: false });
+    ops.digFloorFreezeCheck(state, specText); // dig floor: same freeze contract, era-gated by born_at
     state.spec_sha256 = core.sha256FileSync(sp);
     core.writeState(state);
     console.log(`✓ spec re-frozen: spec_sha256 recomputed (stage ${state.current_stage} unchanged, no commit written)`);
@@ -442,7 +468,26 @@ function cmdCommit(argv) {
   // wire cmdArchive here so the promise is code, not copy. Idempotent: archive exits 0
   // on "already archived" when the stage rolled past.
   if ((stage === 'SHIP' && lv >= 3) || (stage === 'VERIFY' && lv < 3)) {
-    try { sibArchive.cmdArchive({ fromCommit: true }); } catch (e) { console.error(`⚠ post-commit archive skipped: ${e.message || e}`); }   // fromCommit=true: archive inside the commit chain runs with degraded ritual gates and never takes the git commit authority away from this commit
+    try {
+      sibArchive.cmdArchive({ fromCommit: true });   // fromCommit=true: archive inside the commit chain runs with degraded ritual gates and never takes the git commit authority away from this commit
+    } catch (e) {
+      // A failed chain archive never advances silently. When a dest already
+      // materialized, the half-transaction completion cures the crash window
+      // (registry rewrites + DONE + completed_at land on disk) and the advance
+      // proceeds; with no dest holding the task, the advance is refused.
+      const reason = (e && e.message) ? String(e.message).split('\n')[0] : String(e);
+      const prevMode = core.readState._mode;
+      core.readState._mode = 'read';
+      const crashState = core.readState();
+      core.readState._mode = prevMode;
+      const landed = crashState ? sibArchive.landHalfTransaction(crashState) : false;
+      if (landed) {
+        console.error(`⚠ post-commit archive failed mid-transaction (${reason}) — half-transaction completion landed (DONE + completed_at + path rewrites on disk), advancing`);
+      } else {
+        core.die(`post-commit archive failed (${reason}) and no archive destination holds this task — refusing to advance past ${stage}. Run \`gos archive\` directly to finish, then re-run this commit`);
+      }
+    }
+    mergeArchiveWonFields(state);
   }
   if (stage === 'THINK' && lv >= 2) {
     const sp = core.specPathOf(state);
@@ -456,6 +501,10 @@ function cmdCommit(argv) {
       if (state.spec_gate_version !== undefined) enforceStampedSpecFloor(state, specText);
       else stampSpecByProbe(state, specText, { blockOnNone: !state.spec_sha256 });
       state.spec_sha256 = core.sha256FileSync(sp); // B-22 freeze at THINK commit
+      // dig floor: runs AFTER the card floor and outside the probe
+      // sequence — the probe returns the first passing floor, so this leg
+      // reads state directly (era-gated by born_at, pre-era grandfathered).
+      ops.digFloorFreezeCheck(state, specText);
     }
   }
   if (stage === 'PLAN' && lv >= 3) {

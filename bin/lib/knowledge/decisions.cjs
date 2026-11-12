@@ -24,6 +24,68 @@ function autoRenderViews(project) {
   _autoRender(project);
 }
 
+// Dig-floor era: decisions recorded after this instant must carry dig
+// evidence. Single home — the add path and the spec-freeze check both read
+// this constant, never a second copy. Records without a born_at stamp
+// predate the era and grandfather.
+const DIG_FLOOR_ERA = '2026-11-11T09:20:50.980Z';
+
+// Accepted dig-evidence grammar (an evidence OBJECT, never free text):
+//   {command, output_excerpt, anchor} — a ran command, the output it
+//                                     produced, and a resolvable file:line
+//                                     anchor into the inspected source
+//   {ruling: "<date + ruling source>"} — explicit user-ruling citation
+//   {waiver: "<reason>"}                — explicit waiver
+function digShapesHint() {
+  return 'accepted shapes: --dig \'{"command":"<command you ran>","output_excerpt":"<output you observed>","anchor":"<file>:<line>"}\' (a command/output pair plus a resolvable file:line anchor) | --dig-ruling "<date + ruling source>" | --dig-waiver "<reason>"';
+}
+
+// A file:line anchor resolves when the file exists (relative to the CLI's
+// cwd) and the line number falls inside the file.
+function digAnchorErr(anchor, rootDir) {
+  const m = /^(.+):(\d+)$/.exec(String(anchor));
+  if (!m) return `anchor: expected file:line, got "${anchor}"`;
+  const full = path.resolve(rootDir || process.cwd(), m[1]);
+  if (!fs.existsSync(full)) return `anchor: file not found: ${m[1]}`;
+  if (fs.statSync(full).isDirectory()) return `anchor: not a file: ${m[1]}`;
+  let lines = 0;
+  try { lines = fs.readFileSync(full, 'utf8').split('\n').length; } catch { return `anchor: unreadable file: ${m[1]}`; }
+  const ln = parseInt(m[2], 10);
+  if (ln < 1 || ln > lines) return `anchor: line ${ln} outside 1..${lines} for ${m[1]}`;
+  return null;
+}
+
+// Validate a dig evidence object; null = acceptable. Ruling and waiver are
+// single-field objects; the full shape needs the command/output pair plus
+// at least one resolvable anchor (all anchors must resolve when a list is
+// given — a claimed-but-dead anchor is not evidence).
+function digEvidenceErr(dig, rootDir) {
+  if (dig === null || typeof dig !== 'object' || Array.isArray(dig)) {
+    return 'evidence must be an object — a free-text sentence is not evidence';
+  }
+  const keys = Object.keys(dig);
+  if (typeof dig.ruling === 'string') {
+    if (!dig.ruling.trim()) return 'ruling: non-empty "<date + ruling source>" required';
+    if (keys.length !== 1) return 'ruling: must be the only field of the evidence object';
+    return null;
+  }
+  if (typeof dig.waiver === 'string') {
+    if (!dig.waiver.trim()) return 'waiver: non-empty "<reason>" required';
+    if (keys.length !== 1) return 'waiver: must be the only field of the evidence object';
+    return null;
+  }
+  if (typeof dig.command !== 'string' || !dig.command.trim()) return 'command: non-empty string required (the command you ran)';
+  if (typeof dig.output_excerpt !== 'string' || !dig.output_excerpt.trim()) return 'output_excerpt: non-empty string required (the output you observed)';
+  const anchors = Array.isArray(dig.anchor) ? dig.anchor : [dig.anchor];
+  if (!anchors.length) return 'anchor: at least one resolvable file:line anchor required';
+  for (const a of anchors) {
+    if (typeof a !== 'string') return 'anchor: file:line string required';
+    const err = digAnchorErr(a, rootDir);
+    if (err) return err;
+  }
+  return null;
+}
+
 function decisionParseOpts(rest, valueFlags) {
   const pos = [];
   const opt = {};
@@ -131,7 +193,7 @@ function cmdDecision(args) {
 
   if (sub === 'add') {
     if (state.level !== null && state.level < 3) core.die('decision add requires Lv3/Lv4 (Lv1-2 decisions live in spec.md prose).');
-    const { pos, opt } = decisionParseOpts(args.slice(1), ['--rationale', '--supersedes', '--anchor', '--phase']);
+    const { pos, opt } = decisionParseOpts(args.slice(1), ['--rationale', '--supersedes', '--anchor', '--phase', '--dig', '--dig-ruling', '--dig-waiver']);
     let id = null;
     let title = null;
     if (pos.length >= 2) { id = pos[0]; title = pos.slice(1).join(' '); }
@@ -139,7 +201,7 @@ function cmdDecision(args) {
       if (/^[DR]-\d{2,3}$/.test(pos[0])) { id = pos[0]; title = ''; }
       else title = pos[0];
     }
-    if (title === null) core.die('Usage: gos decision add [id] "title" --rationale "..." [--supersedes D-XX] [--anchor spec.md#sec] [--phase "P1: name"]');
+    if (title === null) core.die('Usage: gos decision add [id] "title" --rationale "..." [--supersedes D-XX] [--anchor spec.md#sec] [--phase "P1: name"] [--dig \'<json>\' | --dig-ruling "<date + ruling source>" | --dig-waiver "<reason>"]');
     if (id !== null && !/^D-\d{2,3}$/.test(id)) core.die(`bad id "${id}" — decision ids must be D-prefixed: ^D-\\d{2,3}$ (D-01..D-999)`);
     if (id === null) id = decisionNextId(state, project);
     const { sd: dupS, pd: dupP } = decisionFind(state, project, id);
@@ -161,7 +223,40 @@ function cmdDecision(args) {
       if (!tS && !tP) core.die(`supersedes target ${supersedes} not found`);
       if (decisionChainReaches(state, project, supersedes, id)) core.die(`supersedes: cycle detected — ${id} is already in the chain from ${supersedes}`);
     }
-    const d = { id, title, rationale, birth_phase: phaseL || state.phase_name || 'P0', status: 'open', anchor, covered: false, covered_by: null };
+    // dig floor: decisions born after the floor era carry evidence-object
+    // dig at write time. Exactly one source is accepted; free text in any
+    // spelling is refused. Field checks above stay first so malformed
+    // titles keep their original teaching messages.
+    const bornAt = new Date().toISOString();
+    let dig = null;
+    const digSources = [];
+    if (opt['--dig'] !== undefined) digSources.push('--dig');
+    if (opt['--dig-ruling'] !== undefined) digSources.push('--dig-ruling');
+    if (opt['--dig-waiver'] !== undefined) digSources.push('--dig-waiver');
+    if (digSources.length > 1) core.die(`dig: pass exactly one evidence source (${digSources.join(' + ')} given) — ${digShapesHint()}`);
+    if (digSources.length === 1) {
+      const flag = digSources[0];
+      const val = opt[flag];
+      if (val === null) core.die(`dig: ${flag} requires its value — ${digShapesHint()}`);
+      if (flag === '--dig') {
+        let parsed = null;
+        try { parsed = JSON.parse(val); } catch (e) {
+          core.die(`dig: --dig value is not valid JSON (${String(e.message).split('\n')[0]}) — ${digShapesHint()}`);
+        }
+        const perr = digEvidenceErr(parsed);
+        if (perr) core.die(`dig: ${perr} — ${digShapesHint()}`);
+        dig = parsed;
+      } else {
+        const shape = flag === '--dig-ruling' ? { ruling: val } : { waiver: val };
+        const serr = digEvidenceErr(shape);
+        if (serr) core.die(`dig: ${serr} — ${digShapesHint()}`);
+        dig = shape;
+      }
+    } else if (bornAt > DIG_FLOOR_ERA) {
+      core.die(`dig floor: decisions born after ${DIG_FLOOR_ERA} require dig evidence at add — ${digShapesHint()}`);
+    }
+    const d = { id, title, rationale, birth_phase: phaseL || state.phase_name || 'P0', status: 'open', anchor, covered: false, covered_by: null, born_at: bornAt };
+    if (dig) d.dig = dig;
     if (supersedes) d.supersedes = supersedes;
     let touchedProject = false;
     if (decisionDualStore(state) && project) {
@@ -305,7 +400,8 @@ function cmdDecision(args) {
   }
 
   console.log('Usage: gos decision <add|amend|cover|list|import> ...');
-  console.log('  add [id] "title" --rationale "..." [--supersedes D-XX] [--anchor spec.md#sec] [--phase "P1: name"]');
+  console.log('  add [id] "title" --rationale "..." [--supersedes D-XX] [--anchor spec.md#sec] [--phase "P1: name"] [--dig \'<json>\' | --dig-ruling "<...>" | --dig-waiver "<...>"]');
+  console.log('    dig evidence: {"command":"<cmd>","output_excerpt":"<output>","anchor":"<file>:<line>"} — or a ruling/waiver citation');
   console.log('  amend <id> --title "..." [--rationale "..."]');
   console.log('  cover <id> --task T-NN');
   console.log('  list [--all]    current-phase decisions; --all = merged cross-phase audit incl. superseded (row status is write-time snapshot)');
@@ -313,6 +409,10 @@ function cmdDecision(args) {
 }
 
 Object.assign(module.exports, {
+  DIG_FLOOR_ERA,
+  digShapesHint,
+  digAnchorErr,
+  digEvidenceErr,
   decisionParseOpts,
   decisionFind,
   decisionTitleErr,

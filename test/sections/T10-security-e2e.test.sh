@@ -45,7 +45,7 @@ echo "--- T10 PART 1: security canaries + static audit + version trip ---"
 node "$GOS" init 4 "sec sandbox" --project >/dev/null 2>&1
 
 # --- P1.1: decision add title canary — literal $(...) passed via argv, must be rejected, never executed ---
-set +e; OUT=$(node "$GOS" decision add D-01 '$(touch pwned-t10)' --rationale r 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" decision add D-01 '$(touch pwned-t10)' --rationale r --dig-waiver "test fixture" 2>&1); RC=$?; set -e
 assert_exit "decision canary exits 1" 1 "$RC"
 assert_not_file "decision canary: no command substitution executed" "pwned-t10"
 assert_contains "decision canary names rejection" "rejected" "$OUT"
@@ -64,7 +64,7 @@ assert_not_file "phase canary: no file created" "pwned-t10c"
 assert_contains "phase canary names rejection" "rejected" "$OUT"
 
 # --- P1.4: decision amend canary (needs a clean first)
-node "$GOS" decision add D-01 "clean base" --rationale r >/dev/null 2>&1
+node "$GOS" decision add D-01 "clean base" --rationale r >/dev/null --dig-waiver "test fixture" 2>&1
 set +e; OUT=$(node "$GOS" decision amend D-01 --title '$(touch pwned-t10d)' 2>&1); RC=$?; set -e
 assert_exit "amend canary exits 1" 1 "$RC"
 assert_not_file "amend canary: no file created" "pwned-t10d"
@@ -86,7 +86,7 @@ EXPECTED_ID=$(python3 -c "import hashlib; print(hashlib.sha256(b'github.com:443/
 python3 -c "
 import json; s=json.load(open('.gos/state.json')); s['repo_id']='deadbeefdeadbeef'
 json.dump(s,open('.gos/state.json','w'),indent=2)"
-set +e; OUT=$(node "$GOS" decision add D-99 "blocked" 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" decision add D-99 "blocked" --dig-waiver "test fixture" 2>&1); RC=$?; set -e
 assert_exit "foreign repo_id blocks write" 1 "$RC"
 assert_contains "blocked message names repo identity" "repo identity" "$OUT"
 assert_contains "blocked message names stored repo_id" "deadbeefdeadbeef" "$OUT"
@@ -97,7 +97,7 @@ assert_contains "anchor fix contract" "anchor re-fixed to" "$OUT"
 ID_NOW=$(python3 -c "import json; print(json.load(open('.gos/state.json')).get('repo_id'))")
 assert_eq "anchor fix re-derived repo_id from remotes" "$EXPECTED_ID" "$ID_NOW"
 assert_not_contains "state carries no project_root after fix" "project_root" "$(cat .gos/state.json)"
-set +e; OUT=$(node "$GOS" decision add D-99 "post rescue" 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" decision add D-99 "post rescue" --dig-waiver "test fixture" 2>&1); RC=$?; set -e
 assert_exit "write works after anchor fix" 0 "$RC"
 
 # --- P1.7: version trip — project.json schema 999 → write-class exit 3 (checkpoint save) ---
@@ -122,7 +122,7 @@ OUT=$(node "$GOS" status 2>&1)
 assert_contains "status shows Lv3" "(Lv3)" "$OUT"
 
 # --- E2E.2: uncovered decision → gate coverage exit 1 naming
-node "$GOS" decision add D-01 "use atomic writes" --rationale "crash safety" >/dev/null 2>&1
+node "$GOS" decision add D-01 "use atomic writes" --rationale "crash safety" >/dev/null --dig-waiver "test fixture" 2>&1
 set +e; OUT=$(node "$GOS" gate coverage 2>&1); RC=$?; set -e
 assert_exit "gate coverage exit 1 on uncovered" 1 "$RC"
 assert_contains "failure names D-01" "D-01" "$OUT"
@@ -148,13 +148,13 @@ set +e; OUT=$(node "$GOS" gate coverage 2>&1); RC=$?; set -e
 assert_exit "gate coverage passes after cover" 0 "$RC"
 
 # --- E2E.4: add → amend title → list shows amended
-node "$GOS" decision add D-02 "second decision" >/dev/null 2>&1
+node "$GOS" decision add D-02 "second decision" >/dev/null --dig-waiver "test fixture" 2>&1
 node "$GOS" decision amend D-02 --title "second amended" >/dev/null 2>&1
 OUT=$(node "$GOS" decision list 2>&1)
 assert_contains "amended title in list" "second amended" "$OUT"
 
 # --- E2E.5: supersedes → default list hides it, --all shows
-node "$GOS" decision add D-03 "supersedes d2" --supersedes D-02 >/dev/null 2>&1
+node "$GOS" decision add D-03 "supersedes d2" --supersedes D-02 >/dev/null --dig-waiver "test fixture" 2>&1
 OUT=$(node "$GOS" decision list 2>&1)
 assert_not_contains "default list hides superseded D-02" "D-02" "$OUT"
 OUT=$(node "$GOS" decision list --all 2>&1)
@@ -190,7 +190,7 @@ assert_exit "claim 0 allowed (last_archived null)" 0 "$RC"
 PH=$(python3 -c "import json; print(json.load(open('.gos/state.json'))['phase_name'])")
 assert_eq "state.phase_name = P1: core" "P1: core" "$PH"
 
-node "$GOS" decision add D-01 "use atomic writes" --rationale "crash safety" >/dev/null 2>&1
+node "$GOS" decision add D-01 "use atomic writes" --rationale "crash safety" >/dev/null --dig-waiver "test fixture" 2>&1
 DUAL=$(python3 -c "
 import json
 s=json.load(open('.gos/state.json')); p=json.load(open('.gos/project/project.json'))

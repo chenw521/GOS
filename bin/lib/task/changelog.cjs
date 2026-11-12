@@ -150,12 +150,12 @@ async function cmdChangelogAdd(rest) {
 // validators the add generator pre-writes with — one validator, zero drift.
 // Zone discriminant: [Unreleased] is the add-generated zone, so every entry
 // gets full validateEntry; versioned sections are promote products plus
-// hand-written history, so they get the structural three-checks only and are
+// hand-written history, so they get the structural format checks only and are
 // never entry-validated. A missing file is an advisory, not a failure —
 // obligations start once the file exists, and the next `add` bootstraps it.
-// Without an active task state (state.json is gitignored, so CI and audit
-// contexts have none) the today-obligation check downgrades to an advisory;
-// every other check stays hard.
+// Lint is format-only and state-free: the batch-record obligation (did this
+// batch add a changelog record?) is a structural-delta question enforced by
+// the ship ritual and the gate's changelog obligation leg, not by lint.
 function cmdChangelogLint() {
   let text;
   try {
@@ -165,16 +165,10 @@ function cmdChangelogLint() {
     process.exit(0);
   }
 
-  const hasState = !!core.readState();
   const violations = [];
-  const advisories = [];
 
   for (const err of clcore.validateStructure(text).errors) {
-    if (!hasState && err.startsWith("structure: today's obligation")) {
-      advisories.push(`${err} — downgraded to advisory (no .gos/state.json, CI or audit context)`);
-    } else {
-      violations.push(err);
-    }
+    violations.push(err);
   }
 
   const parsed = clcore.parseChangelog(text);
@@ -198,9 +192,8 @@ function cmdChangelogLint() {
     for (const v of violations) console.error(`  ✗ ${v}`);
     process.exit(1);
   }
-  for (const a of advisories) console.log(`⚠ changelog lint: ${a}`);
   const n = parsed.unreleased.length;
-  console.log(`✓ changelog lint: CHANGELOG.md clean — structural three-checks pass, ${n} [Unreleased] ${n === 1 ? 'entry' : 'entries'} validated, ${parsed.versions.length} version section(s) checked structurally`);
+  console.log(`✓ changelog lint: CHANGELOG.md clean — structural format checks pass, ${n} [Unreleased] ${n === 1 ? 'entry' : 'entries'} validated, ${parsed.versions.length} version section(s) checked structurally`);
   process.exit(0);
 }
 

@@ -28,7 +28,7 @@
 ## Design Decisions (D-NN)
 
 <!-- Each decision gets a D-NN ID. PLAN's Decision Coverage Gate checks all. -->
-<!-- Record each D-NN via: gos decision add D-NN "<conclusion>" --rationale "<why>" -->
+<!-- Record each D-NN via: gos decision add D-NN "<conclusion>" --rationale "<why>" --dig '{"command":"<command you ran>","output_excerpt":"<output you observed>","anchor":"<file>:<line>"}' (or --dig-ruling / --dig-waiver for user rulings) -->
 
 ### D-nn: [Decision title]
 

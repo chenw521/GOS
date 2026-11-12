@@ -696,7 +696,7 @@ console.log('CHECKED[' + v.checked + ']');
 EOF
 node "$T107_FX/gate-hold.cjs" > "$T107_FX/hold.out" 2> "$T107_FX/hold.err"; RC=$?
 t107_exit "red-hold probe completes (process alive, no exit)" "0" "$RC"
-printf 'HOLD-SHAPE-OK\nCODES[gates-json-invalid,readme-drift]\nCHECKED[4]\n' > "$T107_FX/hold-expected.out"
+printf 'HOLD-SHAPE-OK\nCODES[gates-json-invalid,readme-drift]\nCHECKED[5]\n' > "$T107_FX/hold-expected.out"
 if diff -q "$T107_FX/hold-expected.out" "$T107_FX/hold.out" >/dev/null 2>&1; then
   t107_ok "ok:false, findings shaped, zero stdout bytes from the call itself"
 else

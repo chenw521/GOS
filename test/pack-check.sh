@@ -20,7 +20,9 @@
 #             stripped, exact-string census match) must resolve to a git:false
 #             entry — anything else is an unregistered untracked file;
 #   census-v  validator: root-matching entry keys rejected; every entry must
-#             match at least one real file (ls-files union pack union disk).
+#             match at least one real file (ls-files union pack union disk);
+#             optional:true entries are valid while absent but legal only on
+#             .gitignore-covered paths (tracked paths cannot be optional).
 # Usage: bash test/pack-check.sh    (exit 0 = pass, 1 = violation)
 set -uo pipefail
 
@@ -117,14 +119,21 @@ for (const k of rawKeys) {
   }
   const kk = norm(k);
   if (ROOT_SET.has(kk) || kk.startsWith('/')) { bad('v', `root-matching entry key "${k}" rejected`); continue; }
-  // Transient machine-local entries (git:false + covered by .gitignore) may
-  // legitimately be absent on an idle tree — e.g. .gos/.lock exists only while
-  // a gos process runs. They are never dead; their existence check is the
-  // gitignore reconciliation (source 3), not presence here. Lifecycle entries
-  // (lifecycle:true) are the tracked counterpart: present while a task is in
-  // flight, legally absent on idle/archived trees and fresh clones (the dir
-  // never travels once archived).
-  const transient = (!e.git && ignored(kk)) || e.lifecycle === true;
+  // Absence tolerance, most explicit first: optional:true declares it and is
+  // legal only on .gitignore-covered paths (verdict above names the entry
+  // when it is not — tracked paths can never be optional); without the flag,
+  // git:false + .gitignore-covered entries derive the same tolerance
+  // (transient machine-local zones, e.g. .gos/.lock exists only while a gos
+  // process runs; they are never dead — their existence check is the
+  // gitignore reconciliation in source 3). Lifecycle entries (lifecycle:
+  // true) are the tracked counterpart: present while a task is in flight,
+  // legally absent on idle/archived trees and fresh clones (the dir never
+  // travels once archived).
+  const isOptional = e.optional === true;
+  if (isOptional && !ignored(kk)) {
+    bad('v', `optional entry "${k}" must be covered by .gitignore (tracked paths cannot be optional)`);
+  }
+  const transient = isOptional || (!e.git && ignored(kk)) || e.lifecycle === true;
   const alive = transient
     || ls.some((f) => f === kk || f.startsWith(kk + '/'))
     || packList.some((f) => f === kk || f.startsWith(kk + '/'))

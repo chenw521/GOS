@@ -167,16 +167,40 @@ UDATE=$(python3 -c "import datetime; print(datetime.datetime.utcnow().date().iso
 VER=$(node -e "console.log(require(process.env.GOS_ROOT+'/package.json').version)")
 assert_file "P1 archive dir (phase token p1)" ".gos/archive/$UDATE-v$VER-phase-p1-ship-g1"
 assert_file "P2 archive dir (phase token p2)" ".gos/archive/$UDATE-v$VER-phase-p2-ship-g1"
-# structured-slug collision: reset completed_at on the SAME P2 state → re-archive → -2 suffix
+# structured-slug idempotency under archived-tid semantics — two-part split:
+# (1) completed_at reset alone leaves the paths archive-resident → the tid
+#     idempotency early-return fires (layout agrees with the archived home);
+# (2) the registered paths replanted into the live task zone defeat the
+#     early-return → the full archive path runs → same-day slug collision
+#     lands the -2 dest and performs the repair (rewrite + stamp)
 python3 -c "
 import json; s=json.load(open('.gos/state.json'))
 s['completed_at']=None
 json.dump(s,open('.gos/state.json','w'),indent=2)"
 set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
-assert_exit "third same-slug archive exits 0" 0 "$RC"
+assert_exit "stamp-reset re-archive early-returns" 0 "$RC"
+assert_contains "stamp-reset idempotent message" "already archived" "$OUT"
+UDATE=$(python3 -c "import datetime; print(datetime.datetime.utcnow().date().isoformat())")
+VER=$(node -e "console.log(require(process.env.GOS_ROOT+'/package.json').version)")
+NSLUG0=$(ls -d .gos/archive/$UDATE-v$VER-phase-p2-ship-g1* 2>/dev/null | wc -l | tr -d ' ')
+assert_eq "stamp-reset created no new dest" "1" "$NSLUG0"
+LIVE_SP="$(gos_spec)"; LIVE_PL="$(gos_plan)"
+python3 -c "
+import json; s=json.load(open('.gos/state.json'))
+s['completed_at']=None
+s['spec_path']='$LIVE_SP'
+s['plan_path']='$LIVE_PL'
+json.dump(s,open('.gos/state.json','w'),indent=2)"
+echo spec2b > "$(gos_spec)"
+set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
+assert_exit "live-paths re-archive falls through (collision dest)" 0 "$RC"
 assert_file "collision dest got -2 suffix" ".gos/archive/$UDATE-v$VER-phase-p2-ship-g1-2"
 NSLUG=$(ls -d .gos/archive/$UDATE-v$VER-phase-p2-ship-g1* 2>/dev/null | wc -l | tr -d ' ')
 assert_eq "exactly two same-slug dirs" "2" "$NSLUG"
+P2FIX=$(python3 -c "
+import json; s=json.load(open('.gos/state.json'))
+print('|'.join([str(bool(s.get('completed_at'))), str(s['spec_path'].startswith('.gos/archive/$UDATE-v$VER-phase-p2-ship-g1-2/'))]))")
+assert_eq "repair: completed_at stamped + spec_path rewritten into the -2 dest" "True|True" "$P2FIX"
 P2DONE=$(python3 -c "
 import json; p=json.load(open('.gos/project/project.json'))
 print('|'.join([p['phases'][1]['status'], str(p['last_archived_phase']), str(len(p['decisions']))]))")

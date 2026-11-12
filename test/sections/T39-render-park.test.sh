@@ -117,7 +117,7 @@ OUT=$(node "$GOS" phase claim A 2>&1)
 assert_contains "T4.a claim first phase ok" "Phase claimed: A-alpha: first" "$OUT"
 
 # ===== (post-claim): state-only shows this phase's decisions =====
-node "$GOS" decision add "current phase decision" --rationale "t39" >/dev/null 2>&1
+node "$GOS" decision add "current phase decision" --rationale "t39" >/dev/null --dig-waiver "test fixture" 2>&1
 OUT=$(node "$GOS" decision list 2>&1)
 assert_contains "T2.e default shows current decision" "current phase decision" "$OUT"
 assert_not_contains "T2.f default still hides legacy D-01" "legacy decision" "$OUT"
@@ -190,7 +190,7 @@ cat > "$(gos_plan)" << 'EOF'
 - **Files**: fixture.txt
 - **Done when**: never
 EOF
-node "$GOS" decision add "plan decision" --rationale "t39 ghost" >/dev/null 2>&1
+node "$GOS" decision add "plan decision" --rationale "t39 ghost" >/dev/null --dig-waiver "test fixture" 2>&1
 OUT=$(node "$GOS" gate semantic 2>&1); RC=$?
 assert_exit "T10.a ghost covers fail the gate" 1 "$RC"
 assert_contains "T10.b ghost error carries Fix teaching" "Fix: align plan Covers with the state ID set" "$OUT"

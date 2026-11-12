@@ -539,6 +539,14 @@ const CONTRACTS = {
     amendRefuseActive: 'refused — phase is active (claimed by in-flight state; unclaim first, then amend)',
     amendRefuseDone: 'refused — phase is done (closed history; goal rewrite would falsify the audit record)',
     amendRefuseParked: 'refused — phase is parked (un-park first: `gos phase park <n> --undo`, then amend)',
+    phaseRenamed: '✓ Phase renamed: ',            // + old + ' → ' + new (pending-only name rewrite)
+    renameRefuseActive: 'refused — phase is active (claimed by in-flight state; unclaim first, then rename)',
+    renameRefuseDone: 'refused — phase is done (closed history; rename would falsify the audit record)',
+    renameRefuseParked: 'refused — phase is parked (un-park first: `gos phase park <n> --undo`, then rename)',
+    renameExpectMismatch: 'refused — --expect mismatch (mis-target guard)',
+    renameBadShape: 'refused — name must keep the `P<n>: title` shape (P + digits + ": " + title)',
+    renameTooLong: 'refused — name exceeds 80 codepoints',
+    renameRefuseCollision: 'refused — new name collides with an existing phase name (equality or prefix, any status)',
     anchorFixed: '✓ anchor re-fixed to ',         // + realpath
     archiveIdempotent: '✓ already archived',      // re-archive short-circuit
     renderSkip: '(no project.json — render skipped)', // archive in non-Lv4 repo
@@ -1117,7 +1125,7 @@ const COMMANDS = {
   },
   'gate': {
     desc: 'hard gates: coverage|truths|requirements|lessons|semantic|codemap|flip|all + hash-trust-verified custom gates (--json failures: object-only {code,verdict,evidence[],fix} since P15)', class: 'exec', aliases: [], core: true,
-    subs: ['coverage', 'truths', 'requirements', 'lessons', 'semantic', 'codemap', 'flip', 'all', 'trust <name>', '<custom-gate>'],
+    subs: ['coverage', 'truths', 'requirements', 'lessons', 'semantic', 'codemap', 'flip', 'all', 'changelog-obligation [--base <ref>] [--head <ref>]', 'trust <name>', '<custom-gate>'],
     flags: [],
     usage: 'gos gate <name>',
     next: ['gos gate all', 'gos map closure <file>'],
@@ -1169,13 +1177,13 @@ const COMMANDS = {
   },
   'phase': {
     desc: 'Lv4 phase lifecycle: add | list | claim | unclaim | mark-done', class: 'write', aliases: [], core: true,
-    subs: ['add "P: name" --goal "<g>"', 'amend <n> --goal "<g>"', 'list', 'claim <n>', 'unclaim', 'park <n>', 'mark-done <n>'],
+    subs: ['add "P: name" --goal "<g>"', 'amend <n> --goal "<g>"', 'rename <n> "<new>" [--expect "<cur>"]', 'list', 'claim <n>', 'unclaim', 'park <n>', 'mark-done <n>'],
     flags: [
       { name: '--force', scope: 'claim', effect: 'bypass DONE/archive preconditions (data-loss risk if task mid-flight)', risk: 'destructive' },
     ],
     usage: 'gos phase <sub> [args]',
     next: ['gos phase list', 'gos phase claim <n>'],
-    contractKeys: ['command_contracts.phaseAdded', 'command_contracts.phaseAmended', 'command_contracts.amendRefuseActive', 'command_contracts.amendRefuseDone', 'command_contracts.amendRefuseParked', 'command_contracts.phaseClaimed', 'command_contracts.phaseUnclaimed', 'command_contracts.claimGatedPrev', 'command_contracts.claimDeferredHint', 'command_contracts.claimCrossPhaseHint', 'command_contracts.claimTargetDone', 'command_contracts.claimAllClosed', 'command_contracts.claimTargetParked', 'command_contracts.doneHintParkedLine', 'command_contracts.doneHintAllDone', 'command_contracts.phaseParked', 'command_contracts.parkBlocksMilestone', 'command_contracts.parkUndo', 'command_contracts.parkIdempotent', 'command_contracts.parkUndoIdempotent', 'command_contracts.parkRefuseActive', 'command_contracts.parkRefuseDone', 'command_contracts.parkOrphanWarn', 'command_contracts.markDoneCloseOut', 'command_contracts.milestoneBlockedHeader'],
+    contractKeys: ['command_contracts.phaseAdded', 'command_contracts.phaseAmended', 'command_contracts.amendRefuseActive', 'command_contracts.amendRefuseDone', 'command_contracts.amendRefuseParked', 'command_contracts.phaseRenamed', 'command_contracts.renameRefuseActive', 'command_contracts.renameRefuseDone', 'command_contracts.renameRefuseParked', 'command_contracts.renameExpectMismatch', 'command_contracts.renameBadShape', 'command_contracts.renameTooLong', 'command_contracts.renameRefuseCollision', 'command_contracts.phaseClaimed', 'command_contracts.phaseUnclaimed', 'command_contracts.claimGatedPrev', 'command_contracts.claimDeferredHint', 'command_contracts.claimCrossPhaseHint', 'command_contracts.claimTargetDone', 'command_contracts.claimAllClosed', 'command_contracts.claimTargetParked', 'command_contracts.doneHintParkedLine', 'command_contracts.doneHintAllDone', 'command_contracts.phaseParked', 'command_contracts.parkBlocksMilestone', 'command_contracts.parkUndo', 'command_contracts.parkIdempotent', 'command_contracts.parkUndoIdempotent', 'command_contracts.parkRefuseActive', 'command_contracts.parkRefuseDone', 'command_contracts.parkOrphanWarn', 'command_contracts.markDoneCloseOut', 'command_contracts.milestoneBlockedHeader'],
   },
   'anchor': {
     desc: 're-derive state.repo_id from remotes (rescue)', class: 'write', aliases: [], core: false,

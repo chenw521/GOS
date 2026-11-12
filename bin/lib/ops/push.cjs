@@ -255,9 +255,17 @@ function convergeLocalMain(aggSha) {
 }
 
 // Single source for the archive-time hint: the archive flow prints this line
-// after completing locally; the push itself stays user-executed.
+// after completing locally; the push itself stays user-executed. Remote
+// presence selects the ceremony: a configured remote points at the PR flow
+// (branch → PR → squash, subject pre-checked by the squash lint, issue
+// references kept non-closing), a local-only tree keeps the plain-git
+// aggregation command.
 function archivePushHint() {
-  return 'Next: gos push — aggregates commits ahead of origin/main into one semantic commit (message auto-derives from CHANGELOG.md [Unreleased] at push time)';
+  const hasRemote = gitTry(['remote']).out.trim().length > 0;
+  if (!hasRemote) {
+    return 'Next: gos push — aggregates commits ahead of origin/main into one semantic commit (message auto-derives from CHANGELOG.md [Unreleased] at push time)';
+  }
+  return 'Next: branch → pull request → squash-merge — guard the subject with `bash test/checks/push-lint-squash.sh --subject "<candidate>"` before merging; refer with refs #N unless the PR must close it — closing keywords belong in the PR body';
 }
 
 module.exports = { cmdPush, archivePushHint };

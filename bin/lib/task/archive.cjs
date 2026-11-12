@@ -98,6 +98,84 @@ function shipLedgerLines(state) {
   ];
 }
 
+// Newest archive dest holding task/<tid> — the tid's current archive home.
+// The slug is just a name; the tid is the identity: a dest containing the id
+// marks that this task's directory already moved.
+function archivedTidHomeDir(state) {
+  const tid = core.currentTaskId(state);
+  if (!tid || !fs.existsSync(core.ARCHIVE_DIR)) return null;
+  const dirs = fs.readdirSync(core.ARCHIVE_DIR)
+    .filter((d) => fs.existsSync(path.join(core.ARCHIVE_DIR, d, 'task', tid)))
+    .sort();
+  return dirs.length ? dirs[dirs.length - 1] : null;
+}
+
+// Registered state paths resolve into .gos/archive/<home>/ — direct fields
+// must live there; nested evidence paths only disqualify when they still
+// point at the live task zone (evidence may legitimately live outside .gos).
+function statePathsResolveIntoArchiveHome(state, home) {
+  const prefix = `${path.join(path.relative('.', core.ARCHIVE_DIR), home)}${path.sep}`;
+  const tid = core.currentTaskId(state);
+  for (const f of core.STATE_PATH_FIELDS.direct) {
+    const v = state[f];
+    if (typeof v === 'string' && v && !v.startsWith(prefix)) return false;
+  }
+  if (tid) {
+    const liveZone = `.gos${path.sep}task${path.sep}${tid}${path.sep}`;
+    for (const t of state.observable_truths || []) {
+      const ap = t && t.evidence && t.evidence.artifact_path;
+      if (typeof ap === 'string' && ap && ap.startsWith(liveZone)) return false;
+    }
+  }
+  return true;
+}
+
+// Archived-idle path evidence: the tid lives in an archive dest whose layout
+// the state's own paths agree with. Consumed by the gate idle branch and the
+// tid idempotency check — a state whose paths still point at the live task
+// zone is NOT idle: it still needs the archive repair pass.
+function archivedTidIdle(state) {
+  const home = archivedTidHomeDir(state);
+  return !!home && statePathsResolveIntoArchiveHome(state, home);
+}
+
+// Half-transaction completion: an archive dest already holds task/<tid>, the
+// live task dir is gone, the state is approved but not yet stamped DONE (the
+// crash window between dest materialization and writeState — direct rerun or
+// the commit-chain catch). Registry-driven rewrites + DONE + completed_at
+// land on disk; true when the completion ran, false when no dest matched.
+function landHalfTransaction(state) {
+  const tid0 = core.currentTaskId(state);
+  const taskDir0 = tid0 ? path.join(core.GOS_DIR, 'task', tid0) : null;
+  if (state.current_stage === 'DONE' || !(state.approvals || {}).ARCHIVE || !tid0 || fs.existsSync(taskDir0)) return false;
+  const cands = fs.existsSync(core.ARCHIVE_DIR)
+    ? fs.readdirSync(core.ARCHIVE_DIR).filter((d) => {
+        const p = path.join(core.ARCHIVE_DIR, d, 'task', tid0);
+        return fs.existsSync(p);
+      }).sort()
+    : [];
+  if (!cands.length) return false;
+  const done = path.join(core.ARCHIVE_DIR, cands[cands.length - 1]);
+  const relDone = path.relative('.', done);
+  // Field-level rewrite per the registry (full-text replace forbidden)
+  for (const f of core.STATE_PATH_FIELDS.direct) {
+    const v = state[f];
+    if (typeof v === 'string' && v.includes(`.gos/task/${tid0}/`)) state[f] = v.replace(`.gos/task/${tid0}/`, `${relDone}/task/${tid0}/`);
+  }
+  for (const t of state.observable_truths || []) {
+    const ev = t && t.evidence;
+    if (ev && typeof ev.artifact_path === 'string' && ev.artifact_path.includes(`.gos/task/${tid0}/`)) ev.artifact_path = ev.artifact_path.replace(`.gos/task/${tid0}/`, `${relDone}/task/${tid0}/`);
+  }
+  state.current_stage = 'DONE';
+  state.checkpoints = [];
+  state.completed_at = new Date().toISOString();
+  core.writeState(state);
+  console.log(`✓ ship: half-transaction completed idempotently (dest was materialized, state now written) → ${relDone}`);
+  // Returning (never exiting) keeps the commit-chain caller alive: the git
+  // commit that finalizes the staged renames still has to run.
+  return true;
+}
+
 function cmdArchive(opts = {}) {
  const fromCommit = !!opts.fromCommit; // invoked from cmdCommit — gates degrade to warn+skip (never kill the commit mid-flow)
  if (!fromCommit) core.humanGateGuard('archive'); // direct invocation is the human act; the commit-chain call is not
@@ -182,11 +260,15 @@ function cmdArchive(opts = {}) {
     }
     console.log('✓ cleanup-scan clean');
   }
-  // ---- SHIP ritual gate — today's CHANGELOG.md entry (fail-closed) + version discipline (warn) ----
-  // Single-track daily obligation: CHANGELOG.md [Unreleased] must hold a bullet
-  // stamped with today's UTC date. The stamp source is the same utcToday() the
-  // changelog writer uses, so the gate and the writer can never disagree about
-  // "today". A missing CHANGELOG.md blocks with the bootstrap advisory — the
+  // ---- SHIP ritual gate — batch changelog record (fail-closed) + version discipline (warn) ----
+  // Structural obligation: this task's batch must ADD a changelog record.
+  // The shared predicate (changelog-core.batchAddsChangelogRecord) compares
+  // the working-tree changelog against the task_head baseline snapshot — a
+  // just-written uncommitted bullet counts, and a stale-dated bullet written
+  // inside the batch counts too (the date stamp is writer metadata, not the
+  // obligation). Refs must intersect the task's own decision + requirement
+  // ids. Non-git repos use the file-shape fallback ([Unreleased] non-empty).
+  // A missing CHANGELOG.md blocks with the bootstrap advisory — the
   // next `gos changelog add` creates the file from the master template. The
   // version warn below compares the latest git tag against package.json by
   // design; CHANGELOG.md is deliberately not consulted for version truth.
@@ -215,22 +297,69 @@ function cmdArchive(opts = {}) {
         }
       }
     }
- // the obligation reads through the single root-anchored resolver
+  // the obligation reads through the single root-anchored resolver
     // a relocated changelog (gos config changelog-path) is honored here.
     let changelogText = null;
-    try { changelogText = fs.readFileSync(clcore.resolveChangelogMd(), 'utf8'); } catch { /* absent */ }
+    const changelogAbs = clcore.resolveChangelogMd();
+    try { changelogText = fs.readFileSync(changelogAbs, 'utf8'); } catch { /* absent */ }
     if (changelogText === null) {
       console.error(`${core.CONTRACTS.state_semantics.archiveBlocked} (SHIP ritual):`);
       console.error('  ✗ SHIP BLOCKED: CHANGELOG.md not found — obligations start once the file exists');
       console.error('    Run `gos changelog add --summary "<one sentence>"` first (it bootstraps CHANGELOG.md from the master template), then re-run `gos archive`.');
       process.exit(1);
     }
-    const shipToday = clcore.utcToday();
-    const stampedToday = (e) => e.endsWith(`[${shipToday}]`);
-    if (!clcore.parseChangelog(changelogText).unreleased.some(stampedToday)) {
+    const shipTaskRefs = [];
+    {
+      const seen = new Set();
+      const push = (id) => {
+        const t = String(id);
+        if (/^[DR]-\d+$/.test(t) && !seen.has(t)) { seen.add(t); shipTaskRefs.push(t); }
+      };
+      for (const d of state.decisions || []) if (d && d.id) push(d.id);
+      for (const r of state.requirements || []) if (r && r.id) push(r.id);
+    }
+    const shipVerdict = (() => {
+      if (!core.gitInWorkTree()) {
+        return clcore.batchAddsChangelogRecord(changelogText, null, { taskRefs: shipTaskRefs });
+      }
+      const th = typeof state.task_head === 'string' && /^[0-9a-f]{8,40}$/i.test(state.task_head) ? state.task_head : null;
+      if (!th) {
+        console.error(`${core.CONTRACTS.state_semantics.archiveBlocked} (SHIP ritual):`);
+        console.error('  ✗ SHIP BLOCKED: the live task carries no task_head — the changelog record check needs the batch baseline commit');
+        console.error('    Re-claim the task (`gos init`) or re-run its stage commits so task_head re-anchors the diff baseline, then re-run `gos archive`.');
+        process.exit(1);
+      }
+      if (!core.shaReachable(th)) {
+        console.error(`${core.CONTRACTS.state_semantics.archiveBlocked} (SHIP ritual):`);
+        console.error(`  ✗ SHIP BLOCKED: task_head ${th.slice(0, 10)} is unreachable in this git repo — the batch baseline snapshot cannot be read`);
+        console.error('    Fetch the full history (git fetch --unshallow) or re-anchor the task (gos init), then re-run `gos archive`.');
+        process.exit(1);
+      }
+      const top = core.gitToplevelRealpath();
+      const rel = top ? path.relative(top, changelogAbs).split(path.sep).join('/') : null;
+      if (!rel) {
+        // in a work tree yet the toplevel will not resolve — no baseline
+        // snapshot can be read; degrade loudly to the file-shape fallback
+        console.log('⚠ ship changelog check: repo toplevel unresolvable — falling back to the file-shape check ([Unreleased] non-empty)');
+        return clcore.batchAddsChangelogRecord(changelogText, null, { taskRefs: shipTaskRefs });
+      }
+      // base snapshot: the file as it stood at task_head; absent there means
+      // every current bullet is new (the whole changelog is this batch's record).
+      // Three-state shared helper: a git failure is {ok:false} — fail closed,
+      // never conflated with absence (which would satisfy the obligation vacuously)
+      const snap = clcore.showPathSnapshot(th, rel);
+      if (!snap.ok) {
+        console.log('⚠ ship changelog check: base snapshot unreadable — failing closed');
+        return { ok: false, reason: 'base-unreadable' };
+      }
+      // absent-from-base means the whole changelog is this batch's record
+      // (empty base text), never the file-shape fallback trigger (null)
+      return clcore.batchAddsChangelogRecord(changelogText, snap.text == null ? '' : snap.text, { taskRefs: shipTaskRefs });
+    })();
+    if (!shipVerdict.ok) {
       console.error(`${core.CONTRACTS.state_semantics.archiveBlocked} (SHIP ritual):`);
-      console.error(`  ✗ SHIP BLOCKED: no [Unreleased] bullet stamped [${shipToday}] (UTC) in CHANGELOG.md — today's entry missing`);
-      console.error('    Run `gos changelog add` to write today\'s entry, then re-run `gos archive`.');
+      console.error(`  ✗ SHIP BLOCKED: this batch adds no changelog record (${shipVerdict.reason}) — nothing new in CHANGELOG.md against the task_head baseline`);
+      console.error('    Run `gos changelog add` to write this batch\'s entry, then re-run `gos archive`.');
       process.exit(1);
     }
     let ver = 'unknown';
@@ -306,20 +435,21 @@ function cmdArchive(opts = {}) {
  // DRY: slug logic lives in sibContext.archiveSlugParts (single source — the
   // context SHIP preview consumes the same function, no drift)
   const { date, slug } = sibContext.archiveSlugParts(state);
- // ---- : idempotency — DONE + completed_at (this state WAS archived) + today's slug dir present
-  // completed_at discriminates "this task already archived" from "another same-slug task archived today"
+  // ---- : idempotency — DONE + archived tid + (completed_at or paths already home)
   // tid-based idempotency: re-running archive on an already-archived task after a slug change
-  // (version bump / date rollover) is a no-op as long as an archive dest contains this task id
-  // (slug is just a name; tid is the identity)
+  // (version bump / date rollover) is a no-op while an archive dest contains this task id
+  // AND the state's own paths agree with that home — completed_at stamped, or the
+  // STATE_PATH_FIELDS rewrites already landed. A stamp whose tid never archived falls
+  // through (nothing to be idempotent about); an archived tid whose paths still point at
+  // the live .gos/task/<tid>/ zone falls through too — the full archive path below
+  // performs the repair (path rewrite + stamp) instead of no-op'ing.
   {
     const tidIdem = core.currentTaskId(state);
-    if (state.current_stage === 'DONE' && state.completed_at && tidIdem && fs.existsSync(core.ARCHIVE_DIR)) {
-      const already = fs.readdirSync(core.ARCHIVE_DIR).some((d) => fs.existsSync(path.join(core.ARCHIVE_DIR, d, 'task', tidIdem)));
-      if (already) {
-        if (fromCommit) return;
-        console.log(`${core.CONTRACTS.command_contracts.archiveIdempotent} — nothing to do (task ${tidIdem} already archived)`);
-        process.exit(0);
-      }
+    const homeIdem = archivedTidHomeDir(state);
+    if (state.current_stage === 'DONE' && tidIdem && homeIdem && (state.completed_at || statePathsResolveIntoArchiveHome(state, homeIdem))) {
+      if (fromCommit) return;
+      console.log(`${core.CONTRACTS.command_contracts.archiveIdempotent} — nothing to do (task ${tidIdem} already archived)`);
+      process.exit(0);
     }
   }
   if (state.current_stage === 'DONE' && state.completed_at && archiveDirExists(date, slug)) {
@@ -329,43 +459,12 @@ function cmdArchive(opts = {}) {
   }
   // ---- half-transaction completion (crash window: dest materialized but writeState never ran) ----
   // Scenario: the previous run crashed after Phase B and before writeState → the directory has
-  // moved, state is still SHIP.
-  // Detection: stage=SHIP + approved + task/<id>/ absent + an archive dest contains this task id →
-  // rewrite paths per the registry → land DONE → idempotent completion (no new dest, no double adoption).
-  {
-    const tid0 = core.currentTaskId(state);
-    const taskDir0 = tid0 ? path.join(core.GOS_DIR, 'task', tid0) : null;
-    if (state.current_stage !== 'DONE' && (state.approvals || {}).ARCHIVE && tid0 && !fs.existsSync(taskDir0)) {
-      const cands = fs.existsSync(core.ARCHIVE_DIR)
-        ? fs.readdirSync(core.ARCHIVE_DIR).filter((d) => {
-            const p = path.join(core.ARCHIVE_DIR, d, 'task', tid0);
-            return fs.existsSync(p);
-          }).sort()
-        : [];
-      if (cands.length) {
-        const done = path.join(core.ARCHIVE_DIR, cands[cands.length - 1]);
-        const relDone = path.relative('.', done);
-        // Field-level rewrite per the registry (full-text replace forbidden)
-        for (const f of core.STATE_PATH_FIELDS.direct) {
-          const v = state[f];
-          if (typeof v === 'string' && v.includes(`.gos/task/${tid0}/`)) state[f] = v.replace(`.gos/task/${tid0}/`, `${relDone}/task/${tid0}/`);
-        }
-        for (const t of state.observable_truths || []) {
-          const ev = t && t.evidence;
-          if (ev && typeof ev.artifact_path === 'string' && ev.artifact_path.includes(`.gos/task/${tid0}/`)) ev.artifact_path = ev.artifact_path.replace(`.gos/task/${tid0}/`, `${relDone}/task/${tid0}/`);
-        }
-        state.current_stage = 'DONE';
-        state.checkpoints = [];
-        state.completed_at = new Date().toISOString();
-        core.writeState(state);
-        console.log(`✓ ship: half-transaction completed idempotently (dest was materialized, state now written) → ${relDone}`);
-        // Return instead of exit: when invoked from the commit chain the git
-        // commit that finalizes the staged renames still has to run.
-        return;
-      }
-    }
-  }
+  // moved, state is still pre-DONE. Detection + repair live in landHalfTransaction (shared with
+  // the commit-chain catch): rewrite paths per the registry, land DONE + completed_at — no new
+  // dest, no double adoption.
+  if (landHalfTransaction(state)) return;
   // ---- pre-flight: path normalization (absolute → project_root-relative) + validate before touching files ----
+  if (process.env.GOS_TEST_BREAK_SHIP === 'pre-flight') throw new Error('GOS_TEST_BREAK_SHIP: injected pre-flight failure (nothing materialized)');
   {
     const root0 = core.currentRootRealpath();
     const norm = (v) => (typeof v === 'string' && path.isAbsolute(v) && root0 && v.startsWith(root0 + path.sep) ? path.relative(root0, v) : v);
@@ -548,6 +647,7 @@ function cmdArchive(opts = {}) {
   } catch (e) {
     rollback(e);
   }
+  if (process.env.GOS_TEST_BREAK_SHIP === 'pre-stamp') throw new Error('GOS_TEST_BREAK_SHIP: injected pre-stamp failure (dest materialized, state unstamped)');
   // delta.md: what this phase changed (compact record)
   const delta = [
     `# Delta: ${core.sanitizeEcho(state.intent.summary)}`,
@@ -658,4 +758,4 @@ function cmdArchive(opts = {}) {
 
 const sibContext = require('./context.cjs');  // home of archiveSlugParts
 
-module.exports = { archiveDirExists, cmdArchive, specDecisionTitles, shipLedgerLines };
+module.exports = { archiveDirExists, archivedTidHomeDir, archivedTidIdle, cmdArchive, landHalfTransaction, specDecisionTitles, shipLedgerLines, statePathsResolveIntoArchiveHome };

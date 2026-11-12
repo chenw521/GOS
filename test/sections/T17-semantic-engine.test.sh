@@ -33,7 +33,7 @@ spec v1 — fixture
 | impl b | fixture | covers map checks | fixture only | map closure reports |
 why-not: impl b — fixture discard
 SPECEOF
-  node "$GOS" decision add D-01 "core" --rationale "r" >/dev/null 2>&1
+  node "$GOS" decision add D-01 "core" --rationale "r" >/dev/null --dig-waiver "test fixture" 2>&1
   node "$GOS" approve think >/dev/null 2>&1
   node "$GOS" commit think >/dev/null 2>&1
   cat > "$(gos_plan)" <<PLANEOF
@@ -64,7 +64,7 @@ assert_contains "A1 failure names D-99" "D-99" "$OUT"
 # --- A2: decision in state, covered by no task → exit 1
 t17_teardown; t17_setup
 t17_plan "D-01" "src/a.js"
-node "$GOS" decision add D-02 "uncovered" --rationale "r" >/dev/null 2>&1
+node "$GOS" decision add D-02 "uncovered" --rationale "r" >/dev/null --dig-waiver "test fixture" 2>&1
 mkdir -p src && echo x > src/a.js
 set +e; OUT=$(node "$GOS" gate semantic 2>&1); RC=$?; set -e
 assert_exit "A2 uncovered decision → exit 1" 1 "$RC"
@@ -142,7 +142,7 @@ T17_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-t17n"
 mkdir -p "$T17_DIR" && cd "$T17_DIR" || exit 1
 export GIT_CEILING_DIRECTORIES="$TESTBASE"   # stop git from discovering the enclosing repo
 node "$GOS" init 3 "plain dir" >/dev/null 2>&1
-node "$GOS" decision add D-01 "core" --rationale "r" >/dev/null 2>&1
+node "$GOS" decision add D-01 "core" --rationale "r" >/dev/null --dig-waiver "test fixture" 2>&1
 cat > "$(gos_plan)" <<'PLANEOF'
 # Plan
 
@@ -160,7 +160,7 @@ assert_contains "B4 not-git skip line" "skip" "$OUT"
 # --- B5: plan.md missing → skip banner, no crash ---
 t17_teardown; t17_setup
 node "$GOS" init 3 "no plan" >/dev/null 2>&1
-node "$GOS" decision add D-01 "core" --rationale "r" >/dev/null 2>&1
+node "$GOS" decision add D-01 "core" --rationale "r" >/dev/null --dig-waiver "test fixture" 2>&1
 set +e; OUT=$(node "$GOS" gate semantic 2>&1); RC=$?; set -e
 assert_exit "B5 plan missing → exit 0 skip" 0 "$RC"
 assert_contains "B5 skip banner mentions plan.md missing" "plan.md missing" "$OUT"
@@ -171,7 +171,7 @@ T17_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-t17z"
 mkdir -p "$T17_DIR" && cd "$T17_DIR" || exit 1
 git init -q .
 node "$GOS" init 3 "zero commit" >/dev/null 2>&1
-node "$GOS" decision add D-01 "core" --rationale "r" >/dev/null 2>&1
+node "$GOS" decision add D-01 "core" --rationale "r" >/dev/null --dig-waiver "test fixture" 2>&1
 cat > "$(gos_plan)" <<'PLANEOF'
 # Plan
 

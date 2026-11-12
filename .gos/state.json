@@ -1,73 +1,467 @@
 {
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
-  "level": 1,
+  "level": 3,
   "current_stage": "DONE",
   "completed_stages": [
     "INTENT",
+    "THINK",
+    "PLAN",
     "BUILD",
-    "VERIFY"
+    "REVIEW",
+    "VERIFY",
+    "SHIP",
+    "DONE"
   ],
   "intent": {
-    "summary": "Commit-advance destination derives from the committed stage, not current_stage: next(stage) with an adjacency guard (reqIdx <= curIdx+1) and canonical completed_stages backfill, curing the headless INTENT-skip trap where gos commit think from current=INTENT re-entered THINK instead of advancing to BUILD (deterministic repro recorded; amplified multi-jump hole closed). Scope freeze: bin/lib/task/commit.cjs, test/sections/T51-commit-guard.test.sh.",
-    "confirmed": true,
-    "confirmation": {
-      "mode": "headless-auto",
-      "ts": "2026-11-10T02:38:37.398Z"
-    }
+    "summary": "Cure the user-visible bugs the 2026-11-09/10 sessions lived through and restore archive integrity: changelog same-day obligation across UTC midnight (#49), changelog validator rejecting #N issue tokens that blocks closing keywords (#24), between-tasks gate false-red on DONE-resident state (concern dffa50f0), census fresh-checkout optional-entry class (concern 73cef6ab), the fromCommit archive path skipping the completed_at stamp plus the deficient -der archive payload rebuild and one-time retro-stamp, the --help short-circuit, and a phase rename verb so project.json name edits never need hand edits again.",
+    "confirmed": true
   },
   "approvals": {
-    "ARCHIVE": "2026-11-10T05:25:02.464Z"
+    "THINK": "2026-11-11T05:04:56.774Z",
+    "PLAN": "2026-11-11T06:32:19.822Z",
+    "ARCHIVE": "2026-11-12T01:25:47.894Z"
   },
-  "spec_path": ".gos/task/1a2e46f3/spec.md",
-  "plan_path": ".gos/task/1a2e46f3/plan.md",
-  "project": false,
+  "spec_path": null,
+  "plan_path": null,
+  "project": true,
   "requirements": [
     {
       "id": "R-01",
-      "text": "Commit-advance destination derives from the committed stage, not current_stage: next(stage) with an adjacency guard (...",
+      "text": "Cure the user-visible bugs the 2026-11-09/10 sessions lived through and restore archive integrity: changelog same-day...",
       "phase": null,
-      "level": 1
+      "level": 3
+    },
+    {
+      "id": "R-60",
+      "text": "Obligation = structural delta: batch diff adds >=1 Unreleased bullet; bases: CI parent / PR merge-base / SHIP task_head; lint format-only; predicates unified",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-61",
+      "text": "Closing keywords ride the PR body: neutralizer unchanged; #N groups legal; archive push hint + ceremony teach the PR flow",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-62",
+      "text": "completed_at cure: commit chain merges archive disk-writes; idle + tid idempotency re-key to tid-in-archive; slug keeps stamp",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-63",
+      "text": "-der repair: task/1a2e46f3 rebuilt from 493a9e7 + retro-stamp + PROVENANCE; roster concern; siblings untouched",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-64",
+      "text": "help-flag short-circuit: any --help/-h in argv routes to help without executing; write-class included",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-65",
+      "text": "gos phase rename <n> <name>: pending-only; active/done/parked refused; views re-rendered",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-66",
+      "text": "Census optional entries: optional:true = valid-if-absent; .gos/cache optional; validator honors it; ci mkdir hotfix removed",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-67",
+      "text": "Dig floor: decisions carry dig evidence in state; spec freeze refuses decisions without it",
+      "phase": null,
+      "status": "active"
     }
   ],
-  "decisions": [],
+  "decisions": [
+    {
+      "id": "D-61",
+      "title": "Landing unified on PR+squash; #24 closes via PR body (Closes #N); neutralizer stays; ceremony teaches PR flow",
+      "rationale": "User ruling 2026-11-10: one channel, pre-merge CI, clean main; squash is the PR-path aggregation. Neutralizer stays (f3b390a); gos push stays a plain-git capability; archive hint re-points to PR.",
+      "birth_phase": "P19: live pain bugs and archive integrity",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-62",
+      "title": "#49 cure: obligation = structural delta (batch adds >=1 Unreleased bullet); 3 base wirings; lint format-only",
+      "rationale": "8/8 landings carry bullet adds; PR #46's bullet existed with a stale date — date is a clock proxy for the real invariant. A' unifies the duplicated predicates.",
+      "birth_phase": "P19: live pain bugs and archive integrity",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-63",
+      "title": "P19 scope +1: mechanize card-preflight dig floor (e5e75820): dig evidence in state + gate check",
+      "rationale": "User ruling 2026-11-10: auto mode has no human deepen backstop; red team attacks the spec too late to fix card quality. Goal text stays frozen (amend refuses active); spec carries the item.",
+      "birth_phase": "P19: live pain bugs and archive integrity",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-64",
+      "title": "GA-3: commit chain merges archive disk writes; idle+tid-idempotency re-key to tid-in-archive; slug unchanged",
+      "rationale": "commit.cjs:555 stale writeState erases stamp AND path rewrites; 4/4 direct archives stamped, 2/2 Lv1 fromCommit bare; -der shape invisible to a re-keyed guard.",
+      "birth_phase": "P19: live pain bugs and archive integrity",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    },
+    {
+      "id": "D-65",
+      "title": "GA-4: rebuild -der only (snapshot + retro-stamp + PROVENANCE); 6-instance roster to concerns; siblings keep delta",
+      "rationale": "No live gate consumes dead tasks tid dirs (states wiped, never re-archived); history surface has delta.md. -der evidence is richest: git snapshot 493a9e7 + live receipts + landing commit time.",
+      "birth_phase": "P19: live pain bugs and archive integrity",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null
+    }
+  ],
   "observable_truths": [
     {
       "id": "T1",
-      "description": "A headless task whose INTENT was auto-confirmed commits think and lands past THINK: the committed state carries current=BUILD with completed=[INTENT,THINK] backfilled, and the echo names the real destination",
+      "description": "T-01 structural obligation: batch diff adding a new [Unreleased] bullet passes across UTC midnight; adding none fails (T109 both directions)",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\"test/run-sections.sh\",\"T51\"]",
-        "output_excerpt": "✓ A1 no changes → exit 1 (exit 1)",
-        "artifact_path": ".gos/logs/truth-receipts.md",
+        "command": "[\"bash\",\".gos/task/p19/evidence/t1.sh\"]",
+        "output_excerpt": "T1 pass=1 fail=1",
+        "artifact_path": ".gos/archive/2026-11-12-v1.0.0-phase-p19-cure-the-user-visible-bugs-the/task/p19/evidence/t1.sh",
         "replay": true
       }
     },
     {
       "id": "T2",
-      "description": "A multi-stage jump commit is refused with an adjacency message naming the skipped count and the --force escape, and --force sanctions the deliberate jump",
+      "description": "T-02 Lv1 chain archive lands completed_at + archive-rewritten paths + surviving approvals/spec_sha256/plan_snapshot/completed_stages (T112)",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\"test/run-sections.sh\",\"T51\"]",
-        "output_excerpt": "✓ A1 no changes → exit 1 (exit 1)",
-        "artifact_path": ".gos/logs/truth-receipts.md",
+        "command": "[\"bash\",\".gos/task/p19/evidence/t2.sh\"]",
+        "output_excerpt": "T2 mergeHelper=2 completedAtRefs=4",
+        "artifact_path": ".gos/archive/2026-11-12-v1.0.0-phase-p19-cure-the-user-visible-bugs-the/task/p19/evidence/t2.sh",
         "replay": true
       }
     },
     {
       "id": "T3",
-      "description": "A stage outside the task level flow gets a visible warning and keeps the legacy destination semantics, so fixtures and recovery tooling that rely on the alias behavior stay green",
+      "description": "T-03 disjunctive idle: stamp-only idles; tid+paths idles; planted tid with live-zone paths does not idle (T112)",
       "verified": true,
       "evidence": {
-        "command": "[\"node\",\"-e\",\"const m=require(\\\"./.gos/cache/run-manifest.json\\\");console.log(\\\"sections=\\\"+m.sections_run.length+\\\" failed=\\\"+m.failed_sections.length)\"]",
-        "output_excerpt": "sections=109 failed=0",
-        "artifact_path": ".gos/cache/run-manifest.json",
+        "command": "[\"bash\",\".gos/task/p19/evidence/t3.sh\"]",
+        "output_excerpt": "T3 gateIdleRefs=1 archiveHelper=2",
+        "artifact_path": ".gos/archive/2026-11-12-v1.0.0-phase-p19-cure-the-user-visible-bugs-the/task/p19/evidence/t3.sh",
+        "replay": true
+      }
+    },
+    {
+      "id": "T4",
+      "description": "T-04 -der payload: task/1a2e46f3/state.json byte-equal to 493a9e7 plus exactly completed_at+completed_at_retro; PROVENANCE.md present (local-only, T9 pinned diff)",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/p19/evidence/t4.sh\"]",
+        "output_excerpt": "T4 diffLines=0 provenanceFiles=1 frontMatterKeys=3",
+        "artifact_path": ".gos/archive/2026-11-10-v1.0.0-task-commit-advance-destination-der/task/1a2e46f3/PROVENANCE.md",
+        "replay": true
+      }
+    },
+    {
+      "id": "T5",
+      "description": "T-05 help never executes: registered cmds with --help/-h print help rc0 zero side effects; value-position exempt; unknown non-zero (T110)",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/p19/evidence/t5.sh\"]",
+        "output_excerpt": "T5 statusHelpFirstLine=Usage jsonRc=0 unknownRc=1",
+        "artifact_path": ".gos/archive/2026-11-12-v1.0.0-phase-p19-cure-the-user-visible-bugs-the/task/p19/evidence/t5.sh",
+        "replay": true
+      }
+    },
+    {
+      "id": "T6",
+      "description": "T-06 rename verb: pending rename applies + views re-render; collisions/non-pending refused; --expect guard (T111)",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/p19/evidence/t6.sh\"]",
+        "output_excerpt": "T6 renameInHelp=8",
+        "artifact_path": ".gos/archive/2026-11-12-v1.0.0-phase-p19-cure-the-user-visible-bugs-the/task/p19/evidence/t6.sh",
+        "replay": true
+      }
+    },
+    {
+      "id": "T7",
+      "description": "T-07 census: fresh checkout without .gos/cache passes pack-check; tracked-optional negative control red; ci mkdir gone (T66/T6)",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/p19/evidence/t7.sh\"]",
+        "output_excerpt": "T7 ciMkdirLines=0",
+        "artifact_path": ".gos/archive/2026-11-12-v1.0.0-phase-p19-cure-the-user-visible-bugs-the/task/p19/evidence/t7.sh",
+        "replay": true
+      }
+    },
+    {
+      "id": "T8",
+      "description": "T-08 dig floor: post-era decisions without evidence-object dig refused at add and freeze; grandfathered pass with advisory (T113)",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/p19/evidence/t8.sh\"]",
+        "output_excerpt": "T8 eraHomeRefs=4 freezeCalls=2",
+        "artifact_path": ".gos/archive/2026-11-12-v1.0.0-phase-p19-cure-the-user-visible-bugs-the/task/p19/evidence/t8.sh",
         "replay": true
       }
     }
   ],
-  "gaps": [],
-  "activation_source": "headless",
-  "task_head": "1a2e46f3c3cdcf38636f2b3778e5dfad4bed7b6d",
-  "changelog_user_summary": "stage advance commits now land past the committed stage: the destination derives from the committed stage with canonical completed backfill, multi-stage jumps are refused unless --force sanctions them, and out-of-flow stages warn while keeping the legacy destination, curing the headless INTENT-skip trap that left tasks half-advanced (R-01)"
+  "gaps": [
+    {
+      "id": "G-1794381485169",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
+    },
+    {
+      "id": "G-1794387988772",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
+    },
+    {
+      "id": "G-1794389975095",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
+    },
+    {
+      "id": "G-1794391357983",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
+    },
+    {
+      "id": "G-1794393692434",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
+    }
+  ],
+  "phase_name": "P19: live pain bugs and archive integrity",
+  "task_head": "493a9e769f3529e12cfbbee7d4773a61ac34655b",
+  "task_head_history": [
+    {
+      "sha": "493a9e769f3529e12cfbbee7d4773a61ac34655b",
+      "at": "2026-11-10T07:54:58.154Z",
+      "what": "claim"
+    }
+  ],
+  "spec_gate_version": 3,
+  "spec_sha256": "10f6ad159bb98484a99f22744f3adff766f0131201d716e6b21a7ff04b7bee8f",
+  "plan_snapshot": {
+    "tasks": [
+      {
+        "id": "T0",
+        "covers": [
+          "R-01"
+        ],
+        "files": [
+          ".gos/state.json"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T1",
+        "covers": [
+          "D-62",
+          "R-60"
+        ],
+        "files": [
+          "bin/lib/ops/changelog-core.cjs",
+          "test/sections/T109-changelog-structural.test.sh"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T3",
+        "covers": [
+          "D-61",
+          "R-61"
+        ],
+        "files": [
+          "bin/lib/ops/push.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh-CN.cjs",
+          ".github/PULL_REQUEST_TEMPLATE.md",
+          "templates/git/PULL_REQUEST_TEMPLATE.md",
+          "test/sections/T76-*.test.sh",
+          "test/sections/T101-*.test.sh"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T4",
+        "covers": [
+          "R-64"
+        ],
+        "files": [
+          "bin/gos.cjs",
+          "test/sections/T110-help-shortcircuit.test.sh"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T5",
+        "covers": [
+          "R-65"
+        ],
+        "files": [
+          "bin/lib/knowledge/phase.cjs",
+          "bin/lib/nav/registry-consts.cjs",
+          "bin/lib/core/state.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh-CN.cjs",
+          "test/sections/T111-phase-rename.test.sh"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T6",
+        "covers": [
+          "R-66"
+        ],
+        "files": [
+          "census.json",
+          "test/pack-check.sh",
+          ".github/workflows/ci.yml",
+          "test/sections/T66-*.test.sh"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T7",
+        "covers": [
+          "D-64",
+          "R-62"
+        ],
+        "files": [
+          "bin/lib/task/commit.cjs",
+          "bin/lib/task/archive.cjs",
+          "bin/lib/ops/gate.cjs",
+          "test/sections/T112-completed-at-cure.test.sh",
+          "test/sections/T8-phase-archive.test.sh",
+          "test/sections/T27-*.test.sh",
+          "test/sections/T50-*.test.sh",
+          "test/sections/T61-*.test.sh"
+        ],
+        "wave": 2
+      },
+      {
+        "id": "T2",
+        "covers": [
+          "D-62",
+          "R-60"
+        ],
+        "files": [
+          "bin/lib/ops/changelog-core.cjs",
+          "bin/lib/ops/gate.cjs",
+          "bin/lib/task/archive.cjs",
+          "bin/lib/task/changelog.cjs",
+          "bin/lib/core/lock.cjs",
+          "bin/lib/core/state.cjs",
+          ".github/workflows/ci.yml",
+          "test/sections/T53-*.test.sh",
+          "test/sections/T54-*.test.sh",
+          "test/sections/T55-*.test.sh",
+          "test/sections/T57-*.test.sh",
+          "test/sections/T12-wiring.test.sh",
+          "test/sections/T46-module-structure.test.sh",
+          "test/sections/T91-ledger-reconcile.test.sh",
+          "test/sections/T107-auto-dispatch.test.sh"
+        ],
+        "wave": 3
+      },
+      {
+        "id": "T8",
+        "covers": [
+          "D-63",
+          "R-67"
+        ],
+        "files": [
+          "bin/lib/knowledge/decisions.cjs",
+          "bin/lib/task/commit.cjs",
+          "bin/lib/ops/gate.cjs",
+          "bin/lib/core/state.cjs",
+          "templates/spec-template.md",
+          "skills/gos-think/SKILL.md",
+          "test/sections/T113-dig-floor.test.sh",
+          "test/sections/T3-decision.test.sh",
+          "test/sections/T10-security-e2e.test.sh",
+          "test/sections/T106-auto-spawn-channel.test.sh",
+          "test/sections/T12-wiring.test.sh",
+          "test/sections/T14-state-b.test.sh",
+          "test/sections/T17-semantic-engine.test.sh",
+          "test/sections/T22-map-gate-impact.test.sh",
+          "test/sections/T23-concerns.test.sh",
+          "test/sections/T31-map-gate.test.sh",
+          "test/sections/T33-map-manifest.test.sh",
+          "test/sections/T39-render-park.test.sh",
+          "test/sections/T54-changelog-add.test.sh",
+          "test/sections/T55-changelog-lint.test.sh",
+          "test/sections/T88-autorender.test.sh",
+          "test/sections/T96-lang-boundary.test.sh"
+        ],
+        "wave": 4
+      },
+      {
+        "id": "T9",
+        "covers": [
+          "D-65",
+          "R-63"
+        ],
+        "files": [
+          ".gos/archive/2026-11-10-v1.0.0-task-commit-advance-destination-der/task/1a2e46f3/state.json",
+          ".gos/archive/2026-11-10-v1.0.0-task-commit-advance-destination-der/task/1a2e46f3/PROVENANCE.md",
+          ".gos/concerns.md",
+          ".gos/logs/truth-receipts.md",
+          ".gos/task/p19/evidence/t4.sh"
+        ],
+        "wave": 5
+      },
+      {
+        "id": "T10",
+        "covers": [
+          "R-01"
+        ],
+        "files": [
+          ".gos/cache/run-manifest.json",
+          "CHANGELOG.md"
+        ],
+        "wave": 5
+      }
+    ],
+    "audit": [
+      {
+        "at": "2026-11-11T09:39:54.511Z",
+        "what": "snapshot-force"
+      }
+    ],
+    "meta": {
+      "waveValidation": {
+        "ok": true,
+        "waves": 5
+      }
+    }
+  },
+  "changelog_user_summary": "Cure the live pain bugs and restore archive integrity: the changelog obligation becomes a structural batch delta immune to UTC midnight, closing keywords ride the PR body with the ceremony re-pointed, the commit-chain completed_at clobber is cured with disjunctive idle guards, a deficient archive payload is rebuilt with a retro-stamp, the help flag short-circuits before execution, entry renaming and census optional classes land",
+  "checkpoints": [],
+  "completed_at": "2026-11-12T01:26:23.472Z"
 }
