@@ -14,7 +14,7 @@ const gitprobe = require('./gitprobe.cjs');
 
 const STATE_SCHEMA_VERSION = 6;
 
-const PROJECT_SCHEMA_VERSION = 1;
+const PROJECT_SCHEMA_VERSION = 2;
 
 const cpLen = (s) => [...String(s)].length;
 
@@ -25,6 +25,10 @@ const DECISION_STATUS = new Set(['open', 'covered', 'superseded']);
 const REQ_STATUS = new Set(['active', 'dropped']);
 
 const PHASE_STATUS = new Set(['pending', 'active', 'done', 'parked']);
+
+// ISO 8601 date or datetime shape for milestone/phase timestamp fields.
+// Calendar validity is authoring-side; the schema checks shape only.
+const ISO8601_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:?\d{2}))?$/;
 
 function badText(s) {
   if (typeof s !== 'string') return 'not a string';
@@ -77,6 +81,16 @@ function validatePhase(p, where) {
   if (typeof p.goal !== 'string' || p.goal.length === 0) errs.push(`${where}:goal: non-empty required`);
   if (!PHASE_STATUS.has(p.status || '')) errs.push(`${where}:status: '${p.status}' not in pending|active|done|parked`);
   if (p.park_reason !== undefined && typeof p.park_reason !== 'string') errs.push(`${where}:park_reason: must be a string`);
+  // task_ref is the basename of the phase's home task directory (the resolver
+  // joins it under .gos/task/ — stored values never carry path separators).
+  if (p.task_ref !== undefined && p.task_ref !== null) {
+    if (typeof p.task_ref !== 'string' || p.task_ref.length === 0) errs.push(`${where}:task_ref: non-empty string or null required`);
+    else if (/[/\\]/.test(p.task_ref)) errs.push(`${where}:task_ref: basename required (path separators rejected): '${p.task_ref}'`);
+  }
+  // completed_at stamps the phase close snapshot (null while the phase lives).
+  if (p.completed_at !== undefined && p.completed_at !== null) {
+    if (typeof p.completed_at !== 'string' || !ISO8601_RE.test(p.completed_at)) errs.push(`${where}:completed_at: ISO 8601 string or null required`);
+  }
   return errs;
 }
 
@@ -410,7 +424,7 @@ function dieTrackedStoreCJK(file, text) {
 }
 
 function emptyProject() {
-  return { schema_version: PROJECT_SCHEMA_VERSION, last_archived_phase: null, phases: [], decisions: [], requirements: [] };
+  return { schema_version: PROJECT_SCHEMA_VERSION, last_archived_phase: null, milestone: null, phases: [], decisions: [], requirements: [] };
 }
 
 function validateProject(p, mode) {
@@ -421,6 +435,19 @@ function validateProject(p, mode) {
     if (mode === 'fail') fsio.die(hint, 3);
     console.error(`⚠ ${hint} (read-only, project data not used)`);
     return ['__FUTURE__'];
+  }
+  // milestone: null until a milestone opens; an open/closed milestone is an
+  // object with a slug name and ISO timestamps. Absent = legacy v1 project.
+  if (p.milestone !== undefined && p.milestone !== null) {
+    if (typeof p.milestone !== 'object' || Array.isArray(p.milestone)) {
+      errs.push('project.json:milestone: null or object required');
+    } else {
+      const ms = p.milestone;
+      const slugOk = typeof ms.name === 'string' && /^[0-9a-z-]+$/.test(ms.name) && cpLen(ms.name) > 0 && cpLen(ms.name) <= 40 && !/^v\d+$/.test(ms.name);
+      if (!slugOk) errs.push(`project.json:milestone.name: slug required (lowercase [0-9a-z-], 1-40 codepoints, not a bare version number): '${ms.name}'`);
+      if (typeof ms.opened_at !== 'string' || !ISO8601_RE.test(ms.opened_at)) errs.push(`project.json:milestone.opened_at: ISO 8601 string required (got '${ms.opened_at}')`);
+      if (ms.closed_at !== undefined && (typeof ms.closed_at !== 'string' || !ISO8601_RE.test(ms.closed_at))) errs.push(`project.json:milestone.closed_at: ISO 8601 string or undefined required (got '${ms.closed_at}')`);
+    }
   }
   if (!Array.isArray(p.phases)) errs.push('project.json:phases: expected array');
   else p.phases.forEach((ph, i) => errs.push(...validatePhase(ph, `project.json:phases[${i}]`)));
@@ -468,6 +495,35 @@ function saveProject(p) {
   validateProject(p, 'fail');
   fs.mkdirSync(fsio.PROJECT_DIR, { recursive: true });
   fsio.writeAtomicJson(path.join(fsio.PROJECT_DIR, 'project.json'), p);
+}
+
+// Canonicalize bare phase-code references in decision/requirement rows
+// ("P0" → "P0: full-auto mode"). A row value that already equals a canonical
+// phase name, or that no canonical name extends, is left untouched (ghost and
+// dropped rows are classified at milestone close, not here). A bare prefix
+// shared by two canonical names is ambiguous and dies naming both candidates.
+// Mutates rows in place and returns the same array.
+function normalizeRowPhaseRefs(rows, phases, field) {
+  const names = new Set();
+  for (const ph of phases) {
+    if (ph && typeof ph.name === 'string' && ph.name.length > 0) names.add(ph.name);
+  }
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue;
+    const v = row[field];
+    if (typeof v !== 'string' || names.has(v)) continue;
+    const candidates = [];
+    for (const name of names) {
+      if (!name.startsWith(v) || name.length <= v.length) continue;
+      const tail = name.slice(v.length);
+      if (tail.startsWith(':') || tail.startsWith(' ')) candidates.push(name);
+    }
+    if (candidates.length === 1) row[field] = candidates[0];
+    else if (candidates.length > 1) {
+      fsio.die(`bare phase reference '${v}' (${field}) is ambiguous — candidates: ${candidates.map((c) => `'${c}'`).join(', ')}`);
+    }
+  }
+  return rows;
 }
 
 const CONTRACTS = {
@@ -1406,6 +1462,7 @@ module.exports = {
   defaultState,
   currentRootRealpath,
   emptyProject,
+  normalizeRowPhaseRefs,
   loadProject,
   saveProject,
   checkInputConstraint,

@@ -3,7 +3,7 @@
     "total": 1522,
     "callgraph": 968,
     "testof_fn": 116,
-    "fn_count": 901,
+    "fn_count": 902,
     "fns": [
       "absTaskPath",
       "ackWaitMs",
@@ -503,6 +503,7 @@
       "nextStage",
       "nonNegInt",
       "normalizeLocale",
+      "normalizeRowPhaseRefs",
       "normalizeStampsToV2",
       "normalizeTaskPaths",
       "normalizeTaskRefs",
@@ -1032,6 +1033,7 @@
       "validateProject": "bin/lib/core/state.cjs",
       "loadProject": "bin/lib/core/state.cjs",
       "saveProject": "bin/lib/core/state.cjs",
+      "normalizeRowPhaseRefs": "bin/lib/core/state.cjs",
       "currentTaskId": "bin/lib/core/state.cjs",
       "ensureTaskDir": "bin/lib/core/state.cjs",
       "absTaskPath": "bin/lib/core/state.cjs",
@@ -1810,8 +1812,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "5486b26a0778db90",
-    "at": "2026-11-11T11:55:10.221Z"
+    "fp": "ec7dc4799ab05d68",
+    "at": "2026-11-13T02:49:17.236Z"
   },
   "peak": {
     "total": 2065,

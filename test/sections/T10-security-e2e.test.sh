@@ -277,8 +277,11 @@ set +e; OUT=$(GOS_SKIP_SHIP_CHECK=1 node "$GOS" archive 2>&1); RC=$?; set -e
 if [ "$RC" -ne 0 ]; then printf '%s\n' "$OUT" | tail -8 >&2; fi   # [T45 debug-keep] failure detail
 assert_exit "second same-day archive exits 0" 0 "$RC"
 UDATE=$(python3 -c "import datetime; print(datetime.datetime.utcnow().date().isoformat())")
+# legacy slug branch: this sandbox's project.json carries no open milestone
+# (milestone stays null), so the prefix falls back to PKG.version — version
+# read parametrically from GOS_ROOT package.json, never hardcoded
 VER=$(node -e "console.log(require(process.env.GOS_ROOT+'/package.json').version)")
-assert_file "first archive dir exists (structured slug)" ".gos/archive/$UDATE-v$VER-phase-p1-plat"
+assert_file "first archive dir exists (structured slug, legacy version prefix)" ".gos/archive/$UDATE-v$VER-phase-p1-plat"
 assert_file "second archive dir got -2 suffix (structured)" ".gos/archive/$UDATE-v$VER-phase-p1-plat-2"
 
 t10_teardown "$T10B_DIR"

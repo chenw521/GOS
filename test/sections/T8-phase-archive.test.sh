@@ -228,7 +228,7 @@ assert_contains "milestone message" "✓ milestone complete — project.json res
 BLANK=$(python3 -c "
 import json; p=json.load(open('.gos/project/project.json'))
 print('|'.join([str(p['schema_version']), str(p['last_archived_phase']), str(len(p['phases'])), str(len(p['decisions'])), str(len(p['requirements']))]))")
-assert_eq "project.json reset to empty shape" "1|None|0|0|0" "$BLANK"
+assert_eq "project.json reset to empty shape" "2|None|0|0|0" "$BLANK"
 assert_file "milestone-record snapshot" ".gos/archive/$UDATE-v$VER-phase-p3-milestone-tail-task/milestone-record/DECISIONS.md"
 
 # --- .16-18: non-Lv4 guards + no-project render skip

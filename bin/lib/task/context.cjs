@@ -163,15 +163,30 @@ function cmdContext(args) {
 
 function archiveSlugParts(state) {
   const date = new Date().toISOString().slice(0, 10);
-  let version = '0.0.0';
-  try { version = core.PKG.version || '0.0.0'; } catch { /* keep */ }
+  // Slug prefix tracks the milestone lifecycle: an open milestone lends its
+  // stored name (already sanitized when the milestone opened — never
+  // re-sanitized here); a closed, not-yet-reopened milestone leaves a gap
+  // with no prefix at all. Repos without a milestone object (pre-v2 states
+  // and plain non-Lv4 tasks) keep the PKG.version prefix — a PERMANENT
+  // fallback for non-milestone repos, not a sunset.
+  let prefix = '';
+  let project = null;
+  try { project = core.loadProject(); } catch { /* unreadable project keeps the version fallback */ }
+  const ms = project && project.milestone;
+  if (ms && typeof ms === 'object') {
+    prefix = (ms.closed_at === undefined && typeof ms.name === 'string' && ms.name) ? ms.name : '';
+  } else {
+    let version = '0.0.0';
+    try { version = core.PKG.version || '0.0.0'; } catch { /* keep */ }
+    prefix = `v${version}`;
+  }
   let middle = 'task';
   if (state.phase_name) {
     const tok = core.currentTaskId(state) || 'task';
     middle = `phase-${tok}`;
   }
   const topic = (state.intent.summary || 'task').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'misc';
-  return { date, slug: `v${version}-${middle}-${topic}`.slice(0, 60) };
+  return { date, slug: [prefix, middle, topic].filter(Boolean).join('-').slice(0, 60) };
 }
 
 module.exports = { archiveSlugParts, pushCuratedConcerns, cmdContext };

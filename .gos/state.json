@@ -109,7 +109,68 @@
       }
     }
   ],
-  "observable_truths": [],
+  "observable_truths": [
+    {
+      "id": "T1",
+      "description": "P0 at index 0 and names in monotonic order in phase list",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T2",
+      "description": "after archive of a phase task, its project.json entry carries task_ref = archive basename and completed_at ISO stamp",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T3",
+      "description": "milestone close --carry-parked --yes leaves parked phases + parked-owned rows + pending phase entries present in project.json, byte-equal to the preclose backup; snapshots exist as dated view .md files + preclose.json and in the closing milestone-record/",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T4",
+      "description": "milestone open publicize stamps milestone {name, opened_at}; the NEXT archived task slug prefix reads publicize; in the closed-not-reopened gap slugs carry no version prefix",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T5",
+      "description": "with state.json absent and the Lv4 marker present, gos resume prints NO ACTIVE TASK + milestone identity + phase queue + clone warning (exit 0)",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T6",
+      "description": "gos init --project in a fresh repo creates project.json, lv4.json marker, and views but no state.json; init --project on a repo with Lv4 trace refuses without --fresh",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T7",
+      "description": "gos phase mark-done on a never-claimed phase stamps completed_at and leaves task_ref null",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T8",
+      "description": "post-close project.json: decisions array empty or milestone-owned only, done-owned requirement rows = 0, dropped/ghost rows counted in the report, last_archived_phase null",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T9",
+      "description": "gos milestone open evil/../x and backtick names die with a sanitization contract error; a tainted name never reaches a path, slug, or echo line",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T10",
+      "description": "legacy wrapper state (project=true, no phase_name) triggers the retirement prompt; after retirement, stateless resume takes over",
+      "verified": false,
+      "evidence": null
+    }
+  ],
   "gaps": [],
   "phase_name": "P20: milestone lifecycle mechanics and ceremony",
   "task_head": "b3421e205e3e4ead549208f3d73509a494dd509e",

@@ -36,7 +36,7 @@ assert_file "project.json exists" ".gos/project/project.json"
 PJ=$(python3 -c "
 import json; p=json.load(open('.gos/project/project.json'))
 print('%s|%s|%d|%d|%d' % (p['schema_version'], p['last_archived_phase'], len(p['phases']), len(p['decisions']), len(p['requirements'])))")
-assert_contains "project.json empty skeleton" "1|None|0|0|0" "$PJ"
+assert_contains "project.json empty skeleton" "2|None|0|0|0" "$PJ"
 
 # --- .3: corrupted project.json → write-class exit 1 file:field
 t2_teardown; t2_setup

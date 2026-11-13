@@ -337,8 +337,9 @@ NOT claim T14b completion. Outcomes land in the closing milestone-record/.
 BUILD side (asserted by sections; evidence recorded via `gos truth
 verify` in T12 once green) + CEREMONY side (runbook literal verify lines,
 post-archive). Registered IDs are CLI-generated (`T1`..`T10` un-hyphenated
-— truthNextId takes no ID argument); the `T-01`..`T-10` labels below are
-semantic numbers, and the actual-ID ↔ semantic mapping is recorded at T1:
+— truthNextId takes no ID argument); T1 registration produced the identity
+mapping: CLI `TN` ≡ semantic `T-0N` (T1↔T-01 … T10↔T-10). Labels below
+keep the semantic `T-0N` spelling:
 
 ### T-01: P0 at index 0, monotonic names
 - **Expected**: phase list P0 first; names monotonic
