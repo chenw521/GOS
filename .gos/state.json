@@ -2,17 +2,19 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "PLAN",
+  "current_stage": "BUILD",
   "completed_stages": [
     "INTENT",
-    "THINK"
+    "THINK",
+    "PLAN"
   ],
   "intent": {
     "summary": "Milestone lifecycle mechanics and ceremony on the hierarchical model (B-double-prime): project.json is the Lv4 parent container — phase entries gain additive task_ref and completed_at snapshot fields written at mark-done/archive time, resume composes parent plus resident child state (no dedicated parent state file, state.json schema untouched, no levelless shell ever created); implement milestone close-with-parked, fix the P0 phase insertion order, close the shipped v1.0.0-dev milestone with parked P2/P3 carried over, open the publicize milestone, and re-home P2/P3 onto it unchanged (their execution stays with the phases themselves, after P23).",
     "confirmed": true
   },
   "approvals": {
-    "THINK": "2026-11-12T10:35:24.879Z"
+    "THINK": "2026-11-12T10:35:24.879Z",
+    "PLAN": "2026-11-13T02:25:57.287Z"
   },
   "spec_path": null,
   "plan_path": null,
@@ -119,5 +121,221 @@
     }
   ],
   "spec_gate_version": 3,
-  "spec_sha256": "9803027427e3157738bdd794a26142861cc033b7ff2870f05f552a16125a5f31"
+  "spec_sha256": "9803027427e3157738bdd794a26142861cc033b7ff2870f05f552a16125a5f31",
+  "plan_snapshot": {
+    "tasks": [
+      {
+        "id": "T1",
+        "covers": [
+          "R-14"
+        ],
+        "files": [
+          ".gos/state.json"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T2",
+        "covers": [
+          "D-66",
+          "R-07",
+          "R-13"
+        ],
+        "files": [
+          "bin/lib/core/state.cjs",
+          "test/sections/T46-module-structure.test.sh",
+          "test/sections/T25-map-selfcheck.test.sh"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T3",
+        "covers": [
+          "R-11"
+        ],
+        "files": [
+          "bin/lib/task/context.cjs",
+          "test/sections/T10-security-e2e.test.sh",
+          "test/sections/T46-module-structure.test.sh",
+          "test/sections/T25-map-selfcheck.test.sh"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T4",
+        "covers": [
+          "D-67",
+          "R-02",
+          "R-08"
+        ],
+        "files": [
+          "bin/lib/knowledge/milestone.cjs",
+          "bin/lib/knowledge/index.cjs",
+          "bin/gos.cjs",
+          "bin/lib/core/state.cjs",
+          "bin/lib/nav/registry-consts.cjs",
+          "bin/lib/task/init.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs",
+          "test/sections/T2-project.test.sh",
+          "test/sections/T46-module-structure.test.sh",
+          "test/sections/T25-map-selfcheck.test.sh"
+        ],
+        "wave": 2
+      },
+      {
+        "id": "T5",
+        "covers": [
+          "D-68",
+          "R-03",
+          "R-04",
+          "R-05",
+          "R-06",
+          "R-13"
+        ],
+        "files": [
+          "bin/lib/knowledge/milestone.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs",
+          "bin/lib/task/archive.cjs",
+          "test/sections/T46-module-structure.test.sh",
+          "test/sections/T25-map-selfcheck.test.sh"
+        ],
+        "wave": 2
+      },
+      {
+        "id": "T6",
+        "covers": [
+          "D-66",
+          "R-03",
+          "R-07"
+        ],
+        "files": [
+          "bin/lib/task/archive.cjs",
+          "bin/lib/knowledge/phase.cjs",
+          "test/sections/T8-phase-archive.test.sh",
+          "test/sections/T46-module-structure.test.sh",
+          "test/sections/T25-map-selfcheck.test.sh"
+        ],
+        "wave": 2
+      },
+      {
+        "id": "T7",
+        "covers": [
+          "R-05"
+        ],
+        "files": [
+          "bin/lib/nav/cmds.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ],
+        "wave": 2
+      },
+      {
+        "id": "T8",
+        "covers": [
+          "D-69",
+          "R-08"
+        ],
+        "files": [
+          "bin/lib/knowledge/phase.cjs",
+          "bin/lib/knowledge/decisions.cjs",
+          "bin/lib/knowledge/requirements.cjs",
+          "bin/lib/nav/cmds.cjs",
+          "bin/lib/core/state.cjs",
+          "test/sections/T46-module-structure.test.sh",
+          "test/sections/T25-map-selfcheck.test.sh"
+        ],
+        "wave": 3
+      },
+      {
+        "id": "T9",
+        "covers": [
+          "D-69",
+          "R-09"
+        ],
+        "files": [
+          "bin/lib/nav/cmds.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ],
+        "wave": 3
+      },
+      {
+        "id": "T10",
+        "covers": [
+          "D-70",
+          "R-10"
+        ],
+        "files": [
+          "bin/lib/knowledge/phase.cjs",
+          "bin/lib/core/state.cjs",
+          "bin/lib/nav/registry-consts.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs",
+          "test/sections/T46-module-structure.test.sh",
+          "test/sections/T25-map-selfcheck.test.sh"
+        ],
+        "wave": 4
+      },
+      {
+        "id": "T11",
+        "covers": [
+          "R-12"
+        ],
+        "files": [
+          "skills/gos-project/scripts/archive-milestone.sh",
+          "skills/gos-project/SKILL.md"
+        ],
+        "wave": 4
+      },
+      {
+        "id": "T12",
+        "covers": [
+          "R-14",
+          "R-06"
+        ],
+        "files": [
+          "test/sections/T114-milestone-open-close.test.sh",
+          "test/sections/T115-phase-move.test.sh",
+          "test/sections/T116-stateless-resume.test.sh",
+          "test/sections/T117-slug-prefix-init-bootstrap.test.sh",
+          "test/sections/T118-milestone-ceremony.test.sh"
+        ],
+        "wave": 5
+      },
+      {
+        "id": "T13",
+        "covers": [
+          "R-01"
+        ],
+        "files": [
+          "census.json",
+          ".gos/codebase/network.md",
+          ".gos/codebase/unmapped-fns.txt",
+          "test/sections/T46-module-structure.test.sh",
+          "test/sections/T25-map-selfcheck.test.sh"
+        ],
+        "wave": 5
+      },
+      {
+        "id": "T14a",
+        "covers": [
+          "R-15",
+          "R-10"
+        ],
+        "files": [
+          ".gos/task/p20/ceremony-runbook.md"
+        ],
+        "wave": 5
+      }
+    ],
+    "audit": [],
+    "meta": {
+      "waveValidation": {
+        "ok": true,
+        "waves": 5
+      }
+    }
+  }
 }
