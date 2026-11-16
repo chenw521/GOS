@@ -588,7 +588,7 @@
       }
     }
   },
-  "changelog_user_summary": "milestone lifecycle test surface: five new test sections for open/close disposition with crash windows, queue move, stateless resume, slug prefix rules, and the seeded close ceremony, with legacy sections realigned and stateless repos gaining decision import plus the DECISIONS index warning",
+  "changelog_user_summary": "Project identity derives from a tracked Lv4 marker so fresh clones stay project repos: the wrapper state class retires with a one-shot prompt, stateless resume composes the parent view behind a NO ACTIVE TASK banner with a clone warning, the roadmap queue gains a move verb, archive stamps per-entry task_ref and completed_at under schema v2, and the archive slug prefix follows the milestone name",
   "checkpoints": [
     {
       "stage": "BUILD",
