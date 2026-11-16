@@ -743,4 +743,27 @@ module.exports = {
   'init.projectBootstrapped': '✓ Lv4 项目容器已引导（真相源：.gos/project/project.json；此处不写入任何任务状态）',
   'init.projectTraceRefusal': '已存在 Lv4 痕迹（{trace}）——重新引导需要 --fresh（将既有容器重置为空骨架并开启全新里程碑）',
   'init.projectFreshReset': '⚠ --fresh 将重置既有的 Lv4 容器（project.json 回到空骨架并开启全新里程碑）',
+
+  'retire.notice': '⚠ 检测到遗留的包装态 state.json（Lv4 项目容器，未认领任何阶段）——非交互运行保持原样不动；可通过 GOS_RETIRE_WRAPPER=1 或交互式重跑来退役',
+  'retire.prompt': '⚠ 检测到遗留的包装态 state.json（Lv4 项目容器，未认领任何阶段）。现在删除它吗？(y/N) ',
+  'retire.done': '✓ 包装态 state.json 已退役——仓库级项目视图接管（gos status）',
+
+ // 无本地任务态的 Lv4 resume 组合视图（新克隆形态：有被跟踪的 Lv4 痕迹，
+ // 但本机没有任务状态）。横幅是机器可检索的契约字面量——在任何语言下
+ // 都保持逐字节相同的 ASCII 形态；语言包只能在它之后追加说明行，
+ // 绝不本地化横幅本身
+  'resume.noTask.banner': 'NO ACTIVE TASK',
+  'resume.noTask.milestoneNone': '里程碑: 尚未开启',
+  'resume.noTask.milestoneOpen': '里程碑: {name}（开启于 {ts}）',
+  'resume.noTask.milestoneClosed': '里程碑: {name}（关闭于 {ts}）',
+  'resume.noTask.queueEmpty': '阶段: 队列为空',
+  'resume.noTask.queueLine': '阶段: {counts}',
+  'resume.noTask.queueNames': '  {label}: {names}',
+  'resume.noTask.stDone': '已完成 {n}',
+  'resume.noTask.stActive': '进行中 {n}',
+  'resume.noTask.stPending': '待办 {n}',
+  'resume.noTask.stParked': '已搁置 {n}',
+  'resume.noTask.labelPending': '待办',
+  'resume.noTask.labelParked': '已搁置',
+  'resume.noTask.cloneWarning': '⚠ 本机没有 state.json——任务状态仅存本机（永不入库）；进行中的任务可能在另一台机器上',
 };

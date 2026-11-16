@@ -54,7 +54,45 @@ function cmdInstructions(args) {
 
 function cmdResume() {
   const state = core.readState();
-  if (!state) core.die('No state to resume. Start with `gos init`.');
+  if (!state) {
+    // Stateless but Lv4 (tracked trace without machine-local task state — the
+    // fresh-clone shape): compose the read-only parent view below; every
+    // other stateless shape keeps the start invitation.
+    if (!core.isLv4Repo()) core.die('No state to resume. Start with `gos init`.');
+    // Machine-greppable banner 'NO ACTIVE TASK': the ASCII literal is the
+    // contract and stays byte-identical in every locale catalog (a locale
+    // may append an explanation line AFTER it, never localize the banner
+    // itself — see the resume.noTask keys in the locale files).
+    console.log(core.t('resume.noTask.banner'));
+    const project = core.loadProject();
+    const ms = project ? project.milestone : null;
+    if (!ms || typeof ms !== 'object') {
+      console.log(core.t('resume.noTask.milestoneNone'));
+    } else if (ms.closed_at === undefined) {
+      console.log(core.t('resume.noTask.milestoneOpen', { name: ms.name, ts: ms.opened_at }));
+    } else {
+      console.log(core.t('resume.noTask.milestoneClosed', { name: ms.name, ts: ms.closed_at }));
+    }
+    // Phase queue tail: status counts plus the names of what remains
+    // (pending and parked); the full table stays with `gos phase list`.
+    const phases = (project && Array.isArray(project.phases)) ? project.phases : [];
+    const withStatus = (st) => phases.filter((p) => p && p.status === st);
+    if (!phases.length) {
+      console.log(core.t('resume.noTask.queueEmpty'));
+    } else {
+      const counts = [];
+      if (withStatus('done').length) counts.push(core.t('resume.noTask.stDone', { n: withStatus('done').length }));
+      if (withStatus('active').length) counts.push(core.t('resume.noTask.stActive', { n: withStatus('active').length }));
+      if (withStatus('pending').length) counts.push(core.t('resume.noTask.stPending', { n: withStatus('pending').length }));
+      if (withStatus('parked').length) counts.push(core.t('resume.noTask.stParked', { n: withStatus('parked').length }));
+      console.log(core.t('resume.noTask.queueLine', { counts: counts.join(' · ') }));
+      const names = (st) => withStatus(st).map((p) => p.name).join(', ');
+      if (withStatus('pending').length) console.log(core.t('resume.noTask.queueNames', { label: core.t('resume.noTask.labelPending'), names: names('pending') }));
+      if (withStatus('parked').length) console.log(core.t('resume.noTask.queueNames', { label: core.t('resume.noTask.labelParked'), names: names('parked') }));
+    }
+    console.log(core.t('resume.noTask.cloneWarning'));
+    return;
+  }
   console.log('=== GOS Resume Summary ===');
   console.log(`Task: ${core.sanitizeEcho(state.intent.summary)} (Lv${state.level ?? '?'})`);
   console.log(`Completed: ${state.completed_stages.join(' → ') || '(none)'}`);
@@ -71,7 +109,7 @@ function cmdResume() {
   const planAbs = core.planPathOf(state);
   if (specAbs && fs.existsSync(specAbs)) console.log(`Spec: ${specAbs}`);
   if (planAbs && fs.existsSync(planAbs)) console.log(`Plan: ${planAbs}`);
-  if (state.project && fs.existsSync(path.join(core.PROJECT_DIR, 'project.json'))) {
+  if (core.isLv4Repo()) { // repo-level: marker or project.json (isLv4Repo), never the task stamp
     console.log('→ Lv4: DECISIONS/ROADMAP/REQUIREMENTS are GENERATED views — edit via gos decision/requirement/phase commands.');
   }
   if (state.decisions.length) {

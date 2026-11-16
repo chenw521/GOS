@@ -373,6 +373,40 @@ function writeState(stateL) {
   fsio.writeAtomicJson(fsio.STATE_PATH, stateL);
 }
 
+// Legacy wrapper states (project container, no claimed phase) stopped being
+// written when bootstrap went stateless; survivors are retired at the CLI
+// dispatch entry — before the lock, so the confirm prompt never runs inside a
+// lock-holding command. GOS_RETIRE_WRAPPER=1 retires without asking; a
+// non-interactive run prints one notice and leaves the state untouched.
+function retireWrapperState() {
+  if (!fs.existsSync(fsio.STATE_PATH)) return;
+  let s;
+  try { s = JSON.parse(fs.readFileSync(fsio.STATE_PATH, 'utf8')); } catch { return; }
+  if (!s || s.project !== true || s.phase_name) return;
+  if (!['INTENT', 'DONE'].includes(s.current_stage)) return;
+  const i18n = require('./i18n.cjs');
+  const retire = () => {
+    fs.unlinkSync(fsio.STATE_PATH);
+    console.log(i18n.t('retire.done'));
+  };
+  if (process.env.GOS_RETIRE_WRAPPER === '1') { retire(); return; }
+  if (!(process.stdout.isTTY === true) || fsio.isHeadlessEnv()) {
+    console.error(i18n.t('retire.notice'));
+    return;
+  }
+  process.stdout.write(i18n.t('retire.prompt'));
+  let ans = '';
+  const buf = Buffer.alloc(1);
+  while (ans.length < 8) {
+    let n;
+    try { n = fs.readSync(0, buf, 0, 1, null); } catch { break; }
+    if (n === 0) break;
+    if (buf[0] === 0x0a || buf[0] === 0x0d) break;
+    ans += buf.toString('latin1');
+  }
+  if (/^y(es)?$/i.test(ans.trim())) retire();
+}
+
 // Depth-first leaf walk over the state object; returns { path, text } of the
 // first string leaf carrying CJK, null when clean. Pure detection — the
 // tracked probe lives in dieTrackedStoreCJK.
@@ -495,6 +529,13 @@ function saveProject(p) {
   validateProject(p, 'fail');
   fs.mkdirSync(fsio.PROJECT_DIR, { recursive: true });
   fsio.writeAtomicJson(path.join(fsio.PROJECT_DIR, 'project.json'), p);
+}
+
+// Repo-level Lv4-ness: the tracked marker or the project truth store — either
+// alone qualifies. Task states are never consulted; a claimed child carries
+// its own task-boundness stamp (project: true set at claim).
+function isLv4Repo() {
+  return fs.existsSync(path.join(fsio.PROJECT_DIR, 'lv4.json')) || fs.existsSync(path.join(fsio.PROJECT_DIR, 'project.json'));
 }
 
 // Canonicalize bare phase-code references in decision/requirement rows
@@ -1010,7 +1051,7 @@ function defaultState(level, intentText) {
     approvals: {},  // stage-gate approvals — value per stage: legacy = bare ts string (gos approve), auto-routed = {status:'PENDING'|'ratified'|'cleared', ts, mode:'auto', stage, evidence?} ('ratified' is a legacy reader tolerance; 'cleared' is the canonical writer spelling); BASELINE_RESET keeps {ts, reason}
     spec_path: null,   // T5: backfilled below via ensureTaskDir resolution
     plan_path: null,
-    project: false,          // true when init --project (Lv4 truth-source mode)
+    project: false,          // claim stamps true on phase-claimed children (task-boundness marker; repo-level Lv4-ness is isLv4Repo)
     requirements: extractRequirement(intentText, level),
     decisions: [],
     observable_truths: [],
@@ -1466,6 +1507,8 @@ module.exports = {
   pinTaskPaths,
   readState,
   writeState,
+  isLv4Repo,
+  retireWrapperState,
   firstCJKLeaf,
   dieTrackedStoreCJK,
   currentTaskId,

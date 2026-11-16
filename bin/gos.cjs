@@ -173,8 +173,11 @@ function main() {
   // anchoring), but mutating subcommands acquire the .gos/.lock themselves [R2-F9].
  // (Phase C/ : concerns.* overrides in nav.SUBCLASS_OVERRIDES are registry metadata
   // only — dispatch deliberately does NOT consume them; zero behavior change.)
-  core.readState._mode = (cls === 'write' || cls === 'exec') ? 'write' : 'read';
-  core.guardCwd(cls, cname, breakLock, args); // D-06/17: lock + anchor + banner (order matters: lock before state ops)
+ core.readState._mode = (cls === 'write' || cls === 'exec') ? 'write' : 'read';
+ // wrapper-zombie retirement fires before guardCwd so its confirm prompt
+ // never runs inside a lock-holding command; global/help commands skip it
+ if (cls !== 'global' && nav.KNOWN_CASES.includes(cname)) core.retireWrapperState();
+ core.guardCwd(cls, cname, breakLock, args); // D-06/17: lock + anchor + banner (order matters: lock before state ops)
  // write-class loads project.json too — fail-closed validation applies to both stores
   if ((cls === 'write' || cls === 'exec') && fs.existsSync(path.join(core.PROJECT_DIR, 'project.json'))) {
     core.loadProject();

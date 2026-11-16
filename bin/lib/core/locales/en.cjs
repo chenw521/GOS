@@ -750,4 +750,28 @@ module.exports = {
   'init.projectBootstrapped': '✓ Lv4 project container bootstrapped (truth source: .gos/project/project.json; no task state is written here)',
   'init.projectTraceRefusal': 'Lv4 trace already present ({trace}) — re-bootstrap requires --fresh (resets the existing container to an empty skeleton with a fresh open milestone)',
   'init.projectFreshReset': '⚠ --fresh resets the existing Lv4 container (project.json back to an empty skeleton with a fresh open milestone)',
+
+ // ---- wrapper zombie retirement (legacy project-container state; dispatch-entry check)
+  'retire.notice': '⚠ legacy wrapper state.json detected (Lv4 project container, no claimed phase) — non-interactive run left it in place; retire via GOS_RETIRE_WRAPPER=1 or an interactive re-run',
+  'retire.prompt': '⚠ legacy wrapper state.json detected (Lv4 project container, no claimed phase). Delete it now? (y/N) ',
+  'retire.done': '✓ wrapper state.json retired — the repo-level project view takes over (gos status)',
+
+ // ---- stateless Lv4 resume composition (fresh-clone shape: tracked trace,
+ // no machine-local task state). The banner is a machine-greppable contract
+ // literal — byte-identical ASCII in EVERY locale; a locale may append an
+ // explanation line AFTER it, never localize the banner itself ----
+  'resume.noTask.banner': 'NO ACTIVE TASK',
+  'resume.noTask.milestoneNone': 'Milestone: none open',
+  'resume.noTask.milestoneOpen': 'Milestone: {name} (opened {ts})',
+  'resume.noTask.milestoneClosed': 'Milestone: {name} (closed {ts})',
+  'resume.noTask.queueEmpty': 'Phases: none yet — the queue is empty',
+  'resume.noTask.queueLine': 'Phases: {counts}',
+  'resume.noTask.queueNames': '  {label}: {names}',
+  'resume.noTask.stDone': '{n} done',
+  'resume.noTask.stActive': '{n} active',
+  'resume.noTask.stPending': '{n} pending',
+  'resume.noTask.stParked': '{n} parked',
+  'resume.noTask.labelPending': 'pending',
+  'resume.noTask.labelParked': 'parked',
+  'resume.noTask.cloneWarning': '⚠ no local state.json — task state is machine-local (never committed); an in-flight task may live on another machine',
 };

@@ -3,7 +3,7 @@
     "total": 1540,
     "callgraph": 983,
     "testof_fn": 116,
-    "fn_count": 917,
+    "fn_count": 919,
     "fns": [
       "absTaskPath",
       "ackWaitMs",
@@ -418,6 +418,7 @@
       "isAncestorPath",
       "isDelegatedStage",
       "isHeadlessEnv",
+      "isLv4Repo",
       "isPending",
       "isPermanentEntry",
       "isPlainObject",
@@ -712,6 +713,7 @@
       "resolveWallMs",
       "resolveWorkerPlan",
       "resolvedGrantsOf",
+      "retireWrapperState",
       "rollDispatchTableStamp",
       "rootOf",
       "runAdoptOrNoop",
@@ -1042,12 +1044,14 @@
       "validateState": "bin/lib/core/state.cjs",
       "readState": "bin/lib/core/state.cjs",
       "writeState": "bin/lib/core/state.cjs",
+      "retireWrapperState": "bin/lib/core/state.cjs",
       "firstCJKLeaf": "bin/lib/core/state.cjs",
       "dieTrackedStoreCJK": "bin/lib/core/state.cjs",
       "emptyProject": "bin/lib/core/state.cjs",
       "validateProject": "bin/lib/core/state.cjs",
       "loadProject": "bin/lib/core/state.cjs",
       "saveProject": "bin/lib/core/state.cjs",
+      "isLv4Repo": "bin/lib/core/state.cjs",
       "normalizeRowPhaseRefs": "bin/lib/core/state.cjs",
       "currentTaskId": "bin/lib/core/state.cjs",
       "ensureTaskDir": "bin/lib/core/state.cjs",
@@ -1842,8 +1846,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "233e1717b96e73d4",
-    "at": "2026-11-16T03:19:21.926Z"
+    "fp": "b2842e877339a623",
+    "at": "2026-11-16T05:02:12.808Z"
   },
   "peak": {
     "total": 2065,

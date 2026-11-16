@@ -65,8 +65,8 @@ function cmdPhase(args) {
   const rest = args.slice(1);
 
   if (sub === 'add') {
-    const state = core.readState();
-    if (!state || state.project !== true) core.die('phase add requires an Lv4 project (gos init --project)');
+    // repo-level gate: the Lv4 marker or project.json (isLv4Repo) — never the task state
+    if (!core.isLv4Repo()) core.die('phase add requires an Lv4 project (gos init --project)');
     const { pos, opt } = decisions.decisionParseOpts(rest, ['--goal']);
     const name = pos.join(' ').trim();
     const goal = opt['--goal'] !== undefined && opt['--goal'] !== null ? String(opt['--goal']).trim() : '';
@@ -222,8 +222,8 @@ function cmdPhase(args) {
     const state = core.readState();
     if (force) console.log('⚠⚠ FORCE-CLAIM bypasses DONE/archive preconditions — data loss risk if current task is mid-flight');
     // DONE precondition applies to PHASE-OWNED state only (phase_name set by a prior claim).
-    // A wrapper state (project=true, no phase_name — the Lv4 project container created by init
-    // --project) has no work to lose: first claim from wrapper is the NORMAL entry, not an exception.
+    // A wrapper state (legacy project container: project=true, no phase_name) has no work
+    // to lose: first claim from wrapper is the NORMAL entry, not an exception.
     // The archived-chain field is audit-only — the order gate is status-based below.
     // Unclaim-then-reclaim of the SAME phase is the designed recovery path
     // (unclaim output says "re-claim or gos init"); the DONE precondition must not
@@ -249,6 +249,8 @@ function cmdPhase(args) {
     const goal = phases[n].goal;
     const fresh = core.defaultState(3, goal);
     fresh.intent.confirmed = true;
+    // task-boundness stamp: this claimed child belongs to the project; repo
+    // Lv4-ness is isLv4Repo (marker/project.json), independent of this field
     fresh.project = true;
     // [T4b/D-12] no project_root stamp — v4 identity is de-pathed (repo_id via
     // defaultState; repo root runtime-derived where needed).
