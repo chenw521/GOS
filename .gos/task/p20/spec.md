@@ -218,8 +218,7 @@ deepen: any option — ask for another dig round.
 | B. keep the tracked ledger as a second surface | zero migration | none | two publication truths diverge (the D-59 class) | nothing — the divergence already bit the concurrent stream |
 | C. delete the ledger outright | one less file | simplest | loses the machine-side buffer between push windows | a re-add nobody asked for |
 
-why-not: B. keep the tracked ledger — a second truth source is the standing
-anti-pattern; C. delete outright — the buffer has push-window value.
+why-not: B. keep the tracked ledger as a second surface — a second truth source is the standing anti-pattern; C. delete the ledger outright — the buffer has push-window value.
 recommendation: A — conditional: the demotion (census flip via the
 track/gap discipline) and the issues-only publication contract are
 implemented by a later task in the registering stream; P20 records this

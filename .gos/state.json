@@ -2,11 +2,12 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "BUILD",
+  "current_stage": "REVIEW",
   "completed_stages": [
     "INTENT",
     "THINK",
-    "PLAN"
+    "PLAN",
+    "BUILD"
   ],
   "intent": {
     "summary": "Milestone lifecycle mechanics and ceremony on the hierarchical model (B-double-prime): project.json is the Lv4 parent container — phase entries gain additive task_ref and completed_at snapshot fields written at mark-done/archive time, resume composes parent plus resident child state (no dedicated parent state file, state.json schema untouched, no levelless shell ever created); implement milestone close-with-parked, fix the P0 phase insertion order, close the shipped v1.0.0-dev milestone with parked P2/P3 carried over, open the publicize milestone, and re-home P2/P3 onto it unchanged (their execution stays with the phases themselves, after P23).",
@@ -339,7 +340,7 @@
     }
   ],
   "spec_gate_version": 3,
-  "spec_sha256": "9803027427e3157738bdd794a26142861cc033b7ff2870f05f552a16125a5f31",
+  "spec_sha256": "41f1f39e99beb438505e98ec2a9f160be98ae0b167b0d8cd39af560636fac339",
   "plan_snapshot": {
     "tasks": [
       {
@@ -583,5 +584,14 @@
       }
     }
   },
-  "changelog_user_summary": "milestone lifecycle test surface: five new test sections for open/close disposition with crash windows, queue move, stateless resume, slug prefix rules, and the seeded close ceremony, with legacy sections realigned and stateless repos gaining decision import plus the DECISIONS index warning"
+  "changelog_user_summary": "milestone lifecycle test surface: five new test sections for open/close disposition with crash windows, queue move, stateless resume, slug prefix rules, and the seeded close ceremony, with legacy sections realigned and stateless repos gaining decision import plus the DECISIONS index warning",
+  "checkpoints": [
+    {
+      "stage": "BUILD",
+      "unit": "all-waves (auto at commit)",
+      "done": "T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14a,T15",
+      "remaining": "",
+      "at": "2026-11-16T07:22:20.953Z"
+    }
+  ]
 }
