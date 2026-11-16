@@ -27,20 +27,33 @@ import hashlib
 print('6|False|%s' % hashlib.sha256(b'github.com:443/acme/t2-auth').hexdigest()[:16])")
 assert_eq "init: v6 + de-pathed (no project_root) + repo_id from origin remote" "$WANT" "$READ"
 
-# --- .2: init --project sets project flag + creates project.json + four files
+# --- .2: init --project bootstraps the Lv4 container only (no task state file)
 t2_teardown; t2_setup
-node "$GOS" init 4 "platform" --project >/dev/null 2>&1
-FLAG=$(python3 -c "import json; print(json.load(open('.gos/state.json')).get('project'))")
-assert_eq "state.project=true with --project" "True" "$FLAG"
+set +e; OUT=$(node "$GOS" init 4 "platform" --project 2>&1); RC=$?; set -e
+assert_exit "bootstrap exits 0" 0 "$RC"
+assert_contains "bootstrap opens the default milestone" "Milestone opened: milestone-1" "$OUT"
+if [ -e .gos/state.json ]; then
+  echo "  ✗ bootstrap wrote a task state file"; FAIL=$((FAIL+1))
+else
+  echo "  ✓ bootstrap writes no task state file"; PASS=$((PASS+1))
+fi
 assert_file "project.json exists" ".gos/project/project.json"
 PJ=$(python3 -c "
 import json; p=json.load(open('.gos/project/project.json'))
-print('%s|%s|%d|%d|%d' % (p['schema_version'], p['last_archived_phase'], len(p['phases']), len(p['decisions']), len(p['requirements'])))")
-assert_contains "project.json empty skeleton" "2|None|0|0|0" "$PJ"
+print('%s|%s|%s|%d|%d|%d' % (p['schema_version'], p['last_archived_phase'], (p.get('milestone') or {}).get('name'), len(p['phases']), len(p['decisions']), len(p['requirements'])))")
+assert_contains "project.json skeleton with milestone-1 open" "2|None|milestone-1|0|0|0" "$PJ"
+assert_file "lv4 marker seeded by bootstrap" ".gos/project/lv4.json"
+assert_contains "marker is one stable JSON line" '{"lv4":true}' "$(cat .gos/project/lv4.json)"
+set +e; OUT=$(node "$GOS" init 4 "platform" --project 2>&1); RC=$?; set -e
+assert_exit "re-bootstrap without --fresh refuses" 1 "$RC"
+assert_contains "refusal names the Lv4 trace" "Lv4 trace already present" "$OUT"
+set +e; OUT=$(node "$GOS" init 4 "platform" --project --fresh 2>&1); RC=$?; set -e
+assert_exit "--fresh re-bootstraps" 0 "$RC"
 
 # --- .3: corrupted project.json → write-class exit 1 file:field
 t2_teardown; t2_setup
 node "$GOS" init 4 "platform" --project >/dev/null 2>&1
+node "$GOS" init 3 "probe task" >/dev/null 2>&1
 python3 -c "
 import json; p=json.load(open('.gos/project/project.json')); p['phases']='not-array'
 json.dump(p,open('.gos/project/project.json','w'),indent=2)"
@@ -51,6 +64,7 @@ assert_contains "error locates project file:field" "project.json:phases" "$OUT"
 # --- .4: project.json version future → exit 3
 t2_teardown; t2_setup
 node "$GOS" init 4 "platform" --project >/dev/null 2>&1
+node "$GOS" init 3 "probe task" >/dev/null 2>&1
 python3 -c "
 import json; p=json.load(open('.gos/project/project.json')); p['schema_version']=99
 json.dump(p,open('.gos/project/project.json','w'),indent=2)"

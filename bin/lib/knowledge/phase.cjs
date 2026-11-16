@@ -375,6 +375,10 @@ function cmdPhase(args) {
     const wasParked = ph.status === 'parked';
     ph.status = 'done';
     delete ph.park_reason;
+    // Close-out stamp: completed_at records the done transition (backfill
+    // included); task_ref stays untouched — mark-done phases never ran the
+    // archive pipeline, so there is no home to name.
+    ph.completed_at = new Date().toISOString();
     // Mark-done is a done-transition too — keep the audit field at the most
     // recent done transition (incl. backfill), or it rots into a guaranteed lie.
     project.last_archived_phase = ph.name;

@@ -92,9 +92,9 @@ function cmdApprove(args) {
   const state = core.readState();
   if (!state) core.die(core.CONTRACTS.state_semantics.noActiveTask);
   const what = (args[0] || '').toLowerCase();
-  const valid = ['think', 'plan', 'archive', 'baseline-reset'];
+  const valid = ['think', 'plan', 'archive', 'baseline-reset', 'milestone-close'];
   if (!valid.includes(what)) {
-    console.log('Usage: gos approve <think|plan|archive|baseline-reset> [--reason "<why>"]');
+    console.log('Usage: gos approve <think|plan|archive|baseline-reset|milestone-close> [--reason "<why>"]');
     console.log('Approvals record EXPLICIT user sign-off; models must core.ask first.');
     const have = Object.keys(state.approvals || {});
     console.log(have.length ? `Current approvals: ${have.join(', ')}` : 'No approvals yet.');
@@ -109,6 +109,19 @@ function cmdApprove(args) {
     state.approvals.BASELINE_RESET = { ts: new Date().toISOString(), reason };
     core.writeState(state);
     console.log(`✓ BASELINE_RESET approved (reason: ${reason}) — single-consumption: gos map baseline reset --reason "${reason}"`);
+    return;
+  }
+  if (what === 'milestone-close') {
+    // approve milestone-close records {ts, reason?}; milestone close --yes
+    // consumes the record once (fresh within 24h) — reason is optional here
+    // because close only gates on ts freshness, unlike baseline-reset.
+    let reason = null;
+    for (let i = 1; i < args.length; i++) if (args[i] === '--reason') reason = args[++i];
+    const rec = { ts: new Date().toISOString() };
+    if (reason) rec.reason = reason;
+    state.approvals['MILESTONE-CLOSE'] = rec;
+    core.writeState(state);
+    console.log(`✓ MILESTONE-CLOSE approved${reason ? ` (reason: ${reason})` : ''} — single-consumption: gos milestone close --yes (fresh within 24h)`);
     return;
   }
   state.approvals[what.toUpperCase()] = new Date().toISOString();

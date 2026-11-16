@@ -211,6 +211,7 @@ function main() {
     case 'decision': knowledge.cmdDecision(args); break;
     case 'requirement': knowledge.cmdRequirement(args); break;
     case 'phase': knowledge.cmdPhase(args); break;
+    case 'milestone': knowledge.cmdMilestone(args); break;
     case 'anchor': map.cmdAnchor(args); break;
     case 'lessons': knowledge.cmdLessons(args); break;
     case 'gap': nav.cmdGap(args); break;

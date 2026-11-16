@@ -687,24 +687,24 @@ function cmdArchive(opts = {}) {
     }
     if (state.phase_name) {
       const ph = project.phases.find((p) => p && p.name === state.phase_name);
-      if (ph) ph.status = 'done';
+      if (ph) {
+        ph.status = 'done';
+        // task_ref anchors the phase entry to the basename of the home THIS
+        // run created (dest itself, never recomputed from slug parts). A
+        // pre-existing stamp names an earlier home from a prior run and is
+        // left verbatim — idempotent re-entry never re-stamps a different
+        // value.
+        if (ph.task_ref === undefined || ph.task_ref === null) ph.task_ref = path.basename(dest);
+        ph.completed_at = state.completed_at || new Date().toISOString();
+      }
       project.last_archived_phase = state.phase_name;
     }
-    let milestone = false;
-    if (project.phases.length && project.phases.every((p) => p && p.status === 'done')) {
-      // MILESTONE: final render of the full history FIRST, then blank + snapshot into the archive
-      render.renderProjectViews(project);
-      project.phases = [];
-      project.decisions = [];
-      project.requirements = [];
-      project.last_archived_phase = null; // core.emptyProject shape, schema_version kept
-      const mr = path.join(dest, 'milestone-record');
-      fs.mkdirSync(mr, { recursive: true });
-      for (const f of fs.readdirSync(core.PROJECT_DIR).filter((f) => f.endsWith('.md'))) {
-        fs.copyFileSync(path.join(core.PROJECT_DIR, f), path.join(mr, f));
-      }
-      console.log('✓ milestone complete — project.json reset for next milestone');
-      milestone = true;
+    const allDone = project.phases.length > 0 && project.phases.every((entry) => entry && entry.status === 'done');
+    if (allDone) {
+      // Milestone closure is a dedicated verb: archive never wipes. The
+      // final done phase only points the user at the close flow (snapshots
+      // and the wipe live there, approval-gated).
+      console.log(core.t('milestone.closeReadyHint', {}));
     } else {
       // [D-06/T3] milestone debt visibility: parked phases block completion (every(done))
       // — say so LOUDLY at the moment the user just archived, not silently never.
@@ -715,19 +715,19 @@ function cmdArchive(opts = {}) {
           console.log(`    parked: [${x.i}] ${x.p.name} — close out: \`gos phase park ${x.i} --undo\` then claim, or \`gos phase mark-done ${x.i}\` (explicit close-out)`);
         }
       }
-      // ANCHOR REWRITE: spec.md moved into this archive dir — current-phase anchors follow it
-      const prefix = `.gos/archive/${path.basename(dest)}/`;
-      for (const d of project.decisions) {
-        if (d && typeof d.anchor === 'string' && (d.anchor.startsWith('spec.md') || d.anchor.startsWith('task/')) && d.birth_phase === state.phase_name) {
-          d.anchor = prefix + d.anchor;
-        }
+    }
+    // ANCHOR REWRITE: spec.md moved into this archive dir — current-phase anchors follow it.
+    // Runs on every merge now: the all-done branch no longer wipes, so its
+    // merged rows need the archive prefix too.
+    const prefix = `.gos/archive/${path.basename(dest)}/`;
+    for (const d of project.decisions) {
+      if (d && typeof d.anchor === 'string' && (d.anchor.startsWith('spec.md') || d.anchor.startsWith('task/')) && d.birth_phase === state.phase_name) {
+        d.anchor = prefix + d.anchor;
       }
     }
     core.saveProject(project);
-    if (!milestone) {
-      render.renderProjectViews(project);
-      console.log('✓ rendered views (DECISIONS/ROADMAP/REQUIREMENTS)');
-    }
+    render.renderProjectViews(project);
+    console.log('✓ rendered views (DECISIONS/ROADMAP/REQUIREMENTS)');
   }
   state.current_stage = 'DONE';
  // ---- : clear checkpoints (prevent pollution of next task's resume)

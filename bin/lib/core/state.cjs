@@ -1087,11 +1087,12 @@ const COMMANDS = {
     desc: 'status alias (no-arg call)', class: 'read', aliasOf: 'status', aliases: [''], core: true,
   },
   'init': {
-    desc: 'init task: gos init <level> "<intent>" | --project (Lv4 four-file set)', class: 'write', aliases: [], core: true,
-    subs: ['<level> "<intent>"', '--project'], flags: [
+    desc: 'init task: gos init <level> "<intent>" | --project (Lv4 container bootstrap, never a task state)', class: 'write', aliases: [], core: true,
+    subs: ['<level> "<intent>"', '--project', '--project=<milestone-name>'], flags: [
       { name: '--force', scope: 'init', effect: 'discard existing task state and re-init', risk: 'destructive' },
+      { name: '--fresh', scope: 'project', effect: 'reset the existing Lv4 container and re-bootstrap (empty project.json skeleton with a fresh open milestone)', risk: 'destructive' },
     ],
-    usage: 'gos init <level> "<intent>" [--project] [--force]',
+    usage: 'gos init <level> "<intent>" | gos init --project [<milestone-name>] [--fresh]',
     next: ['gos', 'gos context think'],
     contractKeys: [],
   },
@@ -1240,6 +1241,18 @@ const COMMANDS = {
     usage: 'gos phase <sub> [args]',
     next: ['gos phase list', 'gos phase claim <n>'],
     contractKeys: ['command_contracts.phaseAdded', 'command_contracts.phaseAmended', 'command_contracts.amendRefuseActive', 'command_contracts.amendRefuseDone', 'command_contracts.amendRefuseParked', 'command_contracts.phaseRenamed', 'command_contracts.renameRefuseActive', 'command_contracts.renameRefuseDone', 'command_contracts.renameRefuseParked', 'command_contracts.renameExpectMismatch', 'command_contracts.renameBadShape', 'command_contracts.renameTooLong', 'command_contracts.renameRefuseCollision', 'command_contracts.phaseClaimed', 'command_contracts.phaseUnclaimed', 'command_contracts.claimGatedPrev', 'command_contracts.claimDeferredHint', 'command_contracts.claimCrossPhaseHint', 'command_contracts.claimTargetDone', 'command_contracts.claimAllClosed', 'command_contracts.claimTargetParked', 'command_contracts.doneHintParkedLine', 'command_contracts.doneHintAllDone', 'command_contracts.phaseParked', 'command_contracts.parkBlocksMilestone', 'command_contracts.parkUndo', 'command_contracts.parkIdempotent', 'command_contracts.parkUndoIdempotent', 'command_contracts.parkRefuseActive', 'command_contracts.parkRefuseDone', 'command_contracts.parkOrphanWarn', 'command_contracts.markDoneCloseOut', 'command_contracts.milestoneBlockedHeader'],
+  },
+  'milestone': {
+    desc: 'Lv4 milestone lifecycle: open | close', class: 'write', aliases: [], core: false,
+    subs: ['open <name>', 'close [--carry-parked] [--yes] [--empty]'],
+    flags: [
+      { name: '--carry-parked', scope: 'close', effect: 'carry parked phases and the rows they own verbatim into the next milestone' },
+      { name: '--yes', scope: 'close', effect: 'execute the close wipe (default is a no-write dry run); requires a fresh single-use MILESTONE-CLOSE approval', risk: 'destructive' },
+      { name: '--empty', scope: 'close', effect: 'allow closing a milestone with zero done phases (vacuum close)' },
+    ],
+    usage: 'gos milestone open <name> | gos milestone close [--carry-parked] [--yes] [--empty]',
+    next: ['gos phase add "P1: <title>" --goal "<goal>"', 'gos milestone close (dry run first, --yes to execute)', 'gos milestone open <next-name> (after close)'],
+    contractKeys: [],
   },
   'anchor': {
     desc: 're-derive state.repo_id from remotes (rescue)', class: 'write', aliases: [], core: false,

@@ -110,7 +110,7 @@ teardown
 # --- T-04: gate requirements exit 1 (Lv4) ---
 echo "--- T-04: gate requirements (unclaimed R-NN → exit 1, Lv4) ---"
 setup
-node "$GOS" init 4 "platform" --project >/dev/null 2>&1
+node "$GOS" init 4 "platform" >/dev/null 2>&1
 python3 -c "
 import json; s=json.load(open('.gos/state.json'))
 s['requirements']=[{'id':'R-01','text':'auth','phase':'P1','level':4},{'id':'R-02','text':'export','phase':None,'level':4}]
