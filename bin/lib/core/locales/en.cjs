@@ -751,6 +751,11 @@ module.exports = {
   'init.projectTraceRefusal': 'Lv4 trace already present ({trace}) — re-bootstrap requires --fresh (resets the existing container to an empty skeleton with a fresh open milestone)',
   'init.projectFreshReset': '⚠ --fresh resets the existing Lv4 container (project.json back to an empty skeleton with a fresh open milestone)',
 
+ // ---- phase queue move (array-order rewrite, status untouched)
+  'phase.moveDone': '✓ Phase moved: {name} (index {from} → {to})',
+  'phase.moveRefuseActive': 'refused — phase is active (claimed by in-flight state; its roadmap position is pinned until the task closes)',
+  'phase.moveExpectMismatch': 'refused --expect guard: phase sits at index {actual}, advice said {expect} — the queue changed since; re-check with `{cmd:phase} list`',
+
  // ---- wrapper zombie retirement (legacy project-container state; dispatch-entry check)
   'retire.notice': '⚠ legacy wrapper state.json detected (Lv4 project container, no claimed phase) — non-interactive run left it in place; retire via GOS_RETIRE_WRAPPER=1 or an interactive re-run',
   'retire.prompt': '⚠ legacy wrapper state.json detected (Lv4 project container, no claimed phase). Delete it now? (y/N) ',

@@ -1275,9 +1275,10 @@ const COMMANDS = {
   },
   'phase': {
     desc: 'Lv4 phase lifecycle: add | list | claim | unclaim | mark-done', class: 'write', aliases: [], core: true,
-    subs: ['add "P: name" --goal "<g>"', 'amend <n> --goal "<g>"', 'rename <n> "<new>" [--expect "<cur>"]', 'list', 'claim <n>', 'unclaim', 'park <n>', 'mark-done <n>'],
+    subs: ['add "P: name" --goal "<g>"', 'amend <n> --goal "<g>"', 'rename <n> "<new>" [--expect "<cur>"]', 'list', 'claim <n>', 'unclaim', 'park <n>', 'move <from> <to> [--expect "<cur-idx>"]', 'mark-done <n>'],
     flags: [
       { name: '--force', scope: 'claim', effect: 'bypass DONE/archive preconditions (data-loss risk if task mid-flight)', risk: 'destructive' },
+      { name: '--expect', scope: 'move', effect: 'guard: die unless the source phase resolves to this current index (stale-advice protection)' },
     ],
     usage: 'gos phase <sub> [args]',
     next: ['gos phase list', 'gos phase claim <n>'],

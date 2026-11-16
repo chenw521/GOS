@@ -744,6 +744,11 @@ module.exports = {
   'init.projectTraceRefusal': '已存在 Lv4 痕迹（{trace}）——重新引导需要 --fresh（将既有容器重置为空骨架并开启全新里程碑）',
   'init.projectFreshReset': '⚠ --fresh 将重置既有的 Lv4 容器（project.json 回到空骨架并开启全新里程碑）',
 
+  // ---- 阶段队列 move（数组顺序重排，状态不变）
+  'phase.moveDone': '✓ 阶段已移动：{name}（索引 {from} → {to}）',
+  'phase.moveRefuseActive': '拒绝——该阶段处于 active（被进行中的任务状态持有；其路线图位置在任务关闭前固定不动）',
+  'phase.moveExpectMismatch': '拒绝——--expect 守卫不匹配：该阶段当前位于索引 {actual}，建议写的是 {expect}——队列在建议产生后已变化，请用 `{cmd:phase} list` 重新确认',
+
   'retire.notice': '⚠ 检测到遗留的包装态 state.json（Lv4 项目容器，未认领任何阶段）——非交互运行保持原样不动；可通过 GOS_RETIRE_WRAPPER=1 或交互式重跑来退役',
   'retire.prompt': '⚠ 检测到遗留的包装态 state.json（Lv4 项目容器，未认领任何阶段）。现在删除它吗？(y/N) ',
   'retire.done': '✓ 包装态 state.json 已退役——仓库级项目视图接管（gos status）',
