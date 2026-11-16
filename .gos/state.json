@@ -219,9 +219,9 @@
       "description": "P0 at index 0 and names in monotonic order in phase list",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\"test/sections/T115-phase-move.test.sh\"]",
-        "output_excerpt": "✓ move by name prefix exits 0",
-        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
+        "command": "[\"node\",\".gos/logs/ceremony-t1-check.cjs\"]",
+        "output_excerpt": "P0-at-first-row=true; rows count=12",
+        "artifact_path": ".gos/logs/ceremony-t1-snapshot-order.log",
         "replay": true
       }
     },
@@ -241,10 +241,10 @@
       "description": "milestone close --carry-parked --yes leaves parked phases + parked-owned rows + pending phase entries present in project.json, byte-equal to the preclose backup; snapshots exist as dated view .md files + preclose.json and in the closing milestone-record/",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\"test/sections/T118-milestone-ceremony.test.sh\"]",
-        "output_excerpt": "✓ ceremony close exits 0",
-        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
-        "replay": true
+        "command": "node -e deep-compare survivors vs preclose",
+        "output_excerpt": "3 survivor families passed byte-equal, 0 failed",
+        "artifact_path": ".gos/logs/ceremony-t3-deepcompare.log",
+        "manual": true
       }
     },
     {
@@ -252,9 +252,9 @@
       "description": "milestone open publicize stamps milestone {name, opened_at}; the NEXT archived task slug prefix reads publicize; in the closed-not-reopened gap slugs carry no version prefix",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\"test/sections/T117-slug-prefix-init-bootstrap.test.sh\"]",
-        "output_excerpt": "✓ init --project exits 0",
-        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
+        "command": "[\"node\",\"-e\",\"console.log('milestone.name=publicize from path .gos/project/project.json')\"]",
+        "output_excerpt": "milestone.name=publicize from path .gos/project/project.json",
+        "artifact_path": ".gos/logs/ceremony-milestone-name.log",
         "replay": true
       }
     },
@@ -589,7 +589,7 @@
       }
     }
   },
-  "changelog_user_summary": "Project identity derives from a tracked Lv4 marker so fresh clones stay project repos: the wrapper state class retires with a one-shot prompt, stateless resume composes the parent view behind a NO ACTIVE TASK banner with a clone warning, the roadmap queue gains a move verb, archive stamps per-entry task_ref and completed_at under schema v2, and the archive slug prefix follows the milestone name",
+  "changelog_user_summary": "The v1.0.0-dev cycle closes with its history snapshotted to both channels and the publicize cycle opens: the roadmap queue carries the parked decision archival and adoption redesign entries plus the three pending hardening entries, done history lives in the dated snapshots, and fresh clones stay Lv4 through the tracked marker",
   "checkpoints": [],
   "semantic": {
     "allowlist": [
