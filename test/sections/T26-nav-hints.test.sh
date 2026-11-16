@@ -14,12 +14,15 @@ t26_setup() {
 
 t26_teardown() { cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$T26_DIR"; }
 
-# Fixture: phased DONE + archived state — project.json with 3 phases (2 done + 1 pending), state completed_at set
+# Fixture: phased DONE + archived state — project.json with 3 phases (2 done + 1 pending), state completed_at set.
+# Bootstrap is stateless, so the task-lane init seeds the state and the plant
+# below shapes it into the archived phase-owned form.
 t26_archived_fixture() {
   node "$GOS" init --project 4 "batch" --force >/dev/null 2>&1
   node "$GOS" phase add "P1: alpha" --goal "ga" >/dev/null 2>&1
   node "$GOS" phase add "P2: beta" --goal "gb" >/dev/null 2>&1
   node "$GOS" phase add "R: final" --goal "gr" >/dev/null 2>&1
+  node "$GOS" init 3 "batch tail task" >/dev/null 2>&1
   python3 - <<'PYEOF'
 import json
 p = json.load(open('.gos/project/project.json'))
@@ -28,6 +31,7 @@ p['phases'][1]['status'] = 'done'
 p['last_archived_phase'] = 'P2: beta'
 json.dump(p, open('.gos/project/project.json','w'), indent=2)
 s = json.load(open('.gos/state.json'))
+s['project'] = True
 s['phase_name'] = 'P2: beta'
 s['current_stage'] = 'DONE'
 s['completed_at'] = '2026-08-25T00:00:00.000Z'

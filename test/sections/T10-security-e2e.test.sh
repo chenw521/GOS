@@ -43,6 +43,10 @@ assert_not_contains() {
 t10_setup A T10A_DIR
 echo "--- T10 PART 1: security canaries + static audit + version trip ---"
 node "$GOS" init 4 "sec sandbox" --project >/dev/null 2>&1
+# bootstrap is stateless; the amend canary and the repo-identity legs operate
+# on a claimed phase task's state
+node "$GOS" phase add "P1: sec lane" --goal "canary lane" >/dev/null 2>&1
+node "$GOS" phase claim 0 >/dev/null 2>&1
 
 # --- P1.1: decision add title canary — literal $(...) passed via argv, must be rejected, never executed ---
 set +e; OUT=$(node "$GOS" decision add D-01 '$(touch pwned-t10)' --rationale r --dig-waiver "test fixture" 2>&1); RC=$?; set -e
@@ -182,11 +186,8 @@ t10_teardown "$T10B_DIR"; t10_setup B T10B_DIR
 node "$GOS" init 4 "plat" --project >/dev/null 2>&1
 node "$GOS" phase add "P1: core" --goal "g1" >/dev/null 2>&1
 node "$GOS" phase add "P2: next" --goal "g2" >/dev/null 2>&1  # pending P2 keeps first archive off the milestone path
-python3 -c "
-import json; s=json.load(open('.gos/state.json')); s['current_stage']='DONE'
-json.dump(s,open('.gos/state.json','w'),indent=2)"
 set +e; OUT=$(node "$GOS" phase claim 0 2>&1); RC=$?; set -e
-assert_exit "claim 0 allowed (last_archived null)" 0 "$RC"
+assert_exit "claim 0 on the stateless bootstrap exits 0" 0 "$RC"
 PH=$(python3 -c "import json; print(json.load(open('.gos/state.json'))['phase_name'])")
 assert_eq "state.phase_name = P1: core" "P1: core" "$PH"
 
@@ -252,9 +253,8 @@ git add "$(gos_spec)" "$(gos_plan)" && git commit -q -m "commit spec+plan"
 set +e; OUT=$(node "$GOS" init 3 "next task" --force 2>&1); RC=$?; set -e
 assert_exit "committed spec → --force proceeds" 0 "$RC"
 assert_contains "init success contract" "Initialized" "$OUT"
-# restore Lv4 context for the P2 leg (spec/plan still committed-identical → allowed)
-set +e; OUT=$(node "$GOS" init 4 "plat" --project --force 2>&1); RC=$?; set -e
-assert_exit "Lv4 re-init for P2 leg" 0 "$RC"
+# Lv4-ness is repo-level (marker + project.json) — the task-lane init above
+# never disturbed it, so no wrapper re-init is needed for the P2 leg
 
 # --- E2E.10: claim P2 (P1 archived evidence) → archive same-slug task → -2 suffix dir ---
 python3 -c "
@@ -277,11 +277,10 @@ set +e; OUT=$(GOS_SKIP_SHIP_CHECK=1 node "$GOS" archive 2>&1); RC=$?; set -e
 if [ "$RC" -ne 0 ]; then printf '%s\n' "$OUT" | tail -8 >&2; fi   # [T45 debug-keep] failure detail
 assert_exit "second same-day archive exits 0" 0 "$RC"
 UDATE=$(python3 -c "import datetime; print(datetime.datetime.utcnow().date().isoformat())")
-# legacy slug branch: this sandbox's project.json carries no open milestone
-# (milestone stays null), so the prefix falls back to PKG.version — version
-# read parametrically from GOS_ROOT package.json, never hardcoded
-VER=$(node -e "console.log(require(process.env.GOS_ROOT+'/package.json').version)")
-assert_file "first archive dir exists (structured slug, legacy version prefix)" ".gos/archive/$UDATE-v$VER-phase-p1-plat"
-assert_file "second archive dir got -2 suffix (structured)" ".gos/archive/$UDATE-v$VER-phase-p1-plat-2"
+# slug prefix tracks the milestone lifecycle: this sandbox's container holds
+# the bootstrap-opened milestone-1 (still open at both archives) — the prefix
+# is the stored milestone name, never the package version
+assert_file "first archive dir exists (structured slug, open-milestone prefix)" ".gos/archive/$UDATE-milestone-1-phase-p1-plat"
+assert_file "second archive dir got -2 suffix (structured)" ".gos/archive/$UDATE-milestone-1-phase-p1-plat-2"
 
 t10_teardown "$T10B_DIR"

@@ -72,6 +72,14 @@ Every artifact under .gos/: who writes it, who reads it, when it can be deleted.
 | `.gitignore` | cli (brownfield adoption) | git | never | yes |
 | `.ship-staging` | cli (commit ship two-phase) | ship transaction only | rollback/rename on completion | no |
 
+## Feedback (published)
+
+| ID | Type | Title | URL |
+|:--|:--|:--|:--|
+| FB-3 | issue | opt-in one-page explainer rendering for verification and trace artifacts | https://github.com/chenw521/GOS/issues/65 |
+| FB-4 | issue | feedback push cannot auto-label published issues under fine-grained PAT | https://github.com/chenw521/GOS/issues/66 |
+| FB-5 | issue | retire the tracked feedback ledger: gh issues are the publication truth | https://github.com/chenw521/GOS/issues/67 |
+
 ## Layout rules
 
 - Agent artifacts never appear at .gos/ root — they live under `task/<id>/` (supplied via `gos context <stage>` artifact_paths).

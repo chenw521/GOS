@@ -18,6 +18,7 @@
 - [x] D-68: selective wipe, five-class disposition, verbatim carry → T5
 - [x] D-69: wrapper elimination, Lv4 marker, stateless resume → T8, T9
 - [x] D-70: gos phase move + one-time P0 reorder → T10
+- [x] D-71: gh issues are the sole publication truth; feedback ledger demoted to untracked cache → T15
 
 ## Requirement Claims
 
@@ -36,6 +37,13 @@
 - [x] R-13: pre-close bare-P0 normalization → T2, T5
 - [x] R-14: truths registered mechanically + test surface → T1, T12
 - [x] R-15: ceremony close v1.0.0-dev + open publicize → T14a
+
+> Requirement ids: the spec numbers requirements R-01..R-15 task-locally; the
+> truth source registers them project-globally (R-68..R-81, added via
+> `gos requirement add`). Covers lines below cite the global ids: spec
+> R-02→R-68, R-03→R-69, R-04→R-70, R-05→R-71, R-06→R-72, R-07→R-73,
+> R-08→R-74, R-09→R-75, R-10→R-76, R-11→R-77, R-12→R-78, R-13→R-79,
+> R-14→R-80, R-15→R-81.
 
 ## Patterns to Follow
 
@@ -62,7 +70,7 @@
 ### Wave 1 (T1 ∥ T2; then T3)
 
 #### T1: Register spec truths
-- **Covers**: R-14
+- **Covers**: R-80
 - **Files**: .gos/state.json
 - **Read first**: .gos/task/p20/spec.md truths section
 - **Approach**: `gos truth add` for the ten truths. IDs are CLI-generated
@@ -77,7 +85,7 @@
 - **Depends on**: none
 
 #### T2: PROJECT_SCHEMA_VERSION 2 + phase snapshot shapes + normalization helper
-- **Covers**: D-66, R-07, R-13
+- **Covers**: D-66, R-73, R-79
 - **Files**: bin/lib/core/state.cjs, test/sections/T46-module-structure.test.sh, test/sections/T25-map-selfcheck.test.sh
 - **Read first**: bin/lib/core/state.cjs (validateProject/validatePhase/emptyProject), T111 rename guards (collision/--expect conventions — verified NOT a reference-rewrite channel: phase.cjs rename never mutates rows)
 - **Approach**: bump PROJECT_SCHEMA_VERSION 1→2; emptyProject seeds
@@ -96,7 +104,7 @@
 - **Depends on**: none
 
 #### T3: Slug prefix switch + gap rule + T10:281
-- **Covers**: R-11
+- **Covers**: R-77
 - **Files**: bin/lib/task/context.cjs, test/sections/T10-security-e2e.test.sh, test/sections/T46-module-structure.test.sh, test/sections/T25-map-selfcheck.test.sh
 - **Read first**: bin/lib/task/context.cjs archiveSlugParts, archive.cjs idempotent re-entry (resolves by listing)
 - **Approach**: archiveSlugParts reads
@@ -111,7 +119,7 @@
 ### Wave 2 (serial: T4 → T5 → {T6 ∥ T7})
 
 #### T4: milestone open verb + init bootstrap-only + Lv4 marker
-- **Covers**: D-67, R-02, R-08 (marker side)
+- **Covers**: D-67, R-68, R-74 (marker side)
 - **Files**: bin/lib/knowledge/milestone.cjs, bin/lib/knowledge/index.cjs, bin/gos.cjs, bin/lib/core/state.cjs, bin/lib/nav/registry-consts.cjs, bin/lib/task/init.cjs, bin/lib/core/locales/en.cjs, bin/lib/core/locales/zh.cjs, test/sections/T2-project.test.sh, test/sections/T46-module-structure.test.sh, test/sections/T25-map-selfcheck.test.sh
 - **Read first**: bin/lib/knowledge/phase.cjs (claim structure, name-prefix parsing), init.cjs:165-210 (wrapper birth to delete), census/track flow
 - **Approach**: `gos milestone open <name>`: sanitize at identity
@@ -133,8 +141,8 @@
 - **Depends on**: T3
 
 #### T5: milestone close verb — transaction + five-class wipe
-- **Covers**: D-68, R-03, R-04, R-05, R-06, R-13
-- **Files**: bin/lib/knowledge/milestone.cjs, bin/lib/core/locales/en.cjs, bin/lib/core/locales/zh.cjs, bin/lib/task/archive.cjs, test/sections/T46-module-structure.test.sh, test/sections/T25-map-selfcheck.test.sh
+- **Covers**: D-68, R-69, R-70, R-71, R-72, R-79
+- **Files**: bin/lib/knowledge/milestone.cjs, bin/lib/core/locales/en.cjs, bin/lib/core/locales/zh.cjs, bin/lib/task/archive.cjs, test/gos-cli-tests.sh, test/sections/T46-module-structure.test.sh, test/sections/T25-map-selfcheck.test.sh
 - **Read first**: archive.cjs:667-757 (close/reset to replace), state.cjs normalizeRowPhaseRefs (T2), cmds.cjs approvals
 - **Approach**: close [--carry-parked] [--yes] [--empty]: under .gos/.lock —
   (1) normalize row phase refs; (2) validate: {done,parked} phases must be
@@ -165,7 +173,7 @@
 - **Depends on**: T4
 
 #### T6: archive integration — auto-close removal + task_ref stamping
-- **Covers**: D-66, R-03, R-07
+- **Covers**: D-66, R-69, R-73
 - **Files**: bin/lib/task/archive.cjs, bin/lib/knowledge/phase.cjs, test/sections/T8-phase-archive.test.sh, test/sections/T46-module-structure.test.sh, test/sections/T25-map-selfcheck.test.sh
 - **Read first**: archive.cjs:667-757, T5 close implementation, phase.cjs mark-done
 - **Approach**: remove the embedded every(done) close/reset block
@@ -179,7 +187,7 @@
 - **Depends on**: T5
 
 #### T7: approve milestone-close surface
-- **Covers**: R-05
+- **Covers**: R-71
 - **Files**: bin/lib/nav/cmds.cjs, bin/lib/core/locales/en.cjs, bin/lib/core/locales/zh.cjs
 - **Read first**: cmds.cjs cmdApprove (baseline-reset pattern: record {ts,reason}, consume-once)
 - **Approach**: extend cmdApprove valid set with milestone-close
@@ -195,8 +203,8 @@
 ### Wave 3 (serial: T8 → T9)
 
 #### T8: 8-consumer re-point sweep + zombie retirement
-- **Covers**: D-69, R-08
-- **Files**: bin/lib/knowledge/phase.cjs, bin/lib/knowledge/decisions.cjs, bin/lib/knowledge/requirements.cjs, bin/lib/nav/cmds.cjs, bin/lib/core/state.cjs, test/sections/T46-module-structure.test.sh, test/sections/T25-map-selfcheck.test.sh
+- **Covers**: D-69, R-74
+- **Files**: bin/lib/knowledge/phase.cjs, bin/lib/knowledge/decisions.cjs, bin/lib/knowledge/requirements.cjs, bin/lib/nav/cmds.cjs, bin/lib/core/state.cjs, bin/lib/core/lock.cjs, test/sections/T3-decision.test.sh, test/sections/T4-requirement.test.sh, test/sections/T46-module-structure.test.sh, test/sections/T25-map-selfcheck.test.sh
 - **Read first**: all state.project consumer sites (three spellings: === true, !== true, truthy &&), claim's isPhaseOwned logic
 - **Approach**: core.isLv4Repo() = marker exists OR project.json exists;
   census-first grep replaces every repo-level consumer — phase add gate
@@ -215,8 +223,8 @@
 - **Depends on**: T4
 
 #### T9: stateless resume composition
-- **Covers**: D-69, R-09
-- **Files**: bin/lib/nav/cmds.cjs, bin/lib/core/locales/en.cjs, bin/lib/core/locales/zh.cjs
+- **Covers**: D-69, R-75
+- **Files**: bin/lib/nav/cmds.cjs, bin/lib/nav/status.cjs, bin/lib/core/locales/en.cjs, bin/lib/core/locales/zh.cjs
 - **Read first**: cmdResume, sibStatus.structuredNextActions
 - **Approach**: readState() null + isLv4Repo() → first line `NO ACTIVE TASK`
   banner, then milestone identity (name/opened_at or closed notice), phase
@@ -229,7 +237,7 @@
 ### Wave 4 (T10 ∥ T11)
 
 #### T10: phase move verb + one-time P0 reorder
-- **Covers**: D-70, R-10
+- **Covers**: D-70, R-76
 - **Files**: bin/lib/knowledge/phase.cjs, bin/lib/core/state.cjs, bin/lib/nav/registry-consts.cjs, bin/lib/core/locales/en.cjs, bin/lib/core/locales/zh.cjs, test/sections/T46-module-structure.test.sh, test/sections/T25-map-selfcheck.test.sh
 - **Read first**: phase.cjs name-prefix parsing (claim), park undo patterns
 - **Approach**: `gos phase move <from> <to>`: from accepts name-prefix
@@ -241,8 +249,8 @@
 - **Depends on**: T8
 
 #### T11: gos-project skill stub + re-point
-- **Covers**: R-12
-- **Files**: skills/gos-project/scripts/archive-milestone.sh, skills/gos-project/SKILL.md
+- **Covers**: R-78
+- **Files**: skills/gos-project/scripts/archive-milestone.sh, skills/gos-project/SKILL.md, skills/gos-project/reference/complete-milestone.md
 - **Read first**: current script + SKILL.md milestone rows
 - **Approach**: replace script body with refusing stub (exit 1, print
   `retired: use gos milestone close`); SKILL.md complete-milestone row
@@ -253,8 +261,8 @@
 ### Wave 5 (serial: T12 → T13 → T14a)
 
 #### T12: test sections T114-T118
-- **Covers**: R-14, R-06 (assertion home)
-- **Files**: test/sections/T114-milestone-open-close.test.sh, test/sections/T115-phase-move.test.sh, test/sections/T116-stateless-resume.test.sh, test/sections/T117-slug-prefix-init-bootstrap.test.sh, test/sections/T118-milestone-ceremony.test.sh
+- **Covers**: R-80, R-72 (assertion home)
+- **Files**: test/sections/T114-milestone-open-close.test.sh, test/sections/T115-phase-move.test.sh, test/sections/T116-stateless-resume.test.sh, test/sections/T117-slug-prefix-init-bootstrap.test.sh, test/sections/T118-milestone-ceremony.test.sh, test/sections/T14-state-b.test.sh, test/sections/T26-nav-hints.test.sh, test/sections/T39-render-park.test.sh, test/sections/T7-render.test.sh, test/sections/T88-autorender.test.sh, test/sections/T90-projectmd-gate.test.sh
 - **Read first**: T111/T110/T113 conventions; max existing number verified T113
 - **Approach**: T114: open sanitization (evil/../x, backtick names die;
   sanitized form stored), lifecycle (open-refuses-open, close-stamps
@@ -302,7 +310,7 @@
 - **Depends on**: T12
 
 #### T14a: ceremony runbook (BUILD deliverable; execution is T14b, post-archive, OUTSIDE this plan's completion claim)
-- **Covers**: R-15, R-10 (live P0 move)
+- **Covers**: R-81, R-76 (live P0 move)
 - **Files**: .gos/task/p20/ceremony-runbook.md
 - **Read first**: T5 close output contract, spec R-15
 - **Approach**: author the runbook; execution happens post-archive (close
@@ -325,6 +333,18 @@
   archive, so records land in milestone-record/).
 - **Done when**: `grep -c "^## Step" .gos/task/p20/ceremony-runbook.md` ≥ 10 AND every step names an exact command (`grep -c "gos \|node \|bash " ≥ 10`) AND the three truth-verify lines exist verbatim (`grep -c "gos truth verify T" = 3`)
 - **Depends on**: T1, T12, T13
+
+#### T15: feedback ledger demotion follow-up card (placeholder — implementation deferred)
+- **Covers**: D-71
+- **Files**: .gos/task/p20/d71-followup.md
+- **Read first**: D-71 rationale (gos decision list), .gos/FEEDBACK.md, census.json tracked-flip mechanics
+- **Approach**: author the follow-up card only: the demotion of .gos/FEEDBACK.md from
+  tracked to untracked cache (census flip + gitignore reconciliation via the track/gap
+  discipline, never hand-negated) and the gh-issues-as-sole-publication-truth contract
+  are IMPLEMENTED BY A LATER TASK in the stream that registered D-71 — P20 only
+  records the decision card so the decision is covered and auditable.
+- **Done when**: `grep -c "gh issues" .gos/task/p20/d71-followup.md` ≥ 1 AND `grep -c "untracked cache" .gos/task/p20/d71-followup.md` ≥ 1
+- **Depends on**: T14a
 
 ## T14b (post-archive ceremony execution — NOT a BUILD task)
 

@@ -120,11 +120,15 @@ assert_file "migrated young snapshot A kept by sweep" ".gos/cache/render-backup/
 assert_file "migrated young snapshot B kept by sweep" ".gos/cache/render-backup/$MIG_B"
 
 # --- .5c: hard floor — newest backup never deleted, all-expired case
+# Bootstrap's own auto-render leaves one young backup behind; the floor only
+# protects the NEWEST stamped entry, so the probe isolates the two fixture
+# stamps as the sole timestamp entries before rendering.
 t7_teardown; t7_setup
 node "$GOS" init 4 "plat" --project >/dev/null 2>&1
 t7_seed
 FL_1=$(date -u -d '30 days ago' +%Y-%m-%dT%H-%M-%S-000Z)
 FL_2=$(date -u -d '20 days ago' +%Y-%m-%dT%H-%M-%S-000Z)
+ls .gos/cache/render-backup 2>/dev/null | grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}T' | while read -r d; do rm -rf ".gos/cache/render-backup/$d"; done
 mkdir -p ".gos/cache/render-backup/$FL_1" ".gos/cache/render-backup/$FL_2"
 echo f1 > ".gos/cache/render-backup/$FL_1/DECISIONS.md"
 echo f2 > ".gos/cache/render-backup/$FL_2/DECISIONS.md"

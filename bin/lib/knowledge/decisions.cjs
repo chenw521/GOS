@@ -188,10 +188,11 @@ function cmdDecision(args) {
   // `list --all` is the audit view — usable WITHOUT an active task
   const isListAll = sub === 'list' && args.includes('--all');
   const state = core.readState();
-  // stateless repo lane: with a project.json truth store, add/list work
+  // stateless repo lane: with a project.json truth store, add/list/import work
   // without a claimed task (writes land project-only); every other verb
-  // keeps the active-task die
-  if (!state && !(project && ['', 'add', 'list'].includes(sub))) {
+  // keeps the active-task die. import is in the lane because bootstrap's
+  // brownfield warning suggests it in the very stateless shape it creates.
+  if (!state && !(project && ['', 'add', 'list', 'import'].includes(sub))) {
     if (isListAll && project) { printDecisionRows(projectDecisionRows(project), { includeSuperseded: true }); return; }
     if (isListAll) core.die(core.CONTRACTS.command_contracts.listNoSources);
     core.die(`${core.CONTRACTS.state_semantics.noActiveTask} \`gos init\` first.`);
@@ -387,20 +388,21 @@ function cmdDecision(args) {
     let added = 0;
     let skipped = 0;
     const dual = decisionDualStore() && project;
+    if (doAll && !state && !dual) core.die('decision import --all: no truth store to land rows — bootstrap the container first (`gos init --project`)');
     for (const e of entries) {
       const { sd, pd } = decisionFind(state, project, e.id);
       if (sd || pd) { console.log(`⚠ ${e.id} already exists — skipped`); skipped++; continue; }
       const terr = decisionTitleErr(e.title);
       if (terr) { console.log(`⚠ ${e.id} skipped: ${terr}`); skipped++; continue; }
-      const d = { id: e.id, title: e.title, rationale: '', birth_phase: state.phase_name || 'P0', status: 'open', anchor: null, covered: false, covered_by: null };
-      state.decisions.push(d);
+      const d = { id: e.id, title: e.title, rationale: '', birth_phase: (state && state.phase_name) || 'P0', status: 'open', anchor: null, covered: false, covered_by: null };
+      if (state) state.decisions.push(d);
       if (dual) project.decisions.push(d);
       console.log(`${core.CONTRACTS.command_contracts.decisionAdded}${e.id.slice(2)} added: ${e.title}`);
       added++;
     }
     if (added) {
       if (dual) core.saveProject(project);
-      core.writeState(state);
+      if (state) core.writeState(state);
     }
     console.log(`✓ import: ${added} added, ${skipped} skipped`);
     return;

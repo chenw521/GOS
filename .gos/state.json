@@ -25,6 +25,90 @@
       "text": "Milestone lifecycle mechanics and ceremony on the hierarchical model (B-double-prime): project.json is the Lv4 parent...",
       "phase": null,
       "level": 3
+    },
+    {
+      "id": "R-68",
+      "text": "milestone open writes project.json {name, opened_at}; name slug-sanitized at identity; open refuses while an unclosed milestone exists; close stamps closed_at",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-69",
+      "text": "milestone close [--carry-parked]: validate, render, dual-channel snapshot, stat-verify, one atomic wipe under lock; parked only under flag; pending carried; vacuum close needs --empty",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-70",
+      "text": "selective wipe = five-class disposition (parked verbatim, pending carried, done+owned+host wiped, null-phase wiped, ghost wiped); guard = surviving classes; report prints class counts + row IDs",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-71",
+      "text": "close backups: default dry-run; execution needs --yes or approve record; pre-close project.json copied to both channels as dated preclose + view snapshots; standalone close synthesizes close-home",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-72",
+      "text": "snapshot channel two carries views as rendered on disk — copy rendered files, never re-render at close, manual regions survive verbatim",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-73",
+      "text": "archive path stamps task_ref (stable across re-entry) and completed_at; mark-done stamps completed_at only; PROJECT_SCHEMA_VERSION 1->2 with shape checks; emptyProject seeds milestone null",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-74",
+      "text": "repo Lv4-ness = tracked marker .gos/project/lv4.json OR project.json existence; marker travels with clones; state.project consumers re-pointed; legacy wrappers get one-shot retirement prompt",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-75",
+      "text": "stateless resume composes parent view with machine-greppable NO ACTIVE TASK banner; marker without local state.json downgrades claim hint to clone warning",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-76",
+      "text": "phase move <from> <to>: from takes name-prefix + optional --expect index guard; refuses active targets; one-time P0 -> index 0 reorder before the v1.0.0-dev close",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-77",
+      "text": "archive slug prefix switches from PKG.version to stored milestone name for NEW archives only; historical basenames never rewritten; T10:281 assertion updated same change",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-78",
+      "text": "gos-project archive-milestone.sh replaced in-repo by refusing stub (exit 1, prints use gos milestone close); SKILL.md rows re-point to new verb family",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-79",
+      "text": "pre-close normalization: bare-prefix phase fields on decision/requirement rows normalized to canonical names via rename reference-rewrite before the wipe predicate",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-80",
+      "text": "spec truths registered mechanically: plan task 0 registers all truths via gos truth add before first BUILD commit; VERIFY includes truths>0 closeout check",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-81",
+      "text": "ceremony: close v1.0.0-dev (parked P2/P3 + pending P21/P22/P23 carried), open publicize; P2/P3 re-homed unchanged (park_reason verbatim)",
+      "phase": null,
+      "status": "active"
     }
   ],
   "decisions": [
@@ -107,71 +191,144 @@
         "output_excerpt": "21 decisions reference P0 by name, zero by index",
         "anchor": "bin/lib/knowledge/phase.cjs:241"
       }
+    },
+    {
+      "id": "D-71",
+      "title": "gh issues are the sole publication truth; feedback ledger demoted to untracked cache",
+      "rationale": "Tracked ledger lacks local truth: gh state never syncs back, drift guaranteed, PRs get generated diffs. Keep FEEDBACK.md untracked; flip feedback_ledger tracked:false. Overturns P12, 2026-11-16.",
+      "birth_phase": "P20: milestone lifecycle mechanics and ceremony",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null,
+      "born_at": "2026-11-16T06:50:15.973Z",
+      "dig": {
+        "command": "node bin/gos.cjs paths feedback_ledger",
+        "output_excerpt": "feedback_ledger: { rel: FEEDBACK.md, producer: cli (feedback push backfill), purge: regen any time (rendered), tracked: true }",
+        "anchor": "bin/lib/core/fsio.cjs:74"
+      }
     }
   ],
   "observable_truths": [
     {
       "id": "T1",
       "description": "P0 at index 0 and names in monotonic order in phase list",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/sections/T115-phase-move.test.sh\"]",
+        "output_excerpt": "✓ move by name prefix exits 0",
+        "artifact_path": ".gos/cache/section-runs/20261116T053840Z-full17820.log",
+        "replay": true
+      }
     },
     {
       "id": "T2",
       "description": "after archive of a phase task, its project.json entry carries task_ref = archive basename and completed_at ISO stamp",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/sections/T118-milestone-ceremony.test.sh\"]",
+        "output_excerpt": "✓ ceremony close exits 0",
+        "artifact_path": ".gos/cache/section-runs/20261116T053856Z-full7558.log",
+        "replay": true
+      }
     },
     {
       "id": "T3",
       "description": "milestone close --carry-parked --yes leaves parked phases + parked-owned rows + pending phase entries present in project.json, byte-equal to the preclose backup; snapshots exist as dated view .md files + preclose.json and in the closing milestone-record/",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/sections/T118-milestone-ceremony.test.sh\"]",
+        "output_excerpt": "✓ ceremony close exits 0",
+        "artifact_path": ".gos/cache/section-runs/20261116T053856Z-full7558.log",
+        "replay": true
+      }
     },
     {
       "id": "T4",
       "description": "milestone open publicize stamps milestone {name, opened_at}; the NEXT archived task slug prefix reads publicize; in the closed-not-reopened gap slugs carry no version prefix",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/sections/T117-slug-prefix-init-bootstrap.test.sh\"]",
+        "output_excerpt": "✓ init --project exits 0",
+        "artifact_path": ".gos/cache/section-runs/20261116T053852Z-full14496.log",
+        "replay": true
+      }
     },
     {
       "id": "T5",
       "description": "with state.json absent and the Lv4 marker present, gos resume prints NO ACTIVE TASK + milestone identity + phase queue + clone warning (exit 0)",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/sections/T116-stateless-resume.test.sh\"]",
+        "output_excerpt": "✓ resume without state or marker exits 1",
+        "artifact_path": ".gos/cache/section-runs/20261116T053848Z-full29907.log",
+        "replay": true
+      }
     },
     {
       "id": "T6",
       "description": "gos init --project in a fresh repo creates project.json, lv4.json marker, and views but no state.json; init --project on a repo with Lv4 trace refuses without --fresh",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/sections/T117-slug-prefix-init-bootstrap.test.sh\"]",
+        "output_excerpt": "✓ init --project exits 0",
+        "artifact_path": ".gos/cache/section-runs/20261116T053852Z-full14496.log",
+        "replay": true
+      }
     },
     {
       "id": "T7",
       "description": "gos phase mark-done on a never-claimed phase stamps completed_at and leaves task_ref null",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/sections/T114-milestone-open-close.test.sh\"]",
+        "output_excerpt": "✓ open without a name exits 1",
+        "artifact_path": ".gos/cache/section-runs/20261116T053835Z-full19949.log",
+        "replay": true
+      }
     },
     {
       "id": "T8",
       "description": "post-close project.json: decisions array empty or milestone-owned only, done-owned requirement rows = 0, dropped/ghost rows counted in the report, last_archived_phase null",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/sections/T118-milestone-ceremony.test.sh\"]",
+        "output_excerpt": "✓ ceremony close exits 0",
+        "artifact_path": ".gos/cache/section-runs/20261116T053856Z-full7558.log",
+        "replay": true
+      }
     },
     {
       "id": "T9",
       "description": "gos milestone open evil/../x and backtick names die with a sanitization contract error; a tainted name never reaches a path, slug, or echo line",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/sections/T114-milestone-open-close.test.sh\"]",
+        "output_excerpt": "✓ open without a name exits 1",
+        "artifact_path": ".gos/cache/section-runs/20261116T053835Z-full19949.log",
+        "replay": true
+      }
     },
     {
       "id": "T10",
       "description": "legacy wrapper state (project=true, no phase_name) triggers the retirement prompt; after retirement, stateless resume takes over",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/sections/T116-stateless-resume.test.sh\"]",
+        "output_excerpt": "✓ resume without state or marker exits 1",
+        "artifact_path": ".gos/cache/section-runs/20261116T053848Z-full29907.log",
+        "replay": true
+      }
     }
   ],
-  "gaps": [],
+  "gaps": [
+    {
+      "id": "G-1794810977443",
+      "type": "major",
+      "description": "Fluid back to PLAN: requirement id alignment: spec-local Covers R-02..R-15 must cite truth-source globals R-68..R-81 (registered via requirement add); wave-touched files join plan Files for declaration",
+      "status": "open"
+    }
+  ],
   "phase_name": "P20: milestone lifecycle mechanics and ceremony",
   "task_head": "b3421e205e3e4ead549208f3d73509a494dd509e",
   "task_head_history": [
@@ -188,7 +345,7 @@
       {
         "id": "T1",
         "covers": [
-          "R-14"
+          "R-80"
         ],
         "files": [
           ".gos/state.json"
@@ -199,8 +356,8 @@
         "id": "T2",
         "covers": [
           "D-66",
-          "R-07",
-          "R-13"
+          "R-73",
+          "R-79"
         ],
         "files": [
           "bin/lib/core/state.cjs",
@@ -212,7 +369,7 @@
       {
         "id": "T3",
         "covers": [
-          "R-11"
+          "R-77"
         ],
         "files": [
           "bin/lib/task/context.cjs",
@@ -226,8 +383,8 @@
         "id": "T4",
         "covers": [
           "D-67",
-          "R-02",
-          "R-08"
+          "R-68",
+          "R-74"
         ],
         "files": [
           "bin/lib/knowledge/milestone.cjs",
@@ -248,17 +405,18 @@
         "id": "T5",
         "covers": [
           "D-68",
-          "R-03",
-          "R-04",
-          "R-05",
-          "R-06",
-          "R-13"
+          "R-69",
+          "R-70",
+          "R-71",
+          "R-72",
+          "R-79"
         ],
         "files": [
           "bin/lib/knowledge/milestone.cjs",
           "bin/lib/core/locales/en.cjs",
           "bin/lib/core/locales/zh.cjs",
           "bin/lib/task/archive.cjs",
+          "test/gos-cli-tests.sh",
           "test/sections/T46-module-structure.test.sh",
           "test/sections/T25-map-selfcheck.test.sh"
         ],
@@ -268,8 +426,8 @@
         "id": "T6",
         "covers": [
           "D-66",
-          "R-03",
-          "R-07"
+          "R-69",
+          "R-73"
         ],
         "files": [
           "bin/lib/task/archive.cjs",
@@ -283,7 +441,7 @@
       {
         "id": "T7",
         "covers": [
-          "R-05"
+          "R-71"
         ],
         "files": [
           "bin/lib/nav/cmds.cjs",
@@ -296,7 +454,7 @@
         "id": "T8",
         "covers": [
           "D-69",
-          "R-08"
+          "R-74"
         ],
         "files": [
           "bin/lib/knowledge/phase.cjs",
@@ -304,6 +462,9 @@
           "bin/lib/knowledge/requirements.cjs",
           "bin/lib/nav/cmds.cjs",
           "bin/lib/core/state.cjs",
+          "bin/lib/core/lock.cjs",
+          "test/sections/T3-decision.test.sh",
+          "test/sections/T4-requirement.test.sh",
           "test/sections/T46-module-structure.test.sh",
           "test/sections/T25-map-selfcheck.test.sh"
         ],
@@ -313,10 +474,11 @@
         "id": "T9",
         "covers": [
           "D-69",
-          "R-09"
+          "R-75"
         ],
         "files": [
           "bin/lib/nav/cmds.cjs",
+          "bin/lib/nav/status.cjs",
           "bin/lib/core/locales/en.cjs",
           "bin/lib/core/locales/zh.cjs"
         ],
@@ -326,7 +488,7 @@
         "id": "T10",
         "covers": [
           "D-70",
-          "R-10"
+          "R-76"
         ],
         "files": [
           "bin/lib/knowledge/phase.cjs",
@@ -342,26 +504,33 @@
       {
         "id": "T11",
         "covers": [
-          "R-12"
+          "R-78"
         ],
         "files": [
           "skills/gos-project/scripts/archive-milestone.sh",
-          "skills/gos-project/SKILL.md"
+          "skills/gos-project/SKILL.md",
+          "skills/gos-project/reference/complete-milestone.md"
         ],
         "wave": 4
       },
       {
         "id": "T12",
         "covers": [
-          "R-14",
-          "R-06"
+          "R-80",
+          "R-72"
         ],
         "files": [
           "test/sections/T114-milestone-open-close.test.sh",
           "test/sections/T115-phase-move.test.sh",
           "test/sections/T116-stateless-resume.test.sh",
           "test/sections/T117-slug-prefix-init-bootstrap.test.sh",
-          "test/sections/T118-milestone-ceremony.test.sh"
+          "test/sections/T118-milestone-ceremony.test.sh",
+          "test/sections/T14-state-b.test.sh",
+          "test/sections/T26-nav-hints.test.sh",
+          "test/sections/T39-render-park.test.sh",
+          "test/sections/T7-render.test.sh",
+          "test/sections/T88-autorender.test.sh",
+          "test/sections/T90-projectmd-gate.test.sh"
         ],
         "wave": 5
       },
@@ -382,21 +551,37 @@
       {
         "id": "T14a",
         "covers": [
-          "R-15",
-          "R-10"
+          "R-81",
+          "R-76"
         ],
         "files": [
           ".gos/task/p20/ceremony-runbook.md"
         ],
         "wave": 5
+      },
+      {
+        "id": "T15",
+        "covers": [
+          "D-71"
+        ],
+        "files": [
+          ".gos/task/p20/d71-followup.md"
+        ],
+        "wave": 5
       }
     ],
-    "audit": [],
+    "audit": [
+      {
+        "at": "2026-11-16T07:06:35.254Z",
+        "what": "snapshot-force"
+      }
+    ],
     "meta": {
       "waveValidation": {
         "ok": true,
         "waves": 5
       }
     }
-  }
+  },
+  "changelog_user_summary": "milestone lifecycle test surface: five new test sections for open/close disposition with crash windows, queue move, stateless resume, slug prefix rules, and the seeded close ceremony, with legacy sections realigned and stateless repos gaining decision import plus the DECISIONS index warning"
 }

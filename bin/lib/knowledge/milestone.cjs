@@ -3,6 +3,7 @@
 'use strict';
 
 const decisions = require('./decisions.cjs');
+const phaseMod = require('./phase.cjs');
 
 
 const fs = require('node:fs');
@@ -296,7 +297,11 @@ function closeMilestone(flags) {
 // Open semantics shared by `gos milestone open <name>` and the init --project
 // bootstrap: refuse while an unclosed milestone lives (name it, point to
 // close); a closed milestone is replaced by a fresh object; write
-// {name, opened_at}, seed the repo marker, keep rendered views fresh.
+// {name, opened_at}, seed the repo marker, keep rendered views fresh. The
+// publicize render is skipped when handwritten view content is on disk —
+// the brownfield import cure (`gos decision import --all`) needs those rows
+// in place, and the brownfield warning has already named them; the next
+// mutation or explicit render re-renders over the imported truth.
 function openMilestone(rawName) {
   const name = sanitizeMilestoneName(rawName);
   if (name === null) {
@@ -311,7 +316,7 @@ function openMilestone(rawName) {
   project.milestone = { name, opened_at: new Date().toISOString() };
   core.saveProject(project);
   writeLv4Marker();
-  decisions.autoRenderViews(project);
+  if (!phaseMod.detectBrownfield()) decisions.autoRenderViews(project);
   return { project, name };
 }
 

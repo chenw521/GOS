@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none   # sandbox builds its own project container; no live-repo truth source
-# render views single source of truth (state-only default + --all audit) + claim gate prev-done/parked
+# render views single source of truth (stateless repo-lane default + --all audit) + claim gate prev-done/parked
 #      + park lifecycle + milestone debt visibility + ghost teaching line + residual byte-stability
 PASS=0; FAIL=0
 command -v assert_exit >/dev/null || assert_exit() {
@@ -80,18 +80,20 @@ echo "--- T39: render truth-source + park lifecycle + ghost teaching ---"
 
 H0=$(t39_residual_hash)
 
-# ===== : requirement list state-only default / --all merge =====
+# ===== : requirement list stateless repo-lane default / --all audit =====
+# Bootstrap is stateless (no wrapper state): the default list composes from
+# the project.json truth store; --all adds the superseded/audit overlay.
 OUT=$(node "$GOS" requirement list 2>&1)
-assert_contains "T1.a default shows wrapper R-01 only" "t39 container" "$OUT"
-assert_not_contains "T1.b default hides legacy R-02" "legacy done-phase requirement" "$OUT"
+assert_contains "T1.a stateless default composes from project.json" "legacy done-phase requirement" "$OUT"
+assert_contains "T1.b dropped row keeps its write-time status in the lane view" "dropped" "$OUT"
 OUT=$(node "$GOS" requirement list --all 2>&1)
 assert_contains "T1.c --all shows legacy R-02" "legacy done-phase requirement" "$OUT"
 assert_contains "T1.d --all keeps write-time snapshot status (dropped)" "dropped" "$OUT"
 
-# ===== (pre-claim): decision list empty by default / --all carries residuals and superseded =====
+# ===== (pre-claim): decision list stateless lane / --all carries superseded =====
 OUT=$(node "$GOS" decision list 2>&1)
-assert_contains "T2.a default empty state says no decisions" "(no decisions)" "$OUT"
-assert_not_contains "T2.b default hides legacy D-01" "legacy decision" "$OUT"
+assert_contains "T2.a stateless default shows open project rows" "legacy decision" "$OUT"
+assert_not_contains "T2.b stateless default hides superseded D-02" "legacy superseded" "$OUT"
 OUT=$(node "$GOS" decision list --all 2>&1)
 assert_contains "T2.c --all shows legacy D-01" "legacy decision" "$OUT"
 assert_contains "T2.d --all shows superseded D-02" "superseded" "$OUT"

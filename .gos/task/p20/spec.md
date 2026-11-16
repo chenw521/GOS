@@ -210,6 +210,22 @@ optional --expect guard, refuses active targets; executes before the
 v1.0.0-dev close.
 deepen: any option — ask for another dig round.
 
+### D-71: Publication truth — gh issues vs tracked feedback ledger
+
+| Option | Premise | Pros | Cons | Activates |
+|:--|:--|:--|:--|:--|
+| A. gh issues sole truth; ledger demoted to untracked cache (chosen) | the tracked ledger became a second publication surface beside issues | single publication truth; ledger stays as a machine-side buffer | census flip + gitignore reconciliation needed | feedback push flows, census disposition of .gos/FEEDBACK.md |
+| B. keep the tracked ledger as a second surface | zero migration | none | two publication truths diverge (the D-59 class) | nothing — the divergence already bit the concurrent stream |
+| C. delete the ledger outright | one less file | simplest | loses the machine-side buffer between push windows | a re-add nobody asked for |
+
+why-not: B. keep the tracked ledger — a second truth source is the standing
+anti-pattern; C. delete outright — the buffer has push-window value.
+recommendation: A — conditional: the demotion (census flip via the
+track/gap discipline) and the issues-only publication contract are
+implemented by a later task in the registering stream; P20 records this
+card so the decision is covered and auditable (user ruling 2026-11-16).
+deepen: any option — ask for another dig round.
+
 ## Scope
 
 ### In Scope
