@@ -82,10 +82,12 @@ function validatePhase(p, where) {
   if (!PHASE_STATUS.has(p.status || '')) errs.push(`${where}:status: '${p.status}' not in pending|active|done|parked`);
   if (p.park_reason !== undefined && typeof p.park_reason !== 'string') errs.push(`${where}:park_reason: must be a string`);
   // task_ref is the basename of the phase's home task directory (the resolver
-  // joins it under .gos/task/ — stored values never carry path separators).
+  // joins it under .gos/task/ — stored values never carry path separators or
+  // dot-only segments).
   if (p.task_ref !== undefined && p.task_ref !== null) {
     if (typeof p.task_ref !== 'string' || p.task_ref.length === 0) errs.push(`${where}:task_ref: non-empty string or null required`);
     else if (/[/\\]/.test(p.task_ref)) errs.push(`${where}:task_ref: basename required (path separators rejected): '${p.task_ref}'`);
+    else if (p.task_ref === '.' || p.task_ref === '..') errs.push(`${where}:task_ref: basename required ('.'/'..' rejected): '${p.task_ref}'`);
   }
   // completed_at stamps the phase close snapshot (null while the phase lives).
   if (p.completed_at !== undefined && p.completed_at !== null) {

@@ -29,7 +29,7 @@ assert_eq "init: v6 + de-pathed (no project_root) + repo_id from origin remote" 
 
 # --- .2: init --project bootstraps the Lv4 container only (no task state file)
 t2_teardown; t2_setup
-set +e; OUT=$(node "$GOS" init 4 "platform" --project 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" init --project 2>&1); RC=$?; set -e
 assert_exit "bootstrap exits 0" 0 "$RC"
 assert_contains "bootstrap opens the default milestone" "Milestone opened: milestone-1" "$OUT"
 if [ -e .gos/state.json ]; then
@@ -52,7 +52,7 @@ assert_exit "--fresh re-bootstraps" 0 "$RC"
 
 # --- .3: corrupted project.json → write-class exit 1 file:field
 t2_teardown; t2_setup
-node "$GOS" init 4 "platform" --project >/dev/null 2>&1
+node "$GOS" init --project >/dev/null 2>&1
 node "$GOS" init 3 "probe task" >/dev/null 2>&1
 python3 -c "
 import json; p=json.load(open('.gos/project/project.json')); p['phases']='not-array'
@@ -60,6 +60,18 @@ json.dump(p,open('.gos/project/project.json','w'),indent=2)"
 set +e; OUT=$(node "$GOS" checkpoint save --stage BUILD --unit x --done y 2>&1); RC=$?; set -e
 assert_exit "corrupt project.json blocks write-class" 1 "$RC"
 assert_contains "error locates project file:field" "project.json:phases" "$OUT"
+
+# --- .3b: task_ref dot-segment rejection ('.'/'..' are not basenames)
+t2_teardown; t2_setup
+node "$GOS" init --project >/dev/null 2>&1
+node "$GOS" phase add "P1: alpha" --goal g >/dev/null 2>&1
+node "$GOS" init 3 "probe task" >/dev/null 2>&1
+python3 -c "
+import json; p=json.load(open('.gos/project/project.json')); p['phases'][0]['task_ref']='..'
+json.dump(p,open('.gos/project/project.json','w'),indent=2)"
+set +e; OUT=$(node "$GOS" checkpoint save --stage BUILD --unit x --done y 2>&1); RC=$?; set -e
+assert_exit "task_ref dot-segment blocks write-class" 1 "$RC"
+assert_contains "error names the task_ref basename contract" "task_ref: basename required" "$OUT"
 
 # --- .4: project.json version future → exit 3
 t2_teardown; t2_setup

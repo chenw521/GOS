@@ -301,7 +301,7 @@ t114_teardown
 
 # ===== part 3: crash windows — validate / snapshot / wipe =====
 t114_setup
-node "$GOS" init --project 4 "windows" >/dev/null 2>&1
+node "$GOS" init --project >/dev/null 2>&1
 node "$GOS" phase add "P1: done one" --goal g >/dev/null 2>&1
 node "$GOS" phase add "P2: parked one" --goal g >/dev/null 2>&1
 node "$GOS" phase add "P3: pend" --goal g >/dev/null 2>&1
@@ -325,7 +325,11 @@ if [ ! -e .gos/project/milestones ]; then
 else
   echo "  ✗ validate window materialized snapshots"; FAIL=$((FAIL+1))
 fi
-node -e "const s=require('./.gos/state.json'); if ('MILESTONE-CLOSE' in s.approvals) { console.log('  ✓ validate window: approval NOT consumed'); } else { console.log('  ✗ validate window consumed the approval'); }"
+if node -e "const s=require('./.gos/state.json'); process.exit('MILESTONE-CLOSE' in s.approvals ? 0 : 1)"; then
+  echo "  ✓ validate window: approval NOT consumed"; PASS=$((PASS+1))
+else
+  echo "  ✗ validate window consumed the approval"; FAIL=$((FAIL+1))
+fi
 
 set +e; OUT=$(GOS_TEST_BREAK_CLOSE=snapshot node "$GOS" milestone close --carry-parked --yes 2>&1); RC=$?; set -e
 [ "$RC" -ne 0 ] && { echo "  ✓ snapshot-window crash exits non-zero"; PASS=$((PASS+1)); } || { echo "  ✗ snapshot-window crash returned 0"; FAIL=$((FAIL+1)); }
@@ -337,7 +341,11 @@ if cmp -s .gos/project/project.json win-pre.json; then
 else
   echo "  ✗ snapshot window wiped project.json early"; FAIL=$((FAIL+1))
 fi
-node -e "const s=require('./.gos/state.json'); console.log(('MILESTONE-CLOSE' in s.approvals) ? '  ✓ snapshot window: approval NOT consumed' : '  ✗ snapshot window consumed the approval');"
+if node -e "const s=require('./.gos/state.json'); process.exit('MILESTONE-CLOSE' in s.approvals ? 0 : 1)"; then
+  echo "  ✓ snapshot window: approval NOT consumed"; PASS=$((PASS+1))
+else
+  echo "  ✗ snapshot window consumed the approval"; FAIL=$((FAIL+1))
+fi
 
 rm -rf .gos/project/milestones .gos/archive/*close* 2>/dev/null
 set +e; OUT=$(GOS_TEST_BREAK_CLOSE=wipe node "$GOS" milestone close --carry-parked --yes 2>&1); RC=$?; set -e
@@ -347,7 +355,11 @@ WIPE=$(node -e "
 const p = require('./.gos/project/project.json');
 console.log([p.phases.map((x) => x.status).join(','), typeof p.milestone.closed_at === 'string', JSON.stringify(p.last_archived_phase)].join('|'))")
 [ "$WIPE" = "parked,pending|true|null" ] && { echo "  ✓ wipe window: project wiped (survivors kept, closed_at stamped, last_archived null)"; PASS=$((PASS+1)); } || { echo "  ✗ wipe-window shape wrong: $WIPE"; FAIL=$((FAIL+1)); }
-node -e "const s=require('./.gos/state.json'); console.log(('MILESTONE-CLOSE' in s.approvals) ? '  ✗ wipe window left the approval unconsumed' : '  ✓ wipe window: approval consumed');"
+if node -e "const s=require('./.gos/state.json'); process.exit('MILESTONE-CLOSE' in s.approvals ? 1 : 0)"; then
+  echo "  ✓ wipe window: approval consumed"; PASS=$((PASS+1))
+else
+  echo "  ✗ wipe window left the approval unconsumed"; FAIL=$((FAIL+1))
+fi
 
 t114_teardown
 echo "--- T114 done: PASS=$PASS FAIL=$FAIL ---"

@@ -26,7 +26,7 @@ t115_setup() {
   T115_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-t115"
   mkdir -p "$T115_DIR" && cd "$T115_DIR" || exit 1
   git init -q . && git commit -q --allow-empty -m root
-  node "$GOS" init --project 4 "queue" >/dev/null 2>&1
+  node "$GOS" init --project >/dev/null 2>&1
   node "$GOS" phase add "P1: alpha" --goal "goal one" >/dev/null 2>&1
   node "$GOS" phase add "P2: bravo" --goal "goal two" >/dev/null 2>&1
   node "$GOS" phase add "P3: charlie" --goal "goal three" >/dev/null 2>&1

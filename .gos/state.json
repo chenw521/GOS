@@ -327,7 +327,9 @@
       "id": "G-1794810977443",
       "type": "major",
       "description": "Fluid back to PLAN: requirement id alignment: spec-local Covers R-02..R-15 must cite truth-source globals R-68..R-81 (registered via requirement add); wave-touched files join plan Files for declaration",
-      "status": "open"
+      "status": "fixed",
+      "resolution": "plan.md amended: task Covers cite truth-source globals (T1→R-80, T4→R-68/R-74, T5→R-69..R-72, T9→R-75, T10→R-76, T11→R-78, T12→R-80/R-72, T13→R-01, T14a→R-81); spec-local↔global mapping note at plan.md:41-46; union of wave Files covers the shipped diff incl. legacy-section sweep",
+      "resolved_at": "2026-11-16T08:12:42.902Z"
     }
   ],
   "phase_name": "P20: milestone lifecycle mechanics and ceremony",
@@ -592,6 +594,84 @@
       "done": "T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14a,T15",
       "remaining": "",
       "at": "2026-11-16T07:22:20.953Z"
+    }
+  ],
+  "semantic": {
+    "allowlist": [
+      "test/sections/T27-archive-slug.test.sh",
+      "test/sections/T37-phase-ux.test.sh",
+      "test/sections/T71-phase-amend-reposlug.test.sh",
+      "test/sections/T111-phase-rename.test.sh"
+    ]
+  },
+  "review_findings": [
+    {
+      "severity": "major",
+      "status": "fixed",
+      "issue": "init --project=<name> and the documented positional name form never routed to the bootstrap lane (isProject exact-matched --project only); stray task-lane positionals silently created junk null-level state",
+      "location": "bin/lib/task/init.cjs:30,189"
+    },
+    {
+      "severity": "major",
+      "status": "fixed",
+      "issue": "validatePhase accepted task_ref dot-segments (./..), letting a hand-edited project.json redirect the close archive channel outside milestone-record/",
+      "location": "bin/lib/core/state.cjs:86-93"
+    },
+    {
+      "severity": "major",
+      "status": "fixed",
+      "issue": "three T114 crash-window approval assertions were vacuous (console.log checkmarks never incremented FAIL), leaving consume-once guarantees untested",
+      "location": "test/sections/T114-milestone-open-close.test.sh:328-355"
+    },
+    {
+      "severity": "minor",
+      "status": "logged",
+      "issue": "retireWrapperState deletes state.json before guardCwd takes the lock; read-class commands can mutate; dry-run close can prompt-delete"
+    },
+    {
+      "severity": "minor",
+      "status": "logged",
+      "issue": "close-time canonicalization persists rewritten bare phase refs on carried survivors (verbatim contract latent gap; live data unaffected — 0 bare refs among carried rows)"
+    },
+    {
+      "severity": "minor",
+      "status": "logged",
+      "issue": "closeSnapshot target-exists refusal has no recovery story or cleanup hint (same-day same-name close bricked)"
+    },
+    {
+      "severity": "minor",
+      "status": "logged",
+      "issue": "closeReadyHint fires in the closed-not-reopened gap (allDone ignores milestone state)"
+    },
+    {
+      "severity": "minor",
+      "status": "logged",
+      "issue": "wipe-window crash between saveProject and autoRenderViews leaves stale views with no repair hint"
+    },
+    {
+      "severity": "minor",
+      "status": "logged",
+      "issue": "init --project --fresh resets project.json but leaves stale rendered views (openMilestone skips render on brownfield)"
+    },
+    {
+      "severity": "minor",
+      "status": "logged",
+      "issue": "stateless Lv4 repo cannot record the MILESTONE-CLOSE approval (cmdApprove dies noActiveTask); ceremony on a fresh clone would brick at runbook step 4"
+    },
+    {
+      "severity": "minor",
+      "status": "logged",
+      "issue": ">50 decisions-index warning duplicated inline in status.cjs (with-state + stateless paths) instead of a shared helper"
+    },
+    {
+      "severity": "minor",
+      "status": "logged",
+      "issue": "milestone open silently ignores stray flags and prints no brownfield warning (init --project refuses the same shape loudly)"
+    },
+    {
+      "severity": "minor",
+      "status": "logged",
+      "issue": "test gaps: ambiguous bare-ref die path, 24h approval freshness boundary, interactive TTY retirement prompt; registered truth T9 wording (tainted names die) conflicts with the normative R-68 sanitize-at-identity contract"
     }
   ]
 }

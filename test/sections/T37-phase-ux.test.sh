@@ -19,7 +19,7 @@ t37_setup() {
   mkdir -p "$T37_DIR" && cd "$T37_DIR" || exit 1
   git init -q . && git commit -q --allow-empty -m root
   # project container + two phases (own truth source, isolated from the live repo)
-  node "$GOS" init --project 1 "t37 container" >/dev/null 2>&1
+  node "$GOS" init --project >/dev/null 2>&1
   node "$GOS" phase add "A-alpha: first" --goal "t37 fixture one" >/dev/null 2>&1
   node "$GOS" phase add "B-beta: second" --goal "t37 fixture two" >/dev/null 2>&1
   # settle the wrapper state (stage may rest at PLAN after add — claim only needs project.json to exist)

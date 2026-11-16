@@ -27,7 +27,7 @@ function parseLevelStrict(s) {
 }
 
 function cmdInit(args) {
-  const isProject = args.includes('--project');
+  const isProject = args.some((a) => a === '--project' || a.startsWith('--project='));
   const positional = args.filter(a => !a.startsWith('--'));
   const wantsConfirm = args.includes('--confirm') || args.includes('--confirmed');
 
@@ -180,7 +180,8 @@ function cmdInit(args) {
 
 // gos init --project — Lv4 container bootstrap: the four view files (written
 // only when missing), project.json opened through the milestone internals
-// (default name milestone-1, optional name via --project=<name>), and the
+// (default name milestone-1, optional name positionally or via --project=<name>),
+// and the
 // one-line .gos/project/lv4.json repo marker. Bootstrap never writes a task
 // state file; a repo already carrying Lv4 trace (marker, project.json, or a
 // legacy wrapper state.json) refuses re-bootstrap unless --fresh resets the
@@ -188,10 +189,19 @@ function cmdInit(args) {
 // flag; it maps to --fresh with a warning so legacy scripts stay functional).
 function cmdInitProject(args) {
   const fresh = args.includes('--fresh') || args.includes('--force');
-  let name = 'milestone-1';
+  let name = null;
+  let sawFlagName = false;
   for (const a of args) {
-    if (a.startsWith('--project=') && a.length > '--project='.length) name = a.slice('--project='.length);
+    if (a.startsWith('--project=') && a.length > '--project='.length) { name = a.slice('--project='.length); sawFlagName = true; }
   }
+  const positional = args.filter((a) => !a.startsWith('--'));
+  if (positional.length >= 2 && parseLevelStrict(positional[0]).level === null) core.die('init --project takes at most one milestone name');
+  if (positional.length === 1 && sawFlagName) core.die(`milestone name given twice (positional '${core.sanitizeEcho(positional[0])}' and --project=) — pass one`);
+  // legacy invocation shape `init <level> "<intent>" --project` (pre-container
+  // wrapper era) keeps its bootstrap-only meaning: the task-lane positionals
+  // are ignored and the default milestone name applies
+  if (name === null && positional.length === 1) name = positional[0];
+  if (name === null) name = 'milestone-1';
   const markerPath = path.join(core.PROJECT_DIR, 'lv4.json');
   const pjPath = path.join(core.PROJECT_DIR, 'project.json');
   const trace = [];

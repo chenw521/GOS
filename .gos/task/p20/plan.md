@@ -262,7 +262,7 @@
 
 #### T12: test sections T114-T118
 - **Covers**: R-80, R-72 (assertion home)
-- **Files**: test/sections/T114-milestone-open-close.test.sh, test/sections/T115-phase-move.test.sh, test/sections/T116-stateless-resume.test.sh, test/sections/T117-slug-prefix-init-bootstrap.test.sh, test/sections/T118-milestone-ceremony.test.sh, test/sections/T14-state-b.test.sh, test/sections/T26-nav-hints.test.sh, test/sections/T39-render-park.test.sh, test/sections/T7-render.test.sh, test/sections/T88-autorender.test.sh, test/sections/T90-projectmd-gate.test.sh
+- **Files**: test/sections/T114-milestone-open-close.test.sh, test/sections/T115-phase-move.test.sh, test/sections/T116-stateless-resume.test.sh, test/sections/T117-slug-prefix-init-bootstrap.test.sh, test/sections/T118-milestone-ceremony.test.sh, test/sections/T14-state-b.test.sh, test/sections/T26-nav-hints.test.sh, test/sections/T39-render-park.test.sh, test/sections/T7-render.test.sh, test/sections/T88-autorender.test.sh, test/sections/T90-projectmd-gate.test.sh, test/sections/T2-project.test.sh, test/sections/T27-archive-slug.test.sh, test/sections/T37-phase-ux.test.sh, test/sections/T71-phase-amend-reposlug.test.sh, test/sections/T111-phase-rename.test.sh
 - **Read first**: T111/T110/T113 conventions; max existing number verified T113
 - **Approach**: T114: open sanitization (evil/../x, backtick names die;
   sanitized form stored), lifecycle (open-refuses-open, close-stamps

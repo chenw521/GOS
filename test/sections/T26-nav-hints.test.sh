@@ -18,7 +18,7 @@ t26_teardown() { cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$T26_DIR"; }
 # Bootstrap is stateless, so the task-lane init seeds the state and the plant
 # below shapes it into the archived phase-owned form.
 t26_archived_fixture() {
-  node "$GOS" init --project 4 "batch" --force >/dev/null 2>&1
+  node "$GOS" init --project --force >/dev/null 2>&1
   node "$GOS" phase add "P1: alpha" --goal "ga" >/dev/null 2>&1
   node "$GOS" phase add "P2: beta" --goal "gb" >/dev/null 2>&1
   node "$GOS" phase add "R: final" --goal "gr" >/dev/null 2>&1
@@ -100,7 +100,7 @@ assert_contains "next tail has handoff block" "gos resume" "$OUT"
 
 # --- .6: phase mark-done — pending→done; active rejected; out-of-range rejected
 t26_teardown; t26_setup
-node "$GOS" init --project 4 "batch2" --force >/dev/null 2>&1
+node "$GOS" init --project --force >/dev/null 2>&1
 node "$GOS" phase add "X1: one" --goal "g1" >/dev/null 2>&1
 node "$GOS" phase add "X2: two" --goal "g2" >/dev/null 2>&1
 set +e; OUT=$(node "$GOS" phase mark-done 0 2>&1); RC=$?; set -e

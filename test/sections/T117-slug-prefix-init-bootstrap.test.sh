@@ -59,7 +59,7 @@ echo "--- T117: slug prefix + init bootstrap ---"
 
 # ===== bootstrap writes the container, never task state =====
 t117_setup
-set +e; OUT=$(node "$GOS" init --project 4 "container" 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" init --project 2>&1); RC=$?; set -e
 assert_exit "init --project exits 0" 0 "$RC"
 assert_contains "bootstrap banner names the truth source" "Lv4 project container bootstrapped (truth source: .gos/project/project.json; no task state is written here)" "$OUT"
 assert_file "project.json created" ".gos/project/project.json"
@@ -81,18 +81,39 @@ console.log([m.name, typeof m.opened_at === 'string', 'closed_at' in m].join('|'
 assert_eq "default milestone opened, still open" "milestone-1|true|false" "$MS"
 
 # ===== trace refusal + --fresh reset =====
-set +e; OUT=$(node "$GOS" init --project 4 "again" 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" init --project 2>&1); RC=$?; set -e
 assert_exit "re-bootstrap without fresh refuses" 1 "$RC"
 assert_contains "refusal names the Lv4 trace" "Lv4 trace already present" "$OUT"
 assert_contains "refusal names the fresh escape" "re-bootstrap requires --fresh" "$OUT"
 node "$GOS" phase add "P1: seeded" --goal g >/dev/null 2>&1
-set +e; OUT=$(node "$GOS" init --project 4 "again" --fresh 2>&1); RC=$?; set -e
+set +e; OUT=$(node "$GOS" init --project --fresh 2>&1); RC=$?; set -e
 assert_exit "fresh re-bootstrap exits 0" 0 "$RC"
 assert_contains "fresh reset banner" "resets the existing Lv4 container" "$OUT"
 RESET=$(node -e "
 const p = require('./.gos/project/project.json');
 console.log([p.phases.length, p.decisions.length, p.milestone.name, 'closed_at' in p.milestone].join('|'))")
 assert_eq "fresh reset restored an empty container with a fresh open milestone" "0|0|milestone-1|false" "$RESET"
+t117_teardown
+
+# ===== bootstrap name forms: --project=<name>, positional <name>, misuse dies =====
+t117_setup
+set +e; OUT=$(node "$GOS" init --project=flag-beta 2>&1); RC=$?; set -e
+assert_exit "init --project=<name> routes to the bootstrap lane" 0 "$RC"
+if [ ! -e .gos/state.json ]; then
+  echo "  ✓ flag form wrote no state.json"; PASS=$((PASS+1))
+else
+  echo "  ✗ flag form leaked a task state.json"; FAIL=$((FAIL+1))
+fi
+assert_eq "flag form stores the sanitized name" "flag-beta" "$(node -e "console.log(require('./.gos/project/project.json').milestone.name)")"
+set +e; OUT=$(node "$GOS" init --project positional-beta --fresh 2>&1); RC=$?; set -e
+assert_exit "positional name form bootstraps" 0 "$RC"
+assert_eq "positional form stores the name" "positional-beta" "$(node -e "console.log(require('./.gos/project/project.json').milestone.name)")"
+set +e; OUT=$(node "$GOS" init --project a b --fresh 2>&1); RC=$?; set -e
+assert_exit "two positionals die" 1 "$RC"
+assert_contains "two positionals refusal names the cap" "at most one milestone name" "$OUT"
+set +e; OUT=$(node "$GOS" init --project=flag-beta extra --fresh 2>&1); RC=$?; set -e
+assert_exit "name given twice dies" 1 "$RC"
+assert_contains "double-name refusal" "name given twice" "$OUT"
 t117_teardown
 
 # ===== open-milestone name prefix rides the archive slug =====

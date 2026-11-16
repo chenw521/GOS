@@ -21,7 +21,7 @@ t111_setup() {
   mkdir -p "$T111_DIR" && cd "$T111_DIR" || exit 1
   git init -q . && git commit -q --allow-empty -m root
   # sandbox queue: idx0 done, idx1 active, idx2 parked, idx3 and idx4 pending
-  node "$GOS" init --project 1 "t111 container" >/dev/null 2>&1
+  node "$GOS" init --project >/dev/null 2>&1
   node "$GOS" phase add "P1: alpha" --goal "fixture goal one" >/dev/null 2>&1
   node "$GOS" phase add "P2: bravo" --goal "fixture goal two" >/dev/null 2>&1
   node "$GOS" phase add "P3: charlie" --goal "fixture goal three" >/dev/null 2>&1

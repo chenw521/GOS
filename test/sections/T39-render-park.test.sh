@@ -44,7 +44,7 @@ t39_setup() {
   T39_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-t39"
   mkdir -p "$T39_DIR" && cd "$T39_DIR" || exit 1
   git init -q . && git -c user.email=t@t -c user.name=t commit -q --allow-empty -m root
-  node "$GOS" init --project 1 "t39 container" >/dev/null 2>&1
+  node "$GOS" init --project >/dev/null 2>&1
  # PROJECT.md gate: fill the seeded skeleton (TODO-only would block archive preflight)
   cat > .gos/project/PROJECT.md << 'EOF'
 ## What This Is
