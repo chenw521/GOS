@@ -2,13 +2,14 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "VERIFY",
+  "current_stage": "SHIP",
   "completed_stages": [
     "INTENT",
     "THINK",
     "PLAN",
     "BUILD",
-    "REVIEW"
+    "REVIEW",
+    "VERIFY"
   ],
   "intent": {
     "summary": "Milestone lifecycle mechanics and ceremony on the hierarchical model (B-double-prime): project.json is the Lv4 parent container — phase entries gain additive task_ref and completed_at snapshot fields written at mark-done/archive time, resume composes parent plus resident child state (no dedicated parent state file, state.json schema untouched, no levelless shell ever created); implement milestone close-with-parked, fix the P0 phase insertion order, close the shipped v1.0.0-dev milestone with parked P2/P3 carried over, open the publicize milestone, and re-home P2/P3 onto it unchanged (their execution stays with the phases themselves, after P23).",
@@ -219,7 +220,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/sections/T115-phase-move.test.sh\"]",
         "output_excerpt": "✓ move by name prefix exits 0",
-        "artifact_path": ".gos/cache/section-runs/20261116T053840Z-full17820.log",
+        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
         "replay": true
       }
     },
@@ -230,7 +231,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/sections/T118-milestone-ceremony.test.sh\"]",
         "output_excerpt": "✓ ceremony close exits 0",
-        "artifact_path": ".gos/cache/section-runs/20261116T053856Z-full7558.log",
+        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
         "replay": true
       }
     },
@@ -241,7 +242,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/sections/T118-milestone-ceremony.test.sh\"]",
         "output_excerpt": "✓ ceremony close exits 0",
-        "artifact_path": ".gos/cache/section-runs/20261116T053856Z-full7558.log",
+        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
         "replay": true
       }
     },
@@ -252,7 +253,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/sections/T117-slug-prefix-init-bootstrap.test.sh\"]",
         "output_excerpt": "✓ init --project exits 0",
-        "artifact_path": ".gos/cache/section-runs/20261116T053852Z-full14496.log",
+        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
         "replay": true
       }
     },
@@ -263,7 +264,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/sections/T116-stateless-resume.test.sh\"]",
         "output_excerpt": "✓ resume without state or marker exits 1",
-        "artifact_path": ".gos/cache/section-runs/20261116T053848Z-full29907.log",
+        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
         "replay": true
       }
     },
@@ -274,7 +275,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/sections/T117-slug-prefix-init-bootstrap.test.sh\"]",
         "output_excerpt": "✓ init --project exits 0",
-        "artifact_path": ".gos/cache/section-runs/20261116T053852Z-full14496.log",
+        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
         "replay": true
       }
     },
@@ -285,7 +286,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/sections/T114-milestone-open-close.test.sh\"]",
         "output_excerpt": "✓ open without a name exits 1",
-        "artifact_path": ".gos/cache/section-runs/20261116T053835Z-full19949.log",
+        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
         "replay": true
       }
     },
@@ -296,7 +297,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/sections/T118-milestone-ceremony.test.sh\"]",
         "output_excerpt": "✓ ceremony close exits 0",
-        "artifact_path": ".gos/cache/section-runs/20261116T053856Z-full7558.log",
+        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
         "replay": true
       }
     },
@@ -307,7 +308,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/sections/T114-milestone-open-close.test.sh\"]",
         "output_excerpt": "✓ open without a name exits 1",
-        "artifact_path": ".gos/cache/section-runs/20261116T053835Z-full19949.log",
+        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
         "replay": true
       }
     },
@@ -318,7 +319,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/sections/T116-stateless-resume.test.sh\"]",
         "output_excerpt": "✓ resume without state or marker exits 1",
-        "artifact_path": ".gos/cache/section-runs/20261116T053848Z-full29907.log",
+        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
         "replay": true
       }
     }
