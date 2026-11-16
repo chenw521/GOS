@@ -2,12 +2,13 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "REVIEW",
+  "current_stage": "VERIFY",
   "completed_stages": [
     "INTENT",
     "THINK",
     "PLAN",
-    "BUILD"
+    "BUILD",
+    "REVIEW"
   ],
   "intent": {
     "summary": "Milestone lifecycle mechanics and ceremony on the hierarchical model (B-double-prime): project.json is the Lv4 parent container — phase entries gain additive task_ref and completed_at snapshot fields written at mark-done/archive time, resume composes parent plus resident child state (no dedicated parent state file, state.json schema untouched, no levelless shell ever created); implement milestone close-with-parked, fix the P0 phase insertion order, close the shipped v1.0.0-dev milestone with parked P2/P3 carried over, open the publicize milestone, and re-home P2/P3 onto it unchanged (their execution stays with the phases themselves, after P23).",
