@@ -329,7 +329,7 @@ mkdir -p vendor/gen
 for i in $(seq 1 30); do
   printf '// generated vendored fixture\nfunction g%sa() {}\nfunction g%sb() {}\n' "$i" "$i" > "vendor/gen/g$i.js"
 done
-git add vendor/gen && git commit -qm land tier2 fixture
+git add vendor/gen && git commit -qm "land tier2 fixture"
 set +e; node "$GOS" map scan >/dev/null 2>&1; SRC=$?; set -e
 assert_exit "T119.11a pre-rule scan with 62 vendored fns exits 0" 0 "$SRC"
 set +e
@@ -344,7 +344,7 @@ PYRC=$?
 set -e
 assert_exit "T119.11b peak.fn_count exceeds the tier-2 threshold" 0 "$PYRC"
 printf 'vendor/*\n' > .gos/map-ignore
-git add .gos/map-ignore && git commit -qm land vendor rule
+git add .gos/map-ignore && git commit -qm "land vendor rule"
 set +e; node "$GOS" map scan >/dev/null 2>&1; SRC=$?; set -e
 assert_exit "T119.11c rescan with the vendor rule exits 0" 0 "$SRC"
 set +e; GOUT=$(node "$GOS" gate codemap 2>&1); GRC=$?; set -e
