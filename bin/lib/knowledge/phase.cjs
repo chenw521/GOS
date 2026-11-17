@@ -65,8 +65,8 @@ function cmdPhase(args) {
   const rest = args.slice(1);
 
   if (sub === 'add') {
-    const state = core.readState();
-    if (!state || state.project !== true) core.die('phase add requires an Lv4 project (gos init --project)');
+    // repo-level gate: the Lv4 marker or project.json (isLv4Repo) — never the task state
+    if (!core.isLv4Repo()) core.die('phase add requires an Lv4 project (gos init --project)');
     const { pos, opt } = decisions.decisionParseOpts(rest, ['--goal']);
     const name = pos.join(' ').trim();
     const goal = opt['--goal'] !== undefined && opt['--goal'] !== null ? String(opt['--goal']).trim() : '';
@@ -222,8 +222,8 @@ function cmdPhase(args) {
     const state = core.readState();
     if (force) console.log('⚠⚠ FORCE-CLAIM bypasses DONE/archive preconditions — data loss risk if current task is mid-flight');
     // DONE precondition applies to PHASE-OWNED state only (phase_name set by a prior claim).
-    // A wrapper state (project=true, no phase_name — the Lv4 project container created by init
-    // --project) has no work to lose: first claim from wrapper is the NORMAL entry, not an exception.
+    // A wrapper state (legacy project container: project=true, no phase_name) has no work
+    // to lose: first claim from wrapper is the NORMAL entry, not an exception.
     // The archived-chain field is audit-only — the order gate is status-based below.
     // Unclaim-then-reclaim of the SAME phase is the designed recovery path
     // (unclaim output says "re-claim or gos init"); the DONE precondition must not
@@ -249,6 +249,8 @@ function cmdPhase(args) {
     const goal = phases[n].goal;
     const fresh = core.defaultState(3, goal);
     fresh.intent.confirmed = true;
+    // task-boundness stamp: this claimed child belongs to the project; repo
+    // Lv4-ness is isLv4Repo (marker/project.json), independent of this field
     fresh.project = true;
     // [T4b/D-12] no project_root stamp — v4 identity is de-pathed (repo_id via
     // defaultState; repo root runtime-derived where needed).
@@ -359,6 +361,56 @@ function cmdPhase(args) {
     return;
   }
 
+  // Queue reorder — array position is roadmap order, status untouched. The
+  // SOURCE must not be active: in-flight work pins its roadmap position until
+  // the task closes. A destination slot holding an active phase is fine — the
+  // entry only shifts index. The --expect index guard kills stale advice
+  // written against an older queue (same guard shape as rename's --expect).
+  if (sub === 'move') {
+    const { pos, opt } = decisions.decisionParseOpts(rest, ['--expect']);
+    const fromArg = pos[0];
+    const toArg = pos[1];
+    if (fromArg === undefined || toArg === undefined) core.die('Usage: gos phase move <from> <to> [--expect <current-index>]   (from: index or unique name prefix; to: target index)');
+    const project = core.loadProject();
+    const phases = (project && Array.isArray(project.phases)) ? project.phases : [];
+    // Same from-argument space as claim/park: digits keep the legacy index
+    // path, anything else is a unique case-insensitive name prefix.
+    let from;
+    if (/^\d+$/.test(fromArg)) {
+      from = parseInt(fromArg, 10);
+    } else {
+      const hits = phases.map((p, i) => ({ p, i })).filter((x) => x.p && x.p.name.toLowerCase().startsWith(fromArg.toLowerCase()));
+      if (hits.length === 1) from = hits[0].i;
+      else if (hits.length > 1) core.die(`✗ ambiguous phase prefix '${fromArg}' — matches: ${hits.map((h) => `${h.i}=${h.p.name}`).join(', ')}\nNext: pick the index, or extend the prefix`);
+      else from = -1;
+    }
+    if (!(from >= 0 && from < phases.length)) {
+      const queue = phases.map((p, i) => `${i}=${p.name}(${p.status})`).join('  ');
+      core.die(`✗ phase '${fromArg}' not found — valid range: 0-${Math.max(phases.length - 1, 0)}\nQueue: ${queue || '(empty — gos phase add first)'}\nNext: re-check with \`gos phase list\``);
+    }
+    const ph = phases[from];
+    if (!/^\d+$/.test(toArg)) core.die(`✗ target index must be a non-negative integer — got '${toArg}' (see \`gos phase list\`)`);
+    const to = parseInt(toArg, 10);
+    if (!(to >= 0 && to < phases.length)) core.die(`✗ target index ${to} out of range (valid: 0-${Math.max(phases.length - 1, 0)}) — see \`gos phase list\``);
+    const expectArg = (opt['--expect'] !== undefined && opt['--expect'] !== null) ? String(opt['--expect']).trim() : '';
+    if (expectArg !== '') {
+      if (!/^\d+$/.test(expectArg)) core.die(`✗ --expect wants a phase index (non-negative integer) — got '${expectArg}'`);
+      if (parseInt(expectArg, 10) !== from) core.die(`phase ${from} (${ph.name}) ${core.t('phase.moveExpectMismatch', { actual: from, expect: expectArg })}`);
+    }
+    if (ph.status === 'active') core.die(`phase ${from} (${ph.name}) ${core.t('phase.moveRefuseActive')}`);
+    phases.splice(from, 1);
+    phases.splice(to, 0, ph);
+    core.saveProject(project);
+    console.log(core.t('phase.moveDone', { name: ph.name, from, to }));
+    // post-move queue mirrors the phase list table (display and index space
+    // cannot diverge)
+    console.log('| idx | Phase | Goal | Status |');
+    console.log('|:---|:---|:---|:---|');
+    phases.forEach((p, i) => console.log(`| ${i} | ${core.escCell(p.name)} | ${core.escCell(p.goal)} | ${core.escCell(p.status === 'parked' ? `parked(${p.park_reason || '(no reason)'})` : p.status)} |`));
+    decisions.autoRenderViews(project); // views stay fresh after the mutation
+    return;
+  }
+
   // Bootstrap backfill for phases completed OUTSIDE GOS (e.g. pre-roadmap work
   // retro-recorded). ACTIVE phases are refused — no pipeline bypass (finish & archive
   // through the real flow); idempotent on already-done.
@@ -375,6 +427,10 @@ function cmdPhase(args) {
     const wasParked = ph.status === 'parked';
     ph.status = 'done';
     delete ph.park_reason;
+    // Close-out stamp: completed_at records the done transition (backfill
+    // included); task_ref stays untouched — mark-done phases never ran the
+    // archive pipeline, so there is no home to name.
+    ph.completed_at = new Date().toISOString();
     // Mark-done is a done-transition too — keep the audit field at the most
     // recent done transition (incl. backfill), or it rots into a guaranteed lie.
     project.last_archived_phase = ph.name;
@@ -385,7 +441,7 @@ function cmdPhase(args) {
     return;
   }
 
-  console.log('Usage: gos phase <add|amend|rename|list|claim|unclaim|park|mark-done>');
+  console.log('Usage: gos phase <add|amend|rename|list|claim|unclaim|park|move|mark-done>');
   console.log('  add "P1: name" --goal "..."   add pending phase to project.json');
   console.log('  amend <n> --goal "..."        replace goal of a PENDING phase (active/done/parked refused)');
   console.log('  rename <n> "<new name>"       rename a PENDING phase (grammar + collision guarded, prints old→new)');
@@ -394,6 +450,7 @@ function cmdPhase(args) {
   console.log('  unclaim                       revert active phase to pending (state orphaned)');
   console.log('  park <n> [--reason "..."]     explicitly defer a pending phase (blocks milestone, visible debt)');
   console.log('  park <n> --undo               back to pending');
+  console.log('  move <from> <to>              reorder the queue (from: index or unique prefix; to: index; active source refused)');
   console.log('  mark-done <n>                 backfill done status (ACTIVE refused — no pipeline bypass)');
 }
 

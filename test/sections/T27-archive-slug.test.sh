@@ -34,7 +34,7 @@ echo "$DIR1" | grep -q "fix-nav-hints-ascii-topic" && echo "  ✓ ascii topic pr
 
 # --- .2: phased task — phase-N segment (first token of a CJK phase name)
 t27_teardown; t27_setup
-node "$GOS" init --project 4 "batch3" --force >/dev/null 2>&1
+node "$GOS" init --project --force >/dev/null 2>&1
 node "$GOS" phase add "6: 依赖地图" --goal "g" >/dev/null 2>&1
 node "$GOS" phase claim 0 >/dev/null 2>&1
 echo spec > "$(gos_spec)"

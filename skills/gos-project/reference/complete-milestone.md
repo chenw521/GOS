@@ -17,19 +17,21 @@ All phases in ROADMAP.md are done (or user declares the milestone over).
    - "Core Value" ← validated priorities.
    - "Requirements Evolution" ← milestone summary line.
 
-4. **ROADMAP.md archive**:
-   - `mkdir -p .gos/project/milestones && git mv .gos/project/ROADMAP.md .gos/project/milestones/v0.1-ROADMAP.md` (commit BEFORE delete-order: archive → commit → then write fresh empty ROADMAP for next milestone).
+4. **Milestone close** (the verb owns snapshots and the selective wipe):
+   - Dry-run first: `gos milestone close --carry-parked` — inspect the five-class disposition report (kept: parked phases + their rows + pending phases; wiped: done-owned + null-phase + ghost/dropped rows).
+   - Arm it: `gos approve milestone-close --reason "<why>"`, then `gos milestone close --carry-parked --yes`.
+   - Dated snapshots land in `.gos/project/milestones/` (preclose.json + ROADMAP/REQUIREMENTS/DECISIONS views) and in the closing archive's `milestone-record/` — no manual `git mv` of views.
 
-5. **REQUIREMENTS.md reset**: archive alongside ROADMAP; next milestone's new-project regenerates it.
+5. **REQUIREMENTS.md / DECISIONS.md reset**: the close wipe handles both — done-owned rows wipe with history; parked-owned rows survive in place. Views re-render from the post-close project.json.
 
 6. **Retrospective** (3 questions, ≤5 bullets each — value is in reflecting, not volume):
    - What went well? / What was harder than expected? / What would we do differently?
    - Append to `.gos/project/RETROSPECTIVE.md` (create if missing). Cross-milestone patterns matter.
 
-7. **Tag**: `git tag -a v0.1 -m "milestone: <name>"`.
+7. **Tag** (optional, git-side record): `git tag -a v0.1 -m "milestone: <name>"`.
 
 8. **User gate**: show audit + stats + retro summary → "Milestone complete. Start next milestone (new-project mode) or stop here?"
 
 ## Rules
-- Archive commit ordering matters: commit the archive BEFORE removing originals (GSD bug #2630 lesson).
-- Never delete DECISIONS.md — it survives milestones (rolling, pruned, never reset).
+- Never batch destructive acts: dry-run → user inspects → approve → execute, one step at a time.
+- Never delete view files by hand — `gos milestone close` is the only wipe path and it snapshots before wiping.

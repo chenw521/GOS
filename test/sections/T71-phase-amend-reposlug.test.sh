@@ -22,7 +22,7 @@ t71_setup() {
   mkdir -p "$T71_DIR" && cd "$T71_DIR" || exit 1
   git init -q . && git commit -q --allow-empty -m root
   # sandbox project container: idx0 done (refusal fixture), idx1 pending (amend target)
-  node "$GOS" init --project 1 "t71 container" >/dev/null 2>&1
+  node "$GOS" init --project >/dev/null 2>&1
   node "$GOS" phase add "A-alpha: first" --goal "original goal one" >/dev/null 2>&1
   node "$GOS" phase add "B-beta: second" --goal "original goal two" >/dev/null 2>&1
   node "$GOS" phase mark-done 0 >/dev/null 2>&1

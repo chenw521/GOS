@@ -54,7 +54,45 @@ function cmdInstructions(args) {
 
 function cmdResume() {
   const state = core.readState();
-  if (!state) core.die('No state to resume. Start with `gos init`.');
+  if (!state) {
+    // Stateless but Lv4 (tracked trace without machine-local task state — the
+    // fresh-clone shape): compose the read-only parent view below; every
+    // other stateless shape keeps the start invitation.
+    if (!core.isLv4Repo()) core.die('No state to resume. Start with `gos init`.');
+    // Machine-greppable banner 'NO ACTIVE TASK': the ASCII literal is the
+    // contract and stays byte-identical in every locale catalog (a locale
+    // may append an explanation line AFTER it, never localize the banner
+    // itself — see the resume.noTask keys in the locale files).
+    console.log(core.t('resume.noTask.banner'));
+    const project = core.loadProject();
+    const ms = project ? project.milestone : null;
+    if (!ms || typeof ms !== 'object') {
+      console.log(core.t('resume.noTask.milestoneNone'));
+    } else if (ms.closed_at === undefined) {
+      console.log(core.t('resume.noTask.milestoneOpen', { name: ms.name, ts: ms.opened_at }));
+    } else {
+      console.log(core.t('resume.noTask.milestoneClosed', { name: ms.name, ts: ms.closed_at }));
+    }
+    // Phase queue tail: status counts plus the names of what remains
+    // (pending and parked); the full table stays with `gos phase list`.
+    const phases = (project && Array.isArray(project.phases)) ? project.phases : [];
+    const withStatus = (st) => phases.filter((p) => p && p.status === st);
+    if (!phases.length) {
+      console.log(core.t('resume.noTask.queueEmpty'));
+    } else {
+      const counts = [];
+      if (withStatus('done').length) counts.push(core.t('resume.noTask.stDone', { n: withStatus('done').length }));
+      if (withStatus('active').length) counts.push(core.t('resume.noTask.stActive', { n: withStatus('active').length }));
+      if (withStatus('pending').length) counts.push(core.t('resume.noTask.stPending', { n: withStatus('pending').length }));
+      if (withStatus('parked').length) counts.push(core.t('resume.noTask.stParked', { n: withStatus('parked').length }));
+      console.log(core.t('resume.noTask.queueLine', { counts: counts.join(' · ') }));
+      const names = (st) => withStatus(st).map((p) => p.name).join(', ');
+      if (withStatus('pending').length) console.log(core.t('resume.noTask.queueNames', { label: core.t('resume.noTask.labelPending'), names: names('pending') }));
+      if (withStatus('parked').length) console.log(core.t('resume.noTask.queueNames', { label: core.t('resume.noTask.labelParked'), names: names('parked') }));
+    }
+    console.log(core.t('resume.noTask.cloneWarning'));
+    return;
+  }
   console.log('=== GOS Resume Summary ===');
   console.log(`Task: ${core.sanitizeEcho(state.intent.summary)} (Lv${state.level ?? '?'})`);
   console.log(`Completed: ${state.completed_stages.join(' → ') || '(none)'}`);
@@ -71,7 +109,7 @@ function cmdResume() {
   const planAbs = core.planPathOf(state);
   if (specAbs && fs.existsSync(specAbs)) console.log(`Spec: ${specAbs}`);
   if (planAbs && fs.existsSync(planAbs)) console.log(`Plan: ${planAbs}`);
-  if (state.project && fs.existsSync(path.join(core.PROJECT_DIR, 'project.json'))) {
+  if (core.isLv4Repo()) { // repo-level: marker or project.json (isLv4Repo), never the task stamp
     console.log('→ Lv4: DECISIONS/ROADMAP/REQUIREMENTS are GENERATED views — edit via gos decision/requirement/phase commands.');
   }
   if (state.decisions.length) {
@@ -92,9 +130,9 @@ function cmdApprove(args) {
   const state = core.readState();
   if (!state) core.die(core.CONTRACTS.state_semantics.noActiveTask);
   const what = (args[0] || '').toLowerCase();
-  const valid = ['think', 'plan', 'archive', 'baseline-reset'];
+  const valid = ['think', 'plan', 'archive', 'baseline-reset', 'milestone-close'];
   if (!valid.includes(what)) {
-    console.log('Usage: gos approve <think|plan|archive|baseline-reset> [--reason "<why>"]');
+    console.log('Usage: gos approve <think|plan|archive|baseline-reset|milestone-close> [--reason "<why>"]');
     console.log('Approvals record EXPLICIT user sign-off; models must core.ask first.');
     const have = Object.keys(state.approvals || {});
     console.log(have.length ? `Current approvals: ${have.join(', ')}` : 'No approvals yet.');
@@ -109,6 +147,19 @@ function cmdApprove(args) {
     state.approvals.BASELINE_RESET = { ts: new Date().toISOString(), reason };
     core.writeState(state);
     console.log(`✓ BASELINE_RESET approved (reason: ${reason}) — single-consumption: gos map baseline reset --reason "${reason}"`);
+    return;
+  }
+  if (what === 'milestone-close') {
+    // approve milestone-close records {ts, reason?}; milestone close --yes
+    // consumes the record once (fresh within 24h) — reason is optional here
+    // because close only gates on ts freshness, unlike baseline-reset.
+    let reason = null;
+    for (let i = 1; i < args.length; i++) if (args[i] === '--reason') reason = args[++i];
+    const rec = { ts: new Date().toISOString() };
+    if (reason) rec.reason = reason;
+    state.approvals['MILESTONE-CLOSE'] = rec;
+    core.writeState(state);
+    console.log(`✓ MILESTONE-CLOSE approved${reason ? ` (reason: ${reason})` : ''} — single-consumption: gos milestone close --yes (fresh within 24h)`);
     return;
   }
   state.approvals[what.toUpperCase()] = new Date().toISOString();

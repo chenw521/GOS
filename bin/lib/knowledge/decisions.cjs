@@ -99,7 +99,7 @@ function decisionParseOpts(rest, valueFlags) {
 }
 
 function decisionFind(state, project, id) {
-  const sd = Array.isArray(state.decisions) ? (state.decisions.find((d) => d && d.id === id) || null) : null;
+  const sd = (state && Array.isArray(state.decisions)) ? (state.decisions.find((d) => d && d.id === id) || null) : null;
   const pd = (project && Array.isArray(project.decisions)) ? (project.decisions.find((d) => d && d.id === id) || null) : null;
   return { sd, pd };
 }
@@ -120,7 +120,7 @@ function decisionRationaleErr(r) {
 
 function decisionNextId(state, project) {
   let max = 0;
-  const all = [...(Array.isArray(state.decisions) ? state.decisions : []), ...((project && project.decisions) || [])];
+  const all = [...((state && Array.isArray(state.decisions)) ? state.decisions : []), ...((project && project.decisions) || [])];
   for (const d of all) {
     const m = /^D-(\d{2,3})$/.exec((d && d.id) || '');
     if (m) max = Math.max(max, parseInt(m[1], 10));
@@ -142,8 +142,11 @@ function decisionChainReaches(state, project, targetId, newId) {
   return true;
 }
 
-function decisionDualStore(state) {
-  return state.project === true && fs.existsSync(path.join(core.PROJECT_DIR, 'project.json'));
+// Dual-store routing is repo-level: an Lv4 repo keeps project.json as the
+// decision truth store; the claimed task's state mirrors rows for its
+// phase-local view. Stateless repo-lane adds are project-only.
+function decisionDualStore() {
+  return core.isLv4Repo();
 }
 
 function decisionPlanTasks(state) {
@@ -185,14 +188,18 @@ function cmdDecision(args) {
   // `list --all` is the audit view — usable WITHOUT an active task
   const isListAll = sub === 'list' && args.includes('--all');
   const state = core.readState();
-  if (!state) {
+  // stateless repo lane: with a project.json truth store, add/list/import work
+  // without a claimed task (writes land project-only); every other verb
+  // keeps the active-task die. import is in the lane because bootstrap's
+  // brownfield warning suggests it in the very stateless shape it creates.
+  if (!state && !(project && ['', 'add', 'list', 'import'].includes(sub))) {
     if (isListAll && project) { printDecisionRows(projectDecisionRows(project), { includeSuperseded: true }); return; }
     if (isListAll) core.die(core.CONTRACTS.command_contracts.listNoSources);
     core.die(`${core.CONTRACTS.state_semantics.noActiveTask} \`gos init\` first.`);
   }
 
   if (sub === 'add') {
-    if (state.level !== null && state.level < 3) core.die('decision add requires Lv3/Lv4 (Lv1-2 decisions live in spec.md prose).');
+    if (state && state.level !== null && state.level < 3) core.die('decision add requires Lv3/Lv4 (Lv1-2 decisions live in spec.md prose).');
     const { pos, opt } = decisionParseOpts(args.slice(1), ['--rationale', '--supersedes', '--anchor', '--phase', '--dig', '--dig-ruling', '--dig-waiver']);
     let id = null;
     let title = null;
@@ -255,24 +262,22 @@ function cmdDecision(args) {
     } else if (bornAt > DIG_FLOOR_ERA) {
       core.die(`dig floor: decisions born after ${DIG_FLOOR_ERA} require dig evidence at add — ${digShapesHint()}`);
     }
-    const d = { id, title, rationale, birth_phase: phaseL || state.phase_name || 'P0', status: 'open', anchor, covered: false, covered_by: null, born_at: bornAt };
+    const d = { id, title, rationale, birth_phase: phaseL || (state && state.phase_name) || 'P0', status: 'open', anchor, covered: false, covered_by: null, born_at: bornAt };
     if (dig) d.dig = dig;
     if (supersedes) d.supersedes = supersedes;
     let touchedProject = false;
-    if (decisionDualStore(state) && project) {
+    if (decisionDualStore() && project) {
       project.decisions.push(d);   // project.json is the Lv4 truth source
-      state.decisions.push(d);     // ...mirrored into state
       touchedProject = true;
-    } else {
-      state.decisions.push(d);
     }
+    if (state) state.decisions.push(d); // claimed task mirrors the row; stateless repo lane is project-only
     if (supersedes) {
       const { sd: tS, pd: tP } = decisionFind(state, project, supersedes);
       if (tS) tS.status = 'superseded';
       if (tP) { tP.status = 'superseded'; touchedProject = true; } // target lives in whichever store
     }
     if (touchedProject && project) core.saveProject(project);
-    core.writeState(state);
+    if (state) core.writeState(state);
     console.log(`${core.CONTRACTS.command_contracts.decisionAdded}${id.slice(2)} added: ${title}`);
     console.log('Next: gos decision list');
     if (touchedProject && project) autoRenderViews(project); // D-03: views stay fresh after the mutation
@@ -349,12 +354,15 @@ function cmdDecision(args) {
     let rows;
     if (all) {
       const merged = new Map();
-      for (const d of (Array.isArray(state.decisions) ? state.decisions : [])) if (d && d.id) merged.set(d.id, d);
+      for (const d of ((state && Array.isArray(state.decisions)) ? state.decisions : [])) if (d && d.id) merged.set(d.id, d);
       if (project && Array.isArray(project.decisions)) for (const d of project.decisions) if (d && d.id) merged.set(d.id, d); // project wins on conflict
       rows = [...merged.values()];
-      if (project && state.project !== true) console.log(core.CONTRACTS.command_contracts.listForeignProject);
-    } else {
+      // a task with no claimed phase is not project-bound — its --all view is a foreign project
+      if (project && state && !state.phase_name) console.log(core.CONTRACTS.command_contracts.listForeignProject);
+    } else if (state) {
       rows = (Array.isArray(state.decisions) ? state.decisions : []).filter((d) => d && d.id);
+    } else {
+      rows = projectDecisionRows(project); // stateless repo lane composes from project.json
     }
     printDecisionRows(rows, { includeSuperseded: all });
     return;
@@ -379,21 +387,22 @@ function cmdDecision(args) {
     }
     let added = 0;
     let skipped = 0;
-    const dual = decisionDualStore(state) && project;
+    const dual = decisionDualStore() && project;
+    if (doAll && !state && !dual) core.die('decision import --all: no truth store to land rows — bootstrap the container first (`gos init --project`)');
     for (const e of entries) {
       const { sd, pd } = decisionFind(state, project, e.id);
       if (sd || pd) { console.log(`⚠ ${e.id} already exists — skipped`); skipped++; continue; }
       const terr = decisionTitleErr(e.title);
       if (terr) { console.log(`⚠ ${e.id} skipped: ${terr}`); skipped++; continue; }
-      const d = { id: e.id, title: e.title, rationale: '', birth_phase: state.phase_name || 'P0', status: 'open', anchor: null, covered: false, covered_by: null };
-      state.decisions.push(d);
+      const d = { id: e.id, title: e.title, rationale: '', birth_phase: (state && state.phase_name) || 'P0', status: 'open', anchor: null, covered: false, covered_by: null };
+      if (state) state.decisions.push(d);
       if (dual) project.decisions.push(d);
       console.log(`${core.CONTRACTS.command_contracts.decisionAdded}${e.id.slice(2)} added: ${e.title}`);
       added++;
     }
     if (added) {
       if (dual) core.saveProject(project);
-      core.writeState(state);
+      if (state) core.writeState(state);
     }
     console.log(`✓ import: ${added} added, ${skipped} skipped`);
     return;

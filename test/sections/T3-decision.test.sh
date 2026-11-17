@@ -144,9 +144,9 @@ t3_teardown; t3_setup
 node "$GOS" init 4 "platform" --project >/dev/null 2>&1
 node "$GOS" decision add "dual store decision" --rationale "both stores" >/dev/null --dig-waiver "test fixture" 2>&1
 DUAL=$(python3 -c "
-import json
-st=json.load(open('.gos/state.json')); pj=json.load(open('.gos/project/project.json'))
-print(len(st['decisions']), len(pj['decisions']), pj['decisions'][0]['id'])")
-assert_contains "dual-store: state + project both hold D-01" "1 1 D-01" "$DUAL"
+import json, os
+pj=json.load(open('.gos/project/project.json'))
+print(os.path.exists('.gos/state.json'), len(pj['decisions']), pj['decisions'][0]['id'])")
+assert_contains "stateless bootstrap add is project-only (no task state; truth store holds D-01)" "False 1 D-01" "$DUAL"
 
 t3_teardown

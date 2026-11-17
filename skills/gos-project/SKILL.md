@@ -26,7 +26,7 @@ gos gate all                        # hard gates (requirements claim-check activ
 |:---|:---|:---|
 | Lv4 + no PROJECT.md | new-project | `reference/new-project.md` |
 | Phase transition (SHIP done, next phase) | evolve | `reference/evolve.md` |
-| All phases done / milestone end | complete-milestone (**archive via `scripts/archive-milestone.sh`** — atomic order) | `reference/complete-milestone.md` |
+| All phases done / milestone end | complete-milestone (**close via `gos milestone close`** — dry run first, `--yes` requires `gos approve milestone-close`; then `gos milestone open <next>`) | `reference/complete-milestone.md` |
 
 ## Core Rules
 

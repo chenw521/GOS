@@ -27,7 +27,7 @@ function parseLevelStrict(s) {
 }
 
 function cmdInit(args) {
-  const isProject = args.includes('--project');
+  const isProject = args.some((a) => a === '--project' || a.startsWith('--project='));
   const positional = args.filter(a => !a.startsWith('--'));
   const wantsConfirm = args.includes('--confirm') || args.includes('--confirmed');
 
@@ -38,6 +38,12 @@ function cmdInit(args) {
   // (`gos init <level> git "<intent>"`).
   if (positional[0] === 'git') { cmdInitGit(args).catch((e) => core.die(e.message)); return; }
   if (positional[0] === 'coding') { cmdInitCoding(args).catch((e) => core.die(e.message)); return; }
+
+  // `--project` is the Lv4 bootstrap lane: project.json + rendered views +
+  // the repo-level lv4.json marker, converging on milestone-open internals.
+  // Bootstrap never creates or consults task state — the task lane below
+  // stays the only state-writing path.
+  if (isProject) { cmdInitProject(args); return; }
 
  // confirm-only path: zero positional + --confirm/--confirmed. Repairs the
   // r234 root cause (bare `init --confirm` used to core.die on the in-flight guard) and
@@ -162,53 +168,91 @@ function cmdInit(args) {
     if (!fs.existsSync(readmeP)) { fs.mkdirSync(path.dirname(readmeP), { recursive: true }); fs.writeFileSync(readmeP, render.renderPathsMarkdown()); console.log('✓ seeded .gos/README.md (registry navigation — regen via gos paths --markdown)'); }
   } catch { /* non-fatal — guard will instruct */ }
 
-  if (isProject) {
-    fs.mkdirSync(core.PROJECT_DIR, { recursive: true });
- // / : PROJECT.md sections seed with TODO guidance lines — the
-    // approve-archive gate and brownfield detection both key on them.
-    const files = {
-      'PROJECT.md': [
-        '# Project',
-        '',
-        '## What This Is',
-        'TODO: describe the product in a few sentences — what it is, for whom, and the problem it solves.',
-        '',
-        '## Core Value',
-        'TODO: state the core value proposition — why this project exists and what it guarantees.',
-        '',
-        '## Requirements Evolution',
-        'TODO: summarize how requirements evolve — phase claims, decision records, and truth-backed closure.',
-        '',
-      ].join('\n'),
-      'ROADMAP.md': '# Roadmap\n\n| Phase | Goal | Status |\n|:---|:---|:---|\n',
-      'DECISIONS.md': '# Decision Index (GENERATED view — project.json is the truth source; >50 entries → advisory prune)\n\n',
-      'REQUIREMENTS.md': '# Requirements\n\n| ID | Requirement | Phase |\n|:---|:---|:---|\n',
-    };
-    for (const [name, content] of Object.entries(files)) {
-      const p = path.join(core.PROJECT_DIR, name);
-      if (!fs.existsSync(p)) fs.writeFileSync(p, content);
-    }
- // project.json truth source skeleton (only creation point alongside phase add)
-    const pj = path.join(core.PROJECT_DIR, 'project.json');
-    if (!fs.existsSync(pj)) core.saveProject(core.emptyProject());
- // brownfield detection — handwritten 4-file content → suggest import, never silently overwrite
-    const brown = knowledge.detectBrownfield();
-    if (brown) {
-      console.log(`⚠ existing handwritten content detected in: ${brown.join(', ')}`);
-      console.log('  Import decisions into the truth source: `gos decision import --all` (review first: `gos decision import`)');
-      console.log('  Or discard after review: re-run import with --discard. Rendered views will overwrite non-imported content at next archive.');
-    }
-    state.project = true;
-    core.writeState(state);
-  }
   // T2 [D-31]: --force discards the append-only baseline history — loud, never silent
   if (hadHeadHistory) console.log(`⚠ ${core.CONTRACTS.state_semantics.taskHeadReset}`);
-  console.log(`${core.CONTRACTS.state_semantics.initDone} ${isProject ? 'Lv4 project' : 'task'}${level !== null ? ` (Lv${level})` : ''}`);
+  console.log(`${core.CONTRACTS.state_semantics.initDone} task${level !== null ? ` (Lv${level})` : ''}`);
   console.log(`  R-01 recorded: "${core.sanitizeEcho(state.requirements[0].text)}"`);
   if (headless) console.log(core.t('status.headlessAutoConfirm'));
   console.log(state.intent.confirmed
     ? 'Next: intent confirmed → proceed to THINK'
     : 'Next: confirm intent WITH THE USER (restate, wait for yes), then bare `gos init --confirm`');
+}
+
+// gos init --project — Lv4 container bootstrap: the four view files (written
+// only when missing), project.json opened through the milestone internals
+// (default name milestone-1, optional name positionally or via --project=<name>),
+// and the
+// one-line .gos/project/lv4.json repo marker. Bootstrap never writes a task
+// state file; a repo already carrying Lv4 trace (marker, project.json, or a
+// legacy wrapper state.json) refuses re-bootstrap unless --fresh resets the
+// container (--force keeps its task-state semantics and is not a bootstrap
+// flag; it maps to --fresh with a warning so legacy scripts stay functional).
+function cmdInitProject(args) {
+  const fresh = args.includes('--fresh') || args.includes('--force');
+  let name = null;
+  let sawFlagName = false;
+  for (const a of args) {
+    if (a.startsWith('--project=') && a.length > '--project='.length) { name = a.slice('--project='.length); sawFlagName = true; }
+  }
+  const positional = args.filter((a) => !a.startsWith('--'));
+  if (positional.length >= 2 && parseLevelStrict(positional[0]).level === null) core.die('init --project takes at most one milestone name');
+  if (positional.length === 1 && sawFlagName) core.die(`milestone name given twice (positional '${core.sanitizeEcho(positional[0])}' and --project=) — pass one`);
+  // legacy invocation shape `init <level> "<intent>" --project` (pre-container
+  // wrapper era) keeps its bootstrap-only meaning: the task-lane positionals
+  // are ignored and the default milestone name applies
+  if (name === null && positional.length === 1) name = positional[0];
+  if (name === null) name = 'milestone-1';
+  const markerPath = path.join(core.PROJECT_DIR, 'lv4.json');
+  const pjPath = path.join(core.PROJECT_DIR, 'project.json');
+  const trace = [];
+  if (fs.existsSync(markerPath)) trace.push('.gos/project/lv4.json');
+  if (fs.existsSync(pjPath)) trace.push('.gos/project/project.json');
+  const wrapper = core.readState();
+  if (wrapper && wrapper.project === true && !wrapper.phase_name) trace.push('wrapper state.json');
+  if (trace.length && !fresh) {
+    core.die(core.t('init.projectTraceRefusal', { trace: trace.join(' + ') }));
+  }
+  if (trace.length && fresh) {
+    console.log(args.includes('--fresh') ? core.t('init.projectFreshReset') : `${core.t('init.projectFreshReset')} (--force maps to --fresh here)`);
+  }
+  if (fresh && fs.existsSync(pjPath)) core.saveProject(core.emptyProject());
+  fs.mkdirSync(core.PROJECT_DIR, { recursive: true });
+  // PROJECT.md sections seed with TODO guidance lines — the approve-archive
+  // gate and brownfield detection both key on them.
+  const files = {
+    'PROJECT.md': [
+      '# Project',
+      '',
+      '## What This Is',
+      'TODO: describe the product in a few sentences — what it is, for whom, and the problem it solves.',
+      '',
+      '## Core Value',
+      'TODO: state the core value proposition — why this project exists and what it guarantees.',
+      '',
+      '## Requirements Evolution',
+      'TODO: summarize how requirements evolve — phase claims, decision records, and truth-backed closure.',
+      '',
+    ].join('\n'),
+    'ROADMAP.md': '# Roadmap\n\n| Phase | Goal | Status |\n|:---|:---|:---|\n',
+    'DECISIONS.md': '# Decision Index (GENERATED view — project.json is the truth source; >50 entries → advisory prune)\n\n',
+    'REQUIREMENTS.md': '# Requirements\n\n| ID | Requirement | Phase |\n|:---|:---|:---|\n',
+  };
+  for (const [fname, content] of Object.entries(files)) {
+    const p = path.join(core.PROJECT_DIR, fname);
+    if (!fs.existsSync(p)) fs.writeFileSync(p, content);
+  }
+  // brownfield detection — handwritten 4-file content → suggest import, never silently overwrite
+  const brown = knowledge.detectBrownfield();
+  if (brown) {
+    console.log(`⚠ existing handwritten content detected in: ${brown.join(', ')}`);
+    console.log('  Import decisions into the truth source: `gos decision import --all` (review first: `gos decision import`)');
+    console.log('  Or discard after review: re-run import with --discard. Rendered views will overwrite non-imported content at next archive.');
+  }
+  const { name: stored } = knowledge.openMilestone(name);
+  if (stored !== name) console.log(core.t('milestone.openSanitized', { name: stored, raw: core.sanitizeEcho(name) }));
+  console.log(core.t('milestone.opened', { name: stored }));
+  console.log(core.t('init.projectBootstrapped'));
+  console.log(core.t('milestone.nextAfterOpen'));
 }
 
 // gos init git — seed the git workflow template bundle into the current git

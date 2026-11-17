@@ -6,6 +6,6 @@ const core = require('../core/index.cjs');
 
 
 module.exports = {
-  ...Object.assign({}, require('./lessons.cjs'), require('./lessons-json.cjs'), require('./decisions.cjs'), require('./requirements.cjs'), require('./truth.cjs'), require('./concerns.cjs'), require('./phase.cjs')),
+  ...Object.assign({}, require('./lessons.cjs'), require('./lessons-json.cjs'), require('./decisions.cjs'), require('./requirements.cjs'), require('./truth.cjs'), require('./concerns.cjs'), require('./phase.cjs'), require('./milestone.cjs')),
 
 };

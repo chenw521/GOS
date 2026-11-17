@@ -14,7 +14,7 @@ const gitprobe = require('./gitprobe.cjs');
 
 const STATE_SCHEMA_VERSION = 6;
 
-const PROJECT_SCHEMA_VERSION = 1;
+const PROJECT_SCHEMA_VERSION = 2;
 
 const cpLen = (s) => [...String(s)].length;
 
@@ -25,6 +25,10 @@ const DECISION_STATUS = new Set(['open', 'covered', 'superseded']);
 const REQ_STATUS = new Set(['active', 'dropped']);
 
 const PHASE_STATUS = new Set(['pending', 'active', 'done', 'parked']);
+
+// ISO 8601 date or datetime shape for milestone/phase timestamp fields.
+// Calendar validity is authoring-side; the schema checks shape only.
+const ISO8601_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:?\d{2}))?$/;
 
 function badText(s) {
   if (typeof s !== 'string') return 'not a string';
@@ -77,6 +81,18 @@ function validatePhase(p, where) {
   if (typeof p.goal !== 'string' || p.goal.length === 0) errs.push(`${where}:goal: non-empty required`);
   if (!PHASE_STATUS.has(p.status || '')) errs.push(`${where}:status: '${p.status}' not in pending|active|done|parked`);
   if (p.park_reason !== undefined && typeof p.park_reason !== 'string') errs.push(`${where}:park_reason: must be a string`);
+  // task_ref is the basename of the phase's home task directory (the resolver
+  // joins it under .gos/task/ — stored values never carry path separators or
+  // dot-only segments).
+  if (p.task_ref !== undefined && p.task_ref !== null) {
+    if (typeof p.task_ref !== 'string' || p.task_ref.length === 0) errs.push(`${where}:task_ref: non-empty string or null required`);
+    else if (/[/\\]/.test(p.task_ref)) errs.push(`${where}:task_ref: basename required (path separators rejected): '${p.task_ref}'`);
+    else if (p.task_ref === '.' || p.task_ref === '..') errs.push(`${where}:task_ref: basename required ('.'/'..' rejected): '${p.task_ref}'`);
+  }
+  // completed_at stamps the phase close snapshot (null while the phase lives).
+  if (p.completed_at !== undefined && p.completed_at !== null) {
+    if (typeof p.completed_at !== 'string' || !ISO8601_RE.test(p.completed_at)) errs.push(`${where}:completed_at: ISO 8601 string or null required`);
+  }
   return errs;
 }
 
@@ -359,6 +375,40 @@ function writeState(stateL) {
   fsio.writeAtomicJson(fsio.STATE_PATH, stateL);
 }
 
+// Legacy wrapper states (project container, no claimed phase) stopped being
+// written when bootstrap went stateless; survivors are retired at the CLI
+// dispatch entry — before the lock, so the confirm prompt never runs inside a
+// lock-holding command. GOS_RETIRE_WRAPPER=1 retires without asking; a
+// non-interactive run prints one notice and leaves the state untouched.
+function retireWrapperState() {
+  if (!fs.existsSync(fsio.STATE_PATH)) return;
+  let s;
+  try { s = JSON.parse(fs.readFileSync(fsio.STATE_PATH, 'utf8')); } catch { return; }
+  if (!s || s.project !== true || s.phase_name) return;
+  if (!['INTENT', 'DONE'].includes(s.current_stage)) return;
+  const i18n = require('./i18n.cjs');
+  const retire = () => {
+    fs.unlinkSync(fsio.STATE_PATH);
+    console.log(i18n.t('retire.done'));
+  };
+  if (process.env.GOS_RETIRE_WRAPPER === '1') { retire(); return; }
+  if (!(process.stdout.isTTY === true) || fsio.isHeadlessEnv()) {
+    console.error(i18n.t('retire.notice'));
+    return;
+  }
+  process.stdout.write(i18n.t('retire.prompt'));
+  let ans = '';
+  const buf = Buffer.alloc(1);
+  while (ans.length < 8) {
+    let n;
+    try { n = fs.readSync(0, buf, 0, 1, null); } catch { break; }
+    if (n === 0) break;
+    if (buf[0] === 0x0a || buf[0] === 0x0d) break;
+    ans += buf.toString('latin1');
+  }
+  if (/^y(es)?$/i.test(ans.trim())) retire();
+}
+
 // Depth-first leaf walk over the state object; returns { path, text } of the
 // first string leaf carrying CJK, null when clean. Pure detection — the
 // tracked probe lives in dieTrackedStoreCJK.
@@ -410,7 +460,7 @@ function dieTrackedStoreCJK(file, text) {
 }
 
 function emptyProject() {
-  return { schema_version: PROJECT_SCHEMA_VERSION, last_archived_phase: null, phases: [], decisions: [], requirements: [] };
+  return { schema_version: PROJECT_SCHEMA_VERSION, last_archived_phase: null, milestone: null, phases: [], decisions: [], requirements: [] };
 }
 
 function validateProject(p, mode) {
@@ -421,6 +471,19 @@ function validateProject(p, mode) {
     if (mode === 'fail') fsio.die(hint, 3);
     console.error(`⚠ ${hint} (read-only, project data not used)`);
     return ['__FUTURE__'];
+  }
+  // milestone: null until a milestone opens; an open/closed milestone is an
+  // object with a slug name and ISO timestamps. Absent = legacy v1 project.
+  if (p.milestone !== undefined && p.milestone !== null) {
+    if (typeof p.milestone !== 'object' || Array.isArray(p.milestone)) {
+      errs.push('project.json:milestone: null or object required');
+    } else {
+      const ms = p.milestone;
+      const slugOk = typeof ms.name === 'string' && /^[0-9a-z-]+$/.test(ms.name) && cpLen(ms.name) > 0 && cpLen(ms.name) <= 40 && !/^v\d+$/.test(ms.name);
+      if (!slugOk) errs.push(`project.json:milestone.name: slug required (lowercase [0-9a-z-], 1-40 codepoints, not a bare version number): '${ms.name}'`);
+      if (typeof ms.opened_at !== 'string' || !ISO8601_RE.test(ms.opened_at)) errs.push(`project.json:milestone.opened_at: ISO 8601 string required (got '${ms.opened_at}')`);
+      if (ms.closed_at !== undefined && (typeof ms.closed_at !== 'string' || !ISO8601_RE.test(ms.closed_at))) errs.push(`project.json:milestone.closed_at: ISO 8601 string or undefined required (got '${ms.closed_at}')`);
+    }
   }
   if (!Array.isArray(p.phases)) errs.push('project.json:phases: expected array');
   else p.phases.forEach((ph, i) => errs.push(...validatePhase(ph, `project.json:phases[${i}]`)));
@@ -468,6 +531,42 @@ function saveProject(p) {
   validateProject(p, 'fail');
   fs.mkdirSync(fsio.PROJECT_DIR, { recursive: true });
   fsio.writeAtomicJson(path.join(fsio.PROJECT_DIR, 'project.json'), p);
+}
+
+// Repo-level Lv4-ness: the tracked marker or the project truth store — either
+// alone qualifies. Task states are never consulted; a claimed child carries
+// its own task-boundness stamp (project: true set at claim).
+function isLv4Repo() {
+  return fs.existsSync(path.join(fsio.PROJECT_DIR, 'lv4.json')) || fs.existsSync(path.join(fsio.PROJECT_DIR, 'project.json'));
+}
+
+// Canonicalize bare phase-code references in decision/requirement rows
+// ("P0" → "P0: full-auto mode"). A row value that already equals a canonical
+// phase name, or that no canonical name extends, is left untouched (ghost and
+// dropped rows are classified at milestone close, not here). A bare prefix
+// shared by two canonical names is ambiguous and dies naming both candidates.
+// Mutates rows in place and returns the same array.
+function normalizeRowPhaseRefs(rows, phases, field) {
+  const names = new Set();
+  for (const ph of phases) {
+    if (ph && typeof ph.name === 'string' && ph.name.length > 0) names.add(ph.name);
+  }
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue;
+    const v = row[field];
+    if (typeof v !== 'string' || names.has(v)) continue;
+    const candidates = [];
+    for (const name of names) {
+      if (!name.startsWith(v) || name.length <= v.length) continue;
+      const tail = name.slice(v.length);
+      if (tail.startsWith(':') || tail.startsWith(' ')) candidates.push(name);
+    }
+    if (candidates.length === 1) row[field] = candidates[0];
+    else if (candidates.length > 1) {
+      fsio.die(`bare phase reference '${v}' (${field}) is ambiguous — candidates: ${candidates.map((c) => `'${c}'`).join(', ')}`);
+    }
+  }
+  return rows;
 }
 
 const CONTRACTS = {
@@ -954,7 +1053,7 @@ function defaultState(level, intentText) {
     approvals: {},  // stage-gate approvals — value per stage: legacy = bare ts string (gos approve), auto-routed = {status:'PENDING'|'ratified'|'cleared', ts, mode:'auto', stage, evidence?} ('ratified' is a legacy reader tolerance; 'cleared' is the canonical writer spelling); BASELINE_RESET keeps {ts, reason}
     spec_path: null,   // T5: backfilled below via ensureTaskDir resolution
     plan_path: null,
-    project: false,          // true when init --project (Lv4 truth-source mode)
+    project: false,          // claim stamps true on phase-claimed children (task-boundness marker; repo-level Lv4-ness is isLv4Repo)
     requirements: extractRequirement(intentText, level),
     decisions: [],
     observable_truths: [],
@@ -1031,11 +1130,12 @@ const COMMANDS = {
     desc: 'status alias (no-arg call)', class: 'read', aliasOf: 'status', aliases: [''], core: true,
   },
   'init': {
-    desc: 'init task: gos init <level> "<intent>" | --project (Lv4 four-file set)', class: 'write', aliases: [], core: true,
-    subs: ['<level> "<intent>"', '--project'], flags: [
+    desc: 'init task: gos init <level> "<intent>" | --project (Lv4 container bootstrap, never a task state)', class: 'write', aliases: [], core: true,
+    subs: ['<level> "<intent>"', '--project', '--project=<milestone-name>'], flags: [
       { name: '--force', scope: 'init', effect: 'discard existing task state and re-init', risk: 'destructive' },
+      { name: '--fresh', scope: 'project', effect: 'reset the existing Lv4 container and re-bootstrap (empty project.json skeleton with a fresh open milestone)', risk: 'destructive' },
     ],
-    usage: 'gos init <level> "<intent>" [--project] [--force]',
+    usage: 'gos init <level> "<intent>" | gos init --project [<milestone-name>] [--fresh]',
     next: ['gos', 'gos context think'],
     contractKeys: [],
   },
@@ -1177,13 +1277,26 @@ const COMMANDS = {
   },
   'phase': {
     desc: 'Lv4 phase lifecycle: add | list | claim | unclaim | mark-done', class: 'write', aliases: [], core: true,
-    subs: ['add "P: name" --goal "<g>"', 'amend <n> --goal "<g>"', 'rename <n> "<new>" [--expect "<cur>"]', 'list', 'claim <n>', 'unclaim', 'park <n>', 'mark-done <n>'],
+    subs: ['add "P: name" --goal "<g>"', 'amend <n> --goal "<g>"', 'rename <n> "<new>" [--expect "<cur>"]', 'list', 'claim <n>', 'unclaim', 'park <n>', 'move <from> <to> [--expect "<cur-idx>"]', 'mark-done <n>'],
     flags: [
       { name: '--force', scope: 'claim', effect: 'bypass DONE/archive preconditions (data-loss risk if task mid-flight)', risk: 'destructive' },
+      { name: '--expect', scope: 'move', effect: 'guard: die unless the source phase resolves to this current index (stale-advice protection)' },
     ],
     usage: 'gos phase <sub> [args]',
     next: ['gos phase list', 'gos phase claim <n>'],
     contractKeys: ['command_contracts.phaseAdded', 'command_contracts.phaseAmended', 'command_contracts.amendRefuseActive', 'command_contracts.amendRefuseDone', 'command_contracts.amendRefuseParked', 'command_contracts.phaseRenamed', 'command_contracts.renameRefuseActive', 'command_contracts.renameRefuseDone', 'command_contracts.renameRefuseParked', 'command_contracts.renameExpectMismatch', 'command_contracts.renameBadShape', 'command_contracts.renameTooLong', 'command_contracts.renameRefuseCollision', 'command_contracts.phaseClaimed', 'command_contracts.phaseUnclaimed', 'command_contracts.claimGatedPrev', 'command_contracts.claimDeferredHint', 'command_contracts.claimCrossPhaseHint', 'command_contracts.claimTargetDone', 'command_contracts.claimAllClosed', 'command_contracts.claimTargetParked', 'command_contracts.doneHintParkedLine', 'command_contracts.doneHintAllDone', 'command_contracts.phaseParked', 'command_contracts.parkBlocksMilestone', 'command_contracts.parkUndo', 'command_contracts.parkIdempotent', 'command_contracts.parkUndoIdempotent', 'command_contracts.parkRefuseActive', 'command_contracts.parkRefuseDone', 'command_contracts.parkOrphanWarn', 'command_contracts.markDoneCloseOut', 'command_contracts.milestoneBlockedHeader'],
+  },
+  'milestone': {
+    desc: 'Lv4 milestone lifecycle: open | close', class: 'write', aliases: [], core: false,
+    subs: ['open <name>', 'close [--carry-parked] [--yes] [--empty]'],
+    flags: [
+      { name: '--carry-parked', scope: 'close', effect: 'carry parked phases and the rows they own verbatim into the next milestone' },
+      { name: '--yes', scope: 'close', effect: 'execute the close wipe (default is a no-write dry run); requires a fresh single-use MILESTONE-CLOSE approval', risk: 'destructive' },
+      { name: '--empty', scope: 'close', effect: 'allow closing a milestone with zero done phases (vacuum close)' },
+    ],
+    usage: 'gos milestone open <name> | gos milestone close [--carry-parked] [--yes] [--empty]',
+    next: ['gos phase add "P1: <title>" --goal "<goal>"', 'gos milestone close (dry run first, --yes to execute)', 'gos milestone open <next-name> (after close)'],
+    contractKeys: [],
   },
   'anchor': {
     desc: 're-derive state.repo_id from remotes (rescue)', class: 'write', aliases: [], core: false,
@@ -1397,6 +1510,8 @@ module.exports = {
   pinTaskPaths,
   readState,
   writeState,
+  isLv4Repo,
+  retireWrapperState,
   firstCJKLeaf,
   dieTrackedStoreCJK,
   currentTaskId,
@@ -1406,6 +1521,7 @@ module.exports = {
   defaultState,
   currentRootRealpath,
   emptyProject,
+  normalizeRowPhaseRefs,
   loadProject,
   saveProject,
   checkInputConstraint,

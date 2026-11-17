@@ -99,9 +99,8 @@ INP=$(python3 -c "
 import json; p=json.load(open('.gos/project/project.json'))
 print(any(r['id']=='R-02' for r in p['requirements']))")
 INS=$(python3 -c "
-import json; s=json.load(open('.gos/state.json'))
-print(any(r['id']=='R-02' for r in s['requirements']))")
+import os; print(os.path.exists('.gos/state.json'))")
 assert_eq "R-02 in project.json" "True" "$INP"
-assert_eq "R-02 mirrored in state.json" "True" "$INS"
+assert_eq "bootstrap add writes no task state (project-only)" "False" "$INS"
 
 t4_teardown

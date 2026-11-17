@@ -37,7 +37,10 @@ function cmdRequirement(args) {
   // `list --all` is the audit view — usable WITHOUT an active task
   const isListAll = sub === 'list' && rest.includes('--all');
   const state = core.readState();
-  if (!state) {
+  // stateless repo lane: with a project.json truth store, add/list work
+  // without a claimed task (writes land project-only); every other verb
+  // keeps the active-task die
+  if (!state && !(proj && ['', 'add', 'list'].includes(sub))) {
     if (isListAll && proj) { printRequirementRows(projectRequirementRows(proj)); return; }
     if (isListAll) core.die(core.CONTRACTS.command_contracts.listNoSources);
     core.die(core.CONTRACTS.state_semantics.noActiveTask);
@@ -55,24 +58,27 @@ function cmdRequirement(args) {
     let phaseL = flags.phase !== undefined ? String(flags.phase).trim() : null;
     if (phaseL === '') phaseL = null;
     if (phaseL) { const pbt = core.badText(phaseL); if (pbt) core.die(`phase rejected (${pbt})`); }
-    if (state.level === 4 && !phaseL) core.die('phase required at Lv4: gos requirement add "text" --phase "P1: name"');
+    if ((state ? state.level : 4) === 4 && !phaseL) core.die('phase required at Lv4: gos requirement add "text" --phase "P1: name"');
  // auto id: max numeric across state ∪ project, +1; floor at ( init-exclusive)
     const nums = [];
-    for (const r of (state.requirements || [])) { const m = /^R-(\d+)$/.exec(r.id || ''); if (m) nums.push(parseInt(m[1], 10)); }
+    for (const r of ((state && state.requirements) || [])) { const m = /^R-(\d+)$/.exec(r.id || ''); if (m) nums.push(parseInt(m[1], 10)); }
     if (proj) for (const r of (proj.requirements || [])) { const m = /^R-(\d+)$/.exec(r.id || ''); if (m) nums.push(parseInt(m[1], 10)); }
     const next = Math.max(2, (nums.length ? Math.max(...nums) : 0) + 1);
     const id = `R-${String(next).padStart(2, '0')}`;
     const rec = { id, text, phase: phaseL, status: 'active' };   // record key frozen as 'phase' (local phaseL avoids the name collision)
-    // Dual-store: project.json is the truth source when state.project && it exists; state mirrors it
-    if (state.project === true && proj) {
+    // Dual-store: project.json is the Lv4 truth source (repo-level); the
+    // claimed task's state mirrors the row for its phase-local view
+    if (core.isLv4Repo() && proj) {
       proj.requirements.push({ ...rec });
       core.saveProject(proj);
     }
-    state.requirements.push({ ...rec });
-    core.writeState(state);
+    if (state) {
+      state.requirements.push({ ...rec });
+      core.writeState(state);
+    }
     console.log(`${core.CONTRACTS.command_contracts.reqAdded}${id.slice(2)} added: ${text}`);
     console.log('Next: gos requirement list');
-    if (state.project === true && proj) decisions.autoRenderViews(proj); // D-03: views stay fresh after the mutation
+    if (core.isLv4Repo() && proj) decisions.autoRenderViews(proj); // D-03: views stay fresh after the mutation
     return;
   }
 
@@ -82,13 +88,16 @@ function cmdRequirement(args) {
     let rows;
     if (rest.includes('--all')) {
       const merged = new Map();
-      for (const r of (state.requirements || [])) merged.set(r.id, { ...r });
+      for (const r of ((state && state.requirements) || [])) merged.set(r.id, { ...r });
       if (proj) for (const r of (proj.requirements || [])) merged.set(r.id, { ...(merged.get(r.id) || {}), ...r }); // project wins
       rows = [...merged.values()];
       // row.status in this view is a WRITE-TIME snapshot — not a live lifecycle.
-      if (proj && state.project !== true) console.log(core.CONTRACTS.command_contracts.listForeignProject);
-    } else {
+      // a task with no claimed phase is not project-bound — its --all view is a foreign project
+      if (proj && state && !state.phase_name) console.log(core.CONTRACTS.command_contracts.listForeignProject);
+    } else if (state) {
       rows = (state.requirements || []).map((r) => ({ ...r }));
+    } else {
+      rows = projectRequirementRows(proj); // stateless repo lane composes from project.json
     }
     printRequirementRows(rows);
     return;

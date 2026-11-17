@@ -24,7 +24,7 @@ t88_seed() {
   python3 -c "
 import json
 p=json.load(open('.gos/project/project.json'))
-p['phases']=[{'name':'P1: core','goal':'ship core','status':'active'}]
+p['phases']=[{'name':'P1: core','goal':'ship core','status':'pending'}]
 p['decisions']=[{'id':'D-01','title':'seed decision','rationale':'r','birth_phase':'P1: core','status':'open','anchor':None,'covered':False,'covered_by':None}]
 p['requirements']=[{'id':'R-01','text':'seed req','phase':'P1: core','status':'active'}]
 json.dump(p,open('.gos/project/project.json','w'),indent=2)"
@@ -41,6 +41,9 @@ echo "--- T88: auto-render + diff-skip + manifest reconciliation ---"
 
 node "$GOS" init 4 "plat" --project >/dev/null 2>&1
 t88_seed
+# claim the seeded phase: cover/amend operate on the claimed task's state
+# (bootstrap itself is stateless)
+node "$GOS" phase claim 0 >/dev/null 2>&1
 node "$GOS" render >/dev/null 2>&1   # baseline: rendered views + manifest exist
 
 # --- .1: decision add auto-renders ( truth: no manual render needed)

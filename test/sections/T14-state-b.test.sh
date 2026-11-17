@@ -241,11 +241,14 @@ assert_eq "D4 snapshot keeps T4a/T7b with files" '[{"id": "T4a", "covers": ["D-0
 echo "--- T14.E: task_head + history append-only [D-31/B-4] ---"
 t14_teardown; t14_setup
 node "$GOS" init 4 "plat" --project >/dev/null 2>&1
+if [ ! -e .gos/state.json ]; then
+  echo "  ✓ E0 bootstrap writes no task state"; PASS=$((PASS+1))
+else
+  echo "  ✗ E0 bootstrap leaked a task state.json"; FAIL=$((FAIL+1))
+fi
 node "$GOS" phase add "P1: core" --goal "g1" >/dev/null 2>&1
 node "$GOS" phase add "P2: next" --goal "g2" >/dev/null 2>&1
 HEAD1=$(git rev-parse HEAD)
-INITHEAD=$(python3 -c "import json; print(json.load(open('.gos/state.json')).get('task_head') or '')")
-assert_eq "E1 init records task_head = HEAD sha" "$HEAD1" "$INITHEAD"
 node "$GOS" phase claim 0 >/dev/null 2>&1
 E1B=$(python3 -c "
 import json; s=json.load(open('.gos/state.json'))

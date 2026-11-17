@@ -19,6 +19,16 @@ t8_setup() {
 
 t8_teardown() { cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$T8_DIR"; }
 
+# Bootstrap (init --project) writes no task state; the phase/archive flows
+# below need a wrapper-shaped state (project=true, no phase_name) — task-lane
+# init plus one field flip.
+t8_wrapper() {
+  node "$GOS" init 3 "wrapper" >/dev/null 2>&1
+  python3 -c "
+import json; s=json.load(open('.gos/state.json')); s['project']=True
+json.dump(s,open('.gos/state.json','w'),indent=2)"
+}
+
 # fixed-string assert (table rows contain '|', unsafe as assert_contains regex)
 assert_contains_f() {
   local label="$1" expected="$2" actual="$3"
@@ -35,10 +45,13 @@ t8_setup
 echo "--- T8: phase family + archive integration ---"
 
 node "$GOS" init 4 "plat" --project >/dev/null 2>&1
+t8_wrapper
 
 # --- .1: phase add recreates missing project.json + brownfield warning (same strings as init --project)
-rm .gos/project/project.json
-printf '| D-99 | legacy call |\n' >> .gos/project/DECISIONS.md
+# Bootstrap renders the views (rendered bodies are renderer-owned), so the
+# legacy row lives in a handwritten replacement file, not an append.
+rm .gos/project/project.json .gos/project/DECISIONS.md
+printf '| D-99 | legacy call |\n' > .gos/project/DECISIONS.md
 set +e; OUT=$(node "$GOS" phase add "P1: core" --goal "ship g1" 2>&1); RC=$?; set -e
 assert_exit "add P1 exits 0" 0 "$RC"
 assert_contains "add output contract" "✓ Phase added: P1: core" "$OUT"
@@ -206,7 +219,7 @@ import json; p=json.load(open('.gos/project/project.json'))
 print('|'.join([p['phases'][1]['status'], str(p['last_archived_phase']), str(len(p['decisions']))]))")
 assert_eq "P2 done + last_archived + D-02 merged (no milestone: P3 pending)" "done|P2: extra|2" "$P2DONE"
 
-# --- .15: milestone — all phases done → final render + blank project.json + milestone-record/
+# --- .15: final done phase — archive NEVER wipes; close guidance + phase entry stamps
 python3 -c "
 import json
 s=json.load(open('.gos/state.json'))
@@ -223,13 +236,44 @@ p['last_archived_phase']='P3: more'
 json.dump(p,open('.gos/project/project.json','w'),indent=2)"
 echo spec3 > "$(gos_spec)"
 set +e; OUT=$(node "$GOS" archive 2>&1); RC=$?; set -e
-assert_exit "milestone archive exits 0" 0 "$RC"
-assert_contains "milestone message" "✓ milestone complete — project.json reset for next milestone" "$OUT"
-BLANK=$(python3 -c "
+assert_exit "final-phase archive exits 0" 0 "$RC"
+assert_contains "close guidance printed" "milestone ready" "$OUT"
+assert_contains "guidance names the close verb" "gos milestone close" "$OUT"
+assert_contains "render line contract (all-done branch renders too)" "✓ rendered views (DECISIONS/ROADMAP/REQUIREMENTS)" "$OUT"
+KEPT=$(python3 -c "
 import json; p=json.load(open('.gos/project/project.json'))
 print('|'.join([str(p['schema_version']), str(p['last_archived_phase']), str(len(p['phases'])), str(len(p['decisions'])), str(len(p['requirements']))]))")
-assert_eq "project.json reset to empty shape" "1|None|0|0|0" "$BLANK"
-assert_file "milestone-record snapshot" ".gos/archive/$UDATE-v$VER-phase-p3-milestone-tail-task/milestone-record/DECISIONS.md"
+assert_eq "no wipe: full history kept in project.json" "2|P3: more|3|3|1" "$KEPT"
+UDATE=$(python3 -c "import datetime; print(datetime.datetime.utcnow().date().isoformat())")
+VER=$(node -e "console.log(require(process.env.GOS_ROOT+'/package.json').version)")
+if [ -d ".gos/archive/$UDATE-v$VER-phase-p3-milestone-tail-task/milestone-record" ]; then
+  echo "  ✗ archive-time milestone-record must not exist (close verb owns snapshots)"; FAIL=$((FAIL+1))
+else
+  echo "  ✓ no archive-time milestone-record (close verb owns snapshots)"; PASS=$((PASS+1))
+fi
+STAMPS=$(python3 -c "
+import json
+p=json.load(open('.gos/project/project.json'))
+rows=[]
+for ph in p['phases']:
+    ca=str(ph.get('completed_at',''))
+    rows.append('%s=%s,%s' % (ph['name'].split(':')[0], ph.get('task_ref'), 'iso' if (ca.startswith('20') and 'T' in ca) else 'bad'))
+print(';'.join(rows))")
+assert_eq "every phase entry stamped (task_ref=home basename, completed_at ISO; P2 keeps its first home despite the -2 dest)" \
+  "P1=$UDATE-v$VER-phase-p1-ship-g1,iso;P2=$UDATE-v$VER-phase-p2-ship-g1,iso;P3=$UDATE-v$VER-phase-p3-milestone-tail-task,iso" "$STAMPS"
+
+# --- .19: mark-done close-out stamps completed_at; task_ref untouched (no archive home to name)
+node "$GOS" phase add "P4: debt" --goal "ship debt" >/dev/null 2>&1
+node "$GOS" phase park 3 --reason "defer to next milestone" >/dev/null 2>&1
+set +e; OUT=$(node "$GOS" phase mark-done 3 2>&1); RC=$?; set -e
+assert_exit "mark-done close-out exits 0" 0 "$RC"
+assert_contains_f "close-out banner" "parked → done (close-out): P4: debt" "$OUT"
+MD=$(python3 -c "
+import json; p=json.load(open('.gos/project/project.json'))
+ph=[x for x in p['phases'] if x['name']=='P4: debt'][0]
+ca=str(ph.get('completed_at',''))
+print('|'.join([ph['status'], 'iso' if (ca.startswith('20') and 'T' in ca) else 'bad', str('task_ref' in ph)]))")
+assert_eq "mark-done: done + completed_at ISO + no task_ref field" "done|iso|False" "$MD"
 
 # --- .16-18: non-Lv4 guards + no-project render skip
 t8_teardown; t8_setup
@@ -257,6 +301,7 @@ assert_contains "render-skip message" "(no project.json — render skipped)" "$O
 # --- .8: claim precondition semantics — wrapper vs phase-owned state (2026-08-24 fix)
 t8_teardown; t8_setup
 node "$GOS" init 4 "plat" --project >/dev/null 2>&1
+t8_wrapper
 node "$GOS" phase add "P1: first" --goal "g1" >/dev/null 2>&1
 node "$GOS" phase add "P2: second" --goal "g2" >/dev/null 2>&1
 # wrapper (project=true, no phase_name) at INTENT → first claim allowed, NO --force, NO warning
@@ -276,6 +321,7 @@ assert_exit "phase-owned mid-flight claim blocked" 1 "$RC"
 # evidence predicate still enforced for wrapper claims (unarchived predecessor)
 t8_teardown; t8_setup
 node "$GOS" init 4 "plat" --project >/dev/null 2>&1
+t8_wrapper
 node "$GOS" phase add "PA: one" --goal "a" >/dev/null 2>&1
 node "$GOS" phase add "PB: two" --goal "b" >/dev/null 2>&1
 set +e; OUT=$(node "$GOS" phase claim 1 2>&1); RC=$?; set -e

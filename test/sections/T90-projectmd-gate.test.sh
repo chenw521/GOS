@@ -87,6 +87,10 @@ if printf '%s' "$CTX" | grep -qF '.gos/project/PROJECT.md'; then
 else
   echo "  ✓ T90.1d skeleton PROJECT.md withheld from THINK read_files"; PASS=$((PASS+1))
 fi
+# claim the gate phase: the approve-archive pre-flight runs on a claimed
+# task's state (bootstrap itself is stateless)
+node "$GOS" phase add "P1: gate" --goal "project md gate fixture" >/dev/null 2>&1
+node "$GOS" phase claim 0 >/dev/null 2>&1
 
 # --- .2: TODO-only skeleton refused at approve-archive pre-flight, zero mutation
 t90_ship_ready

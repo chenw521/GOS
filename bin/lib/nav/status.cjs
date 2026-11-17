@@ -296,6 +296,12 @@ function cmdStatus() {
   if (!state) {
     console.log(`📊 GOS: ${core.CONTRACTS.state_semantics.noActiveTask}`);
     console.log(core.t('status.noActiveTask.next'));
+    // Stateless repo lane: the DECISIONS-index governance warning keys on
+    // the project truth store, not the task state — a stateless Lv4 repo
+    // grows the index through repo-lane adds and must not lose the warning.
+    const projNs = core.loadProject();
+    const dIdxNs = (projNs && Array.isArray(projNs.decisions)) ? projNs.decisions.length : 0;
+    if (dIdxNs > 50) console.log(`⚠ DECISIONS index large: ${dIdxNs} entries (>50) — recent-2-phase scoping already applied by renderer`);
     console.log(core.CONTRACTS.decorative.fullCapabilityPointer);
     return;
   }
