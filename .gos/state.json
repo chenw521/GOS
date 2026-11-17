@@ -18,7 +18,7 @@
   },
   "approvals": {
     "THINK": "2026-11-17T05:43:12.729Z",
-    "PLAN": "2026-11-17T07:20:18.207Z"
+    "PLAN": "2026-11-17T09:17:12.495Z"
   },
   "spec_path": ".gos/task/08a3f0b6/spec.md",
   "plan_path": ".gos/task/08a3f0b6/plan.md",
@@ -29,6 +29,36 @@
       "text": "Honor .gos/map-ignore at the scanSources file-collection layer so vendored JS never enters the parse/dedup universe (...",
       "phase": null,
       "level": 3
+    },
+    {
+      "id": "R-24",
+      "text": "scan writes .gos/codebase/map-ignored.txt when >=1 file excluded: sorted paths, provenance header, census entry; deleted at zero exclusions; dead-rule advisory",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-25",
+      "text": "cleanup-scan.sh and security.sh filter FILES via grep -vxFf with pinned exit-code contract; missing list = full scan",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-26",
+      "text": "gate C4 advisory attributes missing fns via peak.owners x exclusion; full coverage guides approve-gated baseline reset; partial annotates N of M",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-27",
+      "text": "fix hints name map-ignore; scan prints excluded count; README en+zh glob-semantics section",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-28",
+      "text": "no-map-ignore repos byte-identical; self-repo structural gates green; pack-check green with new census entry",
+      "phase": null,
+      "status": "active"
     }
   ],
   "decisions": [
@@ -98,7 +128,14 @@
     }
   ],
   "observable_truths": [],
-  "gaps": [],
+  "gaps": [
+    {
+      "id": "G-1794907015839",
+      "type": "major",
+      "description": "Fluid back to PLAN: align plan Covers R-02..R-06 to registry-assigned R-24..R-28 (requirement add used the project counter); re-freeze snapshot",
+      "status": "open"
+    }
+  ],
   "activation_source": "headless",
   "task_head": "08a3f0b637a00f6751d8f94ce8ac2ef699006bb6",
   "spec_gate_version": 3,
@@ -110,7 +147,7 @@
         "covers": [
           "D-01",
           "R-01",
-          "R-06"
+          "R-28"
         ],
         "files": [
           "bin/lib/map/engine.cjs",
@@ -123,7 +160,7 @@
         "id": "T3",
         "covers": [
           "D-03",
-          "R-03"
+          "R-25"
         ],
         "files": [
           "skills/gos-ship/scripts/cleanup-scan.sh",
@@ -135,7 +172,7 @@
         "id": "T4",
         "covers": [
           "D-04",
-          "R-05"
+          "R-27"
         ],
         "files": [
           "bin/lib/ops/gate.cjs"
@@ -146,7 +183,7 @@
         "id": "T6",
         "covers": [
           "D-04",
-          "R-05"
+          "R-27"
         ],
         "files": [
           "README.md",
@@ -159,8 +196,8 @@
         "covers": [
           "D-03",
           "D-04",
-          "R-02",
-          "R-05"
+          "R-24",
+          "R-27"
         ],
         "files": [
           "bin/lib/map/index.cjs",
@@ -175,7 +212,7 @@
         "id": "T5",
         "covers": [
           "D-02",
-          "R-04"
+          "R-26"
         ],
         "files": [
           "bin/lib/ops/gate.cjs",
@@ -191,8 +228,8 @@
           "D-01",
           "D-03",
           "R-01",
-          "R-02",
-          "R-03"
+          "R-24",
+          "R-25"
         ],
         "files": [
           "test/sections/T119-map-ignore.test.sh"
@@ -203,7 +240,7 @@
         "id": "T9",
         "covers": [
           "D-02",
-          "R-04"
+          "R-26"
         ],
         "files": [
           "test/sections/T119-map-ignore.test.sh"
@@ -214,8 +251,8 @@
         "id": "T10",
         "covers": [
           "R-01",
-          "R-05",
-          "R-06",
+          "R-27",
+          "R-28",
           "D-04"
         ],
         "files": [
@@ -224,7 +261,12 @@
         "wave": 3
       }
     ],
-    "audit": [],
+    "audit": [
+      {
+        "at": "2026-11-17T09:17:19.961Z",
+        "what": "snapshot-force"
+      }
+    ],
     "meta": {
       "waveValidation": {
         "ok": true,

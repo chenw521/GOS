@@ -1,9 +1,9 @@
 {
   "current": {
-    "total": 1561,
-    "callgraph": 985,
-    "testof_fn": 126,
-    "fn_count": 919,
+    "total": 1565,
+    "callgraph": 986,
+    "testof_fn": 127,
+    "fn_count": 920,
     "fns": [
       "absTaskPath",
       "ackWaitMs",
@@ -481,6 +481,7 @@
       "manifestRead",
       "manualRegion",
       "mapGitInfo",
+      "mapIgnoredPathsAt",
       "mapKnownKeys",
       "mapLangOf",
       "mapResolveSpec",
@@ -1695,6 +1696,7 @@
       "cmdGateTrust": "bin/lib/ops/gate.cjs",
       "changelogObligationLeg": "bin/lib/ops/gate.cjs",
       "cmdGateChangelogObligation": "bin/lib/ops/gate.cjs",
+      "mapIgnoredPathsAt": "bin/lib/ops/gate.cjs",
       "computeGateVerdicts": "bin/lib/ops/gate.cjs",
       "renderGateReport": "bin/lib/ops/gate.cjs",
       "cmdGate": "bin/lib/ops/gate.cjs",
@@ -1846,8 +1848,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "b2842e877339a623",
-    "at": "2026-11-17T07:28:55.294Z"
+    "fp": "eb3a08519405d162",
+    "at": "2026-11-17T08:34:36.486Z"
   },
   "peak": {
     "total": 2065,
