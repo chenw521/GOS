@@ -2,11 +2,12 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "BUILD",
+  "current_stage": "REVIEW",
   "completed_stages": [
     "INTENT",
     "THINK",
-    "PLAN"
+    "PLAN",
+    "BUILD"
   ],
   "intent": {
     "summary": "Honor .gos/map-ignore at the scanSources file-collection layer so vendored JS never enters the parse/dedup universe (fixes codemap gate permanent failure in vendored repos, chenw521/GOS#64); shared exclusion also wired into cleanup-scan.sh and security.sh",
@@ -282,5 +283,14 @@
       }
     }
   },
-  "changelog_user_summary": "name map-ignore in both codemap fix hints and document the glob semantics layering in README en/zh (R-27, D-04)"
+  "changelog_user_summary": "name map-ignore in both codemap fix hints and document the glob semantics layering in README en/zh (R-27, D-04)",
+  "checkpoints": [
+    {
+      "stage": "BUILD",
+      "unit": "all-waves (auto at commit)",
+      "done": "T1,T3,T4,T6,T2,T5,T8,T9,T10",
+      "remaining": "",
+      "at": "2026-11-17T09:45:35.106Z"
+    }
+  ]
 }
