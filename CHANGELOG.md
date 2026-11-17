@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add name map-ignore in both codemap fix hints and document the glob semantics layering in README en/zh (R-27, D-04) (D-04/R-27) [2026-11-17]
+- Add attribute gate C4 missing-vs-peak fns through peak.owners x map-ignore with approve-gated baseline-reset guidance on full coverage (R-26, D-02) (D-02/R-26) [2026-11-17]
+- Add rematerialize .gos/codebase/map-ignored.txt on every scan and consume it from cleanup-scan.sh and security.sh via grep -vxFf with a pinned exit-code contract (R-24/R-25, D-03) (D-03/R-24) [2026-11-17]
+- Add filter the scan universe by .gos/map-ignore at the scanSources collection layer so vendored paths leave files/edges/semantic (R-01, D-01) (D-01/R-01) [2026-11-17]
 - Add The v1.0.0-dev cycle closes with its history snapshotted to both channels and the publicize cycle opens: the roadmap queue carries the parked decision archival and adoption redesign entries plus the three pending hardening entries, done history lives in the dated snapshots, and fresh clones stay Lv4 through the tracked marker (R-81/D-67) [2026-11-16]
 - Add Project identity derives from a tracked Lv4 marker so fresh clones stay project repos: the wrapper state class retires with a one-shot prompt, stateless resume composes the parent view behind a NO ACTIVE TASK banner with a clone warning, the roadmap queue gains a move verb, archive stamps per-entry task_ref and completed_at under schema v2, and the archive slug prefix follows the milestone name (D-66/D-69/D-70/R-74) [2026-11-16]
 - Add Milestone lifecycle becomes a first-class verb family: gos milestone open and close own sanitized identity, dual-channel snapshots, the dry-run approval gate, and the exhaustive five-class close wipe that carries parked and pending queue entries verbatim while wiping done-owned, null-owner, and ghost rows with per-ID reporting (D-67/D-68/R-69/R-70) [2026-11-16]

@@ -18,7 +18,7 @@
   },
   "approvals": {
     "THINK": "2026-11-17T05:43:12.729Z",
-    "PLAN": "2026-11-17T09:17:12.495Z"
+    "PLAN": "2026-11-17T09:19:30.429Z"
   },
   "spec_path": ".gos/task/08a3f0b6/spec.md",
   "plan_path": ".gos/task/08a3f0b6/plan.md",
@@ -134,6 +134,12 @@
       "type": "major",
       "description": "Fluid back to PLAN: align plan Covers R-02..R-06 to registry-assigned R-24..R-28 (requirement add used the project counter); re-freeze snapshot",
       "status": "open"
+    },
+    {
+      "id": "G-1794907162157",
+      "type": "major",
+      "description": "Fluid back to PLAN: declare bin/lib/core/locales/en.cjs in T2/T5 Files (T74 en-zh parity required the alias file; post-freeze discovery)",
+      "status": "open"
     }
   ],
   "activation_source": "headless",
@@ -203,6 +209,7 @@
           "bin/lib/map/index.cjs",
           "census.json",
           "bin/lib/core/state.cjs",
+          "bin/lib/core/locales/en.cjs",
           "bin/lib/core/locales/zh.cjs",
           "test/sections/T46-module-structure.test.sh"
         ],
@@ -217,6 +224,7 @@
         "files": [
           "bin/lib/ops/gate.cjs",
           "bin/lib/core/state.cjs",
+          "bin/lib/core/locales/en.cjs",
           "bin/lib/core/locales/zh.cjs",
           "test/sections/T46-module-structure.test.sh"
         ],
@@ -273,5 +281,6 @@
         "waves": 3
       }
     }
-  }
+  },
+  "changelog_user_summary": "name map-ignore in both codemap fix hints and document the glob semantics layering in README en/zh (R-27, D-04)"
 }

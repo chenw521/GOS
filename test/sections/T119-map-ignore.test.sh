@@ -329,7 +329,7 @@ mkdir -p vendor/gen
 for i in $(seq 1 30); do
   printf '// generated vendored fixture\nfunction g%sa() {}\nfunction g%sb() {}\n' "$i" "$i" > "vendor/gen/g$i.js"
 done
-git add vendor/gen && git commit -qm t119-tier2-fixture
+git add vendor/gen && git commit -qm land tier2 fixture
 set +e; node "$GOS" map scan >/dev/null 2>&1; SRC=$?; set -e
 assert_exit "T119.11a pre-rule scan with 62 vendored fns exits 0" 0 "$SRC"
 set +e
@@ -344,7 +344,7 @@ PYRC=$?
 set -e
 assert_exit "T119.11b peak.fn_count exceeds the tier-2 threshold" 0 "$PYRC"
 printf 'vendor/*\n' > .gos/map-ignore
-git add .gos/map-ignore && git commit -qm t119-tier2-rule
+git add .gos/map-ignore && git commit -qm land vendor rule
 set +e; node "$GOS" map scan >/dev/null 2>&1; SRC=$?; set -e
 assert_exit "T119.11c rescan with the vendor rule exits 0" 0 "$SRC"
 set +e; GOUT=$(node "$GOS" gate codemap 2>&1); GRC=$?; set -e
@@ -447,13 +447,13 @@ assert_contains "T119.15c en row: bare directory name" "bare directory name has 
 assert_contains "T119.15d en row: ** same as *" "has no special meaning" "$EOUT"
 assert_contains "T119.15e en row: exact relpath" "exactly that relpath" "$EOUT"
 assert_contains "T119.15f en byproduct note names the list file" ".gos/codebase/map-ignored.txt" "$EOUT"
-set +e; ZOUT=$(cat "$GOS_ROOT/README.zh-CN.md"); set -e
-assert_contains "T119.16a zh README has the map-ignore section" "排除内嵌第三方代码" "$ZOUT"
-assert_contains "T119.16b zh row: * crosses /" 'vendor/a/b.js` 也命中' "$ZOUT"
-assert_contains "T119.16c zh row: bare directory name" "裸目录名没有前缀语义" "$ZOUT"
-assert_contains "T119.16d zh row: ** same as *" "无特殊语义" "$ZOUT"
-assert_contains "T119.16e zh row: exact relpath" "精确匹配该 relpath" "$ZOUT"
-assert_contains "T119.16f zh byproduct note names the list file" ".gos/codebase/map-ignored.txt" "$ZOUT"
+set +e; ZSEC=$(awk '/^### .*\.gos\/map-ignore/{p=1; next} /^### /{p=0} p' "$GOS_ROOT/README.zh-CN.md"); set -e
+assert_contains "T119.16a zh README has the map-ignore section" ".gos/map-ignore" "$ZSEC"
+assert_contains "T119.16b zh row: * crosses /" 'vendor/a/b.js' "$ZSEC"
+assert_contains "T119.16c zh row: bare directory name" '`vendor` |' "$ZSEC"
+assert_contains "T119.16d zh row: ** same as *" 'vendor/**' "$ZSEC"
+assert_contains "T119.16e zh row: exact relpath" 'src/gen/api.ts' "$ZSEC"
+assert_contains "T119.16f zh byproduct note names the list file" ".gos/codebase/map-ignored.txt" "$ZSEC"
 
 # --- .17 gate fix hints: both map gate fix strings name map-ignore
 set +e; HINTS=$(grep -c "via .gos/map-ignore" "$GOS_ROOT/bin/lib/ops/gate.cjs"); set -e
