@@ -2,672 +2,103 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "DONE",
+  "current_stage": "PLAN",
   "completed_stages": [
     "INTENT",
-    "THINK",
-    "PLAN",
-    "BUILD",
-    "REVIEW",
-    "VERIFY"
+    "THINK"
   ],
   "intent": {
-    "summary": "Milestone lifecycle mechanics and ceremony on the hierarchical model (B-double-prime): project.json is the Lv4 parent container — phase entries gain additive task_ref and completed_at snapshot fields written at mark-done/archive time, resume composes parent plus resident child state (no dedicated parent state file, state.json schema untouched, no levelless shell ever created); implement milestone close-with-parked, fix the P0 phase insertion order, close the shipped v1.0.0-dev milestone with parked P2/P3 carried over, open the publicize milestone, and re-home P2/P3 onto it unchanged (their execution stays with the phases themselves, after P23).",
-    "confirmed": true
+    "summary": "Honor .gos/map-ignore at the scanSources file-collection layer so vendored JS never enters the parse/dedup universe (fixes codemap gate permanent failure in vendored repos, chenw521/GOS#64); shared exclusion also wired into cleanup-scan.sh and security.sh",
+    "confirmed": true,
+    "confirmation": {
+      "mode": "headless-auto",
+      "ts": "2026-11-17T03:29:24.081Z"
+    }
   },
   "approvals": {
-    "THINK": "2026-11-12T10:35:24.879Z",
-    "PLAN": "2026-11-13T02:25:57.287Z",
-    "ARCHIVE": "2026-11-16T10:20:24.549Z"
+    "THINK": "2026-11-17T05:43:12.729Z"
   },
-  "spec_path": null,
-  "plan_path": null,
-  "project": true,
+  "spec_path": ".gos/task/08a3f0b6/spec.md",
+  "plan_path": ".gos/task/08a3f0b6/plan.md",
+  "project": false,
   "requirements": [
     {
       "id": "R-01",
-      "text": "Milestone lifecycle mechanics and ceremony on the hierarchical model (B-double-prime): project.json is the Lv4 parent...",
+      "text": "Honor .gos/map-ignore at the scanSources file-collection layer so vendored JS never enters the parse/dedup universe (...",
       "phase": null,
       "level": 3
-    },
-    {
-      "id": "R-68",
-      "text": "milestone open writes project.json {name, opened_at}; name slug-sanitized at identity; open refuses while an unclosed milestone exists; close stamps closed_at",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-69",
-      "text": "milestone close [--carry-parked]: validate, render, dual-channel snapshot, stat-verify, one atomic wipe under lock; parked only under flag; pending carried; vacuum close needs --empty",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-70",
-      "text": "selective wipe = five-class disposition (parked verbatim, pending carried, done+owned+host wiped, null-phase wiped, ghost wiped); guard = surviving classes; report prints class counts + row IDs",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-71",
-      "text": "close backups: default dry-run; execution needs --yes or approve record; pre-close project.json copied to both channels as dated preclose + view snapshots; standalone close synthesizes close-home",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-72",
-      "text": "snapshot channel two carries views as rendered on disk — copy rendered files, never re-render at close, manual regions survive verbatim",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-73",
-      "text": "archive path stamps task_ref (stable across re-entry) and completed_at; mark-done stamps completed_at only; PROJECT_SCHEMA_VERSION 1->2 with shape checks; emptyProject seeds milestone null",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-74",
-      "text": "repo Lv4-ness = tracked marker .gos/project/lv4.json OR project.json existence; marker travels with clones; state.project consumers re-pointed; legacy wrappers get one-shot retirement prompt",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-75",
-      "text": "stateless resume composes parent view with machine-greppable NO ACTIVE TASK banner; marker without local state.json downgrades claim hint to clone warning",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-76",
-      "text": "phase move <from> <to>: from takes name-prefix + optional --expect index guard; refuses active targets; one-time P0 -> index 0 reorder before the v1.0.0-dev close",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-77",
-      "text": "archive slug prefix switches from PKG.version to stored milestone name for NEW archives only; historical basenames never rewritten; T10:281 assertion updated same change",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-78",
-      "text": "gos-project archive-milestone.sh replaced in-repo by refusing stub (exit 1, prints use gos milestone close); SKILL.md rows re-point to new verb family",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-79",
-      "text": "pre-close normalization: bare-prefix phase fields on decision/requirement rows normalized to canonical names via rename reference-rewrite before the wipe predicate",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-80",
-      "text": "spec truths registered mechanically: plan task 0 registers all truths via gos truth add before first BUILD commit; VERIFY includes truths>0 closeout check",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-81",
-      "text": "ceremony: close v1.0.0-dev (parked P2/P3 + pending P21/P22/P23 carried), open publicize; P2/P3 re-homed unchanged (park_reason verbatim)",
-      "phase": null,
-      "status": "active"
     }
   ],
   "decisions": [
     {
-      "id": "D-66",
-      "title": "Phase snapshots: task_ref = archive basename at archive time; mark-done stamps completed_at only",
-      "rationale": "Each done-with-work phase has exactly one archive dir; basename unique, self-locating; null task_ref = close-out that never ran; tid-only would force glob re-derivation",
-      "birth_phase": "P20: milestone lifecycle mechanics and ceremony",
+      "id": "D-01",
+      "title": "Scope: scanSources filters by loadMapIgnore at collection; ignored paths enter no universe",
+      "rationale": "9 consumers share one filtered universe; sandbox U/P: dup 1->0 gate red->green; src->vendored degrades to externals; post-filter reopens the divergence behind this bug",
+      "birth_phase": "P0",
       "status": "open",
       "anchor": null,
       "covered": false,
       "covered_by": null,
-      "born_at": "2026-11-12T08:06:51.211Z",
+      "born_at": "2026-11-17T05:18:05.415Z",
       "dig": {
-        "command": "ls .gos/archive/ | tail -3",
-        "output_excerpt": "2026-11-12-v1.0.0-phase-p19-cure-the-user-visible-bugs-the (contains task/p19/)",
-        "anchor": "bin/lib/task/archive.cjs:735"
+        "command": "sandbox U/P scan comparison + issue search repo:chenw521/GOS vendored OR closure + globMatch probe",
+        "output_excerpt": "U: files=3 edges=1 dup=[mxActor]; P: files=1 externals=1 dup=[]; glob: public/**=true public=false",
+        "anchor": "bin/lib/map/engine.cjs:82"
       }
     },
     {
-      "id": "D-67",
-      "title": "Milestone: gos milestone open/close; project.json +milestone {name, opened_at}; init --project bootstrap-only",
-      "rationale": "Milestone identity in NO truth source (0 grep hits; slug prefix = PKG.version accident); consumers: gos-project close script + snapshot naming; slug -> milestone name, new archives only",
-      "birth_phase": "P20: milestone lifecycle mechanics and ceremony",
+      "id": "D-02",
+      "title": "Polluted peaks: gate advisory attributes missing fns via peak.owners x map-ignore; full coverage guides baseline reset",
+      "rationale": "peak.owners already exists (engine.cjs:515 write, gate.cjs:1158 read); sandbox attribution 2/2 covered; auto-reset would bypass reason-match/single-consumption/archive audit chain",
+      "birth_phase": "P0",
       "status": "open",
       "anchor": null,
       "covered": false,
       "covered_by": null,
-      "born_at": "2026-11-12T09:19:09.279Z",
+      "born_at": "2026-11-17T05:23:58.163Z",
       "dig": {
-        "command": "grep -rn milestone_name bin/lib | wc -l; grep -rn milestone gos-project/SKILL.md | head -3",
-        "output_excerpt": "0 hits in lib; gos-project consumes via scripts/archive-milestone.sh",
-        "anchor": "bin/lib/task/context.cjs:168"
+        "command": "sandbox peak.owners attribution probe + gate.cjs/map/index.cjs reset-chain read",
+        "output_excerpt": "peak.owners maps mxActor/mxShape -> public/drawio/js/embed.dev.js; attribution all-covered=true; reset chain: reason match + single consumption + edge-history.ndjson archive",
+        "anchor": "bin/lib/ops/gate.cjs:1158"
       }
     },
     {
-      "id": "D-68",
-      "title": "Close-with-parked: selective wipe — parked phases + phase-owned rows survive; null-phase rows wipe",
-      "rationale": "11 live reqs (R-11..R-18,R-21..R-23) must survive verbatim; parked-born decs = 0; 15 null-phase rows all born of done work. Re-add = transcription risk 5b0059ce; bare-carry kills ids plan Covers need",
-      "birth_phase": "P20: milestone lifecycle mechanics and ceremony",
+      "id": "D-03",
+      "title": "Script exclusion: scan materializes map-ignored.txt (unmapped-fns twin, untracked+provenance); scripts grep -vxFf",
+      "rationale": "glob single-point in scan; census layer: tracked trio are non-regenerable truths, map-ignored is regenerable byproduct; audit anchor is tracked map-ignore; avoids vendored-upgrade churn",
+      "birth_phase": "P0",
       "status": "open",
       "anchor": null,
       "covered": false,
       "covered_by": null,
-      "born_at": "2026-11-12T09:21:05.172Z",
+      "born_at": "2026-11-17T05:35:12.180Z",
       "dig": {
-        "command": "count reqs by phase status from project.json",
-        "output_excerpt": "parked-owned: 11; parked-born decs: 0; null-phase reqs: 15 (R-01,R-38,R-40-44,R-60-67)",
-        "anchor": "bin/lib/task/archive.cjs:693"
+        "command": "census.json entries for .gos/codebase/* + git ls-files cross-check",
+        "output_excerpt": "network/allowlist/edge-baseline git:true (non-regenerable); unmapped-fns git:false note=regenerable+provenance; map-ignored belongs to the latter layer",
+        "anchor": "census.json:257"
       }
     },
     {
-      "id": "D-69",
-      "title": "Wrapper elimination: Lv4-ness from project.json existence; init --project stops wrapper; stateless resume composes",
-      "rationale": "8 counted consumers of state.project across 4 modules; claim already sets project:true on children so task-bound routing untouched; repo-level checks re-point only, one-commit sweep (0d2eedee)",
-      "birth_phase": "P20: milestone lifecycle mechanics and ceremony",
+      "id": "D-04",
+      "title": "Discoverability: fix hints name map-ignore; scan prints excluded count; README en+zh gains glob-semantics section",
+      "rationale": "reporter found the mechanism only by reading source — zero discoverability is a root cause of this bug family; fix-hint loop and rename-vendored hints are both dead ends named in the issue",
+      "birth_phase": "P0",
       "status": "open",
       "anchor": null,
       "covered": false,
       "covered_by": null,
-      "born_at": "2026-11-12T09:25:15.536Z",
+      "born_at": "2026-11-17T05:37:18.006Z",
       "dig": {
-        "command": "grep -rn state.project bin/lib | wc -l",
-        "output_excerpt": "8 consumers: phase.cjs:69, decisions.cjs:146, requirements.cjs:66, cmds.cjs resume",
-        "anchor": "bin/lib/nav/cmds.cjs:57"
-      }
-    },
-    {
-      "id": "D-70",
-      "title": "P0 insertion-order fix: gos phase move <from> <to> verb; one-time P0 -> index 0; names untouched",
-      "rationale": "Names are the idempotency key (21 birth_phase refs); rename cascades against D-58 ruling; array order feeds render + adjacency gate only (predecessors all done); snapshot reads monotonic after move",
-      "birth_phase": "P20: milestone lifecycle mechanics and ceremony",
-      "status": "open",
-      "anchor": null,
-      "covered": false,
-      "covered_by": null,
-      "born_at": "2026-11-12T09:29:00.818Z",
-      "dig": {
-        "command": "grep -c birth_phase P0 project.json",
-        "output_excerpt": "21 decisions reference P0 by name, zero by index",
-        "anchor": "bin/lib/knowledge/phase.cjs:241"
-      }
-    },
-    {
-      "id": "D-71",
-      "title": "gh issues are the sole publication truth; feedback ledger demoted to untracked cache",
-      "rationale": "Tracked ledger lacks local truth: gh state never syncs back, drift guaranteed, PRs get generated diffs. Keep FEEDBACK.md untracked; flip feedback_ledger tracked:false. Overturns P12, 2026-11-16.",
-      "birth_phase": "P20: milestone lifecycle mechanics and ceremony",
-      "status": "open",
-      "anchor": null,
-      "covered": false,
-      "covered_by": null,
-      "born_at": "2026-11-16T06:50:15.973Z",
-      "dig": {
-        "command": "node bin/gos.cjs paths feedback_ledger",
-        "output_excerpt": "feedback_ledger: { rel: FEEDBACK.md, producer: cli (feedback push backfill), purge: regen any time (rendered), tracked: true }",
-        "anchor": "bin/lib/core/fsio.cjs:74"
+        "command": "grep README.md map sections + map --help ignore probe + gate.cjs fix strings",
+        "output_excerpt": "README has no map section (only changelog line 312); map help mentions no ignore; parse-failures fix=run map scan (loop); dup-fn fix=rename the fn",
+        "anchor": "bin/lib/ops/gate.cjs:1090"
       }
     }
   ],
-  "observable_truths": [
-    {
-      "id": "T1",
-      "description": "P0 at index 0 and names in monotonic order in phase list",
-      "verified": true,
-      "evidence": {
-        "command": "[\"node\",\".gos/logs/ceremony-t1-check.cjs\"]",
-        "output_excerpt": "P0-at-first-row=true; rows count=12",
-        "artifact_path": ".gos/logs/ceremony-t1-snapshot-order.log",
-        "replay": true
-      }
-    },
-    {
-      "id": "T2",
-      "description": "after archive of a phase task, its project.json entry carries task_ref = archive basename and completed_at ISO stamp",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\"test/sections/T118-milestone-ceremony.test.sh\"]",
-        "output_excerpt": "✓ ceremony close exits 0",
-        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
-        "replay": true
-      }
-    },
-    {
-      "id": "T3",
-      "description": "milestone close --carry-parked --yes leaves parked phases + parked-owned rows + pending phase entries present in project.json, byte-equal to the preclose backup; snapshots exist as dated view .md files + preclose.json and in the closing milestone-record/",
-      "verified": true,
-      "evidence": {
-        "command": "node -e deep-compare survivors vs preclose",
-        "output_excerpt": "3 survivor families passed byte-equal, 0 failed",
-        "artifact_path": ".gos/logs/ceremony-t3-deepcompare.log",
-        "manual": true
-      }
-    },
-    {
-      "id": "T4",
-      "description": "milestone open publicize stamps milestone {name, opened_at}; the NEXT archived task slug prefix reads publicize; in the closed-not-reopened gap slugs carry no version prefix",
-      "verified": true,
-      "evidence": {
-        "command": "[\"node\",\"-e\",\"console.log('milestone.name=publicize from path .gos/project/project.json')\"]",
-        "output_excerpt": "milestone.name=publicize from path .gos/project/project.json",
-        "artifact_path": ".gos/logs/ceremony-milestone-name.log",
-        "replay": true
-      }
-    },
-    {
-      "id": "T5",
-      "description": "with state.json absent and the Lv4 marker present, gos resume prints NO ACTIVE TASK + milestone identity + phase queue + clone warning (exit 0)",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\"test/sections/T116-stateless-resume.test.sh\"]",
-        "output_excerpt": "✓ resume without state or marker exits 1",
-        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
-        "replay": true
-      }
-    },
-    {
-      "id": "T6",
-      "description": "gos init --project in a fresh repo creates project.json, lv4.json marker, and views but no state.json; init --project on a repo with Lv4 trace refuses without --fresh",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\"test/sections/T117-slug-prefix-init-bootstrap.test.sh\"]",
-        "output_excerpt": "✓ init --project exits 0",
-        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
-        "replay": true
-      }
-    },
-    {
-      "id": "T7",
-      "description": "gos phase mark-done on a never-claimed phase stamps completed_at and leaves task_ref null",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\"test/sections/T114-milestone-open-close.test.sh\"]",
-        "output_excerpt": "✓ open without a name exits 1",
-        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
-        "replay": true
-      }
-    },
-    {
-      "id": "T8",
-      "description": "post-close project.json: decisions array empty or milestone-owned only, done-owned requirement rows = 0, dropped/ghost rows counted in the report, last_archived_phase null",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\"test/sections/T118-milestone-ceremony.test.sh\"]",
-        "output_excerpt": "✓ ceremony close exits 0",
-        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
-        "replay": true
-      }
-    },
-    {
-      "id": "T9",
-      "description": "gos milestone open evil/../x and backtick names die with a sanitization contract error; a tainted name never reaches a path, slug, or echo line",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\"test/sections/T114-milestone-open-close.test.sh\"]",
-        "output_excerpt": "✓ open without a name exits 1",
-        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
-        "replay": true
-      }
-    },
-    {
-      "id": "T10",
-      "description": "legacy wrapper state (project=true, no phase_name) triggers the retirement prompt; after retirement, stateless resume takes over",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\"test/sections/T116-stateless-resume.test.sh\"]",
-        "output_excerpt": "✓ resume without state or marker exits 1",
-        "artifact_path": ".gos/cache/section-runs/20261116T095633Z-full13986.log",
-        "replay": true
-      }
-    }
-  ],
-  "gaps": [
-    {
-      "id": "G-1794810977443",
-      "type": "major",
-      "description": "Fluid back to PLAN: requirement id alignment: spec-local Covers R-02..R-15 must cite truth-source globals R-68..R-81 (registered via requirement add); wave-touched files join plan Files for declaration",
-      "status": "fixed",
-      "resolution": "plan.md amended: task Covers cite truth-source globals (T1→R-80, T4→R-68/R-74, T5→R-69..R-72, T9→R-75, T10→R-76, T11→R-78, T12→R-80/R-72, T13→R-01, T14a→R-81); spec-local↔global mapping note at plan.md:41-46; union of wave Files covers the shipped diff incl. legacy-section sweep",
-      "resolved_at": "2026-11-16T08:12:42.902Z"
-    }
-  ],
-  "phase_name": "P20: milestone lifecycle mechanics and ceremony",
-  "task_head": "b3421e205e3e4ead549208f3d73509a494dd509e",
-  "task_head_history": [
-    {
-      "sha": "b3421e205e3e4ead549208f3d73509a494dd509e",
-      "at": "2026-11-12T06:28:14.505Z",
-      "what": "claim"
-    }
-  ],
+  "observable_truths": [],
+  "gaps": [],
+  "activation_source": "headless",
+  "task_head": "08a3f0b637a00f6751d8f94ce8ac2ef699006bb6",
   "spec_gate_version": 3,
-  "spec_sha256": "41f1f39e99beb438505e98ec2a9f160be98ae0b167b0d8cd39af560636fac339",
-  "plan_snapshot": {
-    "tasks": [
-      {
-        "id": "T1",
-        "covers": [
-          "R-80"
-        ],
-        "files": [
-          ".gos/state.json"
-        ],
-        "wave": 1
-      },
-      {
-        "id": "T2",
-        "covers": [
-          "D-66",
-          "R-73",
-          "R-79"
-        ],
-        "files": [
-          "bin/lib/core/state.cjs",
-          "test/sections/T46-module-structure.test.sh",
-          "test/sections/T25-map-selfcheck.test.sh"
-        ],
-        "wave": 1
-      },
-      {
-        "id": "T3",
-        "covers": [
-          "R-77"
-        ],
-        "files": [
-          "bin/lib/task/context.cjs",
-          "test/sections/T10-security-e2e.test.sh",
-          "test/sections/T46-module-structure.test.sh",
-          "test/sections/T25-map-selfcheck.test.sh"
-        ],
-        "wave": 1
-      },
-      {
-        "id": "T4",
-        "covers": [
-          "D-67",
-          "R-68",
-          "R-74"
-        ],
-        "files": [
-          "bin/lib/knowledge/milestone.cjs",
-          "bin/lib/knowledge/index.cjs",
-          "bin/gos.cjs",
-          "bin/lib/core/state.cjs",
-          "bin/lib/nav/registry-consts.cjs",
-          "bin/lib/task/init.cjs",
-          "bin/lib/core/locales/en.cjs",
-          "bin/lib/core/locales/zh.cjs",
-          "test/sections/T2-project.test.sh",
-          "test/sections/T46-module-structure.test.sh",
-          "test/sections/T25-map-selfcheck.test.sh"
-        ],
-        "wave": 2
-      },
-      {
-        "id": "T5",
-        "covers": [
-          "D-68",
-          "R-69",
-          "R-70",
-          "R-71",
-          "R-72",
-          "R-79"
-        ],
-        "files": [
-          "bin/lib/knowledge/milestone.cjs",
-          "bin/lib/core/locales/en.cjs",
-          "bin/lib/core/locales/zh.cjs",
-          "bin/lib/task/archive.cjs",
-          "test/gos-cli-tests.sh",
-          "test/sections/T46-module-structure.test.sh",
-          "test/sections/T25-map-selfcheck.test.sh"
-        ],
-        "wave": 2
-      },
-      {
-        "id": "T6",
-        "covers": [
-          "D-66",
-          "R-69",
-          "R-73"
-        ],
-        "files": [
-          "bin/lib/task/archive.cjs",
-          "bin/lib/knowledge/phase.cjs",
-          "test/sections/T8-phase-archive.test.sh",
-          "test/sections/T46-module-structure.test.sh",
-          "test/sections/T25-map-selfcheck.test.sh"
-        ],
-        "wave": 2
-      },
-      {
-        "id": "T7",
-        "covers": [
-          "R-71"
-        ],
-        "files": [
-          "bin/lib/nav/cmds.cjs",
-          "bin/lib/core/locales/en.cjs",
-          "bin/lib/core/locales/zh.cjs"
-        ],
-        "wave": 2
-      },
-      {
-        "id": "T8",
-        "covers": [
-          "D-69",
-          "R-74"
-        ],
-        "files": [
-          "bin/lib/knowledge/phase.cjs",
-          "bin/lib/knowledge/decisions.cjs",
-          "bin/lib/knowledge/requirements.cjs",
-          "bin/lib/nav/cmds.cjs",
-          "bin/lib/core/state.cjs",
-          "bin/lib/core/lock.cjs",
-          "test/sections/T3-decision.test.sh",
-          "test/sections/T4-requirement.test.sh",
-          "test/sections/T46-module-structure.test.sh",
-          "test/sections/T25-map-selfcheck.test.sh"
-        ],
-        "wave": 3
-      },
-      {
-        "id": "T9",
-        "covers": [
-          "D-69",
-          "R-75"
-        ],
-        "files": [
-          "bin/lib/nav/cmds.cjs",
-          "bin/lib/nav/status.cjs",
-          "bin/lib/core/locales/en.cjs",
-          "bin/lib/core/locales/zh.cjs"
-        ],
-        "wave": 3
-      },
-      {
-        "id": "T10",
-        "covers": [
-          "D-70",
-          "R-76"
-        ],
-        "files": [
-          "bin/lib/knowledge/phase.cjs",
-          "bin/lib/core/state.cjs",
-          "bin/lib/nav/registry-consts.cjs",
-          "bin/lib/core/locales/en.cjs",
-          "bin/lib/core/locales/zh.cjs",
-          "test/sections/T46-module-structure.test.sh",
-          "test/sections/T25-map-selfcheck.test.sh"
-        ],
-        "wave": 4
-      },
-      {
-        "id": "T11",
-        "covers": [
-          "R-78"
-        ],
-        "files": [
-          "skills/gos-project/scripts/archive-milestone.sh",
-          "skills/gos-project/SKILL.md",
-          "skills/gos-project/reference/complete-milestone.md"
-        ],
-        "wave": 4
-      },
-      {
-        "id": "T12",
-        "covers": [
-          "R-80",
-          "R-72"
-        ],
-        "files": [
-          "test/sections/T114-milestone-open-close.test.sh",
-          "test/sections/T115-phase-move.test.sh",
-          "test/sections/T116-stateless-resume.test.sh",
-          "test/sections/T117-slug-prefix-init-bootstrap.test.sh",
-          "test/sections/T118-milestone-ceremony.test.sh",
-          "test/sections/T14-state-b.test.sh",
-          "test/sections/T26-nav-hints.test.sh",
-          "test/sections/T39-render-park.test.sh",
-          "test/sections/T7-render.test.sh",
-          "test/sections/T88-autorender.test.sh",
-          "test/sections/T90-projectmd-gate.test.sh"
-        ],
-        "wave": 5
-      },
-      {
-        "id": "T13",
-        "covers": [
-          "R-01"
-        ],
-        "files": [
-          "census.json",
-          ".gos/codebase/network.md",
-          ".gos/codebase/unmapped-fns.txt",
-          "test/sections/T46-module-structure.test.sh",
-          "test/sections/T25-map-selfcheck.test.sh"
-        ],
-        "wave": 5
-      },
-      {
-        "id": "T14a",
-        "covers": [
-          "R-81",
-          "R-76"
-        ],
-        "files": [
-          ".gos/task/p20/ceremony-runbook.md"
-        ],
-        "wave": 5
-      },
-      {
-        "id": "T15",
-        "covers": [
-          "D-71"
-        ],
-        "files": [
-          ".gos/task/p20/d71-followup.md"
-        ],
-        "wave": 5
-      }
-    ],
-    "audit": [
-      {
-        "at": "2026-11-16T07:06:35.254Z",
-        "what": "snapshot-force"
-      }
-    ],
-    "meta": {
-      "waveValidation": {
-        "ok": true,
-        "waves": 5
-      }
-    }
-  },
-  "changelog_user_summary": "The v1.0.0-dev cycle closes with its history snapshotted to both channels and the publicize cycle opens: the roadmap queue carries the parked decision archival and adoption redesign entries plus the three pending hardening entries, done history lives in the dated snapshots, and fresh clones stay Lv4 through the tracked marker",
-  "checkpoints": [],
-  "semantic": {
-    "allowlist": [
-      "test/sections/T27-archive-slug.test.sh",
-      "test/sections/T37-phase-ux.test.sh",
-      "test/sections/T71-phase-amend-reposlug.test.sh",
-      "test/sections/T111-phase-rename.test.sh"
-    ]
-  },
-  "review_findings": [
-    {
-      "severity": "major",
-      "status": "fixed",
-      "issue": "init --project=<name> and the documented positional name form never routed to the bootstrap lane (isProject exact-matched --project only); stray task-lane positionals silently created junk null-level state",
-      "location": "bin/lib/task/init.cjs:30,189"
-    },
-    {
-      "severity": "major",
-      "status": "fixed",
-      "issue": "validatePhase accepted task_ref dot-segments (./..), letting a hand-edited project.json redirect the close archive channel outside milestone-record/",
-      "location": "bin/lib/core/state.cjs:86-93"
-    },
-    {
-      "severity": "major",
-      "status": "fixed",
-      "issue": "three T114 crash-window approval assertions were vacuous (console.log checkmarks never incremented FAIL), leaving consume-once guarantees untested",
-      "location": "test/sections/T114-milestone-open-close.test.sh:328-355"
-    },
-    {
-      "severity": "minor",
-      "status": "logged",
-      "issue": "retireWrapperState deletes state.json before guardCwd takes the lock; read-class commands can mutate; dry-run close can prompt-delete"
-    },
-    {
-      "severity": "minor",
-      "status": "logged",
-      "issue": "close-time canonicalization persists rewritten bare phase refs on carried survivors (verbatim contract latent gap; live data unaffected — 0 bare refs among carried rows)"
-    },
-    {
-      "severity": "minor",
-      "status": "logged",
-      "issue": "closeSnapshot target-exists refusal has no recovery story or cleanup hint (same-day same-name close bricked)"
-    },
-    {
-      "severity": "minor",
-      "status": "logged",
-      "issue": "closeReadyHint fires in the closed-not-reopened gap (allDone ignores milestone state)"
-    },
-    {
-      "severity": "minor",
-      "status": "logged",
-      "issue": "wipe-window crash between saveProject and autoRenderViews leaves stale views with no repair hint"
-    },
-    {
-      "severity": "minor",
-      "status": "logged",
-      "issue": "init --project --fresh resets project.json but leaves stale rendered views (openMilestone skips render on brownfield)"
-    },
-    {
-      "severity": "minor",
-      "status": "logged",
-      "issue": "stateless Lv4 repo cannot record the MILESTONE-CLOSE approval (cmdApprove dies noActiveTask); ceremony on a fresh clone would brick at runbook step 4"
-    },
-    {
-      "severity": "minor",
-      "status": "logged",
-      "issue": ">50 decisions-index warning duplicated inline in status.cjs (with-state + stateless paths) instead of a shared helper"
-    },
-    {
-      "severity": "minor",
-      "status": "logged",
-      "issue": "milestone open silently ignores stray flags and prints no brownfield warning (init --project refuses the same shape loudly)"
-    },
-    {
-      "severity": "minor",
-      "status": "logged",
-      "issue": "test gaps: ambiguous bare-ref die path, 24h approval freshness boundary, interactive TTY retirement prompt; registered truth T9 wording (tainted names die) conflicts with the normative R-68 sanitize-at-identity contract"
-    }
-  ],
-  "completed_at": "2026-11-16T10:20:32.961Z"
+  "spec_sha256": "9f2cec813ccc7e0b42becb0f2e9eba357b13c41e3877ba5562deda5e76cc9bb9"
 }
