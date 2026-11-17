@@ -886,6 +886,27 @@ function cmdGateChangelogObligation(args) {
   console.log(`\n${core.CONTRACTS.gate_verdicts.allPass}`);
 }
 
+// Codemap polluted-peak attribution source: a fresh .gos/codebase/map-ignored.txt
+// (provenance HEAD slice equals the current head, 'unborn' == 'unborn' included)
+// yields a membership predicate; a stale or absent list falls back to the live
+// .gos/map-ignore rule set (exact match or '*' glob). Absent rules exclude nothing.
+function mapIgnoredPathsAt(cmRoot) {
+  const h = core.gitHeadSha();
+  const cur = h ? h.slice(0, 8) : 'unborn';
+  try {
+    const txt = fs.readFileSync(path.join(cmRoot, '.gos', 'codebase', 'map-ignored.txt'), 'utf8');
+    const prov = (txt.split('\n')[0] || '').match(/^generated-at: .+ @ (\S+)/);
+    if (prov && prov[1] === cur) {
+      const excluded = new Set(txt.split('\n').slice(1).map((l) => l.trim()).filter(Boolean));
+      return { fresh: true, isExcluded: (p) => excluded.has(p) };
+    }
+  } catch { /* absent or unreadable — live rules below */ }
+  const rules = map.loadMapIgnore(cmRoot);
+  if (!rules.size) return { fresh: false, isExcluded: () => false };
+  const globs = [...rules].filter((g) => g.includes('*'));
+  return { fresh: false, isExcluded: (p) => rules.has(p) || globs.some((g) => core.globMatch(g, p)) };
+}
+
 // Programmatic verdict entry (auto-loop legs): runs every check the CLI
 // gate runs and returns the verdict set as data — no process exit, no
 // stdout bytes (per-check ✓/⚠ lines are captured into `lines`; the CLI
@@ -1143,6 +1164,9 @@ function computeGateVerdicts(ctx = {}) {
           const curFns = new Set(sem.fn_universe || []);
           const peakFns = Array.isArray(peak.fns) ? peak.fns : [];
           const missing = peakFns.filter((f) => !curFns.has(f));
+          // polluted-peak attribution: missing fns whose owning file is map-ignored
+          const ign = mapIgnoredPathsAt(cmRoot);
+          const attrCount = missing.filter((f) => ign.isExcluded(String((peak.owners || {})[f] || f))).length;
           // ① total edge drop (>15% AND >10)
           if (typeof peak.total === 'number' && peak.total > 0) {
             const dropAbs = peak.total - cur.total, dropPct = dropAbs / peak.total;
@@ -1152,13 +1176,27 @@ function computeGateVerdicts(ctx = {}) {
           if (typeof peak.fn_count === 'number' && peak.fn_count > 0) {
             const fnDropPct = (peak.fn_count - cur.fn_count) / peak.fn_count;
             if (fnDropPct > 0.15 || missing.length) {
-              if (peak.fn_count <= 50) console.log(`⚠ codemap: fn missing vs peak (${missing.length}): [${missing.join(', ')}]`);
-              else {
+              // full-coverage reset guidance requires a fresh exclusion list —
+              // stale data degrades to the plain advisory; partial attribution
+              // (live-rule fallback) annotates in either freshness mode.
+              // Guided rotation (peakFullyIgnored): gos approve baseline-reset
+              // --reason "<why>" then gos map baseline reset --reason "<why>"
+              // — approve-gated, never automatic.
+              const SCC = core.CONTRACTS.semantic_checks;
+              const fullyIgnored = missing.length > 0 && attrCount === missing.length;
+              const partlyIgnored = attrCount > 0 && attrCount < missing.length;
+              if (peak.fn_count <= 50) {
+                console.log(`⚠ codemap: fn missing vs peak (${missing.length}): [${missing.join(', ')}]`);
+                if (fullyIgnored && ign.fresh) console.log(`⚠ codemap: ${SCC.peakFullyIgnored.replace('<M>', String(missing.length))}`);
+                else if (partlyIgnored) console.log(`⚠ codemap: ${SCC.peakPartiallyIgnored.replace('<N>', String(attrCount)).replace('<M>', String(missing.length))}`);
+              } else {
                 const byDir = {};
                 const owners = peak.owners || {};
                 for (const f of missing) { const d = String(owners[f] || f).split('/').slice(0, -1).join('/') || '(root)'; byDir[d] = (byDir[d] || 0) + 1; }
                 const top = Object.entries(byDir).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([d, n]) => `${d}: ${n}`).join('; ');
                 console.log(`⚠ codemap: fn missing vs peak ${missing.length}/${peak.fn_count} — by dir: ${top}`);
+                if (fullyIgnored && ign.fresh) console.log(`⚠ codemap: ${SCC.peakFullyIgnored.replace('<M>', String(missing.length))}`);
+                else if (partlyIgnored) console.log(`⚠ codemap: ${SCC.peakPartiallyIgnored.replace('<N>', String(attrCount)).replace('<M>', String(missing.length))}`);
               }
             }
           }
