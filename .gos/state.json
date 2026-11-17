@@ -2,10 +2,11 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "PLAN",
+  "current_stage": "BUILD",
   "completed_stages": [
     "INTENT",
-    "THINK"
+    "THINK",
+    "PLAN"
   ],
   "intent": {
     "summary": "Honor .gos/map-ignore at the scanSources file-collection layer so vendored JS never enters the parse/dedup universe (fixes codemap gate permanent failure in vendored repos, chenw521/GOS#64); shared exclusion also wired into cleanup-scan.sh and security.sh",
@@ -16,7 +17,8 @@
     }
   },
   "approvals": {
-    "THINK": "2026-11-17T05:43:12.729Z"
+    "THINK": "2026-11-17T05:43:12.729Z",
+    "PLAN": "2026-11-17T07:20:18.207Z"
   },
   "spec_path": ".gos/task/08a3f0b6/spec.md",
   "plan_path": ".gos/task/08a3f0b6/plan.md",
@@ -100,5 +102,134 @@
   "activation_source": "headless",
   "task_head": "08a3f0b637a00f6751d8f94ce8ac2ef699006bb6",
   "spec_gate_version": 3,
-  "spec_sha256": "9f2cec813ccc7e0b42becb0f2e9eba357b13c41e3877ba5562deda5e76cc9bb9"
+  "spec_sha256": "9f2cec813ccc7e0b42becb0f2e9eba357b13c41e3877ba5562deda5e76cc9bb9",
+  "plan_snapshot": {
+    "tasks": [
+      {
+        "id": "T1",
+        "covers": [
+          "D-01",
+          "R-01",
+          "R-06"
+        ],
+        "files": [
+          "bin/lib/map/engine.cjs",
+          "test/sections/T30-map-edges.test.sh",
+          "test/sections/T46-module-structure.test.sh"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T3",
+        "covers": [
+          "D-03",
+          "R-03"
+        ],
+        "files": [
+          "skills/gos-ship/scripts/cleanup-scan.sh",
+          "skills/gos-ship/scripts/security.sh"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T4",
+        "covers": [
+          "D-04",
+          "R-05"
+        ],
+        "files": [
+          "bin/lib/ops/gate.cjs"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T6",
+        "covers": [
+          "D-04",
+          "R-05"
+        ],
+        "files": [
+          "README.md",
+          "README.zh-CN.md"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T2",
+        "covers": [
+          "D-03",
+          "D-04",
+          "R-02",
+          "R-05"
+        ],
+        "files": [
+          "bin/lib/map/index.cjs",
+          "census.json",
+          "bin/lib/core/state.cjs",
+          "bin/lib/core/locales/zh.cjs",
+          "test/sections/T46-module-structure.test.sh"
+        ],
+        "wave": 2
+      },
+      {
+        "id": "T5",
+        "covers": [
+          "D-02",
+          "R-04"
+        ],
+        "files": [
+          "bin/lib/ops/gate.cjs",
+          "bin/lib/core/state.cjs",
+          "bin/lib/core/locales/zh.cjs",
+          "test/sections/T46-module-structure.test.sh"
+        ],
+        "wave": 2
+      },
+      {
+        "id": "T8",
+        "covers": [
+          "D-01",
+          "D-03",
+          "R-01",
+          "R-02",
+          "R-03"
+        ],
+        "files": [
+          "test/sections/T119-map-ignore.test.sh"
+        ],
+        "wave": 3
+      },
+      {
+        "id": "T9",
+        "covers": [
+          "D-02",
+          "R-04"
+        ],
+        "files": [
+          "test/sections/T119-map-ignore.test.sh"
+        ],
+        "wave": 3
+      },
+      {
+        "id": "T10",
+        "covers": [
+          "R-01",
+          "R-05",
+          "R-06",
+          "D-04"
+        ],
+        "files": [
+          "test/sections/T119-map-ignore.test.sh"
+        ],
+        "wave": 3
+      }
+    ],
+    "audit": [],
+    "meta": {
+      "waveValidation": {
+        "ok": true,
+        "waves": 3
+      }
+    }
+  }
 }
