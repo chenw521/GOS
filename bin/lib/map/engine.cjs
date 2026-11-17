@@ -103,12 +103,30 @@ function scanSources(root) {
   };
   walk(root);
   files.sort();
+  // .gos/map-ignore partition (same exact-or-glob predicate as semanticUniverse):
+  // excluded paths drop out before the read loop — no rawPairs, no edges, no
+  // externals, and they never reach finalFiles.
+  const ig = loadMapIgnore(root);
+  let kept = files;
+  let ignoredFiles = [];
+  let deadRules = [];
+  if (ig.size > 0) {
+    const globs = [...ig].filter((g) => g.includes('*'));
+    const hit = (rel) => ig.has(rel) || globs.some((g) => core.globMatch(g, rel));
+    ignoredFiles = files.filter(hit);
+    kept = files.filter((rel) => !hit(rel));
+    // dead rule = matches no walker-admitted file (kept or excluded) and no
+    // tracked file; semantic-only rules (e.g. bare .md paths) stay alive via git
+    const universe = new Set(files);
+    for (const p of core.trackedFiles(root).exact) universe.add(p);
+    deadRules = [...ig].filter((r) => ![...universe].some((p) => (r.includes('*') ? core.globMatch(r, p) : p === r)));
+  }
   // Single content read per file (REVIEW #3): pass 1 reads + guards + collects raw
   // (from, spec) pairs; resolution happens AFTER the ok-set is known so guard-skipped
   // files can never become edge targets.
   const scannedOk = new Set();
   const rawPairs = [];
-  for (const rel of files) {
+  for (const rel of kept) {
     const pats = MAP_PATTERNS[mapLangOf(path.extname(rel))];
     let content;
     try { content = fs.readFileSync(path.join(root, rel), 'utf8'); }
@@ -144,7 +162,10 @@ function scanSources(root) {
   }
   edgesL.sort((a, b) => (a.from + '\u0000' + a.to).localeCompare(b.from + '\u0000' + b.to));
   externals.sort((a, b) => (a.from + '\u0000' + a.spec).localeCompare(b.from + '\u0000' + b.spec));
-  return { files: finalFiles, edges: edgesL, externals, skipped_binary: skippedBinary, skipped_huge: skippedHuge, skipped_dir: skippedDir, unreadable_file: unreadableFile };   // frozen key: scan output schema keeps `edges` (local edgesL is a shadow-defense rename)
+  const result = { files: finalFiles, edges: edgesL, externals, skipped_binary: skippedBinary, skipped_huge: skippedHuge, skipped_dir: skippedDir, unreadable_file: unreadableFile };   // frozen key: scan output schema keeps `edges` (local edgesL is a shadow-defense rename)
+  if (ignoredFiles.length) result.ignored = ignoredFiles;        // 'ignored' + 'ignore_dead' join the
+  if (deadRules.length) result.ignore_dead = deadRules;          // schema only when non-empty
+  return result;
 }
 
 function mapGitInfo(root) {

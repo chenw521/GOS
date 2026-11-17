@@ -1087,12 +1087,12 @@ function computeGateVerdicts(ctx = {}) {
       failures.push(...dirRes.failures);
       if (sem.acorn_missing) console.log('⚠ codemap: acorn not installed — fn-level data unavailable (see: core.CONTRACTS acornMissing); install acorn then re-run: gos map scan');   // ①' capability advisory, never FAIL
       const pf = sem.parse_failures || [];
-      if (pf.length) failures.push(core.gateFail('codemap-parse-failures', { verdict: core.CONTRACTS.semantic_checks.parseFailures.replace('<N>', String(pf.length)).replace('<files>', pf.map((x) => x.file).join(', ')), evidence: pf.map((x) => x.file), fix: core.gateCmd('node bin/gos.cjs map scan') + ' — fix the parse errors or refresh the map' }));   // ① FAIL
+      if (pf.length) failures.push(core.gateFail('codemap-parse-failures', { verdict: core.CONTRACTS.semantic_checks.parseFailures.replace('<N>', String(pf.length)).replace('<files>', pf.map((x) => x.file).join(', ')), evidence: pf.map((x) => x.file), fix: core.gateCmd('node bin/gos.cjs map scan') + ' — fix the parse errors, or exclude vendored paths via .gos/map-ignore then rescan' }));   // ① FAIL
       const deadAnn = sem.dead_fn_annotations || [];
       if (deadAnn.length) failures.push(core.gateFail('codemap-dead-annotation', { verdict: `${deadAnn.length} dead gos-map:fn annotation(s) — they point at fns that no longer exist`, evidence: deadAnn, fix: 'fix or remove the dead annotations (dead data misleads the codemap)' }));   // ⑤ FAIL
       // ---- repo-wide unique-name hard assertion (monolith semantic conservation; scan set includes files outside bin/, plugin exemptions noted in the allowlist) ----
       const dupNames = sem.dup_names || [];
-      if (dupNames.length) for (const n of dupNames.slice(0, 5)) failures.push(core.gateFail('codemap-dup-fn-name', { verdict: `duplicate fn name across files: ${n} — global uniqueness required`, evidence: [n], fix: 'rename the fn or qualify the annotation; bare annotations are rejected at parse time' }));
+      if (dupNames.length) for (const n of dupNames.slice(0, 5)) failures.push(core.gateFail('codemap-dup-fn-name', { verdict: `duplicate fn name across files: ${n} — global uniqueness required`, evidence: [n], fix: 'rename the fn or qualify the annotation; bare annotations are rejected at parse time; third-party code: exclude via .gos/map-ignore then rescan' }));
       else console.log('✓ codemap: repo-wide unique-name assertion green (dup_names = ∅)');
       // ③ self-consistency: acorn top-level count (deps.fn_count) vs cheap regex recount.
  // Missing fn_count family (schema-window between P- and P- commits) → advisory, not FAIL (F-M8).

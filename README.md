@@ -94,6 +94,27 @@ mechanical facts:
 - **Memory that survives sessions**: audit-chained lessons as tracked JSON
   truth, decision chains with supersede tracking, cross-session `gos resume`.
 
+### Excluding vendored code — .gos/map-ignore
+
+Codemap and semantic scans carry two hardcoded skip layers that cannot be
+turned off — the builtin skip-dirs (`node_modules`, `dist`, etc.) and
+minified `.min.js`. `.gos/map-ignore` adds the repo-authored layer on top:
+a tracked file, one rule per line (`#` starts a comment), evaluated against
+the full relpath of every tracked file:
+
+| Rule | Semantics |
+|:---|:---|
+| `vendor/*` | `*` crosses `/` — `vendor/a/b.js` is covered |
+| `vendor` | nothing — a bare directory name has no prefix semantics |
+| `vendor/**` | same as `vendor/*` — `**` has no special meaning |
+| `src/gen/api.ts` | exactly that relpath — rules without `*` are exact full-path matches |
+
+Every scan rematerializes the byproduct `.gos/codebase/map-ignored.txt`:
+written when ≥ 1 file is excluded, deleted when none are. Ship scripts
+consume it as the exclusion record. The codemap gate's parse-failure and
+duplicate-fn hints point here — add the offending source to
+`.gos/map-ignore` and rerun.
+
 ### Adversarial by default
 
 THINK and PLAN outputs are attacked by fresh-context Red Team rounds (heterogeneous

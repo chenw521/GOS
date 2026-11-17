@@ -116,6 +116,16 @@ BEGIN {
 # Scan staged + tracked files (skip tests/fixtures/docs/markdown)
 FILES=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null; git ls-files 2>/dev/null | grep -v '^\.gos/' )
 FILES=$(echo "$FILES" | sort -u | grep -Ev '\.(md|lock|json)$|(^|/)(test|tests|fixtures|mocks)/|^gates/|security\.sh$' || true)
+# map-ignored exclusion: skip files excluded from the codemap universe
+# (.gos/codebase/map-ignored.txt, rematerialized by every `gos map scan`);
+# missing list = full scan (backward compatible)
+LIST=.gos/codebase/map-ignored.txt
+if [ -f "$LIST" ]; then
+  ORIG=$FILES
+  FILES=$(printf '%s\n' "$FILES" | grep -vxFf "$LIST")
+  rc=$?
+  [ "$rc" -le 1 ] || FILES="$ORIG"   # grep error (unreadable list) → fall back to full scan
+fi
 
 for f in $FILES; do
   [ -f "$f" ] || continue
