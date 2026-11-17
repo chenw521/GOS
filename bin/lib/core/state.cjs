@@ -727,7 +727,7 @@ const CONTRACTS = {
     noHead: 'not a git repo — deps.json unanchored (freshness unverifiable, auto-rescan on query)',
     headUnborn: 'git repo with no commits — deps.json anchored to empty tree',
     mapIgnoreExcluded: 'excluded <N> file(s) via .gos/map-ignore — list: .gos/codebase/map-ignored.txt',
-    mapIgnoreDeadRule: '⚠ map-ignore rule(s) matched nothing (typo or stale path?): <rules>',
+    mapIgnoreDeadRule: 'map-ignore rule(s) matched nothing (typo or stale path?): <rules>',
     peakFullyIgnored: 'all <M> missing fn(s) fully covered by map-ignore — rotate the peak via: gos approve baseline-reset --reason "<why>" then gos map baseline reset --reason "<why>" (approve-gated, never automatic)',
     peakPartiallyIgnored: '<N> of <M> missing fn(s) are in map-ignored paths',
     closureUnknownPath: 'closure input not in graph (<paths>) — typo, deleted, or not in scan set — refusing vacuous answer',

@@ -1,9 +1,9 @@
 {
   "current": {
-    "total": 1565,
-    "callgraph": 986,
+    "total": 1567,
+    "callgraph": 988,
     "testof_fn": 127,
-    "fn_count": 920,
+    "fn_count": 921,
     "fns": [
       "absTaskPath",
       "ackWaitMs",
@@ -481,6 +481,7 @@
       "manifestRead",
       "manualRegion",
       "mapGitInfo",
+      "mapIgnorePredicate",
       "mapIgnoredPathsAt",
       "mapKnownKeys",
       "mapLangOf",
@@ -1219,6 +1220,7 @@
       "fnSetFingerprint": "bin/lib/map/engine.cjs",
       "depsSelfHash": "bin/lib/map/engine.cjs",
       "loadMapIgnore": "bin/lib/map/engine.cjs",
+      "mapIgnorePredicate": "bin/lib/map/engine.cjs",
       "acornCtx": "bin/lib/map/engine.cjs",
       "semanticUniverse": "bin/lib/map/engine.cjs",
       "readUniverseLines": "bin/lib/map/engine.cjs",
@@ -1848,8 +1850,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "eb3a08519405d162",
-    "at": "2026-11-17T09:40:38.237Z"
+    "fp": "132d43f72b8969a8",
+    "at": "2026-11-17T10:26:36.003Z"
   },
   "peak": {
     "total": 2065,

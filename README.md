@@ -100,7 +100,7 @@ Codemap and semantic scans carry two hardcoded skip layers that cannot be
 turned off — the builtin skip-dirs (`node_modules`, `dist`, etc.) and
 minified `.min.js`. `.gos/map-ignore` adds the repo-authored layer on top:
 a tracked file, one rule per line (`#` starts a comment), evaluated against
-the full relpath of every tracked file:
+the full relpath of every scanned file — tracked or not:
 
 | Rule | Semantics |
 |:---|:---|

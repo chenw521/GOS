@@ -74,7 +74,7 @@ INTENT (对齐) → [自适应中段] → VERIFY (证明) → TRACE (记录)
 
 ### 排除内嵌第三方代码——.gos/map-ignore
 
-codemap 与语义扫描自带两层硬编码跳过，关不掉——内置 skip-dirs（`node_modules`、`dist` 等）和压缩产物 `.min.js`。`.gos/map-ignore` 在其上叠加仓库自维护的排除层：一个 tracked 文件，每行一条规则（`#` 开头为注释），对每个 tracked 文件按完整 relpath 求值：
+codemap 与语义扫描自带两层硬编码跳过，关不掉——内置 skip-dirs（`node_modules`、`dist` 等）和压缩产物 `.min.js`。`.gos/map-ignore` 在其上叠加仓库自维护的排除层：一个 tracked 文件，每行一条规则（`#` 开头为注释），对每个被扫描文件（无论是否 tracked）按完整 relpath 求值：
 
 | 规则 | 语义 |
 |:---|:---|

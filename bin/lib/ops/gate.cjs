@@ -903,8 +903,8 @@ function mapIgnoredPathsAt(cmRoot) {
   } catch { /* absent or unreadable — live rules below */ }
   const rules = map.loadMapIgnore(cmRoot);
   if (!rules.size) return { fresh: false, isExcluded: () => false };
-  const globs = [...rules].filter((g) => g.includes('*'));
-  return { fresh: false, isExcluded: (p) => rules.has(p) || globs.some((g) => core.globMatch(g, p)) };
+  const liveHit = map.mapIgnorePredicate(rules);   // same predicate the scan layer filters with
+  return { fresh: false, isExcluded: liveHit };
 }
 
 // Programmatic verdict entry (auto-loop legs): runs every check the CLI

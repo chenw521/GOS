@@ -192,12 +192,12 @@ function cmdMap(args) {
       if (ig.length) {
         const headSha = core.gitHeadSha();
         const provHeader = `generated-at: ${new Date().toISOString().replace(/\.\d+Z$/, 'Z')} @ ${headSha ? headSha.slice(0, 8) : 'unborn'}`;
-        try { fs.mkdirSync(path.join(root, '.gos', 'codebase'), { recursive: true }); fs.writeFileSync(path.join(root, '.gos', 'codebase', 'map-ignored.txt'), `${provHeader}\n${ig.join('\n')}\n`); } catch { /* list file is best-effort */ }
+        try { fs.mkdirSync(path.join(root, '.gos', 'codebase'), { recursive: true }); core.writeAtomicText(path.join(root, '.gos', 'codebase', 'map-ignored.txt'), `${provHeader}\n${ig.join('\n')}\n`); } catch { /* list file is best-effort */ }
         console.log(SC.mapIgnoreExcluded.replace('<N>', String(ig.length)));
       } else {
         try { fs.unlinkSync(path.join(root, '.gos', 'codebase', 'map-ignored.txt')); } catch { /* absent already — best-effort */ }
       }
-      if (scan.ignore_dead) console.log(SC.mapIgnoreDeadRule.replace('<rules>', scan.ignore_dead.join(', ')));
+      if (scan.ignore_dead) console.log(`⚠ ${SC.mapIgnoreDeadRule.replace('<rules>', scan.ignore_dead.join(', '))}`);
     }
     for (const f of ['.dependency-cruiser.cjs', '.dependency-cruiser.json', '.import-linter.cfg']) {   // third-party config probe
       if (fs.existsSync(path.join(root, f))) { console.log(`⚠ ${SC.probeHint.replace('<file>', f)}`); break; }

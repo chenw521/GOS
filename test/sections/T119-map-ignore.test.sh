@@ -129,10 +129,21 @@ set +e; SECOUT=$(bash "$SHIP/security.sh" 2>&1); SECRC=$?; set -e
 assert_exit "T119.3f security.sh flags the string eval without the list (exit 2)" 2 "$SECRC"
 set +e; node "$GOS" map scan >/dev/null 2>&1; RESCAN_RC=$?; set -e
 assert_exit "T119.3g rescan rematerializes the list" 0 "$RESCAN_RC"
+# forged/stale provenance must not narrow the scan: a list whose HEAD slice
+# mismatches the current HEAD is ignored wholesale (full scan)
+sed -i '1s/@ .*/@ deadbeef/' .gos/codebase/map-ignored.txt
+set +e; FOUT=$(bash "$SHIP/cleanup-scan.sh" 2>&1); FRC=$?; set -e
+assert_exit "T119.3j stale-provenance list is refused (full scan)" 1 "$FRC"
+assert_contains "T119.3k stale-provenance findings still name vendored code" "vendor/mxgraph" "$FOUT"
+node "$GOS" map scan >/dev/null 2>&1
 chmod 000 .gos/codebase/map-ignored.txt
-set +e; COUT=$(bash "$SHIP/cleanup-scan.sh" 2>&1); CRC=$?; set -e
-assert_exit "T119.3h unreadable list restores unfiltered files (grep rc>=2 contract)" 1 "$CRC"
-assert_contains "T119.3i unreadable-list findings still name vendored code" "vendor/mxgraph" "$COUT"
+if [ "$(id -u)" = "0" ]; then
+  echo "  ℹ T119.3h skipped: chmod 000 stays readable under root (unreadability covered by the rc>=2 contract path)"
+else
+  set +e; COUT=$(bash "$SHIP/cleanup-scan.sh" 2>&1); CRC=$?; set -e
+  assert_exit "T119.3h unreadable list restores unfiltered files (grep rc>=2 contract)" 1 "$CRC"
+  assert_contains "T119.3i unreadable-list findings still name vendored code" "vendor/mxgraph" "$COUT"
+fi
 chmod 644 .gos/codebase/map-ignored.txt
 
 # --- .4 dead rule: a rule matching nothing is reported; live exclusion is unaffected
@@ -456,8 +467,9 @@ assert_contains "T119.16e zh row: exact relpath" 'src/gen/api.ts' "$ZSEC"
 assert_contains "T119.16f zh byproduct note names the list file" ".gos/codebase/map-ignored.txt" "$ZSEC"
 
 # --- .17 gate fix hints: both map gate fix strings name map-ignore
-set +e; HINTS=$(grep -c "via .gos/map-ignore" "$GOS_ROOT/bin/lib/ops/gate.cjs"); set -e
-assert_eq "T119.17a both gate fix hints name map-ignore" "2" "$HINTS"
+set +e; H1=$(grep -c "exclude vendored paths via .gos/map-ignore then rescan" "$GOS_ROOT/bin/lib/ops/gate.cjs"); H2=$(grep -c "third-party code: exclude via .gos/map-ignore then rescan" "$GOS_ROOT/bin/lib/ops/gate.cjs"); set -e
+assert_eq "T119.17a parse-failures hint names map-ignore" "1" "$H1"
+assert_eq "T119.17b dup-fn hint names map-ignore" "1" "$H2"
 
 # --- .18 ship-script parity on the self repo: no list file -> full scan, clean
 set +e; COUT=$(cd "$GOS_ROOT" && bash skills/gos-ship/scripts/cleanup-scan.sh 2>&1); CRC=$?; set -e

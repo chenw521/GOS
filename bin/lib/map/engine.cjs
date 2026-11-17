@@ -111,15 +111,16 @@ function scanSources(root) {
   let ignoredFiles = [];
   let deadRules = [];
   if (ig.size > 0) {
-    const globs = [...ig].filter((g) => g.includes('*'));
-    const hit = (rel) => ig.has(rel) || globs.some((g) => core.globMatch(g, rel));
-    ignoredFiles = files.filter(hit);
-    kept = files.filter((rel) => !hit(rel));
+    const hit = mapIgnorePredicate(ig);
+    ignoredFiles = [];
+    kept = [];
+    for (const rel of files) (hit(rel) ? ignoredFiles : kept).push(rel);
     // dead rule = matches no walker-admitted file (kept or excluded) and no
     // tracked file; semantic-only rules (e.g. bare .md paths) stay alive via git
     const universe = new Set(files);
     for (const p of core.trackedFiles(root).exact) universe.add(p);
-    deadRules = [...ig].filter((r) => ![...universe].some((p) => (r.includes('*') ? core.globMatch(r, p) : p === r)));
+    const uni = [...universe];
+    deadRules = [...ig].filter((r) => !uni.some((p) => (r.includes('*') ? core.globMatch(r, p) : p === r)));
   }
   // Single content read per file (REVIEW #3): pass 1 reads + guards + collects raw
   // (from, spec) pairs; resolution happens AFTER the ok-set is known so guard-skipped
@@ -198,6 +199,11 @@ function loadMapIgnore(root) {   // .gos/map-ignore: glob list, tracked; + .md l
   return out;
 }
 
+function mapIgnorePredicate(rules) {   // single membership predicate: exact full relpath OR `*`-glob (fnmatch, `*` crosses `/`)
+  const globs = [...rules].filter((g) => g.includes('*'));
+  return (p) => rules.has(p) || globs.some((g) => core.globMatch(g, p));
+}
+
 const SEMANTIC_EXTS = new Set([...Array.from(MAP_EXTS), '.md', '.sh']);
 
 let _acorn = null;
@@ -220,12 +226,13 @@ function acornCtx() {
 function semanticUniverse(root) {
   const t = core.trackedFiles(root);
   const ig = loadMapIgnore(root);
+  const igHit = mapIgnorePredicate(ig);
   const out = [];
   for (const p of t.exact) {
     const e = path.extname(p), top = p.split('/')[0];
     if (!SEMANTIC_EXTS.has(e)) continue;
     if (top === '.gos' || MAP_SKIP_DIRS.has(top) || top.startsWith('test-')) continue;
-    if (ig.has(p) || [...ig].some((g) => g.includes('*') && core.globMatch(g, p))) continue;
+    if (igHit(p)) continue;
     out.push(p);
   }
   return out;
@@ -789,6 +796,7 @@ Object.assign(module.exports, {
   semanticUniverse,
   readUniverseLines,
   loadMapIgnore,
+  mapIgnorePredicate,
   buildExtractorCtx,
   runExtractors,
   fnSetFingerprint,
