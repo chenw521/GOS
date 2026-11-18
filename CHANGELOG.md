@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add close the two stage-back gap mirrors of the archived map-ignore scan task with in-flow resolutions covering registry ID alignment and the en.cjs Files declaration (R-01) [2026-11-18]
 - Add name map-ignore in both codemap fix hints and document the glob semantics layering in README en/zh (R-27, D-04) (D-04/R-27) [2026-11-17]
 - Add attribute gate C4 missing-vs-peak fns through peak.owners x map-ignore with approve-gated baseline-reset guidance on full coverage (R-26, D-02) (D-02/R-26) [2026-11-17]
 - Add rematerialize .gos/codebase/map-ignored.txt on every scan and consume it from cleanup-scan.sh and security.sh via grep -vxFf with a pinned exit-code contract (R-24/R-25, D-03) (D-03/R-24) [2026-11-17]
