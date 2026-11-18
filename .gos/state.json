@@ -2,13 +2,14 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "VERIFY",
+  "current_stage": "SHIP",
   "completed_stages": [
     "INTENT",
     "THINK",
     "PLAN",
     "BUILD",
-    "REVIEW"
+    "REVIEW",
+    "VERIFY"
   ],
   "intent": {
     "summary": "Honor .gos/map-ignore at the scanSources file-collection layer so vendored JS never enters the parse/dedup universe (fixes codemap gate permanent failure in vendored repos, chenw521/GOS#64); shared exclusion also wired into cleanup-scan.sh and security.sh",
@@ -129,7 +130,74 @@
       }
     }
   ],
-  "observable_truths": [],
+  "observable_truths": [
+    {
+      "id": "T1",
+      "description": "a repo with vendored dup-fn JS and a .gos/map-ignore rule covering it passes gos map scan then gate codemap green (was permanent red on codemap-dup-fn-name)",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"-c\",\"grep -hE \\\"T119\\\\\\\\.(1c|2c|2d) \\\" .gos/cache/section-runs/20261117T101743Z-full29956.log | tee .gos/task/08a3f0b6/evidence/t1.log\"]",
+        "output_excerpt": "✓ T119.2c gate codemap green with vendored excluded (exit 0)",
+        "artifact_path": ".gos/task/08a3f0b6/evidence/t1.log",
+        "replay": true
+      }
+    },
+    {
+      "id": "T2",
+      "description": "after that scan .gos/codebase/map-ignored.txt exists with generated-at + HEAD provenance on line 1 and lists exactly the vendored files; deleted when exclusions drop to zero",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/08a3f0b6/evidence/t2.sh\"]",
+        "output_excerpt": "assert-hits: 5",
+        "artifact_path": ".gos/task/08a3f0b6/evidence/t2.log",
+        "replay": true
+      }
+    },
+    {
+      "id": "T3",
+      "description": "cleanup-scan.sh and security.sh run clean on vendored console.log/eval with the list present; findings reproduce when the list is removed, unreadable, or provenance-stale",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/08a3f0b6/evidence/t3.sh\"]",
+        "output_excerpt": "✓ T119.3a cleanup-scan clean with the list present (exit 0)",
+        "artifact_path": ".gos/task/08a3f0b6/evidence/t3.log",
+        "replay": true
+      }
+    },
+    {
+      "id": "T4",
+      "description": "a polluted pre-fix peak triggers the guided advisory naming approve baseline-reset + map baseline reset; following it rotates the peak and clears the advisory",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/08a3f0b6/evidence/t4.sh\"]",
+        "output_excerpt": "✓ T119.7i baseline reset without the approve record dies (exit 1)",
+        "artifact_path": ".gos/task/08a3f0b6/evidence/t4.log",
+        "replay": true
+      }
+    },
+    {
+      "id": "T5",
+      "description": "both READMEs carry the map-ignore section with all four glob-semantics rows and both gate fix hints name map-ignore; scan prints the excluded-count line only when files were excluded",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/08a3f0b6/evidence/t5.sh\"]",
+        "output_excerpt": "README.md:4",
+        "artifact_path": ".gos/task/08a3f0b6/evidence/t5.log",
+        "replay": true
+      }
+    },
+    {
+      "id": "T6",
+      "description": "on the GOS self-repo (no map-ignore) scan output and deps.json shape are unchanged (schema 3, no new keys) and pack-check stays green with the new census entry",
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/08a3f0b6/evidence/t6.sh\"]",
+        "output_excerpt": "self-scan: exit 0",
+        "artifact_path": ".gos/task/08a3f0b6/evidence/t6.log",
+        "replay": true
+      }
+    }
+  ],
   "gaps": [
     {
       "id": "G-1794907015839",

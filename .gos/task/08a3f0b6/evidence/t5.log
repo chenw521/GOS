@@ -1,0 +1,5 @@
+README.md:4
+README.zh-CN.md:4
+hint-fragments: 1
+  ✓ T119.2b scan prints the excluded-count line
+  ✓ T119.4c advisory names the dead rule

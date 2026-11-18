@@ -1,0 +1,8 @@
+self-scan: exit 0
+deps-shape-ok schema 3
+PACKCHECK-GREEN
+  ✓ T119.12a self-repo scan (no rule file) exits 0 (exit 0)
+  ✓ T119.12b self-repo scan prints no excluded-count line
+  ✓ T119.12c self-repo deps.json keeps the pre-fix structure (schema 3, no exclusion keys)
+  ✓ T119.12c self-repo deps.json keeps the pre-fix structure (exit 0)
+  ✓ T119.12d no map-ignored.txt byproduct on the self repo

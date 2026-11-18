@@ -1,0 +1,9 @@
+  ✓ T119.7g guided advisory names the approve step
+  ✓ T119.7h guided advisory names the reset step
+  ✓ T119.7i baseline reset without the approve record dies (exit 1)
+  ✓ T119.8k no missing-vs-peak advisory after the rotation
+  ✓ T119.9c list provenance header hand-staled
+  ✓ T119.9d gate codemap green with a stale list (exit 0)
+  ✓ T119.9e plain missing-vs-peak advisory still prints
+  ✓ T119.9f stale list suppresses the reset guidance
+assert-hits: 8
