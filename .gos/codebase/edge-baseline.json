@@ -1,9 +1,9 @@
 {
   "current": {
-    "total": 1567,
-    "callgraph": 988,
+    "total": 1568,
+    "callgraph": 989,
     "testof_fn": 127,
-    "fn_count": 921,
+    "fn_count": 922,
     "fns": [
       "absTaskPath",
       "ackWaitMs",
@@ -851,6 +851,7 @@
       "t",
       "tailWindow",
       "takeFlagValue",
+      "taskAnchorFromState",
       "taskPathRel",
       "teardownCommitlint",
       "testBreak",
@@ -1150,6 +1151,7 @@
       "resolveByPrefix": "bin/lib/knowledge/lessons.cjs",
       "expiryFor": "bin/lib/knowledge/lessons.cjs",
       "ensureMigratedLocked": "bin/lib/knowledge/lessons.cjs",
+      "taskAnchorFromState": "bin/lib/knowledge/lessons.cjs",
       "cmdLessons": "bin/lib/knowledge/lessons.cjs",
       "sanitizeMilestoneName": "bin/lib/knowledge/milestone.cjs",
       "writeLv4Marker": "bin/lib/knowledge/milestone.cjs",
@@ -1850,8 +1852,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "132d43f72b8969a8",
-    "at": "2026-11-17T10:38:13.672Z"
+    "fp": "2264a5559183a88f",
+    "at": "2026-11-18T04:59:18.550Z"
   },
   "peak": {
     "total": 2065,

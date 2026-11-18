@@ -13,6 +13,10 @@ const fsio = require('./fsio.cjs');
 const gitprobe = require('./gitprobe.cjs');
 
 const STATE_SCHEMA_VERSION = 6;
+// Birth-phase constant for rows born at project init, before any phase
+// existed ('init'). Single source for every consumer: decision writes,
+// milestone close classification, rendered views, legacy migration.
+const INIT_PHASE = 'init';
 
 const PROJECT_SCHEMA_VERSION = 2;
 
@@ -524,6 +528,17 @@ function loadProject() {
  // REVIEW: read-class encountering a FUTURE schema version must REFUSE the data
   // (status/resume still work off state.json) — not just warn and consume it
   if (errs.includes('__FUTURE__')) return null;
+  // One-time backfill (idempotent, strict equality only): decision rows
+  // born at init carried the placeholder 'P0' or the migration-era
+  // 'legacy' as birth_phase — both mean the same thing and rewrite to
+  // INIT_PHASE. Prefixed values like 'P0: real' are real phase rows and
+  // are left untouched (bare-prefix extension is normalizeRowPhaseRefs
+  // business, never this migration). Persisted by the next saveProject.
+  if (Array.isArray(obj.decisions)) {
+    for (const d of obj.decisions) {
+      if (d && (d.birth_phase === 'P0' || d.birth_phase === 'legacy')) d.birth_phase = INIT_PHASE;
+    }
+  }
   return obj;
 }
 
@@ -1501,6 +1516,7 @@ function humanGateGuard(cmdName) {
 
 module.exports = {
   STATE_PATH_FIELDS,
+  INIT_PHASE,
   humanGateGuard,
   NO_CMD_KEY,
   COMMANDS,

@@ -376,33 +376,52 @@ function cmdArchive(opts = {}) {
     process.exit(1);
   }
   if (hadIncidents) {
-    // incident → two-of-one: today's lesson (either side) OR `gos lessons skip --reason`
- // P15 : reads json truth only (entries.at + json.audit) — no sidecar, no md parse
+    // incident → two-of-one: a lesson for THIS task (either side) OR a skip
+    // covering the current incident count. Task-anchored audit rows (the
+    // details.task payload flattened onto the row by appendAuditRow) satisfy
+    // across calendar days — the lessons gate follows the task lifecycle,
+    // not the wall clock. Unanchored legacy rows keep the today-only match
+    // of the pre-anchor era.
     const today = new Date().toISOString().slice(0, 10);
+    const tid = core.currentTaskId(state);
+    const incidentsNow = gapCount + rtFindings;
     const projDisp = knowledge.loadStoreDisplay(core.lessonsPaths('project'));
     const globDisp = knowledge.loadStoreDisplay(core.lessonsPaths('model'));
-    const todayIn = (store) => store && Array.isArray(store.entries) && store.entries.some((e) => e && e.at === today);
-    const hasTodayLesson = todayIn(projDisp.store) || todayIn(globDisp.store);
- // REVIEW #3: is per-archive two-of-one — only a skip taken TODAY exempts THIS
-    // archive; a historical skip row must never become a permanent blanket exemption.
+    const auditOf = (disp) => ((disp.ok && disp.store && Array.isArray(disp.store.audit)) ? disp.store.audit : []);
+    const hasTaskLesson = (disp) => {
+      if (!disp.ok || !disp.store || !Array.isArray(disp.store.entries)) return false;
+      const live = new Set(disp.store.entries.map((e) => (e ? e.id : null)));
+      // add rows anchor the original entry; edit rows re-anchor the amended
+      // successor (an amend must not silently drop the task anchor)
+      return auditOf(disp).some((r) => r && (r.what === 'add' || r.what === 'edit') && r.new_id && r.task === tid && live.has(r.new_id));
+    };
+    // legacy fallback: entry dated today whose add row carries no task anchor
+    const legacyTodayIn = (disp) => {
+      if (!disp.ok || !disp.store || !Array.isArray(disp.store.entries)) return false;
+      const anchorOf = new Map(auditOf(disp).filter((r) => r && r.what === 'add' && r.new_id).map((r) => [r.new_id, r.task || null]));
+      return disp.store.entries.some((e) => e && e.at === today && !anchorOf.get(e.id));
+    };
+    const hasLesson = hasTaskLesson(projDisp) || hasTaskLesson(globDisp) || legacyTodayIn(projDisp) || legacyTodayIn(globDisp);
+    // skip exemption: an anchored skip must cover the current incident
+    // snapshot (re-arms on new incidents); a legacy unanchored skip exempts
+    // this archive only when taken today
     let skipInfo = null;
-    if (projDisp.ok && projDisp.store && Array.isArray(projDisp.store.audit)) {
-      const skips = projDisp.store.audit.filter((r) => r && r.what === 'skip');
-      const todaySkips = skips.filter((r) => String(r.at || '').startsWith(today));
-      if (todaySkips.length) skipInfo = { count: skips.length, last: todaySkips[todaySkips.length - 1] };
-    }
-    if (!hasTodayLesson && !skipInfo) {
+    const skips = auditOf(projDisp).filter((r) => r && r.what === 'skip');
+    const exempts = skips.filter((r) => (r.task === tid && Number.isInteger(r.incidents) && r.incidents >= incidentsNow)
+      || (!r.task && String(r.at || '').startsWith(today)));
+    if (exempts.length) skipInfo = { count: skips.length, last: exempts[exempts.length - 1] };
+    if (!hasLesson && !skipInfo) {
       console.error(`${core.CONTRACTS.state_semantics.archiveBlocked} (F-1 lessons enforcement):`);
       console.error(`  This task had ${gapCount} gap(s) / ${rtFindings} red-team finding(s).`);
-      console.error('  Record a lesson first (either side counts):');
+      console.error('  Record a lesson for this task first (either side counts):');
       console.error(`    gos lessons add --type project --scene "<scene>" --lesson "<what changed>"`);
       console.error(`    gos lessons add --type model --scene "<scene>" --lesson "<what changed>"`);
-      console.error('  …or take the explicit exemption:');
+      console.error('  …or take the explicit exemption (re-arms on new incidents):');
       console.error('    gos lessons skip --reason "<why this residual risk is accepted>"');
       console.error('  Then re-run `gos archive`.');
       process.exit(1);
     }
-    if (skipInfo && !hasTodayLesson) {
+    if (skipInfo && !hasLesson) {
       console.log(`⚠ F-1 exemption taken — last skip reason: ${skipInfo.last.why} (cumulative skips: ${skipInfo.count})`);
     }
   }

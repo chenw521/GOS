@@ -727,6 +727,7 @@ module.exports = {
   'milestone.closeClassDropped': 'dropped——随历史擦除',
   'milestone.closeClassParkedOwned': 'parked-owned——按原样结转',
   'milestone.closeClassPendingOwned': 'pending-owned——按原样结转',
+  'milestone.closeClassInitOwned': 'init-owned——项目 init 期诞生，按原样结转',
   'milestone.closeNone': '（无）',
   'milestone.closePhasesWiped': 'done——随历史擦除（{n}）',
   'milestone.closePhasesCarriedParked': 'parked——按原样结转（{n}）',

@@ -12,352 +12,332 @@
     "VERIFY"
   ],
   "intent": {
-    "summary": "Honor .gos/map-ignore at the scanSources file-collection layer so vendored JS never enters the parse/dedup universe (fixes codemap gate permanent failure in vendored repos, chenw521/GOS#64); shared exclusion also wired into cleanup-scan.sh and security.sh",
-    "confirmed": true,
-    "confirmation": {
-      "mode": "headless-auto",
-      "ts": "2026-11-17T03:29:24.081Z"
-    }
+    "summary": "Two live papercuts fixed ahead of the thematic batches: #62 (F-1 lessons same-day check ages out across UTC midnight and blocks gos archive) and #1 (DECISIONS.md renders a phantom Phase P0 absent from ROADMAP.md). Small, independently shippable; clears the daily-friction class before the structural work begins. Issues #62 #1",
+    "confirmed": true
   },
   "approvals": {
-    "THINK": "2026-11-17T05:43:12.729Z",
-    "PLAN": "2026-11-17T09:19:30.429Z",
-    "ARCHIVE": "2026-11-18T01:15:00.547Z"
+    "THINK": "2026-11-18T03:09:34.694Z",
+    "PLAN": "2026-11-18T03:15:29.915Z",
+    "ARCHIVE": "2026-11-18T05:20:36.097Z"
   },
-  "spec_path": ".gos/archive/2026-11-18-publicize-task-honor-gos-map-ignore-at-the-sc/task/08a3f0b6/spec.md",
-  "plan_path": ".gos/archive/2026-11-18-publicize-task-honor-gos-map-ignore-at-the-sc/task/08a3f0b6/plan.md",
-  "project": false,
+  "spec_path": null,
+  "plan_path": null,
+  "project": true,
   "requirements": [
     {
       "id": "R-01",
-      "text": "Honor .gos/map-ignore at the scanSources file-collection layer so vendored JS never enters the parse/dedup universe (...",
+      "text": "Two live papercuts fixed ahead of the thematic batches: #62 (F-1 lessons same-day check ages out across UTC midnight ...",
       "phase": null,
       "level": 3
     },
     {
-      "id": "R-24",
-      "text": "scan writes .gos/codebase/map-ignored.txt when >=1 file excluded: sorted paths, provenance header, census entry; deleted at zero exclusions; dead-rule advisory",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-25",
-      "text": "cleanup-scan.sh and security.sh filter FILES via grep -vxFf with pinned exit-code contract; missing list = full scan",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-26",
-      "text": "gate C4 advisory attributes missing fns via peak.owners x exclusion; full coverage guides approve-gated baseline reset; partial annotates N of M",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-27",
-      "text": "fix hints name map-ignore; scan prints excluded count; README en+zh glob-semantics section",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-28",
-      "text": "no-map-ignore repos byte-identical; self-repo structural gates green; pack-check green with new census entry",
+      "id": "R-29",
+      "text": "init-born decision rows survive milestone close visibly",
       "phase": null,
       "status": "active"
     }
   ],
   "decisions": [
     {
-      "id": "D-01",
-      "title": "Scope: scanSources filters by loadMapIgnore at collection; ignored paths enter no universe",
-      "rationale": "9 consumers share one filtered universe; sandbox U/P: dup 1->0 gate red->green; src->vendored degrades to externals; post-filter reopens the divergence behind this bug",
-      "birth_phase": "P0",
-      "status": "open",
+      "id": "D-101",
+      "title": "F-1 lesson check anchors to task lifecycle: lesson.at >= claim UTC date replaces calendar-day match",
+      "rationale": "Same cure shape as #49 changelog precedent: anchor to task lifecycle, drop wall clock. No checking power lost (same-day never verified relevance). Claim anchor always available at archive time",
+      "birth_phase": "P25: quick-fix batch",
+      "status": "superseded",
       "anchor": null,
       "covered": false,
       "covered_by": null,
-      "born_at": "2026-11-17T05:18:05.415Z",
+      "born_at": "2026-11-18T02:44:22.232Z",
       "dig": {
-        "command": "sandbox U/P scan comparison + issue search repo:chenw521/GOS vendored OR closure + globMatch probe",
-        "output_excerpt": "U: files=3 edges=1 dup=[mxActor]; P: files=1 externals=1 dup=[]; glob: public/**=true public=false",
-        "anchor": "bin/lib/map/engine.cjs:82"
+        "command": "sed -n 378,408p bin/lib/task/archive.cjs && jq .task_head_history .gos/state.json",
+        "output_excerpt": "const today = new Date().toISOString().slice(0,10); entries.some((e) => e && e.at === today) // claim anchor: at 2026-11-18T02:29:14.503Z what=claim",
+        "anchor": "bin/lib/task/archive.cjs:381"
       }
     },
     {
-      "id": "D-02",
-      "title": "Polluted peaks: gate advisory attributes missing fns via peak.owners x map-ignore; full coverage guides baseline reset",
-      "rationale": "peak.owners already exists (engine.cjs:515 write, gate.cjs:1158 read); sandbox attribution 2/2 covered; auto-reset would bypass reason-match/single-consumption/archive audit chain",
-      "birth_phase": "P0",
+      "id": "D-102",
+      "title": "F-1 anchors to task identity: add/skip audit rows carry details.task; archive accepts this task's rows",
+      "rationale": "Time window was a proxy for identity, never a requirement. Audit details is the designed free surface. Kills midnight aging and foreign-row loopholes. Supersedes D-101",
+      "birth_phase": "P25: quick-fix batch",
       "status": "open",
       "anchor": null,
       "covered": false,
       "covered_by": null,
-      "born_at": "2026-11-17T05:23:58.163Z",
+      "born_at": "2026-11-18T02:53:25.230Z",
       "dig": {
-        "command": "sandbox peak.owners attribution probe + gate.cjs/map/index.cjs reset-chain read",
-        "output_excerpt": "peak.owners maps mxActor/mxShape -> public/drawio/js/embed.dev.js; attribution all-covered=true; reset chain: reason match + single consumption + edge-history.ndjson archive",
-        "anchor": "bin/lib/ops/gate.cjs:1158"
+        "command": "sed -n 186,212p bin/lib/knowledge/lessons-json.cjs && grep -n appendAuditRow bin/lib/knowledge/lessons.cjs",
+        "output_excerpt": "detail fields deliberately stay OUTSIDE the self-hash payload; add row details {new_id}; skip row has no details yet",
+        "anchor": "bin/lib/knowledge/lessons-json.cjs:188"
+      },
+      "supersedes": "D-101"
+    },
+    {
+      "id": "D-103",
+      "title": "init decisions get explicit init constant: unified writes, init-owned survive class, one-time legacy migration",
+      "rationale": "Ghost-wipe at milestone close is the real disease (D-01..D-04 would be silently wiped); render inconsistency is only the symptom. init is a real lifecycle stage, not missing data",
+      "birth_phase": "P25: quick-fix batch",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null,
+      "born_at": "2026-11-18T02:57:16.952Z",
+      "dig": {
+        "command": "grep -n ghost bin/lib/knowledge/milestone.cjs && jq .decisions[].birth_phase .gos/project/project.json",
+        "output_excerpt": "done-owned, null-phase, ghost and dropped rows go; D-01..D-04 -> P0, phases array has no P0",
+        "anchor": "bin/lib/knowledge/milestone.cjs:236"
       }
     },
     {
-      "id": "D-03",
-      "title": "Script exclusion: scan materializes map-ignored.txt (unmapped-fns twin, untracked+provenance); scripts grep -vxFf",
-      "rationale": "glob single-point in scan; census layer: tracked trio are non-regenerable truths, map-ignored is regenerable byproduct; audit anchor is tracked map-ignore; avoids vendored-upgrade churn",
-      "birth_phase": "P0",
+      "id": "D-104",
+      "title": "Lessons lifecycle redesign gets its own phase P26, queued before P22; P22 keeps non-lessons ledger work",
+      "rationale": "User ruling: the redesign is structural, not a quick-fix batch item. Positioned before P22 so its lessons digestion mechanics land on the new architecture, not the old flat ledger",
+      "birth_phase": "P25: quick-fix batch",
       "status": "open",
       "anchor": null,
       "covered": false,
       "covered_by": null,
-      "born_at": "2026-11-17T05:35:12.180Z",
+      "born_at": "2026-11-18T03:02:45.362Z",
       "dig": {
-        "command": "census.json entries for .gos/codebase/* + git ls-files cross-check",
-        "output_excerpt": "network/allowlist/edge-baseline git:true (non-regenerable); unmapped-fns git:false note=regenerable+provenance; map-ignored belongs to the latter layer",
-        "anchor": "census.json:257"
+        "ruling": "User ruling 2026-11-18 during P25 THINK: this redesign work goes to an independent new phase"
       }
     },
     {
-      "id": "D-04",
-      "title": "Discoverability: fix hints name map-ignore; scan prints excluded count; README en+zh gains glob-semantics section",
-      "rationale": "reporter found the mechanism only by reading source — zero discoverability is a root cause of this bug family; fix-hint loop and rename-vendored hints are both dead ends named in the issue",
-      "birth_phase": "P0",
+      "id": "D-105",
+      "title": "Ship as two feature branches, two PRs, serial squash-merge: feat/f1-task-anchor Fixes #62, feat/init-phase Fixes #1",
+      "rationale": "Required Gate (audit mode) check blocked merging PR 1 with the split's structural reds. User ruling 2026-11-18: one branch, one PR closing #62 and #1, audit-green merge.",
+      "birth_phase": "P25: quick-fix batch",
       "status": "open",
       "anchor": null,
       "covered": false,
       "covered_by": null,
-      "born_at": "2026-11-17T05:37:18.006Z",
+      "born_at": "2026-11-18T03:05:01.741Z",
       "dig": {
-        "command": "grep README.md map sections + map --help ignore probe + gate.cjs fix strings",
-        "output_excerpt": "README has no map section (only changelog line 312); map help mentions no ignore; parse-failures fix=run map scan (loop); dup-fn fix=rename the fn",
-        "anchor": "bin/lib/ops/gate.cjs:1090"
+        "command": "git ls-files bin/lib/knowledge/lessons.cjs bin/lib/task/archive.cjs bin/lib/knowledge/decisions.cjs bin/lib/knowledge/milestone.cjs bin/lib/render/views.cjs test/sections/T18-f1-gate-lessons.test.sh test/sections/T3-decision.test.sh test/sections/T7-render.test.sh",
+        "output_excerpt": "all 8 files exist; #62 touches lessons.cjs+archive.cjs+T18, #1 touches decisions.cjs+milestone.cjs+views.cjs+T3/T7 — disjoint sets",
+        "anchor": "bin/lib/task/archive.cjs:378"
       }
     }
   ],
   "observable_truths": [
     {
       "id": "T1",
-      "description": "a repo with vendored dup-fn JS and a .gos/map-ignore rule covering it passes gos map scan then gate codemap green (was permanent red on codemap-dup-fn-name)",
+      "description": "A task with incidents archives cleanly even when its lesson was recorded before UTC midnight: F-1 passes on this-task audit anchor (cross-midnight reproduction from issue #62 no longer blocks)",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\"-c\",\"grep -hE \\\"T119\\\\\\\\.(1c|2c|2d) \\\" .gos/cache/section-runs/20261117T101743Z-full29956.log | tee .gos/task/08a3f0b6/evidence/t1.log\"]",
-        "output_excerpt": "✓ T119.2c gate codemap green with vendored excluded (exit 0)",
-        "artifact_path": ".gos/archive/2026-11-18-publicize-task-honor-gos-map-ignore-at-the-sc/task/08a3f0b6/evidence/t1.log",
+        "command": "[\"bash\",\".gos/task/p25/evidence/t1.sh\"]",
+        "output_excerpt": "cross-midnight-exempts=1",
+        "artifact_path": ".gos/archive/2026-11-18-publicize-phase-p25-two-live-papercuts-fixed-ahead/task/p25/evidence/t1t2-raw.log",
         "replay": true
       }
     },
     {
       "id": "T2",
-      "description": "after that scan .gos/codebase/map-ignored.txt exists with generated-at + HEAD provenance on line 1 and lists exactly the vendored files; deleted when exclusions drop to zero",
+      "description": "A lesson or skip recorded in ANOTHER task's context no longer satisfies F-1 for this task (foreign-row loophole closed)",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\".gos/task/08a3f0b6/evidence/t2.sh\"]",
-        "output_excerpt": "assert-hits: 5",
-        "artifact_path": ".gos/archive/2026-11-18-publicize-task-honor-gos-map-ignore-at-the-sc/task/08a3f0b6/evidence/t2.log",
+        "command": "[\"bash\",\".gos/task/p25/evidence/t2.sh\"]",
+        "output_excerpt": "foreign-blocks=1 add-then-rm=1 stale-skip=1",
+        "artifact_path": ".gos/archive/2026-11-18-publicize-phase-p25-two-live-papercuts-fixed-ahead/task/p25/evidence/t1t2-raw.log",
         "replay": true
       }
     },
     {
       "id": "T3",
-      "description": "cleanup-scan.sh and security.sh run clean on vendored console.log/eval with the list present; findings reproduce when the list is removed, unreadable, or provenance-stale",
+      "description": "gos decision add without a claimed task renders Phase as explicit init in DECISIONS.md with a header note; no phantom P0 anywhere in rendered views",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\".gos/task/08a3f0b6/evidence/t3.sh\"]",
-        "output_excerpt": "✓ T119.3a cleanup-scan clean with the list present (exit 0)",
-        "artifact_path": ".gos/archive/2026-11-18-publicize-task-honor-gos-map-ignore-at-the-sc/task/08a3f0b6/evidence/t3.log",
+        "command": "[\"bash\",\".gos/task/p25/evidence/t3.sh\"]",
+        "output_excerpt": "note=1 nobareP0=1 cell=1 legacy=1",
+        "artifact_path": ".gos/archive/2026-11-18-publicize-phase-p25-two-live-papercuts-fixed-ahead/task/p25/evidence/t3-raw.log",
         "replay": true
       }
     },
     {
       "id": "T4",
-      "description": "a polluted pre-fix peak triggers the guided advisory naming approve baseline-reset + map baseline reset; following it rotates the peak and clears the advisory",
+      "description": "Decisions born with birth_phase init survive a milestone close (visible as init-owned in the close report) instead of being ghost-wiped",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\".gos/task/08a3f0b6/evidence/t4.sh\"]",
-        "output_excerpt": "✓ T119.7i baseline reset without the approve record dies (exit 1)",
-        "artifact_path": ".gos/archive/2026-11-18-publicize-task-honor-gos-map-ignore-at-the-sc/task/08a3f0b6/evidence/t4.log",
+        "command": "[\"bash\",\".gos/task/p25/evidence/t4.sh\"]",
+        "output_excerpt": "dec=1 req=1 strictP0=1 survivors=1",
+        "artifact_path": ".gos/archive/2026-11-18-publicize-phase-p25-two-live-papercuts-fixed-ahead/task/p25/evidence/t4-raw.log",
         "replay": true
       }
     },
     {
       "id": "T5",
-      "description": "both READMEs carry the map-ignore section with all four glob-semantics rows and both gate fix hints name map-ignore; scan prints the excluded-count line only when files were excluded",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\".gos/task/08a3f0b6/evidence/t5.sh\"]",
-        "output_excerpt": "README.md:4",
-        "artifact_path": ".gos/archive/2026-11-18-publicize-task-honor-gos-map-ignore-at-the-sc/task/08a3f0b6/evidence/t5.log",
-        "replay": true
-      }
-    },
-    {
-      "id": "T6",
-      "description": "on the GOS self-repo (no map-ignore) scan output and deps.json shape are unchanged (schema 3, no new keys) and pack-check stays green with the new census entry",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\".gos/task/08a3f0b6/evidence/t6.sh\"]",
-        "output_excerpt": "self-scan: exit 0",
-        "artifact_path": ".gos/archive/2026-11-18-publicize-task-honor-gos-map-ignore-at-the-sc/task/08a3f0b6/evidence/t6.log",
-        "replay": true
-      }
+      "description": "Two independently squash-merged PRs land the fixes; each merge auto-closes its issue (#62, #1)",
+      "verified": false,
+      "evidence": null,
+      "desc": "One merged PR (all checks green) lands both fixes; its merge auto-closes #62 and #1",
+      "waived": true,
+      "waive_reason": "delivery truth externally blocked pre-freeze: the squash merge and issue autoclose happen after the branch state freezes; asserted from merged main at ship reporting",
+      "waived_at": "2026-11-18T04:22:46.323Z"
     }
   ],
   "gaps": [
     {
-      "id": "G-1794907015839",
+      "id": "G-1794973464495",
       "type": "major",
-      "description": "Fluid back to PLAN: align plan Covers R-02..R-06 to registry-assigned R-24..R-28 (requirement add used the project counter); re-freeze snapshot",
-      "status": "fixed",
-      "resolution": "cured in-flow: plan re-committed with registry IDs R-24..R-28 (snapshot-force audit row recorded); gate bidirectional coverage green at REVIEW",
-      "resolved_at": "2026-11-18T01:31:45.696Z"
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
     },
     {
-      "id": "G-1794907162157",
+      "id": "G-1794974395639",
       "type": "major",
-      "description": "Fluid back to PLAN: declare bin/lib/core/locales/en.cjs in T2/T5 Files (T74 en-zh parity required the alias file; post-freeze discovery)",
-      "status": "fixed",
-      "resolution": "cured in-flow: bin/lib/core/locales/en.cjs declared in T2/T5 Files at the re-committed plan; diff-hit gate green through SHIP",
-      "resolved_at": "2026-11-18T01:31:45.817Z"
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
+    },
+    {
+      "id": "G-1794975794723",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
+    },
+    {
+      "id": "G-1794977317727",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
     }
   ],
-  "activation_source": "headless",
-  "task_head": "08a3f0b637a00f6751d8f94ce8ac2ef699006bb6",
+  "phase_name": "P25: quick-fix batch",
+  "task_head": "b90100192a16c2606865c53abb20054a43279f8e",
+  "task_head_history": [
+    {
+      "sha": "b90100192a16c2606865c53abb20054a43279f8e",
+      "at": "2026-11-18T02:29:14.503Z",
+      "what": "claim"
+    }
+  ],
   "spec_gate_version": 3,
-  "spec_sha256": "9f2cec813ccc7e0b42becb0f2e9eba357b13c41e3877ba5562deda5e76cc9bb9",
+  "spec_sha256": "2caa6d3f051a240311bc4d5fae311367bde16954a0e05eb08dc2a724945b89ac",
   "plan_snapshot": {
     "tasks": [
       {
+        "id": "T0",
+        "covers": [
+          "D-104"
+        ],
+        "files": [],
+        "wave": 1
+      },
+      {
         "id": "T1",
         "covers": [
-          "D-01",
-          "R-01",
-          "R-28"
+          "D-102",
+          "D-101"
         ],
         "files": [
-          "bin/lib/map/engine.cjs",
-          "test/sections/T30-map-edges.test.sh",
+          "bin/lib/knowledge/lessons.cjs",
           "test/sections/T46-module-structure.test.sh"
         ],
-        "wave": 1
-      },
-      {
-        "id": "T3",
-        "covers": [
-          "D-03",
-          "R-25"
-        ],
-        "files": [
-          "skills/gos-ship/scripts/cleanup-scan.sh",
-          "skills/gos-ship/scripts/security.sh"
-        ],
-        "wave": 1
-      },
-      {
-        "id": "T4",
-        "covers": [
-          "D-04",
-          "R-27"
-        ],
-        "files": [
-          "bin/lib/ops/gate.cjs"
-        ],
-        "wave": 1
-      },
-      {
-        "id": "T6",
-        "covers": [
-          "D-04",
-          "R-27"
-        ],
-        "files": [
-          "README.md",
-          "README.zh-CN.md"
-        ],
-        "wave": 1
+        "wave": 2
       },
       {
         "id": "T2",
         "covers": [
-          "D-03",
-          "D-04",
-          "R-24",
-          "R-27"
+          "D-102",
+          "D-101"
         ],
         "files": [
-          "bin/lib/map/index.cjs",
-          "census.json",
-          "bin/lib/core/state.cjs",
-          "bin/lib/core/locales/en.cjs",
-          "bin/lib/core/locales/zh.cjs",
-          "test/sections/T46-module-structure.test.sh"
+          "bin/lib/task/archive.cjs"
         ],
         "wave": 2
+      },
+      {
+        "id": "T3",
+        "covers": [
+          "D-102",
+          "R-01"
+        ],
+        "files": [
+          "test/sections/T18-f1-gate-lessons.test.sh"
+        ],
+        "wave": 2
+      },
+      {
+        "id": "T4",
+        "covers": [
+          "D-103"
+        ],
+        "files": [
+          "bin/lib/knowledge/decisions.cjs"
+        ],
+        "wave": 3
       },
       {
         "id": "T5",
         "covers": [
-          "D-02",
-          "R-26"
+          "D-103",
+          "R-29"
         ],
         "files": [
-          "bin/lib/ops/gate.cjs",
-          "bin/lib/core/state.cjs",
+          "bin/lib/knowledge/milestone.cjs",
           "bin/lib/core/locales/en.cjs",
-          "bin/lib/core/locales/zh.cjs",
-          "test/sections/T46-module-structure.test.sh"
+          "bin/lib/core/locales/zh.cjs"
         ],
-        "wave": 2
+        "wave": 3
+      },
+      {
+        "id": "T6",
+        "covers": [
+          "D-103"
+        ],
+        "files": [
+          "bin/lib/render/views.cjs"
+        ],
+        "wave": 3
+      },
+      {
+        "id": "T7",
+        "covers": [
+          "D-103"
+        ],
+        "files": [
+          "bin/lib/core/state.cjs"
+        ],
+        "wave": 3
       },
       {
         "id": "T8",
         "covers": [
-          "D-01",
-          "D-03",
+          "D-103",
           "R-01",
-          "R-24",
-          "R-25"
+          "R-29"
         ],
         "files": [
-          "test/sections/T119-map-ignore.test.sh"
+          "test/sections/T3-decision.test.sh",
+          "test/sections/T7-render.test.sh",
+          "test/sections/T114-milestone-open-close.test.sh"
         ],
         "wave": 3
       },
       {
         "id": "T9",
         "covers": [
-          "D-02",
-          "R-26"
+          "D-105",
+          "R-01"
         ],
         "files": [
-          "test/sections/T119-map-ignore.test.sh"
+          ".gos/task/p25/plan.md"
         ],
-        "wave": 3
-      },
-      {
-        "id": "T10",
-        "covers": [
-          "R-01",
-          "R-27",
-          "R-28",
-          "D-04"
-        ],
-        "files": [
-          "test/sections/T119-map-ignore.test.sh"
-        ],
-        "wave": 3
+        "wave": 4
       }
     ],
     "audit": [
       {
-        "at": "2026-11-17T09:17:19.961Z",
+        "at": "2026-11-18T03:45:05.823Z",
         "what": "snapshot-force"
       }
     ],
     "meta": {
       "waveValidation": {
         "ok": true,
-        "waves": 3
+        "waves": 4
       }
     }
   },
-  "changelog_user_summary": "name map-ignore in both codemap fix hints and document the glob semantics layering in README en/zh (R-27, D-04)",
+  "changelog_user_summary": "Introduce the explicit init birth marker for decision rows: writes stamp the constant, DECISIONS.md renders init with a header note, init rows survive milestone close, and a one-time migration rewrites legacy P0/legacy values",
   "checkpoints": [],
-  "completed_at": "2026-11-18T01:15:03.474Z"
+  "completed_at": "2026-11-18T05:20:38.819Z"
 }

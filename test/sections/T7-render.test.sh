@@ -181,4 +181,30 @@ OUT=$(node "$GOS" status 2>&1)
 assert_contains "index large warning fires" "index large" "$OUT"
 assert_contains "warning counts 60 entries" "60 entries (>50)" "$OUT"
 
+# --- .8: init-phase rows render explicitly (init constant + header note, no bare P0 cell)
+t7_teardown; t7_setup
+node "$GOS" init 4 "init rows" --project >/dev/null 2>&1
+python3 -c "
+import json
+p=json.load(open('.gos/project/project.json'))
+p['phases']=[{'name':'P1: core','goal':'g','status':'active'}]
+p['decisions']=[
+ {'id':'D-01','title':'init born','rationale':'r','birth_phase':'init','status':'open','anchor':None,'covered':False,'covered_by':None},
+ {'id':'D-02','title':'legacy placeholder','rationale':'r','birth_phase':'P0','status':'open','anchor':None,'covered':False,'covered_by':None},
+ {'id':'D-03','title':'real P0 phase row','rationale':'r','birth_phase':'P0: real','status':'open','anchor':None,'covered':False,'covered_by':None},
+]
+json.dump(p,open('.gos/project/project.json','w'),indent=2)"
+set +e; OUT=$(node "$GOS" render 2>&1); RC=$?; set -e
+assert_exit "render with init-phase rows exits 0" 0 "$RC"
+MD=$(cat .gos/project/DECISIONS.md 2>/dev/null)
+assert_contains "header note explains the init phase" "before any phase existed" "$MD"
+assert_contains "init-born row renders the init cell" "| init born | r | init | open |" "$MD"
+assert_contains "legacy P0 placeholder migrates to init in the rendered view" "| legacy placeholder | r | init | open |" "$MD"
+assert_contains "prefixed real phase row stays untouched" "| real P0 phase row | r | P0: real | open |" "$MD"
+if printf '%s' "$MD" | grep -qF '| P0 |'; then
+  echo "  ✗ bare P0 column value still rendered"; FAIL=$((FAIL+1))
+else
+  echo "  ✓ no bare P0 column value anywhere"; PASS=$((PASS+1))
+fi
+
 t7_teardown

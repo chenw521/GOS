@@ -148,5 +148,10 @@ import json, os
 pj=json.load(open('.gos/project/project.json'))
 print(os.path.exists('.gos/state.json'), len(pj['decisions']), pj['decisions'][0]['id'])")
 assert_contains "stateless bootstrap add is project-only (no task state; truth store holds D-01)" "False 1 D-01" "$DUAL"
+DUAL_BP=$(python3 -c "
+import json
+pj=json.load(open('.gos/project/project.json'))
+print(pj['decisions'][0]['birth_phase'])")
+assert_contains "stateless add stamps birth_phase init (no task context)" "init" "$DUAL_BP"
 
 t3_teardown

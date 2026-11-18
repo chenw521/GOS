@@ -38,8 +38,8 @@ function writeLv4Marker() {
 }
 
 // Close-time row disposition classes, in report order. The first four wipe
-// with the milestone history; the last three survive the close.
-const CLOSE_ROW_CLASSES = ['done-owned', 'null-phase', 'ghost', 'dropped', 'parked-owned', 'pending-owned', 'active-owned'];
+// with the milestone history; the last four survive the close.
+const CLOSE_ROW_CLASSES = ['done-owned', 'null-phase', 'ghost', 'dropped', 'parked-owned', 'pending-owned', 'active-owned', 'init-owned'];
 
 // Classify one decision or requirement row against the phase array. The
 // owning phase field is selected by row id prefix (decision rows carry
@@ -53,6 +53,8 @@ const CLOSE_ROW_CLASSES = ['done-owned', 'null-phase', 'ghost', 'dropped', 'park
 //                  that survive normalization land here)
 //   null-phase     phase reference is null/absent/empty
 //   done-owned / pending-owned / active-owned  owner status mapping
+//   init-owned     phase reference is the init constant — born at project
+//                  init, before any phase existed; survives verbatim
 // Anything else refuses (fail closed) — an unclassifiable row never reaches
 // a wipe decision by accident.
 function classifyRowDisposition(row, phases) {
@@ -62,6 +64,7 @@ function classifyRowDisposition(row, phases) {
   const field = /^D-/.test(row.id) ? 'birth_phase' : /^R-/.test(row.id) ? 'phase' : null;
   if (field === null) core.die(core.t('milestone.closeUnknownRowId', { id: row.id }));
   const ref = row[field];
+  if (ref === core.INIT_PHASE) return 'init-owned';
   let owner = null;
   let ghost = false;
   if (ref === null || ref === undefined || ref === '') {
@@ -134,6 +137,7 @@ function closeReportLines(project, buckets) {
     dropped: core.t('milestone.closeClassDropped'),
     'parked-owned': core.t('milestone.closeClassParkedOwned'),
     'pending-owned': core.t('milestone.closeClassPendingOwned'),
+    'init-owned': core.t('milestone.closeClassInitOwned'),
   };
   const idNum = (id) => parseInt((/^[DR]-(\d+)$/.exec(String(id)) || [0, 0])[1], 10) || 0;
   const family = (header, rows) => {
@@ -234,12 +238,12 @@ function closeApprovalGate(consume) {
 }
 
 // In-memory wipe: done-owned, null-phase, ghost and dropped rows go; rows
-// owned by parked/pending phases stay verbatim; done phase entries go,
-// parked/pending entries stay verbatim; the milestone is stamped closed and
-// last_archived_phase resets. Classification happens against the FULL phase
-// array, so rows are filtered before phases.
+// owned by parked/pending phases and init-born rows stay verbatim; done
+// phase entries go, parked/pending entries stay verbatim; the milestone is
+// stamped closed and last_archived_phase resets. Classification happens
+// against the FULL phase array, so rows are filtered before phases.
 function closeApplyWipe(project) {
-  const keep = new Set(['parked-owned', 'pending-owned']);
+  const keep = new Set(['parked-owned', 'pending-owned', 'init-owned']);
   const rowFilter = (rows) => rows.filter((row) => {
     const cls = classifyRowDisposition(row, project.phases);
     if (cls === 'active-owned') core.die(core.t('milestone.closeInvariantActive', { id: row.id }));

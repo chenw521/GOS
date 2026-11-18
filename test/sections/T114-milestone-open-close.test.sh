@@ -59,6 +59,7 @@ for (let i = 31; i <= 40; i++) dec.push(decRow(`D-${i}`, null));
 for (let i = 41; i <= 50; i++) dec.push(decRow(`D-${i}`, "G9: ghost"));
 dec.push(decRow("D-51", "P1: d1"));
 dec.push(decRow("D-52", "PK: parked"));
+dec.push(decRow("D-71", "init"));
 for (let i = 53; i <= 62; i++) dec.push(decRow(`D-${i}`, "P7: pend"));
 for (let i = 63; i <= 70; i++) dec.push(decRow(`D-${i}`, "PB: pend"));
 p.decisions = dec;
@@ -71,6 +72,7 @@ for (let i = 41; i <= 50; i++) req.push(reqRow(`R-${i}`, "P1: d1", "dropped"));
 req.push(reqRow("R-51", "G9: ghost", "dropped"));
 req.push(reqRow("R-52", "PK: parked"));
 req.push(reqRow("R-53", "PK: parked", "dropped"));
+req.push(reqRow("R-68", "init"));
 for (let i = 54; i <= 60; i++) req.push(reqRow(`R-${i}`, "P8: pend"));
 for (let i = 61; i <= 67; i++) req.push(reqRow(`R-${i}`, "PA: pend"));
 p.requirements = req;
@@ -101,8 +103,8 @@ const out = [
   same(post.requirements, pre.requirements, "id"),
   same(post.phases, pre.phases, "name"),
 ].join("|");
-const wipeOk = (post.decisions.every((d) => ["PK: parked", "P7: pend", "PB: pend"].includes(d.birth_phase))
-  && post.requirements.every((r) => ["PK: parked", "P8: pend", "PA: pend"].includes(r.phase))) ? "ok" : "class";
+const wipeOk = (post.decisions.every((d) => ["PK: parked", "P7: pend", "PB: pend", "init"].includes(d.birth_phase))
+  && post.requirements.every((r) => ["PK: parked", "P8: pend", "PA: pend", "init"].includes(r.phase))) ? "ok" : "class";
 console.log(out + "|" + wipeOk);
 ' "$1"
 }
@@ -183,6 +185,8 @@ assert_contains "report counts null-phase decisions" "null-phase — wiped with 
 assert_contains "report counts ghost decisions" "ghost phase ref — wiped with history (10)" "$OUT"
 assert_contains "report counts parked-owned decisions" "parked-owned — carried verbatim (1)" "$OUT"
 assert_contains "report counts pending-owned decisions" "pending-owned — carried verbatim (18)" "$OUT"
+assert_contains "report counts init-owned decisions" "init-owned — born at project init, carried verbatim (1): D-71" "$OUT"
+assert_contains "report counts init-owned requirements" "init-owned — born at project init, carried verbatim (1): R-68" "$OUT"
 assert_contains "report counts dropped requirements" "dropped — wiped with history (11)" "$OUT"
 assert_contains "report separates phases wipe/carry" "done, wiped with history (6)" "$OUT"
 assert_contains "dry-run next step names the approval" "record the MILESTONE-CLOSE approval" "$OUT"
@@ -261,7 +265,7 @@ POST=$(node -e "
 const p = require('./.gos/project/project.json');
 const doneReqs = p.requirements.filter((r) => r.status !== 'dropped' && ['P0: d0','P1: d1','P2: d2','P3: d3','P4: d4','P5: d5'].includes(r.phase)).length;
 console.log([p.phases.map((x) => x.status), p.decisions.length, p.requirements.length, doneReqs, JSON.stringify(p.last_archived_phase), typeof p.milestone.closed_at === 'string'].join('|'))")
-[ "$POST" = "parked,pending,pending,pending,pending,pending|19|16|0|null|true" ] && { echo "  ✓ post-close wipe side (carried 6 phases, 19 dec, 16 req, 0 done-owned reqs, last_archived null, closed_at stamped)"; PASS=$((PASS+1)); } || { echo "  ✗ post-close shape wrong: $POST"; FAIL=$((FAIL+1)); }
+[ "$POST" = "parked,pending,pending,pending,pending,pending|20|17|0|null|true" ] && { echo "  ✓ post-close wipe side (carried 6 phases, 20 dec, 17 req, 0 done-owned reqs, last_archived null, closed_at stamped)"; PASS=$((PASS+1)); } || { echo "  ✗ post-close shape wrong: $POST"; FAIL=$((FAIL+1)); }
 APPROVED=$(node -e "const s=require('./.gos/state.json'); console.log(('MILESTONE-CLOSE' in (s.approvals||{})) ? 'left' : 'consumed')")
 [ "$APPROVED" = "consumed" ] && { echo "  ✓ approval record consumed by the executing close"; PASS=$((PASS+1)); } || { echo "  ✗ approval record survived the close"; FAIL=$((FAIL+1)); }
 if grep -q 'ceremony note kept verbatim through close' .gos/project/DECISIONS.md; then
@@ -283,14 +287,17 @@ node "$GOS" init --project --project=bare-refs >/dev/null 2>&1
 node -e '
 const fs = require("fs");
 const p = JSON.parse(fs.readFileSync(".gos/project/project.json", "utf8"));
-p.phases = [{ name: "P0: d0", goal: "g", status: "done", completed_at: "2026-11-01T00:00:00.000Z" }, { name: "PK: parked", goal: "g", status: "parked", park_reason: "deps" }];
-p.decisions = [{ id: "D-01", title: "bare code ref", rationale: "", birth_phase: "P0", status: "open", anchor: null, covered: false, covered_by: null }];
+p.phases = [{ name: "P0: d0", goal: "g", status: "done", completed_at: "2026-11-01T00:00:00.000Z" }, { name: "PX: dx", goal: "g", status: "done", completed_at: "2026-11-01T00:00:00.000Z" }, { name: "PK: parked", goal: "g", status: "parked", park_reason: "deps" }];
+p.decisions = [
+  { id: "D-01", title: "strict init placeholder", rationale: "", birth_phase: "P0", status: "open", anchor: null, covered: false, covered_by: null },
+  { id: "D-02", title: "bare code ref", rationale: "", birth_phase: "PX", status: "open", anchor: null, covered: false, covered_by: null }];
 p.requirements = [{ id: "R-01", text: "canonical too", phase: "PK", status: "active" }];
 fs.writeFileSync(".gos/project/project.json", JSON.stringify(p, null, 2));'
 cp .gos/project/project.json bare-pre.json
 set +e; OUT=$(node "$GOS" milestone close --carry-parked 2>&1); RC=$?; set -e
 assert_exit "bare-ref dry run exits 0" 0 "$RC"
-assert_contains "bare decision ref classified against the canonical owner" "done-owned — wiped with history (1): D-01" "$OUT"
+assert_contains "bare decision ref classified against the canonical owner" "done-owned — wiped with history (1): D-02" "$OUT"
+assert_contains "strict P0 placeholder classifies init-owned (never prefix-extends)" "init-owned — born at project init, carried verbatim (1): D-01" "$OUT"
 assert_contains "bare requirement ref classified against the parked owner" "parked-owned — carried verbatim (1): R-01" "$OUT"
 if cmp -s .gos/project/project.json bare-pre.json; then
   echo "  ✓ canonicalization stays in memory through the dry run"; PASS=$((PASS+1))

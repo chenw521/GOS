@@ -176,7 +176,7 @@ function printDecisionRows(rows, { includeSuperseded = false } = {}) {
   for (const d of sorted) {
     if (d.status === 'superseded' && !includeSuperseded) continue;
     const esc = String(d.title || '').replace(/\|/g, '\\|');
-    console.log(`| ${d.id} | ${esc} | ${d.status || 'open'} | ${d.birth_phase || 'P0'} |`);
+    console.log(`| ${d.id} | ${esc} | ${d.status || 'open'} | ${d.birth_phase || core.INIT_PHASE} |`);
     shown++;
   }
   if (!shown) console.log('(no decisions)');
@@ -262,7 +262,7 @@ function cmdDecision(args) {
     } else if (bornAt > DIG_FLOOR_ERA) {
       core.die(`dig floor: decisions born after ${DIG_FLOOR_ERA} require dig evidence at add — ${digShapesHint()}`);
     }
-    const d = { id, title, rationale, birth_phase: phaseL || (state && state.phase_name) || 'P0', status: 'open', anchor, covered: false, covered_by: null, born_at: bornAt };
+    const d = { id, title, rationale, birth_phase: phaseL || (state && state.phase_name) || core.INIT_PHASE, status: 'open', anchor, covered: false, covered_by: null, born_at: bornAt };
     if (dig) d.dig = dig;
     if (supersedes) d.supersedes = supersedes;
     let touchedProject = false;
@@ -394,7 +394,7 @@ function cmdDecision(args) {
       if (sd || pd) { console.log(`⚠ ${e.id} already exists — skipped`); skipped++; continue; }
       const terr = decisionTitleErr(e.title);
       if (terr) { console.log(`⚠ ${e.id} skipped: ${terr}`); skipped++; continue; }
-      const d = { id: e.id, title: e.title, rationale: '', birth_phase: (state && state.phase_name) || 'P0', status: 'open', anchor: null, covered: false, covered_by: null };
+      const d = { id: e.id, title: e.title, rationale: '', birth_phase: (state && state.phase_name) || core.INIT_PHASE, status: 'open', anchor: null, covered: false, covered_by: null };
       if (state) state.decisions.push(d);
       if (dual) project.decisions.push(d);
       console.log(`${core.CONTRACTS.command_contracts.decisionAdded}${e.id.slice(2)} added: ${e.title}`);
