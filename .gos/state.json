@@ -2,7 +2,7 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "SHIP",
+  "current_stage": "DONE",
   "completed_stages": [
     "INTENT",
     "THINK",
@@ -17,7 +17,8 @@
   },
   "approvals": {
     "THINK": "2026-11-18T03:09:34.694Z",
-    "PLAN": "2026-11-18T03:15:29.915Z"
+    "PLAN": "2026-11-18T03:15:29.915Z",
+    "ARCHIVE": "2026-11-18T05:20:36.097Z"
   },
   "spec_path": null,
   "plan_path": null,
@@ -125,7 +126,7 @@
       "evidence": {
         "command": "[\"bash\",\".gos/task/p25/evidence/t1.sh\"]",
         "output_excerpt": "cross-midnight-exempts=1",
-        "artifact_path": ".gos/task/p25/evidence/t1t2-raw.log",
+        "artifact_path": ".gos/archive/2026-11-18-publicize-phase-p25-two-live-papercuts-fixed-ahead/task/p25/evidence/t1t2-raw.log",
         "replay": true
       }
     },
@@ -136,7 +137,7 @@
       "evidence": {
         "command": "[\"bash\",\".gos/task/p25/evidence/t2.sh\"]",
         "output_excerpt": "foreign-blocks=1 add-then-rm=1 stale-skip=1",
-        "artifact_path": ".gos/task/p25/evidence/t1t2-raw.log",
+        "artifact_path": ".gos/archive/2026-11-18-publicize-phase-p25-two-live-papercuts-fixed-ahead/task/p25/evidence/t1t2-raw.log",
         "replay": true
       }
     },
@@ -147,7 +148,7 @@
       "evidence": {
         "command": "[\"bash\",\".gos/task/p25/evidence/t3.sh\"]",
         "output_excerpt": "note=1 nobareP0=1 cell=1 legacy=1",
-        "artifact_path": ".gos/task/p25/evidence/t3-raw.log",
+        "artifact_path": ".gos/archive/2026-11-18-publicize-phase-p25-two-live-papercuts-fixed-ahead/task/p25/evidence/t3-raw.log",
         "replay": true
       }
     },
@@ -158,7 +159,7 @@
       "evidence": {
         "command": "[\"bash\",\".gos/task/p25/evidence/t4.sh\"]",
         "output_excerpt": "dec=1 req=1 strictP0=1 survivors=1",
-        "artifact_path": ".gos/task/p25/evidence/t4-raw.log",
+        "artifact_path": ".gos/archive/2026-11-18-publicize-phase-p25-two-live-papercuts-fixed-ahead/task/p25/evidence/t4-raw.log",
         "replay": true
       }
     },
@@ -337,13 +338,6 @@
     }
   },
   "changelog_user_summary": "Introduce the explicit init birth marker for decision rows: writes stamp the constant, DECISIONS.md renders init with a header note, init rows survive milestone close, and a one-time migration rewrites legacy P0/legacy values",
-  "checkpoints": [
-    {
-      "stage": "BUILD",
-      "unit": "all-waves (auto at commit)",
-      "done": "T0,T1,T2,T3,T4,T5,T6,T7,T8,T9",
-      "remaining": "",
-      "at": "2026-11-18T04:48:55.546Z"
-    }
-  ]
+  "checkpoints": [],
+  "completed_at": "2026-11-18T05:20:38.819Z"
 }

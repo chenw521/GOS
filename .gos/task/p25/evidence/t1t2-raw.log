@@ -1,4 +1,0 @@
-  ✓ anchored lesson dated yesterday still exempts (cross-midnight) (exit 0)
-  ✓ foreign-task lesson row (today) does NOT exempt (exit 1)
-  ✓ anchored skip with stale incidents snapshot does NOT exempt (exit 1)
-  ✓ this-task add row whose entry was removed does NOT exempt (exit 1)
