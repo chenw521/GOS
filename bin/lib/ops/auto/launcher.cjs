@@ -682,6 +682,12 @@ function materializeSeedDir(files, baseDir, prefix) {
 //   allowFull        boolean  explicit gate for the full profile
 //   workspace        string   repo root, ro-bound into the sandbox
 //   writableRoots    string[] adapter-declared writable binds (e.g. .gos/, scratch)
+//   writablePolicy   object   { allow: string[] } — policy-bound compose:
+//                            every writable root must be a member of the
+//                            enumerated allow set and none may be the
+//                            task-state root (.gos) or any of its
+//                            ancestors; a mask-shadowed writable root
+//                            refuses instead of only reporting
 //   seedRoots        object   seed name -> materialized snapshot dir on disk
 //   store            object   store API injection (saveSnapshot/loadSnapshot);
 //                            defaults to a lazy require of ./store.cjs
@@ -766,6 +772,29 @@ function compose(profileName, opts) {
   const writableRoots = (Array.isArray(o.writableRoots) ? o.writableRoots : [])
     .filter((w) => typeof w === 'string' && w)
     .map((w) => path.resolve(w));
+  // Policy-bound writable set (the Class S frame): every writable bind
+  // must be a member of the caller's enumerated allow set, and no entry
+  // may be the task-state root (.gos) or any of its ancestors — an
+  // ancestor bind would shadow task state writable. Both violations
+  // refuse fail-closed before any argv is composed.
+  const writablePolicyActive = !!(o.writablePolicy && typeof o.writablePolicy === 'object'
+    && Array.isArray(o.writablePolicy.allow));
+  if (writablePolicyActive) {
+    const allow = o.writablePolicy.allow
+      .filter((p) => typeof p === 'string' && p)
+      .map((p) => path.resolve(p));
+    const gosRoot = o.workspace ? path.join(path.resolve(String(o.workspace)), '.gos') : null;
+    const outside = writableRoots.filter((w) => !allow.includes(w));
+    const shadowing = gosRoot ? writableRoots.filter((w) => isAncestorPath(w, gosRoot)) : [];
+    if (outside.length || shadowing.length) {
+      return {
+        ok: false, code: 'auto.launcher.writable-outside-policy', profile: name, ...base,
+        detail: 'writable binds must stay inside the enumerated allow set and never shadow the task-state root',
+        ...(outside.length ? { outside } : {}),
+        ...(shadowing.length ? { shadowing } : {}),
+      };
+    }
+  }
   // Adapter-declared read-only mounts (the host exec tree). Never a symlink
   // and never the filesystem root — the mount must exist inside the sandbox
   // without pulling the whole host in.
@@ -910,6 +939,17 @@ function compose(profileName, opts) {
     envOut.GIT_COMMITTER_EMAIL = GIT_IDENTITY.email;
   }
   const writableShadowed = writableRoots.filter((w) => masks.some((m) => isAncestorPath(m.dest, w)));
+  // Fail closed under the writable policy: a writable root covered by a
+  // later mask mount would write into the mask and vanish — the spawn
+  // would believe itself writable while losing every write. Non-policy
+  // composes keep the report-only meta field.
+  if (writablePolicyActive && writableShadowed.length) {
+    return {
+      ok: false, code: 'auto.launcher.writable-shadowed', profile: name, ...base,
+      detail: 'a writable root is covered by a mask mount and would lose every write',
+      writableShadowed: writableShadowed.slice(),
+    };
+  }
   return {
     ok: true,
     profile: name,

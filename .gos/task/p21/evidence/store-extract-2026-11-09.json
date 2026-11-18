@@ -1,0 +1,82 @@
+{
+  "source": "/home/bio-06/.local/share/gos/85af56a090a78924/store.json",
+  "extractedAtIso": "2026-11-18T08:14:00.654Z",
+  "note": "dogfood auto store, read-only extraction",
+  "counters": {
+    "spawnCount": 30,
+    "tripCount": 4
+  },
+  "limits": {
+    "N": 3,
+    "K": 5,
+    "B": 30
+  },
+  "breaker_records": [
+    {
+      "layer": "N",
+      "cls": "task",
+      "ts": "2026-11-09T04:38:15.128Z",
+      "detail": "stage=VERIFY stage VERIFY: 3 consecutive failed spawns (limit N=3) | deny 'sudo':   ✓ verb 'sudo' -> unknown-verb; deny 'rm -rf /':   ✓ FAIL: rm -rf /; deny 'rm -rf /':   ✓ FAIL: rm -rf /*; deny 'rm -rf /':   ✓ FAIL: rm -rf /home; deny 'rm -rf /':   ✓ FAIL: rm -rf /etc; deny 'rm -rf /':   ✓ FAIL: rm -rf /Users; deny 'rm -rf /':   ✓ FAIL: rm -rf /srv; deny 'rm -rf /':   ✓ FAIL: rm -rf /run; deny 'rm -rf /':   ✓ FAIL: rm -rf /mnt/backup (depth-2 mount root); deny 'rm"
+    },
+    {
+      "layer": "N",
+      "cls": "task",
+      "ts": "2026-11-09T09:17:13.875Z",
+      "detail": "stage=THINK stage THINK: 3 consecutive failed spawns (limit N=3) | terminal ok but no new stage-labeled commit reachable from HEAD"
+    },
+    {
+      "layer": "B",
+      "cls": "task",
+      "ts": "2026-11-09T10:49:14.165Z",
+      "detail": "stage=VERIFY spawn budget exhausted: 30 spawned sessions (limit B=30)"
+    }
+  ],
+  "think_window_stamps": {
+    "addc34ca-b254-485a-95a4-d57264ce671b-1": {
+      "stage": "THINK",
+      "streamSha256": "2ce7ac4258982a0691d4c8483b6e54269f2018be81763e332f4d4727c1999fab",
+      "spawnedAtIso": "2026-11-09T09:05:29.892Z",
+      "stampedAtIso": "2026-11-09T09:10:09.776Z",
+      "modelPinned": null,
+      "modelObserved": null,
+      "headSha256": "2ce7ac4258982a0691d4c8483b6e54269f2018be81763e332f4d4727c1999fab",
+      "tailSha256": "2ce7ac4258982a0691d4c8483b6e54269f2018be81763e332f4d4727c1999fab",
+      "commandCount": 23,
+      "totalBytes": 186820,
+      "denyHits": 0,
+      "denyCommandHits": 0
+    },
+    "addc34ca-b254-485a-95a4-d57264ce671b-2": {
+      "stage": "THINK",
+      "streamSha256": "1f663998685dae8ec44ea260165e994db303cae0b1d756ffb4ae1bbe93258f35",
+      "spawnedAtIso": "2026-11-09T09:10:11.577Z",
+      "stampedAtIso": "2026-11-09T09:11:49.835Z",
+      "modelPinned": null,
+      "modelObserved": null,
+      "headSha256": "1f663998685dae8ec44ea260165e994db303cae0b1d756ffb4ae1bbe93258f35",
+      "tailSha256": "1f663998685dae8ec44ea260165e994db303cae0b1d756ffb4ae1bbe93258f35",
+      "commandCount": 10,
+      "totalBytes": 64460,
+      "denyHits": 0,
+      "denyCommandHits": 0
+    },
+    "addc34ca-b254-485a-95a4-d57264ce671b-3": {
+      "stage": "THINK",
+      "streamSha256": "ffaa16b45cce89655fb738425c03804190f1772b6a62df22f47483c98177249f",
+      "spawnedAtIso": "2026-11-09T09:11:51.607Z",
+      "stampedAtIso": "2026-11-09T09:17:13.778Z",
+      "modelPinned": null,
+      "modelObserved": null,
+      "headSha256": "ffaa16b45cce89655fb738425c03804190f1772b6a62df22f47483c98177249f",
+      "tailSha256": "ffaa16b45cce89655fb738425c03804190f1772b6a62df22f47483c98177249f",
+      "commandCount": 24,
+      "totalBytes": 227028,
+      "denyHits": 0,
+      "denyCommandHits": 0
+    }
+  },
+  "baselineState": {
+    "sha256": "4bc251cddca386fb523422fe750acac5421cc987a6ee5b12b8982225b3e800b5",
+    "recordedAtIso": "2026-11-09T10:49:14.116Z"
+  }
+}

@@ -699,6 +699,9 @@ module.exports = {
   'auto.cli.run.detached': 'auto runner detached (pid {pid}) — follow progress with `{cmd:auto} status`; run log: {log}',
   'auto.cli.run.report': 'auto run: {status} ({reason})',
   'auto.cli.run.iterations': 'iterations: {n}',
+  'autoDetach.completed': 'detached runner finished (exit {code}) — run log: {log}',
+  'autoDetach.waitTimeout': 'detached runner did not confirm the run lock within {sec}s — run log: {log}',
+  'autoDetach.exitedUnproven': 'detached runner exited before confirming the run lock — run log: {log}',
   'auto.cli.disposition.usage': 'Usage: {cmd:auto} disposition <runId> --reason "<text>" [--by <name>]',
   'auto.cli.disposition.recorded': 'disposition recorded for run {runId} (by {by})',
   'auto.cli.disposition.mirror': 'ledger mirror (hash only): {path}',
@@ -784,4 +787,16 @@ module.exports = {
   'resume.noTask.labelPending': 'pending',
   'resume.noTask.labelParked': 'parked',
   'resume.noTask.cloneWarning': '⚠ no local state.json — task state is machine-local (never committed); an in-flight task may live on another machine',
+
+ // ---- branch reap (content-landed local branch retirement; verdict JSON on
+ // stdout, these surfaces cover the refusal/die paths and apply failures) ----
+  'branchReap.err.unknownSub': 'branch: unknown subcommand \'{sub}\' — {usage}',
+  'branchReap.err.unknownArg': 'branch reap: unknown argument \'{arg}\' — {usage}',
+  'branchReap.err.baseRequired': 'branch reap: --base <ref> is required — {usage}',
+  'branchReap.err.noRepo': 'branch reap: not a git work tree — run from inside the repository being reaped',
+  'branchReap.err.baseMissing': 'branch reap: base ref \'{base}\' does not resolve to a commit — fetch first or point --base at an existing ref',
+  'branchReap.err.replaceRefs': 'branch reap: refusing — refs/replace/* is non-empty ({n} ref(s)): replace refs rewrite history and could fake the content-landed verdict; remove them and re-run',
+  'branchReap.err.grafts': 'branch reap: refusing — info/grafts is non-empty: grafts rewrite history and could fake the content-landed verdict; remove the grafts file and re-run',
+  'branchReap.err.runLockLive': 'branch reap --apply: refusing — a live auto run lock is held by pid {pid} on {host}: reaping mid-run would delete branches out from under the runner (dry-run needs no lock)',
+  'branchReap.apply.errors': 'branch reap --apply: {n} deletion(s) failed — see the applied:false rows in the JSON output',
 };

@@ -3,6 +3,7 @@
 module.exports = {
   ...require('./auto/cli.cjs'),
   ...require('./brownfield.cjs'),
+  ...require('./branch-reap.cjs'),
   ...require('./config.cjs'),
   ...require('./doctor.cjs'),
   ...require('./feedback.cjs'),

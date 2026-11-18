@@ -356,9 +356,12 @@ function autoRun(mods, rest, ui) {
   // top-level command-lock break), so the run subcommand recovers it from
   // the raw process argv — for `auto run` it targets the store's run lock.
   const breakLock = rest.includes('--break-lock') || process.argv.slice(2).includes('--break-lock');
-  let detach = false;
+  // Detach is the survival default (the enclosing operator terminal may time
+  // out and group-kill its process tree); --fg opts back into the foreground.
+  let detach = true;
   for (const a of rest) {
     if (a === '--detach') detach = true;
+    else if (a === '--fg') detach = false;
     else if (a === '--break-lock') continue;
     else core.die(core.t('auto.cli.unknownArg', { sub: 'run', arg: a }));
   }
@@ -374,6 +377,15 @@ function autoRun(mods, rest, ui) {
   }
   const loaded = mods.store.load();
   const opts = { detach };
+  if (detach) {
+    // The detached child is a GOS invocation in its own right and takes the
+    // repo command lock at its entry; the parent holds nothing past the
+    // fork point (its remaining work is read-and-print only).
+    core.releaseLock();
+    // Forward the original invocation to the detached child; the loop strips
+    // detach-class flags and appends --fg (the child never re-detaches).
+    opts.detachArgv = process.argv.slice(2);
+  }
   if (loaded.ok) {
     opts.profile = loaded.store.profile;
     opts.limits = loaded.store.limits;
@@ -385,8 +397,13 @@ function autoRun(mods, rest, ui) {
     core.die(`auto run: ${created.reason}${created.detail ? `: ${created.detail}` : ''}`);
   }
   created.loop.run().then((report) => {
-    if (report.ok && report.status === 'detached') {
-      console.log(core.t('auto.cli.run.detached', { pid: report.pid, log: report.log || '.gos/logs/auto-run-*.log' }));
+    if (report.status === 'detached') {
+      if (Number.isInteger(report.completed)) {
+        console.log(core.t('autoDetach.completed', { code: report.completed, log: report.log || '(none)' }));
+      } else {
+        console.log(core.t('auto.cli.run.detached', { pid: report.pid, log: report.log || '.gos/logs/auto-run-*.log' }));
+      }
+      process.exitCode = report.ok ? 0 : 1;
       return;
     }
     console.log(core.t('auto.cli.run.report', { status: report.status, reason: report.reason || '' }));
@@ -406,6 +423,12 @@ function autoRun(mods, rest, ui) {
       console.log(`✗ ${g.what}`);
       if (g.why) console.log(`    why: ${g.why}`);
       if (g.fix) console.log(`    fix: ${g.fix}`);
+    }
+    if (report.status === 'sentinel-timeout') {
+      console.log(`  ${core.t('autoDetach.waitTimeout', { sec: report.waitSec || 5, log: report.log || '(none)' })}`);
+    }
+    if (report.status === 'sentinel-missing') {
+      console.log(`  ${core.t('autoDetach.exitedUnproven', { log: report.log || '(none)' })}`);
     }
     process.exitCode = report.ok ? 0 : 1;
   }).catch((e) => {

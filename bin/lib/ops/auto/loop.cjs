@@ -383,10 +383,53 @@ function loopSpawnRunner(spec, ctx) {
   });
 }
 
+// Detach contract constants: the child proves "started" by acquiring the run
+// lock and stamping a sentinel file; the parent bounded-waits for that proof
+// (never trusting the fork alone), and run logs prune to a keep-last-N tail.
+const DETACH_SENTINEL_ENV = 'GOS_AUTO_DETACH_SENTINEL';
+const DETACH_SENTINEL_WAIT_MS = 5000;
+const DETACH_POLL_MS = 100;
+const RUN_LOG_KEEP = 5;
+
+const detachSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Detached child argv: the forwarded invocation minus every detach-class
+// flag, always carrying exactly one trailing --fg -- a detached child must
+// never re-detach (forward equivalence, no detach chain).
+function detachChildArgv(argv) {
+  const carried = (Array.isArray(argv) ? argv : []).filter((a) => a !== '--detach' && a !== '--fg');
+  carried.push('--fg');
+  return carried;
+}
+
+// Run-log rotation: keep the newest N auto-run logs (mtime descending, name
+// as the tiebreak), unlink the rest. Runs at detach start so a churn of
+// short detached runs cannot grow the log dir unbounded.
+function rotateRunLogs(logDir, keep) {
+  let names;
+  try { names = fs.readdirSync(logDir); } catch { return; }
+  const logs = [];
+  for (const name of names) {
+    if (!/^auto-run-.*\.log$/.test(name)) continue;
+    const file = path.join(logDir, name);
+    let mtimeMs = 0;
+    try { mtimeMs = fs.statSync(file).mtimeMs; } catch { /* raced away */ }
+    logs.push({ file, name, mtimeMs });
+  }
+  logs.sort((a, b) => (b.mtimeMs - a.mtimeMs) || (a.name < b.name ? 1 : -1));
+  for (const entry of logs.slice(keep)) {
+    try { fs.unlinkSync(entry.file); } catch { /* raced away */ }
+  }
+}
+
 // Real detach: spawns the CLI run command detached from this parent. The
-// child's output tees into a machine-local run log so a silent exit is
-// diagnosable from an artifact instead of a black hole.
-function defaultDetacher(command, args, opts) {
+// child's output tees into a machine-local run log; the sentinel carries the
+// child's lock verdict back -- refusal or missing proof fails the parent,
+// while a lock-acquired sentinel either detaches (child outlives the window)
+// or surfaces the child's exit code when it finishes inside the window. The
+// wait streams the child's log output to this terminal so an early refusal
+// is visible without opening the log.
+async function defaultDetacher(command, args, opts) {
   const logDir = path.join(opts.rootDir || process.cwd(), '.gos', 'logs');
   try { fs.mkdirSync(logDir, { recursive: true }); } catch { /* unwritable: fall back to ignore */ }
   let stdio = 'ignore';
@@ -396,8 +439,82 @@ function defaultDetacher(command, args, opts) {
     const fd = fs.openSync(logPath, 'a');
     stdio = ['ignore', fd, fd];
   } catch { logPath = null; }
-  const child = spawnrun.spawnDetached(command, args, { stdio, env: opts.env });
-  return { pid: child.pid, log: logPath };
+  rotateRunLogs(logDir, RUN_LOG_KEEP);
+  const sentinelPath = path.join(logDir, `auto-detach-${process.pid}-${Date.now()}.json`);
+  const child = spawnrun.spawnDetached(command, args, {
+    stdio,
+    env: { ...(opts.env || {}), [DETACH_SENTINEL_ENV]: sentinelPath },
+  });
+  let exited = false;
+  let exitCode = null;
+  try {
+    child.on('exit', (code) => { exited = true; exitCode = code; });
+    child.on('error', () => { exited = true; });
+  } catch { /* child handle already closed */ }
+
+  let forwarded = 0;
+  const forwardLog = () => {
+    if (!logPath) return;
+    try {
+      const size = fs.statSync(logPath).size;
+      if (size <= forwarded) return;
+      const fd = fs.openSync(logPath, 'r');
+      try {
+        const want = size - forwarded;
+        const buf = Buffer.allocUnsafe(want);
+        let done = 0;
+        while (done < want) {
+          const n = fs.readSync(fd, buf, done, want - done, forwarded + done);
+          if (n <= 0) break;
+          done += n;
+        }
+        if (done > 0) process.stdout.write(buf.subarray(0, done));
+        forwarded += done;
+      } finally { fs.closeSync(fd); }
+    } catch { /* log vanished or shrank mid-read */ }
+  };
+  const readSentinel = () => {
+    let raw;
+    try { raw = fs.readFileSync(sentinelPath, 'utf8'); } catch { return null; }
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch { return null; }
+  };
+
+  const deadline = Date.now() + DETACH_SENTINEL_WAIT_MS;
+  let verdict = null;
+  while (verdict == null) {
+    forwardLog();
+    const sentinel = readSentinel();
+    if (sentinel && sentinel.ok === false) {
+      while (!exited && Date.now() < deadline) { await detachSleep(DETACH_POLL_MS); forwardLog(); }
+      verdict = { ok: false, status: 'refused', reason: sentinel.reason || 'lock-refused' };
+    } else if (sentinel && sentinel.ok === true) {
+      while (!exited && Date.now() < deadline) { await detachSleep(DETACH_POLL_MS); forwardLog(); }
+      verdict = exited
+        ? { ok: exitCode === 0, status: 'detached', completed: exitCode }
+        : { ok: true, status: 'detached', completed: null };
+    } else if (exited) {
+      verdict = { ok: false, status: 'sentinel-missing', reason: 'child-exit-unproven' };
+    } else if (Date.now() >= deadline) {
+      verdict = { ok: false, status: 'sentinel-timeout', reason: 'timeout' };
+    } else {
+      await detachSleep(DETACH_POLL_MS);
+    }
+  }
+  forwardLog();
+  try { fs.unlinkSync(sentinelPath); } catch { /* already gone */ }
+  return { pid: child.pid, log: logPath, ...verdict };
+}
+
+// Sentinel writer for the runner side: a detached child (and only one -- the
+// env key is set solely by the detacher) stamps its lock verdict here so the
+// bounded-wait parent proves "started" from the lock, not from the fork.
+function writeDetachSentinel(env, payload) {
+  const target = env && env[DETACH_SENTINEL_ENV];
+  if (!target) return;
+  try { fs.writeFileSync(target, JSON.stringify(payload)); } catch { /* best effort */ }
 }
 
 function defaultCliEntry() {
@@ -424,7 +541,12 @@ function defaultCliEntryArgs() {
 //   maxIterations      safety ceiling on iterations (default: none)
 //   breakLock          pass-through to the store run-lock acquisition
 //   detach             run as a detached child instead of in-process
-//   detacher           (command, args, {rootDir, env}) -> {pid}
+//   detachArgv         forwarded CLI argv for the detached child (default
+//                      ['auto', 'run']); detach-class flags are stripped and
+//                      --fg appended so the child never re-detaches
+//   detacher           (command, args, {rootDir, env}) -> {pid, log, ok?,
+//                      status?, completed?}; the real default bounded-waits
+//                      for the child's lock-acquired sentinel
 //   gitRunner          (args, cwd) -> spawnSync shape
 //   stateReader        () -> GOS state object | null | {corrupt}
 //   spawnRunner        (spec, {wallMs}) -> spawnSync shape (sync or promise)
@@ -480,13 +602,26 @@ async function runLoop(opts) {
 
   // Detach mode: spawn the CLI run command as a detached child and return.
   // The child performs branch/lock/iteration work; the parent holds nothing
-  // (no marker — the child IS the runner, not a spawned stage session).
+  // (no marker — the child IS the runner, not a spawned stage session). The
+  // child argv carries the forwarded invocation with every detach-class flag
+  // stripped and --fg appended (forward equivalence — no re-detach chain).
   if (opts.detach) {
     const detacher = typeof opts.detacher === 'function' ? opts.detacher : defaultDetacher;
     const command = defaultCliEntry();
-    const args = [...defaultCliEntryArgs(), 'auto', 'run'];
+    const forwarded = Array.isArray(opts.detachArgv) && opts.detachArgv.length ? opts.detachArgv.slice() : ['auto', 'run'];
+    const args = [...defaultCliEntryArgs(), ...detachChildArgv(forwarded)];
     const res = await detacher(command, args, { rootDir, env: { ...env } });
-    return report({ ok: true, status: 'detached', pid: res && res.pid, log: res && res.log, argv: [command, ...args] });
+    const ok = !(res && res.ok === false);
+    return report({
+      ok,
+      status: ok ? 'detached' : (res && res.status) || 'detach-failed',
+      pid: res && res.pid,
+      log: res && res.log,
+      reason: res && res.reason,
+      completed: res ? res.completed : undefined,
+      argv: [command, ...args],
+      waitSec: Math.round(DETACH_SENTINEL_WAIT_MS / 1000),
+    });
   }
 
   // Trust store: fail-closed load, then the mode gate (resume never
@@ -512,8 +647,12 @@ async function runLoop(opts) {
   // Exclusive run lock: a second instance is refused and the holder named.
   const lock = store.acquireRunLock({ rootDir, breakLock: opts.breakLock === true });
   if (!lock.ok) {
+    writeDetachSentinel(env, { ok: false, reason: lock.reason });
     return report({ ok: false, status: 'refused', reason: lock.reason, holder: lock.holder || null, path: lock.path, guidance: lock.guidance });
   }
+  // Detach sentinel: lock acquisition is the proof of "started" that the
+  // bounded-wait parent observes (the fork alone proves nothing).
+  writeDetachSentinel(env, { ok: true, pid: process.pid, ts: now() });
 
   const stateReader = typeof opts.stateReader === 'function' ? opts.stateReader : () => defaultStateReader(rootDir);
   const spawnRunner = opts.spawnRunner || loopSpawnRunner;
@@ -1277,7 +1416,7 @@ async function drive(ctx) {
     const mutation = mutationBetween(baseline, postIdentity, loopBranch, currentBranch(gitRunner, rootDir));
 
     // ---- score the outcome ----
-    const scored = await score({ iter, spec, result, streamText, b, stage, gitRunner, rootDir, adapter, endedAtMs, idleMs: tp.idleSec * 1000, baseline, postIdentity, mutation, hits, outcome });
+    const scored = await score({ iter, spec, result, streamText, b, stage, gitRunner, rootDir, adapter, endedAtMs, idleMs: tp.idleSec * 1000, baseline, postIdentity, mutation, hits, outcome, stageAlreadyCompleted: Array.isArray(after.state.completed_stages) && after.state.completed_stages.map(String).includes(stage) });
     if (scored.err) return report(scored.err, { iterations, breaker: breakerView() });
     if (scored.tripped) return tripNow();
 
@@ -1653,6 +1792,21 @@ async function score(ctx) {
         ok: false, status: 'paused', paused: true, reason: 'external-mutation',
         expected: baseline, observed: postIdentity, detail: mutation.detail,
         guidance: store.guidanceFor('auto.loop.externalMutation', { detail: mutation.detail }),
+      },
+    };
+  }
+  if (ctx.stageAlreadyCompleted === true) {
+    // The stage's advance landed before this spawn: the pointer names a
+    // stage already in completed_stages, and the duplicate-advance guard
+    // refuses a second stage-labeled commit, so no re-drive can ever
+    // satisfy attribution. A clean session here is a pointer repair need,
+    // not a spawn failure — pause instead of burning the consecutive
+    // budget on sessions that did nothing wrong.
+    return {
+      err: {
+        ok: false, status: 'paused', paused: true, reason: 'stage-already-advanced',
+        expected: baseline, observed: postIdentity,
+        detail: `stage ${stage} is in completed_stages but current_stage still names it; the advance commit already exists and a re-drive can never produce a new one — repair the pointer (re-run the stage commit or move the pointer past ${stage}) and resume`,
       },
     };
   }

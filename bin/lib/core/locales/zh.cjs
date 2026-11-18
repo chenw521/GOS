@@ -692,6 +692,9 @@ module.exports = {
   'auto.cli.run.detached': 'auto 运行器已脱离运行（pid {pid}）— 用 `{cmd:auto} status` 查看进度；运行日志：{log}',
   'auto.cli.run.report': 'auto 运行：{status}（{reason}）',
   'auto.cli.run.iterations': '迭代次数：{n}',
+  'autoDetach.completed': '脱离运行器已完成（退出码 {code}）— 运行日志：{log}',
+  'autoDetach.waitTimeout': '脱离运行器未在 {sec} 秒内确认运行锁 — 运行日志：{log}',
+  'autoDetach.exitedUnproven': '脱离运行器在确认运行锁之前即退出 — 运行日志：{log}',
   'auto.cli.disposition.usage': '用法：{cmd:auto} disposition <runId> --reason "<说明>" [--by <署名>]',
   'auto.cli.disposition.recorded': '已为运行 {runId} 记录处置（由 {by}）',
   'auto.cli.disposition.mirror': '账本镜像（仅哈希）：{path}',
@@ -776,4 +779,16 @@ module.exports = {
   'resume.noTask.labelPending': '待办',
   'resume.noTask.labelParked': '已搁置',
   'resume.noTask.cloneWarning': '⚠ 本机没有 state.json——任务状态仅存本机（永不入库）；进行中的任务可能在另一台机器上',
+
+ // ---- 分支收割（内容已落地本地分支的退役；判定 JSON 走 stdout，
+ // 这里只覆盖拒绝/中止路径与 --apply 失败提示） ----
+  'branchReap.err.unknownSub': 'branch：未知子命令 \'{sub}\' — {usage}',
+  'branchReap.err.unknownArg': 'branch reap：未知参数 \'{arg}\' — {usage}',
+  'branchReap.err.baseRequired': 'branch reap：必须提供 --base <ref> — {usage}',
+  'branchReap.err.noRepo': 'branch reap：当前不在 git 工作树内——请在要收割的仓库中运行',
+  'branchReap.err.baseMissing': 'branch reap：基准引用 \'{base}\' 无法解析为一个提交——先 fetch，或把 --base 指向存在的引用',
+  'branchReap.err.replaceRefs': 'branch reap：拒绝执行——refs/replace/* 非空（{n} 个引用）：replace 引用会改写历史，可能伪造“内容已落地”的判定；请先移除再重跑',
+  'branchReap.err.grafts': 'branch reap：拒绝执行——info/grafts 非空：grafts 会改写历史，可能伪造“内容已落地”的判定；请先移除 grafts 文件再重跑',
+  'branchReap.err.runLockLive': 'branch reap --apply：拒绝执行——auto 运行锁由 {host} 上的 pid {pid} 持有：运行中收割会删掉 runner 脚下的分支（dry-run 无需锁）',
+  'branchReap.apply.errors': 'branch reap --apply：{n} 个删除失败——见 JSON 输出中 applied:false 的行',
 };

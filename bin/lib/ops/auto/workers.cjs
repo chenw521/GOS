@@ -179,6 +179,16 @@ const DEFAULT_VERIFY_STEPS = Object.freeze([
   Object.freeze({ id: 'truth', module: 'bin/lib/ops/gate.cjs', fn: 'computeGateVerdicts', args: [{ which: 'truths' }] }),
 ]);
 
+// Enumerated writable set for the Class S frame, as one repo-relative
+// literal: the section runner tee-logs to .gos/cache/section-runs and
+// overwrites .gos/cache/run-manifest.json — the only tree writes a fixed
+// command makes. Task state (.gos root and everything else in the tree)
+// stays read-only behind the workspace ro-bind; the launcher's writable
+// policy enforces the enumeration at compose time.
+function scriptWritableRoots(workspace) {
+  return [path.join(path.resolve(String(workspace)), '.gos', 'cache')];
+}
+
 // Store dependency is lazy (store.cjs requires this module at load): the
 // require happens at call time so both load orders stay cycle-free.
 function storeOf() {
@@ -275,7 +285,10 @@ function dispatchNeedsHost(entry) {
 // The spawn registers through the store registry as kind 'script' before
 // composing; a refused compose tears the registration back down. The
 // returned argv is the composed sandbox frame plus '--' plus the step's
-// fixed command — no adapter, no prompt, no model, no git identity.
+// fixed command — no adapter, no prompt, no model, no git identity. The
+// frame's writable set is enumerated in code (.gos/cache only) and bound
+// by the launcher's writable policy: ctx.writableRoots entries outside
+// the enumeration refuse the compose.
 function composeScriptSpawn(step, ctx = {}) {
   if (classifyStep(step) !== 'S') {
     return stepFail('not-script-step', `step ${step && step.id ? step.id : '(unidentified)'} does not carry a fixed command (Class S)`);
@@ -305,11 +318,13 @@ function composeScriptSpawn(step, ctx = {}) {
     store.removeSpawn(ctx.spawnId, ctx.rootDir);
     return { ok: false, reason: manifest.reason || 'grant-manifest-failed', detail: manifest.detail, spawnId: ctx.spawnId };
   }
+  const writable = scriptWritableRoots(ctx.workspace || ctx.rootDir);
   const composed = launcher.compose(entry.profile, {
     workspace: ctx.workspace,
     env: ctx.env || process.env,
     engineProbe: ctx.engineProbe,
-    writableRoots: ctx.writableRoots,
+    writableRoots: Array.isArray(ctx.writableRoots) ? ctx.writableRoots : writable,
+    writablePolicy: { allow: writable },
     userConfig: ctx.userConfig,
     scratchDir: reg.scratch,
     ackDir: reg.acksDir,

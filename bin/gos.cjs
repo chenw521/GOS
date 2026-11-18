@@ -225,6 +225,7 @@ function main() {
     case 'changelog': task.cmdChangelog(args); break;
     case 'feedback': ops.cmdFeedback(args); break;
     case 'push': ops.cmdPush(args); break;
+    case 'branch': ops.cmdBranch(args); break;
     case 'track': ops.cmdTrack(args); break;
     case 'render': render.cmdRender(args); break; // T8/D-03: --force bypasses the manifest refusal
     case 'auto': ops.cmdAuto(args); break;
