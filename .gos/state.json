@@ -295,5 +295,5 @@
       }
     }
   },
-  "changelog_user_summary": "Anchor F-1 lesson/skip audit rows to the claiming task so archive no longer fails across UTC midnight"
+  "changelog_user_summary": "Introduce the explicit init birth marker for decision rows: writes stamp the constant, DECISIONS.md renders init with a header note, init rows survive milestone close, and a one-time migration rewrites legacy P0/legacy values"
 }

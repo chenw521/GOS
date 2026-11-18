@@ -734,6 +734,7 @@ module.exports = {
   'milestone.closeClassDropped': 'dropped — wiped with history',
   'milestone.closeClassParkedOwned': 'parked-owned — carried verbatim',
   'milestone.closeClassPendingOwned': 'pending-owned — carried verbatim',
+  'milestone.closeClassInitOwned': 'init-owned — born at project init, carried verbatim',
   'milestone.closeNone': '(none)',
   'milestone.closePhasesWiped': 'done, wiped with history ({n})',
   'milestone.closePhasesCarriedParked': 'parked, carried verbatim ({n})',

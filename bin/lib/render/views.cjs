@@ -345,6 +345,8 @@ function renderDecisionsMd(project) {
     RENDERED_HEADER,
     '# Decision Index (active + last 2 phases)',
     '',
+    'Phase "init" = decisions born at project init, before any phase existed.',
+    '',
     '| ID | Decision | Rationale | Phase | Status |',
     '|:---|:---|:---|:---|:---|',
   ];
