@@ -379,9 +379,9 @@ function cmdArchive(opts = {}) {
     // incident → two-of-one: a lesson for THIS task (either side) OR a skip
     // covering the current incident count. Task-anchored audit rows (the
     // details.task payload flattened onto the row by appendAuditRow) satisfy
-    // across calendar days — F-1 follows the task lifecycle, not the wall
-    // clock. Unanchored legacy rows keep the today-only match of the
-    // pre-anchor era.
+    // across calendar days — the lessons gate follows the task lifecycle,
+    // not the wall clock. Unanchored legacy rows keep the today-only match
+    // of the pre-anchor era.
     const today = new Date().toISOString().slice(0, 10);
     const tid = core.currentTaskId(state);
     const incidentsNow = gapCount + rtFindings;

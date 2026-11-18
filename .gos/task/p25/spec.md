@@ -19,7 +19,8 @@ inconsistency as a Major finding — downstream agents treat generated
 views as the contract. The #1 dig surfaced a harder defect behind the
 render symptom: milestone close classifies `birth_phase = "P0"` rows as
 ghost and wipes them, so the four init-time decisions in this repo
-(D-01..D-04) would be silently erased at the first milestone close.
+(the imported-legacy quartet registered at bootstrap) would be silently
+erased at the first milestone close.
 
 ## Requirements (R-NN)
 
@@ -99,7 +100,7 @@ deepen: any option — ask for another dig round.
 
 | Option | Premise | Pros | Cons | Activates |
 |:--|:--|:--|:--|:--|
-| D-103-A | single init constant at all write sites, init-owned survive class in close, render shows init with header note, one-time legacy migration; "born at init" is a real lifecycle stage, not missing data; consumers need to recognize it, not delete or fake it | milestone ghost-wipe plugged (D-01..D-04 saved); render self-explanatory; honest semantics | touches milestone close class table (i18n report copy + CLOSE_ROW_CLASSES); constant synced across 4 consumer files; one-time migration | decisions.cjs writes, milestone.cjs classification, views.cjs render, project migrate, T3/T7/T114 fixtures |
+| D-103-A | single init constant at all write sites, init-owned survive class in close, render shows init with header note, one-time legacy migration; "born at init" is a real lifecycle stage, not missing data; consumers need to recognize it, not delete or fake it | milestone ghost-wipe plugged (the four init-era decisions saved); render self-explanatory; honest semantics | touches milestone close class table (i18n report copy + CLOSE_ROW_CLASSES); constant synced across 4 consumer files; one-time migration | decisions.cjs writes, milestone.cjs classification, views.cjs render, project migrate, T3/T7/T114 fixtures |
 | D-103-B | render-layer explicitization only; display clarity suffices | minimal diff | does not plug the milestone ghost-wipe — the disease stays | — |
 | D-103-C | stateless add associates the active phase; an owner phase prevents ghost | no classification changes | fabricated attribution: pre-claim gap decisions are not born in that phase's lifetime | — |
 | D-103-D | virtual P0 row in the phases array; init becomes a first-class phase | no special-case code | pollutes every phase-management predicate (rename collision, claim, move, archive numbering) for one constant | — |

@@ -167,10 +167,10 @@ EOF
 OUT=$(GOS_SKIP_SHIP_CHECK=1 t18_g archive 2>&1)
 assert_contains "B-21 drift warning emitted" "B-21" "$OUT"
 
-# --- T18.7: task-anchored F-1 — lesson/skip rows anchor to the claiming task ---
-# Anchored rows satisfy F-1 regardless of calendar day (task lifecycle, not
-# wall clock); foreign-task anchors never satisfy; unanchored legacy rows keep
-# the today-only match from the pre-anchor era.
+# --- .7: task-anchored lessons enforcement — rows anchor to the claiming task ---
+# Anchored rows satisfy the gate regardless of calendar day (task lifecycle,
+# not wall clock); foreign-task anchors never satisfy; unanchored legacy rows
+# keep the today-only match from the pre-anchor era.
 t18_f1_fixture() { # $1 = slug → sets T18_F1 dir + inits a task, exports T18_F1_TID
   T18_F1="$TESTBASE/test-$(date +%s)-$RANDOM-$1"
   mkdir -p "$T18_F1/.gos/cache" && cd "$T18_F1" || exit 1

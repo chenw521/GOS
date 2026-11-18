@@ -120,8 +120,8 @@ function ensureMigratedLocked(P) {
 // Audit anchor: read the claiming task non-fatally so the stateless lane (no
 // active task) still records rows without an anchor — write-class entries must
 // not bare-readState (read-mode flip precedent: task/archive.cjs recovery
-// load). The incidents snapshot (gaps + red-team findings) lets archive-side
-// F-1 detect a skip that predates newer incidents.
+// load). The incidents snapshot (gaps + red-team findings) lets the
+// archive-side lessons gate detect a skip that predates newer incidents.
 function taskAnchorFromState() {
   const prevMode = core.readState._mode;
   core.readState._mode = 'read';

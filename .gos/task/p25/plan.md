@@ -13,7 +13,8 @@
 ## Requirement Claims
 
 - [x] R-01: fix #62 and #1, independently shippable → T3, T8, T9
-- [x] R-02: init rows survive milestone close visibly → T5, T8
+- [x] R-29: init rows survive milestone close visibly (spec R-02; registry
+  issued R-29 under the global id namespace) → T5, T8
 
 ## Patterns to Follow
 
@@ -32,10 +33,12 @@
 
 #### T0: Queue P26 lessons lifecycle redesign ahead of P22
 - **Covers**: D-104
-- **Files**: .gos/project/project.json
 - **Read first**: .gos/state.json decisions D-104
 - **Approach**: phase add P26 with the audit-evidence goal text, then
   phase move ahead of P22 (both executed 2026-11-18 during THINK).
+  No Files entry: the change lives in the machine-local project registry,
+  which git diffs never see — declaring a local-only path would
+  permanently fail the diff-zero-hit gate.
 - **Done when**: `node bin/gos.cjs phase list` shows P26 at index 4
   with P22 immediately after
 - **Depends on**: none
@@ -115,7 +118,7 @@
 - **Depends on**: none (within wave)
 
 #### T5: init-owned survive class in milestone close
-- **Covers**: D-103, R-02
+- **Covers**: D-103, R-29
 - **Files**: bin/lib/knowledge/milestone.cjs, bin/lib/core/locales/en.cjs, bin/lib/core/locales/zh.cjs
 - **Read first**: bin/lib/knowledge/milestone.cjs:40-90 (class table +
   classifyRowDisposition), core.t registry (T74 language boundary)
@@ -160,7 +163,7 @@
 - **Depends on**: T4
 
 #### T8: T3/T7/T114 fixtures for the init constant
-- **Covers**: D-103, R-01, R-02
+- **Covers**: D-103, R-01, R-29
 - **Files**: test/sections/T3-decision.test.sh,
   test/sections/T7-render.test.sh,
   test/sections/T114-milestone-open-close.test.sh

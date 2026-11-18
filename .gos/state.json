@@ -25,6 +25,12 @@
       "text": "Two live papercuts fixed ahead of the thematic batches: #62 (F-1 lessons same-day check ages out across UTC midnight ...",
       "phase": null,
       "level": 3
+    },
+    {
+      "id": "R-29",
+      "text": "init-born decision rows survive milestone close visibly",
+      "phase": null,
+      "status": "active"
     }
   ],
   "decisions": [
@@ -140,7 +146,14 @@
       "evidence": null
     }
   ],
-  "gaps": [],
+  "gaps": [
+    {
+      "id": "G-1794973464495",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
+    }
+  ],
   "phase_name": "P25: quick-fix batch",
   "task_head": "b90100192a16c2606865c53abb20054a43279f8e",
   "task_head_history": [
@@ -159,9 +172,7 @@
         "covers": [
           "D-104"
         ],
-        "files": [
-          ".gos/project/project.json"
-        ],
+        "files": [],
         "wave": 1
       },
       {
@@ -211,7 +222,7 @@
         "id": "T5",
         "covers": [
           "D-103",
-          "R-02"
+          "R-29"
         ],
         "files": [
           "bin/lib/knowledge/milestone.cjs",
@@ -245,7 +256,7 @@
         "covers": [
           "D-103",
           "R-01",
-          "R-02"
+          "R-29"
         ],
         "files": [
           "test/sections/T3-decision.test.sh"
@@ -264,7 +275,12 @@
         "wave": 4
       }
     ],
-    "audit": [],
+    "audit": [
+      {
+        "at": "2026-11-18T03:45:05.823Z",
+        "what": "snapshot-force"
+      }
+    ],
     "meta": {
       "waveValidation": {
         "ok": true,
