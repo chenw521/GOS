@@ -8,7 +8,8 @@
 - [x] D-102: F-1 anchors to task identity (audit details.task, skip incidents snapshot, add-row liveness) → T1, T2, T3
 - [x] D-103: explicit init constant (unified writes, init-owned survive class, exact-equality migration) → T4, T5, T6, T7, T8
 - [x] D-104: P26 phase for lessons lifecycle redesign, queued before P22 → T0
-- [x] D-105: two branches, two PRs, serial squash-merge → T9
+- [x] D-105: single branch, single PR closing #62 and #1 (amended
+  2026-11-18 after the required audit gate blocked the two-PR split) → T9
 
 ## Requirement Claims
 
@@ -43,7 +44,7 @@
   with P22 immediately after
 - **Depends on**: none
 
-### Wave 2 (branch feat/f1-task-anchor → PR 1 → Fixes #62)
+### Wave 2 (branch feat/f1-task-anchor → single PR → Fixes #62, #1)
 
 #### T1: Stamp task identity on lessons add/skip audit rows
 - **Covers**: D-102, D-101 (supersede marker in comment history)
@@ -99,7 +100,7 @@
   0 with ≥4 new assertions AND `bash test/run-sections.sh T18` green
 - **Depends on**: T1, T2
 
-### Wave 3 (branch feat/init-phase, rebase after PR 1 lands → PR 2 → Fixes #1)
+### Wave 3 (same branch feat/f1-task-anchor → single PR with Wave 2)
 
 #### T4: init constant at decision write sites
 - **Covers**: D-103
@@ -179,27 +180,21 @@
 
 ### Wave 4 (delivery)
 
-#### T9: Two-branch serial squash-merge delivery
+#### T9: Single-PR squash-merge delivery
 - **Covers**: D-105, R-01
 - **Files**: .gos/task/p25/plan.md
 - **Read first**: AGENTS.md (PR-only main, squash-subject lint rule),
   test/checks/push-lint-squash.sh
-- **Approach**: FIRST repair the drift found at plan red-team R4 (stage
-  commits intent/think already sit on local main, ahead 2 — lesson
-  6f65b3c4 trap): `git checkout -b feat/f1-task-anchor` at the current
-  head, then reset local main to origin/main so main is PR-only again.
-  All subsequent stage and wave commits land on the open feature
-  branch. After Wave 1 gates green: land PR 1 from feat/f1-task-anchor
-  with body "Fixes #62" (subject passes bash
-  test/checks/push-lint-squash.sh --subject; squash carries the task
-  stage chore commits with it). After PR 1 lands: branch
-  feat/init-phase from the updated main, land PR 2 with body "Fixes
-  #1" (task archive runs before PR 2 if the archive gate requires the
-  task branch shape — SHIP decides). Both squash subjects are
-  imperative verb-object clauses.
-- **Done when**: local main has zero ahead commits against origin at
-  PR time; `gh pr view` for both PRs shows merged AND issues #62 and
-  #1 are closed AND both subjects passed the squash lint before merge
+- **Approach**: All waves land on feat/f1-task-anchor; the single PR body
+  carries "Fixes #62" and "Fixes #1" so one squash merge autocloses both
+  issues. Delivery shape amended 2026-11-18 (user ruling): the required
+  Gate (audit mode) check blocked merging a first PR while Wave-3 tasks
+  and truths structurally belonged to the second branch — one task, one
+  plan, one green merge. Squash subject is an imperative verb-object
+  clause passing test/checks/push-lint-squash.sh before merge; merge only
+  with the full check suite green.
+- **Done when**: the PR is merged with all checks green AND issues #62 and
+  #1 are both closed by the merge AND the subject passed the squash lint
 - **Depends on**: T3, T8
 
 ## Observable Truths
@@ -224,10 +219,11 @@
 - **Expected**: milestone close reports init-owned; row survives
 - **Verify**: T114 fixture asserts the class + row presence post-close
 
-### T5 (state T5): two PRs, per-issue autoclose
-- **Expected**: both PRs merged; #62 and #1 closed by their commits
-- **Verify**: `gh pr list --state merged --limit 2` + `gh issue view 62
-  --json state` + `gh issue view 1 --json state` both closed
+### T5 (state T5): single PR closes both issues
+- **Expected**: one merged PR (all checks green); #62 and #1 closed by
+  its merge
+- **Verify**: PR view shows merged + `gh issue view 62 --json state` +
+  `gh issue view 1 --json state` both closed
 
 ## Risks
 

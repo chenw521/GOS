@@ -100,7 +100,7 @@
     {
       "id": "D-105",
       "title": "Ship as two feature branches, two PRs, serial squash-merge: feat/f1-task-anchor Fixes #62, feat/init-phase Fixes #1",
-      "rationale": "Phase goal says independently shippable; disjoint file surfaces allow independent revert and per-issue autoclose. Second PR rebases the landed main (zero file overlap)",
+      "rationale": "Required Gate (audit mode) check blocked merging PR 1 with the split's structural reds. User ruling 2026-11-18: one branch, one PR closing #62 and #1, audit-green merge.",
       "birth_phase": "P25: quick-fix batch",
       "status": "open",
       "anchor": null,
@@ -143,12 +143,19 @@
       "id": "T5",
       "description": "Two independently squash-merged PRs land the fixes; each merge auto-closes its issue (#62, #1)",
       "verified": false,
-      "evidence": null
+      "evidence": null,
+      "desc": "One merged PR (all checks green) lands both fixes; its merge auto-closes #62 and #1"
     }
   ],
   "gaps": [
     {
       "id": "G-1794973464495",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
+    },
+    {
+      "id": "G-1794974395639",
       "type": "major",
       "description": "Fluid back to PLAN: discovered during PLAN",
       "status": "open"
