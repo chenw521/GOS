@@ -349,11 +349,11 @@
         "sha256": "09ace9da9add63f35757ef737d67b327ded4a1c33ca02a6f7c659ed2c58033ff"
       },
       {
-        "line": 137,
+        "line": 156,
         "sha256": "5bf251f676aa7c5cba75af7040e4e875b5b64714169a64be8c1cecf4df3cc6ef"
       },
       {
-        "line": 321,
+        "line": 346,
         "sha256": "35f2171509778f91f6315449a42d256fa0d943738cdb7a8f31a9c916cf378e2d"
       }
     ]
@@ -853,15 +853,15 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 410,
+        "line": 427,
         "sha256": "ba595698c5feccc15e9b3b8fc0a1cff6f2665d21d92f24060ef13949f9e536ad"
       },
       {
-        "line": 595,
+        "line": 612,
         "sha256": "8638628646a84624acfd64faf64766d6f92c2a8ccb2423e483657dbc3afed673"
       },
       {
-        "line": 709,
+        "line": 726,
         "sha256": "829ec48da19a6121f8d61b41da0dae442d73885705855f41cc81f083b6b69ae5"
       }
     ]
