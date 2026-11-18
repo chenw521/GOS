@@ -271,5 +271,6 @@
         "waves": 4
       }
     }
-  }
+  },
+  "changelog_user_summary": "Anchor F-1 lesson/skip audit rows to the claiming task so archive no longer fails across UTC midnight"
 }

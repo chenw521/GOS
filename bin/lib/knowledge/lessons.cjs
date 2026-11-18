@@ -117,6 +117,25 @@ function ensureMigratedLocked(P) {
   return j.ensureMigrated(P, { quiet: true });
 }
 
+// Audit anchor: read the claiming task non-fatally so the stateless lane (no
+// active task) still records rows without an anchor — write-class entries must
+// not bare-readState (read-mode flip precedent: task/archive.cjs recovery
+// load). The incidents snapshot (gaps + red-team findings) lets archive-side
+// F-1 detect a skip that predates newer incidents.
+function taskAnchorFromState() {
+  const prevMode = core.readState._mode;
+  core.readState._mode = 'read';
+  let st = null;
+  try { st = core.readState(); } catch { st = null; }
+  core.readState._mode = prevMode;
+  if (!st) return null;
+  const task = core.currentTaskId(st);
+  if (!task) return null;
+  const incidents = (st.gaps || []).length
+    + (st.redteam_rounds || []).reduce((n, r) => n + ((r && Number.isInteger(r.findings)) ? r.findings : 0), 0);
+  return { task, incidents };
+}
+
 function cmdLessons(args) {
   const sub = (args[0] || 'list').toLowerCase();
   const rest = args.slice(1);
@@ -161,7 +180,10 @@ function cmdLessons(args) {
       const { id, salt } = j.mintId(entry, (cand) => ids.has(cand));
       const full = { id, ...entry, ...(salt != null ? { salt } : {}) };
       store.entries.push(full);
-      j.appendAuditRow(store, 'add', `add ${type} lesson${scene ? ` (${scene})` : ''}`, { new_id: id });
+      const details = { new_id: id };
+      const anchor = taskAnchorFromState();
+      if (anchor) details.task = anchor.task;
+      j.appendAuditRow(store, 'add', `add ${type} lesson${scene ? ` (${scene})` : ''}`, details);
       j.saveStore(P, store);
     });
     if (type === 'model') console.log(`⚠ ${core.CONTRACTS.semantic_checks.globalWriteHint}`);
@@ -307,7 +329,10 @@ function cmdLessons(args) {
     const P = core.lessonsPaths('project'); // skip is a project-context audit action
     withSide(P, 'skip', () => {
       const store = loadOrDie(P, 'skip');
-      j.appendAuditRow(store, 'skip', reason);
+      const details = {};
+      const anchor = taskAnchorFromState();
+      if (anchor) { details.task = anchor.task; details.incidents = anchor.incidents; }
+      j.appendAuditRow(store, 'skip', reason, details);
       j.saveStore(P, store);
       const count = store.audit.filter((r) => r.what === 'skip').length;
       console.log(`✓ skip recorded (audit row); cumulative skips: ${count}`);

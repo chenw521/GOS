@@ -167,4 +167,82 @@ EOF
 OUT=$(GOS_SKIP_SHIP_CHECK=1 t18_g archive 2>&1)
 assert_contains "B-21 drift warning emitted" "B-21" "$OUT"
 
+# --- T18.7: task-anchored F-1 — lesson/skip rows anchor to the claiming task ---
+# Anchored rows satisfy F-1 regardless of calendar day (task lifecycle, not
+# wall clock); foreign-task anchors never satisfy; unanchored legacy rows keep
+# the today-only match from the pre-anchor era.
+t18_f1_fixture() { # $1 = slug → sets T18_F1 dir + inits a task, exports T18_F1_TID
+  T18_F1="$TESTBASE/test-$(date +%s)-$RANDOM-$1"
+  mkdir -p "$T18_F1/.gos/cache" && cd "$T18_F1" || exit 1
+  git init -q . && git commit -q --allow-empty -m root
+  printf ".gos/state.json\n.gos/cache/\n" > .gitignore && git add .gitignore && git commit -q -m gi
+  t18_g init 3 "t18 $1" >/dev/null 2>&1
+  T18_F1_TID="$(python3 -c 'import json;print(json.load(open(".gos/state.json"))["task_head"][:8])')"
+}
+t18_f1_seed() { # $1 = node body receiving j + store; T18_TID/T18_EXTRA flow through env
+  T18_TID="$T18_F1_TID" t18_node '
+    const j = require(process.env.GOS_ROOT + "/bin/lib/knowledge/lessons-json.cjs");
+    const store = j.emptyStore();
+    '"$1"'
+    j.saveStore({ truth: ".gos/lessons.json", anchor: ".gos/cache/.lessons-anchors.json", file: ".gos/lessons.md", global: false }, store);
+  '
+}
+t18_f1_incidents() { # $1 = gap count, $2 = red-team findings
+  t18_mkstate "s['gaps']=[{'stage':'VERIFY','what':'g'}]*$1; s['redteam_rounds']=[{'round':1,'findings':$2}]; s.setdefault('approvals',{})['ARCHIVE']=True"
+}
+t18_f1_done() { cd "$T18_DIR" || exit 1; rm -rf "$T18_F1"; }
+
+# .7.1: this-task lesson row dated yesterday exempts across a simulated midnight
+t18_f1_fixture anchored-pass
+t18_f1_incidents 1 2
+export T18_EXTRA="$(node -e 'console.log(new Date(Date.now()-86400000).toISOString().slice(0,10))')"
+t18_f1_seed '
+  const base = { at: process.env.T18_EXTRA, type: "project", scene: "anchored", lesson: "cross-midnight lesson", tags: [], origin: "v2" };
+  const { id } = j.mintId(base, () => false);
+  store.entries.push({ id, ...base });
+  j.appendAuditRow(store, "add", "seed", { new_id: id, task: process.env.T18_TID });
+'
+OUT=$(GOS_SKIP_SHIP_CHECK=1 t18_g archive 2>&1); RC=$?
+assert_exit "anchored lesson dated yesterday still exempts (cross-midnight)" "0" "$RC"
+t18_f1_done
+
+# .7.2: foreign-task lesson row stamped today does NOT exempt
+t18_f1_fixture foreign-blocks
+t18_f1_incidents 1 1
+export T18_EXTRA="$(node -e 'console.log(new Date().toISOString().slice(0,10))')"
+t18_f1_seed '
+  const base = { at: process.env.T18_EXTRA, type: "project", scene: "foreign", lesson: "foreign task lesson", tags: [], origin: "v2" };
+  const { id } = j.mintId(base, () => false);
+  store.entries.push({ id, ...base });
+  j.appendAuditRow(store, "add", "seed", { new_id: id, task: "foreign1" });
+'
+OUT=$(GOS_SKIP_SHIP_CHECK=1 t18_g archive 2>&1); RC=$?
+assert_exit "foreign-task lesson row (today) does NOT exempt" "1" "$RC"
+assert_contains "foreign-task block still demands a lesson" "lessons skip --reason" "$OUT"
+t18_f1_done
+
+# .7.3: this-task skip row with a stale incidents snapshot does NOT exempt
+t18_f1_fixture stale-skip
+t18_f1_incidents 2 1
+t18_f1_seed 'j.appendAuditRow(store, "skip", "stale snapshot skip", { task: process.env.T18_TID, incidents: 1 });'
+OUT=$(GOS_SKIP_SHIP_CHECK=1 t18_g archive 2>&1); RC=$?
+assert_exit "anchored skip with stale incidents snapshot does NOT exempt" "1" "$RC"
+assert_contains "stale-snapshot block still demands a lesson" "lessons skip --reason" "$OUT"
+t18_f1_done
+
+# .7.4: this-task add row whose entry was later removed does NOT exempt
+t18_f1_fixture add-then-rm
+t18_f1_incidents 1 0
+export T18_EXTRA="$(node -e 'console.log(new Date().toISOString().slice(0,10))')"
+t18_f1_seed '
+  const base = { at: process.env.T18_EXTRA, type: "project", scene: "gone", lesson: "removed lesson", tags: [], origin: "v2" };
+  const { id } = j.mintId(base, () => false);
+  j.appendAuditRow(store, "add", "seed", { new_id: id, task: process.env.T18_TID });
+  j.appendAuditRow(store, "rm", "disposed for fixture", { old_id: id });
+'
+OUT=$(GOS_SKIP_SHIP_CHECK=1 t18_g archive 2>&1); RC=$?
+assert_exit "this-task add row whose entry was removed does NOT exempt" "1" "$RC"
+t18_f1_done
+unset T18_EXTRA
+
 t18_teardown
