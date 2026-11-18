@@ -2,17 +2,19 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "PLAN",
+  "current_stage": "BUILD",
   "completed_stages": [
     "INTENT",
-    "THINK"
+    "THINK",
+    "PLAN"
   ],
   "intent": {
     "summary": "Two live papercuts fixed ahead of the thematic batches: #62 (F-1 lessons same-day check ages out across UTC midnight and blocks gos archive) and #1 (DECISIONS.md renders a phantom Phase P0 absent from ROADMAP.md). Small, independently shippable; clears the daily-friction class before the structural work begins. Issues #62 #1",
     "confirmed": true
   },
   "approvals": {
-    "THINK": "2026-11-18T03:09:34.694Z"
+    "THINK": "2026-11-18T03:09:34.694Z",
+    "PLAN": "2026-11-18T03:15:29.915Z"
   },
   "spec_path": null,
   "plan_path": null,
@@ -149,5 +151,125 @@
     }
   ],
   "spec_gate_version": 3,
-  "spec_sha256": "06f0f02c2d1a5111b822d10b23356b806fa7562058d42e5403066a3fe3c6df80"
+  "spec_sha256": "06f0f02c2d1a5111b822d10b23356b806fa7562058d42e5403066a3fe3c6df80",
+  "plan_snapshot": {
+    "tasks": [
+      {
+        "id": "T0",
+        "covers": [
+          "D-104"
+        ],
+        "files": [
+          ".gos/project/project.json"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T1",
+        "covers": [
+          "D-102",
+          "D-101"
+        ],
+        "files": [
+          "bin/lib/knowledge/lessons.cjs"
+        ],
+        "wave": 2
+      },
+      {
+        "id": "T2",
+        "covers": [
+          "D-102",
+          "D-101"
+        ],
+        "files": [
+          "bin/lib/task/archive.cjs"
+        ],
+        "wave": 2
+      },
+      {
+        "id": "T3",
+        "covers": [
+          "D-102",
+          "R-01"
+        ],
+        "files": [
+          "test/sections/T18-f1-gate-lessons.test.sh"
+        ],
+        "wave": 2
+      },
+      {
+        "id": "T4",
+        "covers": [
+          "D-103"
+        ],
+        "files": [
+          "bin/lib/knowledge/decisions.cjs"
+        ],
+        "wave": 3
+      },
+      {
+        "id": "T5",
+        "covers": [
+          "D-103",
+          "R-02"
+        ],
+        "files": [
+          "bin/lib/knowledge/milestone.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ],
+        "wave": 3
+      },
+      {
+        "id": "T6",
+        "covers": [
+          "D-103"
+        ],
+        "files": [
+          "bin/lib/render/views.cjs"
+        ],
+        "wave": 3
+      },
+      {
+        "id": "T7",
+        "covers": [
+          "D-103"
+        ],
+        "files": [
+          "bin/lib/core/state.cjs"
+        ],
+        "wave": 3
+      },
+      {
+        "id": "T8",
+        "covers": [
+          "D-103",
+          "R-01",
+          "R-02"
+        ],
+        "files": [
+          "test/sections/T3-decision.test.sh"
+        ],
+        "wave": 3
+      },
+      {
+        "id": "T9",
+        "covers": [
+          "D-105",
+          "R-01"
+        ],
+        "files": [
+          ".gos/task/p25/plan.md"
+        ],
+        "wave": 4
+      }
+    ],
+    "audit": [],
+    "meta": {
+      "waveValidation": {
+        "ok": true,
+        "waves": 4
+      }
+    }
+  }
 }
