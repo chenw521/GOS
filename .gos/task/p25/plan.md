@@ -48,7 +48,7 @@
 
 #### T1: Stamp task identity on lessons add/skip audit rows
 - **Covers**: D-102, D-101 (supersede marker in comment history)
-- **Files**: bin/lib/knowledge/lessons.cjs
+- **Files**: bin/lib/knowledge/lessons.cjs, test/sections/T46-module-structure.test.sh
 - **Read first**: bin/lib/knowledge/lessons.cjs (add ~124-165, skip
   ~302-316), bin/lib/knowledge/lessons-json.cjs:186-212 (appendAuditRow
   details), bin/lib/knowledge/decisions.cjs:190-195 (stateless lane

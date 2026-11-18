@@ -188,6 +188,12 @@
       "type": "major",
       "description": "Fluid back to PLAN: discovered during PLAN",
       "status": "open"
+    },
+    {
+      "id": "G-1794977317727",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
     }
   ],
   "phase_name": "P25: quick-fix batch",
@@ -218,7 +224,8 @@
           "D-101"
         ],
         "files": [
-          "bin/lib/knowledge/lessons.cjs"
+          "bin/lib/knowledge/lessons.cjs",
+          "test/sections/T46-module-structure.test.sh"
         ],
         "wave": 2
       },
