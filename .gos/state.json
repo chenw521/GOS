@@ -2,7 +2,7 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "SHIP",
+  "current_stage": "DONE",
   "completed_stages": [
     "INTENT",
     "THINK",
@@ -21,10 +21,11 @@
   },
   "approvals": {
     "THINK": "2026-11-17T05:43:12.729Z",
-    "PLAN": "2026-11-17T09:19:30.429Z"
+    "PLAN": "2026-11-17T09:19:30.429Z",
+    "ARCHIVE": "2026-11-18T01:15:00.547Z"
   },
-  "spec_path": ".gos/task/08a3f0b6/spec.md",
-  "plan_path": ".gos/task/08a3f0b6/plan.md",
+  "spec_path": ".gos/archive/2026-11-18-publicize-task-honor-gos-map-ignore-at-the-sc/task/08a3f0b6/spec.md",
+  "plan_path": ".gos/archive/2026-11-18-publicize-task-honor-gos-map-ignore-at-the-sc/task/08a3f0b6/plan.md",
   "project": false,
   "requirements": [
     {
@@ -138,7 +139,7 @@
       "evidence": {
         "command": "[\"bash\",\"-c\",\"grep -hE \\\"T119\\\\\\\\.(1c|2c|2d) \\\" .gos/cache/section-runs/20261117T101743Z-full29956.log | tee .gos/task/08a3f0b6/evidence/t1.log\"]",
         "output_excerpt": "✓ T119.2c gate codemap green with vendored excluded (exit 0)",
-        "artifact_path": ".gos/task/08a3f0b6/evidence/t1.log",
+        "artifact_path": ".gos/archive/2026-11-18-publicize-task-honor-gos-map-ignore-at-the-sc/task/08a3f0b6/evidence/t1.log",
         "replay": true
       }
     },
@@ -149,7 +150,7 @@
       "evidence": {
         "command": "[\"bash\",\".gos/task/08a3f0b6/evidence/t2.sh\"]",
         "output_excerpt": "assert-hits: 5",
-        "artifact_path": ".gos/task/08a3f0b6/evidence/t2.log",
+        "artifact_path": ".gos/archive/2026-11-18-publicize-task-honor-gos-map-ignore-at-the-sc/task/08a3f0b6/evidence/t2.log",
         "replay": true
       }
     },
@@ -160,7 +161,7 @@
       "evidence": {
         "command": "[\"bash\",\".gos/task/08a3f0b6/evidence/t3.sh\"]",
         "output_excerpt": "✓ T119.3a cleanup-scan clean with the list present (exit 0)",
-        "artifact_path": ".gos/task/08a3f0b6/evidence/t3.log",
+        "artifact_path": ".gos/archive/2026-11-18-publicize-task-honor-gos-map-ignore-at-the-sc/task/08a3f0b6/evidence/t3.log",
         "replay": true
       }
     },
@@ -171,7 +172,7 @@
       "evidence": {
         "command": "[\"bash\",\".gos/task/08a3f0b6/evidence/t4.sh\"]",
         "output_excerpt": "✓ T119.7i baseline reset without the approve record dies (exit 1)",
-        "artifact_path": ".gos/task/08a3f0b6/evidence/t4.log",
+        "artifact_path": ".gos/archive/2026-11-18-publicize-task-honor-gos-map-ignore-at-the-sc/task/08a3f0b6/evidence/t4.log",
         "replay": true
       }
     },
@@ -182,7 +183,7 @@
       "evidence": {
         "command": "[\"bash\",\".gos/task/08a3f0b6/evidence/t5.sh\"]",
         "output_excerpt": "README.md:4",
-        "artifact_path": ".gos/task/08a3f0b6/evidence/t5.log",
+        "artifact_path": ".gos/archive/2026-11-18-publicize-task-honor-gos-map-ignore-at-the-sc/task/08a3f0b6/evidence/t5.log",
         "replay": true
       }
     },
@@ -193,7 +194,7 @@
       "evidence": {
         "command": "[\"bash\",\".gos/task/08a3f0b6/evidence/t6.sh\"]",
         "output_excerpt": "self-scan: exit 0",
-        "artifact_path": ".gos/task/08a3f0b6/evidence/t6.log",
+        "artifact_path": ".gos/archive/2026-11-18-publicize-task-honor-gos-map-ignore-at-the-sc/task/08a3f0b6/evidence/t6.log",
         "replay": true
       }
     }
@@ -353,13 +354,6 @@
     }
   },
   "changelog_user_summary": "name map-ignore in both codemap fix hints and document the glob semantics layering in README en/zh (R-27, D-04)",
-  "checkpoints": [
-    {
-      "stage": "BUILD",
-      "unit": "all-waves (auto at commit)",
-      "done": "T1,T3,T4,T6,T2,T5,T8,T9,T10",
-      "remaining": "",
-      "at": "2026-11-17T09:45:35.106Z"
-    }
-  ]
+  "checkpoints": [],
+  "completed_at": "2026-11-18T01:15:03.474Z"
 }

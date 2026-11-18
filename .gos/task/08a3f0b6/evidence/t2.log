@@ -1,6 +1,0 @@
-  ✓ T119.2e exclusion list file written
-  ✓ T119.2f list provenance first line (generated-at + HEAD8|unborn)
-  ✓ T119.2g list body is exactly the vendored files, sorted
-  ✓ T119.2h no src/ file in the exclusion list
-  ✓ T119.5b stale list deleted at zero exclusions (rematerialize semantics)
-assert-hits: 5

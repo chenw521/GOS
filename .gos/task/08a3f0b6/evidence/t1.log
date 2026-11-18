@@ -1,3 +1,0 @@
-  ✓ T119.1c red verdict names codemap-dup-fn-name
-  ✓ T119.2c gate codemap green with vendored excluded (exit 0)
-  ✓ T119.2d repo-wide unique-name assertion green
