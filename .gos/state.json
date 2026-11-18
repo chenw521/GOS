@@ -2,12 +2,13 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "REVIEW",
+  "current_stage": "VERIFY",
   "completed_stages": [
     "INTENT",
     "THINK",
     "PLAN",
-    "BUILD"
+    "BUILD",
+    "REVIEW"
   ],
   "intent": {
     "summary": "Two live papercuts fixed ahead of the thematic batches: #62 (F-1 lessons same-day check ages out across UTC midnight and blocks gos archive) and #1 (DECISIONS.md renders a phantom Phase P0 absent from ROADMAP.md). Small, independently shippable; clears the daily-friction class before the structural work begins. Issues #62 #1",

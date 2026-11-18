@@ -243,6 +243,23 @@ t18_f1_seed '
 OUT=$(GOS_SKIP_SHIP_CHECK=1 t18_g archive 2>&1); RC=$?
 assert_exit "this-task add row whose entry was removed does NOT exempt" "1" "$RC"
 t18_f1_done
+
+# .7.5: amend re-anchors — edit row with this task keeps the exemption alive
+t18_f1_fixture amend-reanchor
+t18_f1_incidents 1 0
+export T18_EXTRA="$(node -e 'console.log(new Date(Date.now()-86400000).toISOString().slice(0,10))')"
+t18_f1_seed '
+  const oldBase = { at: process.env.T18_EXTRA, type: "project", scene: "s", lesson: "original wording", tags: [], origin: "v2" };
+  const { id: oldId } = j.mintId(oldBase, () => false);
+  const next = { ...oldBase, lesson: "amended wording" };
+  const { id: newId } = j.mintId(next, (c) => c === oldId);
+  store.entries.push({ id: newId, ...next });
+  j.appendAuditRow(store, "add", "seed", { new_id: oldId, task: process.env.T18_TID });
+  j.appendAuditRow(store, "edit", `amend ${oldId.slice(0, 8)}→${newId.slice(0, 8)}`, { old_id: oldId, new_id: newId, task: process.env.T18_TID });
+'
+OUT=$(GOS_SKIP_SHIP_CHECK=1 t18_g archive 2>&1); RC=$?
+assert_exit "anchored edit row exempts when the amended entry is live" "0" "$RC"
+t18_f1_done
 unset T18_EXTRA
 
 t18_teardown

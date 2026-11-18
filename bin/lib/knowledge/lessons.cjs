@@ -258,7 +258,10 @@ function cmdLessons(args) {
       const full = { id, ...next, ...(salt != null ? { salt } : {}) };
       store.entries = store.entries.filter((e) => e.id !== old.id);
       store.entries.push(full);
-      j.appendAuditRow(store, 'edit', `amend ${old.id.slice(0, 8)}→${id.slice(0, 8)}`, { old_id: old.id, new_id: id, prev_sha: prevSha });
+      const details = { old_id: old.id, new_id: id, prev_sha: prevSha };
+      const anchor = taskAnchorFromState();
+      if (anchor) details.task = anchor.task;
+      j.appendAuditRow(store, 'edit', `amend ${old.id.slice(0, 8)}→${id.slice(0, 8)}`, details);
       j.saveStore(P, store);
       console.log(`✓ entry amended: ${old.id.slice(0, 8)} → ${id.slice(0, 8)} (origin preserved: ${old.origin}; lineage in audit row)`);
     });

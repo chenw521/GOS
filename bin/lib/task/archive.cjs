@@ -391,7 +391,9 @@ function cmdArchive(opts = {}) {
     const hasTaskLesson = (disp) => {
       if (!disp.ok || !disp.store || !Array.isArray(disp.store.entries)) return false;
       const live = new Set(disp.store.entries.map((e) => (e ? e.id : null)));
-      return auditOf(disp).some((r) => r && r.what === 'add' && r.new_id && r.task === tid && live.has(r.new_id));
+      // add rows anchor the original entry; edit rows re-anchor the amended
+      // successor (an amend must not silently drop the task anchor)
+      return auditOf(disp).some((r) => r && (r.what === 'add' || r.what === 'edit') && r.new_id && r.task === tid && live.has(r.new_id));
     };
     // legacy fallback: entry dated today whose add row carries no task anchor
     const legacyTodayIn = (disp) => {
