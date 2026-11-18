@@ -2,17 +2,19 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "PLAN",
+  "current_stage": "BUILD",
   "completed_stages": [
     "INTENT",
-    "THINK"
+    "THINK",
+    "PLAN"
   ],
   "intent": {
     "summary": "Make gos auto survivable on a real host: the VERIFY script worker cannot run the section suite inside a read-only bwrap sandbox (burned 30/30 spawn budget 2026-11-10) — needs a writable TESTBASE pin or workspace-profile compose; spawned BUILD workers die by group-kill when the enclosing operator terminal times out — detach-by-default or heartbeat liveness; branch-reaping machinery for chain/pre-* anchors and the 16 unlanded-looking local branches needing content-landed verification; only then re-enable gos auto.",
     "confirmed": true
   },
   "approvals": {
-    "THINK": "2026-11-18T07:26:07.232Z"
+    "THINK": "2026-11-18T07:26:07.232Z",
+    "PLAN": "2026-11-18T07:47:15.596Z"
   },
   "spec_path": null,
   "plan_path": null,
@@ -119,5 +121,227 @@
     }
   ],
   "spec_gate_version": 3,
-  "spec_sha256": "dfb02b30abec1bf6ad4f112f33f543745a4a755a9a5860555f9c37a5a55dd486"
+  "spec_sha256": "dfb02b30abec1bf6ad4f112f33f543745a4a755a9a5860555f9c37a5a55dd486",
+  "plan_snapshot": {
+    "tasks": [
+      {
+        "id": "T1",
+        "covers": [
+          "D-107",
+          "R-1"
+        ],
+        "files": [
+          "bin/lib/ops/auto/workers.cjs",
+          "bin/lib/ops/auto/launcher.cjs",
+          "bin/lib/ops/auto/loop.cjs",
+          "test/sections/T120-compose-invariants.test.sh"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T3",
+        "covers": [
+          "D-109",
+          "R-5"
+        ],
+        "files": [
+          "bin/lib/ops/auto/cli.cjs",
+          "bin/lib/ops/auto/loop.cjs",
+          "bin/lib/core/locales/{en",
+          "zh}.cjs",
+          "test/sections/T123-auto-detach.test.sh"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T4a",
+        "covers": [
+          "D-110",
+          "R-6"
+        ],
+        "files": [
+          "bin/lib/ops/branch-reap.cjs",
+          "bin/gos.cjs",
+          "bin/lib/core/locales/en.cjs",
+          "bin/lib/core/locales/zh.cjs"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T5a",
+        "covers": [
+          "D-106",
+          "R-7"
+        ],
+        "files": [
+          "bin/lib/knowledge/decisions.cjs",
+          "bin/lib/ops/gate.cjs"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T6",
+        "covers": [
+          "R-10"
+        ],
+        "files": [
+          ".gos/task/p21/think-trip-triage.md",
+          ".gos/task/p21/evidence/",
+          "test/sections/T127-think-trip.test.sh"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T9a",
+        "covers": [
+          "D-107",
+          "R-4"
+        ],
+        "files": [
+          "test/triage-ledger.md"
+        ],
+        "wave": 1
+      },
+      {
+        "id": "T2",
+        "covers": [
+          "D-107",
+          "R-2"
+        ],
+        "files": [
+          "bin/lib/ops/auto/launcher.cjs",
+          "bin/lib/ops/auto/loop.cjs",
+          "test/run-sections.sh",
+          "test/sections/T124-env-registry.test.sh"
+        ],
+        "wave": 2
+      },
+      {
+        "id": "T4b",
+        "covers": [
+          "D-110",
+          "R-6"
+        ],
+        "files": [
+          "test/sections/T121-branch-reap.test.sh"
+        ],
+        "wave": 2
+      },
+      {
+        "id": "T5b",
+        "covers": [
+          "D-106",
+          "R-7"
+        ],
+        "files": [
+          "test/sections/T122-dig-closure-floor.test.sh"
+        ],
+        "wave": 2
+      },
+      {
+        "id": "T8",
+        "covers": [
+          "R-9"
+        ],
+        "files": [
+          "bin/lib/ops/auto/loop.cjs",
+          "bin/lib/ops/auto/launcher.cjs",
+          "test/fixtures/5419521c-deny-slice.log",
+          "test/sections/T125-deny-scoring.test.sh"
+        ],
+        "wave": 2
+      },
+      {
+        "id": "T7",
+        "covers": [
+          "D-108",
+          "R-3"
+        ],
+        "files": [
+          "test/run-sections.sh",
+          "test/sections/T126-worktree-helper.test.sh",
+          "bin/lib/ops/auto/workers.cjs"
+        ],
+        "wave": 2
+      },
+      {
+        "id": "T9b",
+        "covers": [
+          "D-107",
+          "R-4"
+        ],
+        "files": [
+          "test/sections/*.test.sh",
+          "test/triage-ledger.md"
+        ],
+        "wave": 3
+      },
+      {
+        "id": "T9c",
+        "covers": [
+          "D-108",
+          "R-4"
+        ],
+        "files": [
+          "test/sections/*.test.sh",
+          "test/triage-ledger.md"
+        ],
+        "wave": 3
+      },
+      {
+        "id": "T9z",
+        "covers": [
+          "D-107",
+          "R-4"
+        ],
+        "files": [
+          "test/sections/baseline.json",
+          "test/checks/manifest-coverage.sh"
+        ],
+        "wave": 4
+      },
+      {
+        "id": "T10a",
+        "covers": [
+          "R-8"
+        ],
+        "files": [
+          "bin/lib/ops/auto/loop.cjs",
+          "bin/lib/ops/auto/store.cjs",
+          "test/sections/"
+        ],
+        "wave": 4
+      },
+      {
+        "id": "T10b",
+        "covers": [
+          "R-8"
+        ],
+        "files": [
+          "bin/lib/ops/auto/cli.cjs",
+          "bin/lib/core/locales/{en",
+          "zh}.cjs",
+          "test/sections/"
+        ],
+        "wave": 5
+      },
+      {
+        "id": "T11",
+        "covers": [
+          "R-8"
+        ],
+        "files": [
+          ".gos/task/p21/dogfood-runbook.md"
+        ],
+        "wave": 5
+      }
+    ],
+    "audit": [],
+    "meta": {
+      "waveValidation": {
+        "ok": true,
+        "waves": 5
+      }
+    }
+  }
 }

@@ -38,7 +38,7 @@ The 2026-11-09 dogfood run burned the full spawn budget (B=30, layer B TRIPPED a
 
 ### Selected Approach
 
-P1 restricted skeleton (writableRoots over `.gos` + env unset surface + worktree fixture-ization), default-detach survival, two-tier branch reaping, and the minimal dig-closure floor — all under the existing restricted profile and mask invariants.
+P1 restricted skeleton (enumerated writable roots under `.gos` per R-1 — the whole-tree form in D-107's premise wording is superseded; source-side env registry; worktree fixture-ization), default-detach survival, two-tier branch reaping, and the minimal dig-closure floor — all under the existing restricted profile and mask invariants.
 
 ### Alternatives (Rejected)
 
@@ -132,6 +132,7 @@ deepen: closed — 6/6 sample (f1/task-p0/dogfood/chore/docs/fix), chain semanti
 
 - [DI-1]: patch-content equality tier for reap auto-delete (after first dry-run reports show a real zombie population)
 - [DI-2]: `--fresh` mode sandbox compose reuse of the worktree helper (P21 lands the helper only)
+- [DI-3]: agent-spawn writable surface (restricted `[.gos, .gos/logs]`, loop.cjs:1150-1153) — pre-existing trust-model territory; narrowing it to the R-1 enumerated form needs its own write-point census (red-team round 4, plan-attack F3)
 
 ## Red Team Record (Lv2+ mandatory before user approval)
 
