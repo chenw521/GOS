@@ -1550,14 +1550,19 @@ async function scriptIteration(a) {
         stepFailures.push(`Class S compose ${step.id}: ${composed.reason}${composed.detail ? ': ' + composed.detail : ''}`);
         break;
       }
+      // Spec env whitelist: the passthrough base carries no GOS_AUTO_*
+      // values (runner-side leaks never cross), the compose channel vars
+      // land from composed.env, and the session pair (marker + spawn id)
+      // is everything the loop adds itself. The approvals baseline rides
+      // the runner-held exit channel instead — a sandboxed sections spawn
+      // never commits.
       const spec = {
         argv: composed.argv,
         env: {
-          ...registry.sanitizedSpawnEnv(env === process.env ? undefined : env),
+          ...launcher.stripGosAutoEnv(registry.sanitizedSpawnEnv(env === process.env ? undefined : env)),
           ...composed.env,
           [SPAWN_MARKER_ENV]: '1',
           GOS_AUTO_SPAWN_ID: spawnId,
-          [baselineEnvName]: baselineSha,
         },
         cwd: rootDir,
         stage,
@@ -1588,8 +1593,11 @@ async function scriptIteration(a) {
       const hits = (result && Array.isArray(result.preTruncationDenyHits) && result.preTruncationDenyHits.length)
         ? result.preTruncationDenyHits
         : launcher.scanSpawnOutput(streamText, { deny: denyForScan });
+      // Step-failing hits are command-kind only (a bash command field match);
+      // text-kind echoes of the deny strings stay reported in the stamp below.
+      const commandHits = hits.filter((h) => h && h.kind === 'command');
       escapeTotal += hits.length;
-      const stamp = store.stampStream(spawnId, stage, streamSha256, new Date(now()).toISOString(), rootDir, { denyHits: hits.length, denyCommandHits: hits.filter((h) => h && h.kind === 'command').length });
+      const stamp = store.stampStream(spawnId, stage, streamSha256, new Date(now()).toISOString(), rootDir, { denyHits: hits.length, denyCommandHits: commandHits.length });
       if (!stamp.ok) {
         return { err: endWith({ ok: false, status: 'paused', paused: true, reason: 'stamp-failed', detail: stamp.reason, path: stamp.path, guidance: store.guidanceFor('auto.loop.stampFailed', { detail: String(stamp.reason) }) }) };
       }
@@ -1597,10 +1605,10 @@ async function scriptIteration(a) {
         try { store.saveWindows(spawnId, { head: result.windowHead.stdout, tail: result.windowTail.stdout }, rootDir); } catch { /* advisory */ }
       }
       const runnerFailed = !!(result && (result.error != null || (result.status != null && result.status !== 0)));
-      if (runnerFailed || hits.length) {
+      if (runnerFailed || commandHits.length) {
         stepFailures.push(
-          hits.length
-            ? hits.map((h) => `deny '${h.pattern}': ${h.line.slice(0, 120)}`).join('; ')
+          commandHits.length
+            ? commandHits.map((h) => `deny '${h.pattern}': ${h.line.slice(0, 120)}`).join('; ')
             : `${step.id}: ${String((result && result.error && result.error.message) || (result && result.stderr) || 'script step failed').slice(0, 240)}`,
         );
         stepsSeen.push({ id: step.id, kind: 'S', status: 'failed' });
@@ -1707,9 +1715,11 @@ async function score(ctx) {
   // cannot push deny lines out of the captured window); the post-hoc scan
   // stays as the floor for runners that captured without a scanner. The
   // caller stamps the same hits into the telemetry, so both consumers read
-  // one computation.
+  // one computation. Only command-kind hits (a bash command field match)
+  // fail the step; text-kind echoes stay reported in iter.escapeHits.
   const hits = Array.isArray(ctx.hits) ? ctx.hits : launcher.scanSpawnOutput(streamText, { deny: Array.isArray(spec.deny) ? spec.deny : undefined });
   iter.escapeHits = hits.length;
+  const commandHits = hits.filter((h) => h && h.kind === 'command');
 
   const outcome = ctx.outcome || adapter.parseEventStream(streamText);
 
@@ -1718,9 +1728,9 @@ async function score(ctx) {
   if (idleKilled) { signal = 'idle-timeout'; detail = 'stream stalled: no output chunk for the idle limit (killed live)'; }
   else if (timedOut) { signal = 'wall-timeout'; detail = 'spawn exceeded the wall clock'; }
   else if (spawnBroke) { signal = 'spawn-error'; detail = String(runnerError.message || 'spawn error'); }
-  else if (hits.length) {
+  else if (commandHits.length) {
     signal = 'task-failed';
-    detail = hits.map((h) => `deny '${h.pattern}': ${h.line.slice(0, 120)}`).join('; ');
+    detail = commandHits.map((h) => `deny '${h.pattern}': ${h.line.slice(0, 120)}`).join('; ');
   } else if (result && result.status !== 0 && result.status != null) {
     signal = 'task-failed';
     detail = `host exited rc=${result.status}${String(result.stderr || '').trim() ? ': ' + String(result.stderr).trim().slice(0, 240) : ''}`;
@@ -1741,7 +1751,7 @@ async function score(ctx) {
     // any progress the same session made. Only command-kind hits carry
     // that veto: an echo of the deny strings in config or docs is prose,
     // not an execution attempt.
-    const escapeDriven = hits.some((h) => h && h.kind === 'command');
+    const escapeDriven = commandHits.length > 0;
     const advEarly = breakerMod.detectAdvance({ preSpawnHead: iter.preSpawnHead, cwd: rootDir, gitRunner, stage: iter.stage });
     if (!escapeDriven && advEarly.ok && advEarly.advanced === true) {
       iter.head = advEarly.head;

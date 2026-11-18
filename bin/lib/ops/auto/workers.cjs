@@ -179,14 +179,23 @@ const DEFAULT_VERIFY_STEPS = Object.freeze([
   Object.freeze({ id: 'truth', module: 'bin/lib/ops/gate.cjs', fn: 'computeGateVerdicts', args: [{ which: 'truths' }] }),
 ]);
 
-// Enumerated writable set for the Class S frame, as one repo-relative
-// literal: the section runner tee-logs to .gos/cache/section-runs and
-// overwrites .gos/cache/run-manifest.json — the only tree writes a fixed
-// command makes. Task state (.gos root and everything else in the tree)
+// Enumerated writable set for the Class S frame, as repo-relative literals
+// plus the pre-created absolute TESTBASE pin. The section runner tee-logs
+// to .gos/cache/section-runs and overwrites .gos/cache/run-manifest.json
+// (literal runs), while a pinned run writes its whole tree — sections
+// checkout included — under <scratch>/testbed, the TESTBASE pin the
+// launcher binds rw post-mask. The pin enters the enumeration only: a
+// writable bind for it would land under the masked store tree, so the
+// post-mask carve-out owns the bind and the policy allow set owns the
+// membership. Task state (.gos root and everything else in the tree)
 // stays read-only behind the workspace ro-bind; the launcher's writable
 // policy enforces the enumeration at compose time.
-function scriptWritableRoots(workspace) {
-  return [path.join(path.resolve(String(workspace)), '.gos', 'cache')];
+function scriptWritableRoots(workspace, opts) {
+  const out = [path.join(path.resolve(String(workspace)), '.gos', 'cache')];
+  const scratch = opts && typeof opts.scratch === 'string' && opts.scratch
+    ? path.resolve(opts.scratch) : null;
+  if (scratch) out.push(path.join(scratch, 'testbed'));
+  return out;
 }
 
 // Store dependency is lazy (store.cjs requires this module at load): the
@@ -318,12 +327,22 @@ function composeScriptSpawn(step, ctx = {}) {
     store.removeSpawn(ctx.spawnId, ctx.rootDir);
     return { ok: false, reason: manifest.reason || 'grant-manifest-failed', detail: manifest.detail, spawnId: ctx.spawnId };
   }
-  const writable = scriptWritableRoots(ctx.workspace || ctx.rootDir);
+  // Pre-create the absolute TESTBASE pin before the compose: the writable
+  // enumeration (below) names it, and the launcher's post-mask carve-out
+  // binds it rw once the frame exists. An uncreatable pin refuses here so
+  // no sandbox ever starts against a TESTBASE it cannot write.
+  const testBasePin = path.join(reg.scratch, 'testbed');
+  try { fs.mkdirSync(testBasePin, { recursive: true }); }
+  catch (e) {
+    store.removeSpawn(ctx.spawnId, ctx.rootDir);
+    return { ok: false, reason: 'testbase-pin-unwritable', detail: `${testBasePin}: ${e.message}`, spawnId: ctx.spawnId };
+  }
+  const writable = scriptWritableRoots(ctx.workspace || ctx.rootDir, { scratch: reg.scratch });
   const composed = launcher.compose(entry.profile, {
     workspace: ctx.workspace,
     env: ctx.env || process.env,
     engineProbe: ctx.engineProbe,
-    writableRoots: Array.isArray(ctx.writableRoots) ? ctx.writableRoots : writable,
+    writableRoots: Array.isArray(ctx.writableRoots) ? ctx.writableRoots : scriptWritableRoots(ctx.workspace || ctx.rootDir),
     writablePolicy: { allow: writable },
     userConfig: ctx.userConfig,
     scratchDir: reg.scratch,
@@ -352,6 +371,7 @@ function composeScriptSpawn(step, ctx = {}) {
     tier: composed.tier,
     engine: composed.engine,
     scratch: reg.scratch,
+    testBase: testBasePin,
     grantManifestPath: manifest.path,
     registration: reg.entry,
     meta: composed.meta,
@@ -376,6 +396,168 @@ function gitRunnerOf(opts, fallbackCwd) {
 function newRunTag() {
   const ts = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+$/, '');
   return `pin-${ts}-${crypto.randomBytes(4).toString('hex')}`;
+}
+
+// ---- section worktrees (Class S pinned runs) -------------------------------
+
+// Worktree directory prefix under the TESTBASE pin. Every registration the
+// helper creates carries this basename, so prefix-matching is the prune
+// namespace: no other worktree of the repository can ever match it.
+const SECTION_WT_PREFIX = 'sections-tree';
+
+// Porcelain worktree paths of a repository (null when git cannot list).
+function listWorktreePaths(git, rootDir) {
+  let r;
+  try { r = git(['worktree', 'list', '--porcelain'], rootDir); }
+  catch { return null; }
+  if (!r || r.status !== 0) return null;
+  const out = [];
+  for (const line of String(r.stdout || '').split('\n')) {
+    const m = line.match(/^worktree (.+)$/);
+    if (m) out.push(m[1]);
+  }
+  return out;
+}
+
+// sweepSectionWorktrees(rootDir, { testBase?, gitRunner? }) — idempotent
+// prefix prune: every worktree whose basename carries the section prefix
+// (optionally restricted to the given TESTBASE parent) is removed, stale
+// prefix directories that never registered are cleared, and git's own
+// metadata is pruned. Safe to call repeatedly and on a clean repository.
+function sweepSectionWorktrees(rootDir, opts = {}) {
+  const git = gitRunnerOf(opts, rootDir);
+  const testBase = opts && typeof opts.testBase === 'string' && opts.testBase
+    ? path.resolve(opts.testBase) : null;
+  const removed = [];
+  const listed = listWorktreePaths(git, rootDir);
+  if (listed) {
+    for (const wt of listed) {
+      if (!path.basename(wt).startsWith(SECTION_WT_PREFIX)) continue;
+      if (testBase && path.dirname(path.resolve(wt)) !== testBase) continue;
+      let rm = null;
+      try { rm = git(['worktree', 'remove', '--force', wt], rootDir); }
+      catch { rm = null; }
+      if ((rm && rm.status !== 0) || fs.existsSync(wt)) {
+        try { fs.rmSync(wt, { recursive: true, force: true }); } catch { /* best effort */ }
+      }
+      removed.push(wt);
+    }
+  }
+  if (testBase) {
+    let entries = [];
+    try { entries = fs.readdirSync(testBase); } catch { entries = []; }
+    for (const e of entries) {
+      if (!e.startsWith(SECTION_WT_PREFIX)) continue;
+      const p = path.join(testBase, e);
+      let st = null;
+      try { st = fs.lstatSync(p); } catch { continue; }
+      if (!st.isDirectory()) continue;
+      try { fs.rmSync(p, { recursive: true, force: true }); } catch { /* best effort */ }
+    }
+  }
+  try { git(['worktree', 'prune'], rootDir); } catch { /* best effort */ }
+  return { ok: true, removed, pruned: true };
+}
+
+// Tracked payload size of the repository in bytes (null when unreadable) —
+// the checkout a pinned run materializes writes exactly these files.
+function trackedBytesOf(git, rootDir) {
+  let r;
+  try { r = git(['ls-files', '-z'], rootDir); }
+  catch { return null; }
+  if (!r || r.status !== 0) return null;
+  let total = 0;
+  for (const f of String(r.stdout || '').split('\0')) {
+    if (!f) continue;
+    try { total += fs.statSync(path.join(rootDir, f)).size; } catch { continue; }
+  }
+  return total;
+}
+
+// Free bytes at a directory (null when the filesystem is unqueryable).
+function availableBytesOf(dir) {
+  try {
+    const st = fs.statfsSync(dir);
+    return st.bavail * st.bsize;
+  } catch { return null; }
+}
+
+// Hardlink a node_modules tree into a fresh checkout (the sandbox has no
+// network, and a fresh worktree has no dependencies). Regular files
+// hardlink first and fall back to a copy when the link crosses a
+// filesystem boundary; symlinks are recreated verbatim.
+function linkNodeModules(src, dest) {
+  const stats = { linked: 0, copied: 0, missing: false };
+  let st = null;
+  try { st = fs.statSync(src); } catch { st = null; }
+  if (!st || !st.isDirectory()) { stats.missing = true; return stats; }
+  const walk = (s, d) => {
+    fs.mkdirSync(d, { recursive: true });
+    for (const e of fs.readdirSync(s, { withFileTypes: true })) {
+      const sp = path.join(s, e.name);
+      const dp = path.join(d, e.name);
+      if (e.isDirectory()) walk(sp, dp);
+      else if (e.isSymbolicLink()) {
+        try { fs.symlinkSync(fs.readlinkSync(sp), dp); } catch { /* skip */ }
+      } else {
+        try { fs.linkSync(sp, dp); stats.linked++; }
+        catch { fs.copyFileSync(sp, dp); stats.copied++; }
+      }
+    }
+  };
+  walk(src, dest);
+  return stats;
+}
+
+// prepareSectionWorktree(rootDir, { testBase, pin, gitRunner? }) — checks a
+// detached full checkout of the pinned commit out under
+// <testBase>/sections-tree, with node_modules hardlinked in from the live
+// repository. A disk preflight compares the tracked payload size against
+// the free space at the test base and fails loud instead of filling the
+// volume. Preparing is idempotent: the prefix prune clears any earlier
+// registration or stale directory before the checkout lands.
+function prepareSectionWorktree(rootDir, opts = {}) {
+  const pin = opts.pin;
+  if (typeof pin !== 'string' || !GIT_SHA_RE.test(pin)) {
+    return stepFail('section-pin-invalid', 'pin must be a git commit hash (7-64 hex chars)');
+  }
+  const rawBase = opts.testBase;
+  if (typeof rawBase !== 'string' || !rawBase || !path.isAbsolute(rawBase)) {
+    return stepFail('section-testbase-invalid', 'testBase must be an absolute directory path');
+  }
+  const testBase = path.resolve(rawBase);
+  let st = null;
+  try { st = fs.statSync(testBase); } catch { st = null; }
+  if (!st || !st.isDirectory()) {
+    return stepFail('section-testbase-invalid', `testBase '${testBase}' is not a directory`);
+  }
+  const git = gitRunnerOf(opts, rootDir);
+  sweepSectionWorktrees(rootDir, { testBase, gitRunner: git });
+  const need = trackedBytesOf(git, rootDir);
+  const avail = availableBytesOf(testBase);
+  if (need != null && avail != null && avail < need) {
+    return stepFail('section-worktree-no-space', `testBase has ${avail} bytes free, the pinned checkout needs ${need}`);
+  }
+  const dir = path.join(testBase, SECTION_WT_PREFIX);
+  let add;
+  try { add = git(['worktree', 'add', '--detach', dir, pin], rootDir); }
+  catch (e) { return stepFail('section-worktree-add-failed', e.message); }
+  if (!add || add.status !== 0) {
+    return stepFail('section-worktree-add-failed', String((add && (add.stderr || add.stdout)) || 'git worktree add failed').trim());
+  }
+  const nodeModules = linkNodeModules(path.join(path.resolve(rootDir), 'node_modules'), path.join(dir, 'node_modules'));
+  const bail = (reason, detail) => {
+    sweepSectionWorktrees(rootDir, { testBase, gitRunner: git });
+    return stepFail(reason, detail);
+  };
+  let tree;
+  try { tree = git(['rev-parse', `${pin}^{tree}`], rootDir); }
+  catch (e) { return bail('pin-tree-unresolved', e.message); }
+  const treeSha = tree && tree.status === 0 ? String(tree.stdout || '').trim() : '';
+  if (!GIT_SHA_RE.test(treeSha)) {
+    return bail('pin-tree-unresolved', String((tree && (tree.stderr || tree.stdout)) || 'rev-parse failed').trim());
+  }
+  return { ok: true, path: dir, treeSha, pin, nodeModules, testBase };
 }
 
 // materializePin(rootDir, { loopStartCommit, gitRunner?, runTag? }) —
@@ -1518,6 +1700,10 @@ module.exports = {
   resolveWorkerPlan,
   dispatchNeedsHost,
   composeScriptSpawn,
+  scriptWritableRoots,
+  SECTION_WT_PREFIX,
+  prepareSectionWorktree,
+  sweepSectionWorktrees,
   materializePin,
   loadPinnedModule,
   runPinnedLeg,

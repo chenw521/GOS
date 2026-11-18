@@ -87,9 +87,12 @@ user takes it, the reply opens with a `new facts:` line listing the
 increment in the exemplar form shown in
 `skills/gos-think/examples/deep-dig-cases.md`; if the new facts move any
 cell of the card, re-present the card. An empty increment closes the
-port — answer "no new facts" and the card stands. Deepen rounds are
-user-driven, exempt from the 3-follow-up cap, and uncapped; every round
-must surface new facts to continue.
+port — answer "no new facts" and the card stands. Closing the port also
+closes the deepen line itself: at record time it takes its closed state
+— `deepen: closed - <what was dug>` — and a decision records only with
+the line closed (`gos decision add --deepen` refuses an open deepen
+line). Deepen rounds are user-driven, exempt from the 3-follow-up cap,
+and uncapped; every round must surface new facts to continue.
 
 ### Rendering contract
 

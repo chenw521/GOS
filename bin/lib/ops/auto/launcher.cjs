@@ -71,6 +71,27 @@ const GRANT_MANIFEST_DEST = '/run/gos-grants.json';
 const GRANT_MANIFEST_ENV = 'GOS_AUTO_GRANT_MANIFEST';
 const TESTBASE_ENV = 'TESTBASE';
 const GIT_IDENTITY = Object.freeze({ name: 'gos-auto', email: 'gos-auto@invalid' });
+
+// Registry of every GOS_AUTO_* environment name the auto family defines,
+// wherever the literal lives (launcher, loop, redteam, ratify, workers, cli,
+// breaker, core spawnreg, adapters). External sweeps (the section runner)
+// and spec env assembly iterate this list so an unset/scrub list can never
+// drift from the literals in the tree; the env-registry section asserts
+// every GOS_AUTO_ literal under bin/ is a member.
+const ALL_GOS_AUTO_ENV = Object.freeze([
+  'GOS_AUTO_ACK_DIR',
+  'GOS_AUTO_APPROVALS_BASELINE',
+  'GOS_AUTO_DETACH_SENTINEL',
+  'GOS_AUTO_DIRTY_BASELINE',
+  'GOS_AUTO_GRANT_MANIFEST',
+  'GOS_AUTO_SPAWN_ACK_WAIT_MS',
+  'GOS_AUTO_SPAWNED',
+  'GOS_AUTO_SPAWN_ID',
+  'GOS_AUTO_SPAWN_SCRATCH',
+  'GOS_AUTO_TEST_FIXTURE',
+  'GOS_AUTO_TIMEOUT_IDLE_SEC',
+  'GOS_AUTO_TIMEOUT_WALL_SEC',
+]);
 // bwrap --size (bytes, applied to the next --tmpfs) landed in 0.7.0; an
 // engine whose version cannot be parsed never earns sizing trust.
 const TMPFS_SIZE_BYTES = 512 * 1024 * 1024;
@@ -96,6 +117,21 @@ function numericVersionToken(stdout) {
   if (!text) return null;
   const token = text.split(/\s+/).pop();
   return /^\d+(\.\d+)*$/.test(token) ? token : null;
+}
+
+// Copy of env with every GOS_AUTO_* entry removed (family prefix, so a
+// drifted literal no registry member covers is still stripped). Spec env
+// assembly layers the deliberate injections — compose channel vars, the
+// session marker, the spawn id — over this base, so no runner-side
+// GOS_AUTO_* value can ride the passthrough into a sandbox.
+function stripGosAutoEnv(env) {
+  const src = env && typeof env === 'object' ? env : {};
+  const out = {};
+  for (const k of Object.keys(src)) {
+    if (k.startsWith('GOS_AUTO_')) continue;
+    out[k] = src[k];
+  }
+  return out;
 }
 
 // Profile tokens resolve to machine-absolute paths at compose time so the
@@ -988,7 +1024,9 @@ module.exports = {
   EMPTY_SRC,
   DENY_BASELINE_SNAPSHOT,
   SEED_SNAPSHOT_NAMES,
+  ALL_GOS_AUTO_ENV,
   compose,
+  stripGosAutoEnv,
   maskOverBindHolds,
   probeEngine,
   resolveTokenPath,

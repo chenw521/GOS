@@ -12,6 +12,11 @@
 #   bash test/run-sections.sh --affected [--base <ref>] [files...]
 #                                                      # map-blast closure ∩ section
 #                                                      # anchors + gos-map:none set
+# Env:
+#   GOS_SECTIONS_TREE_OVERRIDE=<sha>    run the suite against a pinned
+#                                       worktree of <sha> checked out under
+#                                       TESTBASE (manifest lands at
+#                                       $TESTBASE/run-manifest.json)
 set -uo pipefail
 
 GOS_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -80,7 +85,7 @@ else
   # literal base: pid-tagged so a nested runner's sweep can tell a live
   # enclosing runner's base from an abort leftover
   TESTBASE="$(mktemp -d "$GOS_ROOT/test-sections-base-$$-XXXXXX")"
-  trap 'rm -rf "$TESTBASE"' EXIT
+  LITERAL_BASE=1
 fi
 export TESTBASE
 TB_CANON="$(cd "$TESTBASE" 2>/dev/null && pwd -P)"
@@ -89,6 +94,7 @@ if [ -z "$TB_CANON" ] || [ "$TB_CANON" = "$GR_CANON" ]; then
   echo "✗ TESTBASE '$TESTBASE' cannot serve as the section base (unenterable or the repo root itself) — refusing literal fallback" >&2
   exit 1
 fi
+
 # Phase B T9 [R3-F7]: default fake HOME — global-file sections (T15/T18…) may override
 # with their own sandbox HOME; nothing here may touch the real ~/.config/gos/
 export HOME="$TESTBASE/home"
@@ -96,6 +102,51 @@ mkdir -p "$HOME"
 # fake HOME hides the real .gitconfig — pin git identity so sandbox commits work
 export GIT_AUTHOR_NAME="gos-test" GIT_AUTHOR_EMAIL="gos-test@test.invalid"
 export GIT_COMMITTER_NAME="gos-test" GIT_COMMITTER_EMAIL="gos-test@test.invalid"
+
+# ---- GOS_SECTIONS_TREE_OVERRIDE: sections run against a pinned worktree.
+# The override names the commit the suite must verify; the worktree helper
+# (bin/lib/ops/auto/workers.cjs) checks a detached full checkout out under
+# TESTBASE with node_modules hardlinked in, so a read-only workspace still
+# yields a writable tree. Sections and the gos CLI come from that tree and
+# the run manifest lands at $TESTBASE/run-manifest.json — the repo-root
+# manifest belongs to literal runs only. Without the override nothing
+# changes: live tree, repo-root manifest. The helper runs AFTER the fake
+# HOME pin so its git child never reads the enclosing session's gitconfig.
+GOS_SECTIONS_TREE_OVERRIDE="${GOS_SECTIONS_TREE_OVERRIDE:-}"
+TREE_ROOT="$GOS_ROOT"
+if [ -n "$GOS_SECTIONS_TREE_OVERRIDE" ]; then
+  if ! printf '%s' "$GOS_SECTIONS_TREE_OVERRIDE" | grep -Eqx '[0-9a-f]{7,64}'; then
+    echo "✗ GOS_SECTIONS_TREE_OVERRIDE must be a git commit hash (7-64 hex chars), got '$GOS_SECTIONS_TREE_OVERRIDE'" >&2
+    exit 1
+  fi
+  TREE_ROOT="$(node -e '
+    const path = require("path");
+    const w = require(path.join(process.argv[1], "bin/lib/ops/auto/workers.cjs"));
+    const r = w.prepareSectionWorktree(process.argv[1], { testBase: process.argv[2], pin: process.argv[3] });
+    if (!r.ok) { process.stderr.write(`✗ ${r.reason}: ${r.detail || ""}\n`); process.exit(1); }
+    process.stdout.write(r.path);
+  ' "$GOS_ROOT" "$TESTBASE" "$GOS_SECTIONS_TREE_OVERRIDE")" || {
+    echo "✗ sections tree override: the worktree helper refused to materialize '$GOS_SECTIONS_TREE_OVERRIDE' under '$TESTBASE' (reason above)" >&2
+    exit 1
+  }
+  export GOS="$TREE_ROOT/bin/gos.cjs"
+  export GOS_SECTIONS_TREE="$TREE_ROOT"
+fi
+
+# EXIT teardown: a pinned run retires its worktree registration (idempotent
+# prefix prune + git worktree prune, so aborts never leak either), and a
+# literal base carries its runner's pid sweep.
+runner_teardown() {
+  if [ -n "${GOS_SECTIONS_TREE_OVERRIDE:-}" ]; then
+    node -e '
+      const path = require("path");
+      const w = require(path.join(process.argv[1], "bin/lib/ops/auto/workers.cjs"));
+      w.sweepSectionWorktrees(process.argv[1], { testBase: process.argv[2] });
+    ' "$GOS_ROOT" "$TESTBASE" >/dev/null 2>&1 || true
+  fi
+  if [ "${LITERAL_BASE:-0}" = "1" ]; then rm -rf "$TESTBASE"; fi
+}
+trap runner_teardown EXIT
 # Phase U: headless determinism anchor — suite stdout is never a TTY,
 # so without this pin the init dual-mode flips with the developer's terminal state
 # (CI green / local red). Sections that need the interactive path MUST `env -u GOS_HEADLESS`
@@ -104,11 +155,30 @@ export GOS_HEADLESS=1
 # P15 /F10: sections pin en — locale-dependent output stays deterministic
 # regardless of the developer's environment (goldens live in section ).
 export GOS_LANG=en
-# Runner-session spawn markers never cross into sections: fixtures drive the
-# loop through module APIs and would refuse (marker-active) if the env of a
-# spawned `gos section` call leaked through. Sections testing marker behavior
-# set GOS_AUTO_SPAWNED / GOS_AUTO_SPAWN_ID explicitly per case.
-unset GOS_AUTO_SPAWNED GOS_AUTO_SPAWN_ID
+# Runner-session GOS_AUTO_* env never crosses into sections. The registry
+# (launcher ALL_GOS_AUTO_ENV) is the single source: every member is swept
+# here, and any GOS_AUTO_* left after the sweep — a literal that drifted
+# out of the registry — is named in a grep-able warning, not silence.
+# Sections testing marker behavior set GOS_AUTO_SPAWNED / GOS_AUTO_SPAWN_ID
+# explicitly per case.
+GOS_AUTO_ENV_REGISTRY="$(node -e '
+const path = require("path");
+const reg = require(path.join(process.argv[1], "bin/lib/ops/auto/launcher.cjs")).ALL_GOS_AUTO_ENV;
+if (!Array.isArray(reg) || !reg.length) process.exit(1);
+process.stdout.write(reg.join("\n"));
+' "$GOS_ROOT" 2>/dev/null)" || GOS_AUTO_ENV_REGISTRY=""
+if [ -z "$GOS_AUTO_ENV_REGISTRY" ]; then
+  echo "⚠ env-sweep-registry-unreadable — falling back to the session pair only" >&2
+  GOS_AUTO_ENV_REGISTRY="GOS_AUTO_SPAWNED
+GOS_AUTO_SPAWN_ID"
+fi
+while IFS= read -r gos_auto_var; do
+  [ -n "$gos_auto_var" ] && unset "$gos_auto_var"
+done <<< "$GOS_AUTO_ENV_REGISTRY"
+GOS_AUTO_SURVIVORS="$(env | sed -n 's/^\(GOS_AUTO_[A-Za-z0-9_]*\)=.*/\1/p' | sort -u | tr '\n' ' ')"
+if [ -n "${GOS_AUTO_SURVIVORS// /}" ]; then
+  echo "⚠ env-sweep-survivors (unregistered GOS_AUTO_* left in the runner env): ${GOS_AUTO_SURVIVORS}" >&2
+fi
 
 assert_contains() {
   local label="$1" expected="$2" actual="$3"
@@ -163,7 +233,14 @@ SELECTOR="full"
 
 # Full-run log: every byte the runner prints is teed to a per-run file so a
 # failure can be diagnosed from the artifact instead of re-running the suite.
-LOGS_DIR="$GOS_ROOT/.gos/cache/section-runs"
+# Pinned runs log under TESTBASE (the workspace may be read-only and the
+# repo-root cache belongs to literal runs); the log path in the manifest
+# carries the absolute path in that case.
+if [ -n "$GOS_SECTIONS_TREE_OVERRIDE" ]; then
+  LOGS_DIR="$TESTBASE/section-runs"
+else
+  LOGS_DIR="$GOS_ROOT/.gos/cache/section-runs"
+fi
 mkdir -p "$LOGS_DIR"
 RUN_LOG="$LOGS_DIR/$(date -u +%Y%m%dT%H%M%SZ)-${SELECTOR}$RANDOM.log"
 exec > >(tee "$RUN_LOG") 2>&1
@@ -228,7 +305,7 @@ print('\n'.join(f'{k}\t{v}' for k, v in sorted(rationale.items())), file=sys.std
   printf '%s\n' $SELECTED | sed 's/^/  · /'
 fi
 
-for f in "$GOS_ROOT"/test/sections/T*.test.sh; do
+for f in "$TREE_ROOT"/test/sections/T*.test.sh; do
   name="$(basename "$f" .test.sh)"
   if [ -n "$FILTER" ] && [[ "$name" != *"$FILTER"* ]]; then continue; fi
   if [ -n "$SELECTED" ] && ! printf '%s' "$SELECTED" | grep -qw "$name"; then
@@ -272,9 +349,18 @@ done
 # aborts. Literal bases carry their runner's pid — a base owned by a LIVE
 # runner (an enclosing suite, a concurrent invocation) is never a leak; bases
 # without a readable pid are never deleted (unattributable, product-runner
-# no-marker precedent).
+# no-marker precedent). Pinned-run leftovers under THIS base's worktree
+# prefix (an aborted override run) ride the same sweep: the helper's prune
+# is idempotent and never touches another base's registration.
 shopt -s nullglob
 for leak in "$GOS_ROOT"/test-*-t[0-9]*; do rm -rf "$leak"; done
+if [ -d "$TESTBASE/sections-tree" ]; then
+  node -e '
+    const path = require("path");
+    const w = require(path.join(process.argv[1], "bin/lib/ops/auto/workers.cjs"));
+    w.sweepSectionWorktrees(process.argv[1], { testBase: process.argv[2] });
+  ' "$GOS_ROOT" "$TESTBASE" >/dev/null 2>&1 || true
+fi
 for base in "$GOS_ROOT"/test-sections-base-*; do
   [ "$base" = "$TESTBASE" ] && continue
   bpid="$(basename "$base" | sed -n 's/^test-sections-base-\([0-9][0-9]*\)-.*/\1/p')"
@@ -292,13 +378,40 @@ echo "full log: $RUN_LOG"
 
 # run-manifest: overwrite-mode (never append — partial runs are snapshots,
 # R4 plan r2 ). Component form {head_tree, patch_sha} — commit-advance tolerant ( fix).
+# Tree provenance: a pinned run (GOS_SECTIONS_TREE_OVERRIDE) writes its
+# manifest to $TESTBASE/run-manifest.json with tree_source "pinned" and the
+# pin sha (head_tree resolves the pin, patch_sha hashes the pinned
+# worktree's diff — a clean checkout, so typically the empty-diff sha); a
+# literal run keeps the repo-root path with tree_source "live" and pin null.
 RAN_SECS="$(printf '%s\n' "$RAN_NAMES" | python3 -c "import json,sys; print(json.dumps(sorted(l.strip() for l in sys.stdin if l.strip())))" 2>/dev/null || echo '[]')"
 RESULTS_FINAL="$(printf '%s' "${RESULTS_JSON%,}" | python3 -c "import json,sys; s=sys.stdin.read().strip(); print('{'+s+'}' if s else '{}')" 2>/dev/null || echo '{}')"
 FAILED_FINAL="$(printf '%s' "$FAILED_SECS" | python3 -c "import json,sys,re; s=sys.argv[1]; print(json.dumps(sorted(re.sub(r'\(\d+\)$','',x) for x in s.split())))" "$FAILED_SECS" 2>/dev/null || echo '[]')"
-WTH_H="$(git -C "$GOS_ROOT" rev-parse 'HEAD^{tree}' 2>/dev/null)"
-WTH_P="$(git -C "$GOS_ROOT" -c core.quotepath=off diff --no-color --no-ext-diff --no-textconv HEAD 2>/dev/null | sha256sum | cut -d' ' -f1)"
-mkdir -p "$GOS_ROOT/.gos/cache"
-printf '{"schema_version":2,"selector":"%s","sections_run":%s,"failed_sections":%s,"results":%s,"log":"%s","head_tree":"%s","patch_sha":"%s","finished_at":"%s"}\n' \
-  "$SELECTOR" "$RAN_SECS" "$FAILED_FINAL" "$RESULTS_FINAL" "${RUN_LOG#"$GOS_ROOT"/}" "${WTH_H:-unknown}" "${WTH_P:-unknown}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$GOS_ROOT/.gos/cache/run-manifest.json"
+if [ -n "$GOS_SECTIONS_TREE_OVERRIDE" ]; then
+  MANIFEST_PATH="$TESTBASE/run-manifest.json"
+  TREE_SOURCE="pinned"
+  TREE_PIN_JSON="\"$GOS_SECTIONS_TREE_OVERRIDE\""
+  WTH_H="$(git -C "$GOS_ROOT" rev-parse "${GOS_SECTIONS_TREE_OVERRIDE}^{tree}" 2>/dev/null)"
+  WTH_P="$(git -C "$TREE_ROOT" -c core.quotepath=off diff --no-color --no-ext-diff --no-textconv HEAD 2>/dev/null | sha256sum | cut -d' ' -f1)"
+else
+  MANIFEST_PATH="$GOS_ROOT/.gos/cache/run-manifest.json"
+  TREE_SOURCE="live"
+  TREE_PIN_JSON="null"
+  WTH_H="$(git -C "$GOS_ROOT" rev-parse 'HEAD^{tree}' 2>/dev/null)"
+  WTH_P="$(git -C "$GOS_ROOT" -c core.quotepath=off diff --no-color --no-ext-diff --no-textconv HEAD 2>/dev/null | sha256sum | cut -d' ' -f1)"
+fi
+mkdir -p "$(dirname "$MANIFEST_PATH")" 2>/dev/null || true
+printf '{"schema_version":2,"selector":"%s","sections_run":%s,"failed_sections":%s,"results":%s,"log":"%s","head_tree":"%s","patch_sha":"%s","tree_source":"%s","pin":%s,"finished_at":"%s"}\n' \
+  "$SELECTOR" "$RAN_SECS" "$FAILED_FINAL" "$RESULTS_FINAL" "${RUN_LOG#"$GOS_ROOT"/}" "${WTH_H:-unknown}" "${WTH_P:-unknown}" "$TREE_SOURCE" "$TREE_PIN_JSON" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$MANIFEST_PATH"
+
+# Pinned teardown: retire this run's worktree (the EXIT trap repeats the
+# idempotent prune for abort paths) — the manifest is already on disk, so
+# the checkout it described can go.
+if [ -n "$GOS_SECTIONS_TREE_OVERRIDE" ]; then
+  node -e '
+    const path = require("path");
+    const w = require(path.join(process.argv[1], "bin/lib/ops/auto/workers.cjs"));
+    w.sweepSectionWorktrees(process.argv[1], { testBase: process.argv[2] });
+  ' "$GOS_ROOT" "$TESTBASE" >/dev/null 2>&1 || true
+fi
 
 [ "$TOTAL_FAIL" -eq 0 ] && exit 0 || exit 1
