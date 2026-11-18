@@ -204,13 +204,17 @@
       "id": "G-1794907015839",
       "type": "major",
       "description": "Fluid back to PLAN: align plan Covers R-02..R-06 to registry-assigned R-24..R-28 (requirement add used the project counter); re-freeze snapshot",
-      "status": "open"
+      "status": "fixed",
+      "resolution": "cured in-flow: plan re-committed with registry IDs R-24..R-28 (snapshot-force audit row recorded); gate bidirectional coverage green at REVIEW",
+      "resolved_at": "2026-11-18T01:31:45.696Z"
     },
     {
       "id": "G-1794907162157",
       "type": "major",
       "description": "Fluid back to PLAN: declare bin/lib/core/locales/en.cjs in T2/T5 Files (T74 en-zh parity required the alias file; post-freeze discovery)",
-      "status": "open"
+      "status": "fixed",
+      "resolution": "cured in-flow: bin/lib/core/locales/en.cjs declared in T2/T5 Files at the re-committed plan; diff-hit gate green through SHIP",
+      "resolved_at": "2026-11-18T01:31:45.817Z"
     }
   ],
   "activation_source": "headless",
