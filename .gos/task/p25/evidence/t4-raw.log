@@ -1,0 +1,4 @@
+  ✓ report counts init-owned decisions
+  ✓ report counts init-owned requirements
+  ✓ post-close wipe side (carried 6 phases, 20 dec, 17 req, 0 done-owned reqs, last_archived null, closed_at stamped)
+  ✓ strict P0 placeholder classifies init-owned (never prefix-extends)

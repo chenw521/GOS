@@ -118,33 +118,56 @@
     {
       "id": "T1",
       "description": "A task with incidents archives cleanly even when its lesson was recorded before UTC midnight: F-1 passes on this-task audit anchor (cross-midnight reproduction from issue #62 no longer blocks)",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/p25/evidence/t1.sh\"]",
+        "output_excerpt": "cross-midnight-exempts=1",
+        "artifact_path": ".gos/task/p25/evidence/t1t2-raw.log",
+        "replay": true
+      }
     },
     {
       "id": "T2",
       "description": "A lesson or skip recorded in ANOTHER task's context no longer satisfies F-1 for this task (foreign-row loophole closed)",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/p25/evidence/t2.sh\"]",
+        "output_excerpt": "foreign-blocks=1 add-then-rm=1 stale-skip=1",
+        "artifact_path": ".gos/task/p25/evidence/t1t2-raw.log",
+        "replay": true
+      }
     },
     {
       "id": "T3",
       "description": "gos decision add without a claimed task renders Phase as explicit init in DECISIONS.md with a header note; no phantom P0 anywhere in rendered views",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/p25/evidence/t3.sh\"]",
+        "output_excerpt": "note=1 nobareP0=1 cell=1 legacy=1",
+        "artifact_path": ".gos/task/p25/evidence/t3-raw.log",
+        "replay": true
+      }
     },
     {
       "id": "T4",
       "description": "Decisions born with birth_phase init survive a milestone close (visible as init-owned in the close report) instead of being ghost-wiped",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\".gos/task/p25/evidence/t4.sh\"]",
+        "output_excerpt": "dec=1 req=1 strictP0=1 survivors=1",
+        "artifact_path": ".gos/task/p25/evidence/t4-raw.log",
+        "replay": true
+      }
     },
     {
       "id": "T5",
       "description": "Two independently squash-merged PRs land the fixes; each merge auto-closes its issue (#62, #1)",
       "verified": false,
       "evidence": null,
-      "desc": "One merged PR (all checks green) lands both fixes; its merge auto-closes #62 and #1"
+      "desc": "One merged PR (all checks green) lands both fixes; its merge auto-closes #62 and #1",
+      "waived": true,
+      "waive_reason": "delivery truth externally blocked pre-freeze: the squash merge and issue autoclose happen after the branch state freezes; asserted from merged main at ship reporting",
+      "waived_at": "2026-11-18T04:22:46.323Z"
     }
   ],
   "gaps": [
@@ -156,6 +179,12 @@
     },
     {
       "id": "G-1794974395639",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
+    },
+    {
+      "id": "G-1794975794723",
       "type": "major",
       "description": "Fluid back to PLAN: discovered during PLAN",
       "status": "open"
@@ -266,7 +295,9 @@
           "R-29"
         ],
         "files": [
-          "test/sections/T3-decision.test.sh"
+          "test/sections/T3-decision.test.sh",
+          "test/sections/T7-render.test.sh",
+          "test/sections/T114-milestone-open-close.test.sh"
         ],
         "wave": 3
       },

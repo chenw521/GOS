@@ -1,0 +1,4 @@
+  ✓ header note explains the init phase
+  ✓ init-born row renders the init cell
+  ✓ legacy P0 placeholder migrates to init in the rendered view
+  ✓ no bare P0 column value anywhere

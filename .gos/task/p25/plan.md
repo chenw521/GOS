@@ -165,9 +165,7 @@
 
 #### T8: T3/T7/T114 fixtures for the init constant
 - **Covers**: D-103, R-01, R-29
-- **Files**: test/sections/T3-decision.test.sh,
-  test/sections/T7-render.test.sh,
-  test/sections/T114-milestone-open-close.test.sh
+- **Files**: test/sections/T3-decision.test.sh, test/sections/T7-render.test.sh, test/sections/T114-milestone-open-close.test.sh
 - **Read first**: existing T3/T7/T114 assertion patterns
 - **Approach**: T3 — stateless decision add (no claimed task) writes
   birth_phase init; T7 — rendered DECISIONS.md shows the init cell +
