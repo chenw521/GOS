@@ -103,12 +103,31 @@ function scanSources(root) {
   };
   walk(root);
   files.sort();
+  // .gos/map-ignore partition (same exact-or-glob predicate as semanticUniverse):
+  // excluded paths drop out before the read loop — no rawPairs, no edges, no
+  // externals, and they never reach finalFiles.
+  const ig = loadMapIgnore(root);
+  let kept = files;
+  let ignoredFiles = [];
+  let deadRules = [];
+  if (ig.size > 0) {
+    const hit = mapIgnorePredicate(ig);
+    ignoredFiles = [];
+    kept = [];
+    for (const rel of files) (hit(rel) ? ignoredFiles : kept).push(rel);
+    // dead rule = matches no walker-admitted file (kept or excluded) and no
+    // tracked file; semantic-only rules (e.g. bare .md paths) stay alive via git
+    const universe = new Set(files);
+    for (const p of core.trackedFiles(root).exact) universe.add(p);
+    const uni = [...universe];
+    deadRules = [...ig].filter((r) => !uni.some((p) => (r.includes('*') ? core.globMatch(r, p) : p === r)));
+  }
   // Single content read per file (REVIEW #3): pass 1 reads + guards + collects raw
   // (from, spec) pairs; resolution happens AFTER the ok-set is known so guard-skipped
   // files can never become edge targets.
   const scannedOk = new Set();
   const rawPairs = [];
-  for (const rel of files) {
+  for (const rel of kept) {
     const pats = MAP_PATTERNS[mapLangOf(path.extname(rel))];
     let content;
     try { content = fs.readFileSync(path.join(root, rel), 'utf8'); }
@@ -144,7 +163,10 @@ function scanSources(root) {
   }
   edgesL.sort((a, b) => (a.from + '\u0000' + a.to).localeCompare(b.from + '\u0000' + b.to));
   externals.sort((a, b) => (a.from + '\u0000' + a.spec).localeCompare(b.from + '\u0000' + b.spec));
-  return { files: finalFiles, edges: edgesL, externals, skipped_binary: skippedBinary, skipped_huge: skippedHuge, skipped_dir: skippedDir, unreadable_file: unreadableFile };   // frozen key: scan output schema keeps `edges` (local edgesL is a shadow-defense rename)
+  const result = { files: finalFiles, edges: edgesL, externals, skipped_binary: skippedBinary, skipped_huge: skippedHuge, skipped_dir: skippedDir, unreadable_file: unreadableFile };   // frozen key: scan output schema keeps `edges` (local edgesL is a shadow-defense rename)
+  if (ignoredFiles.length) result.ignored = ignoredFiles;        // 'ignored' + 'ignore_dead' join the
+  if (deadRules.length) result.ignore_dead = deadRules;          // schema only when non-empty
+  return result;
 }
 
 function mapGitInfo(root) {
@@ -177,6 +199,11 @@ function loadMapIgnore(root) {   // .gos/map-ignore: glob list, tracked; + .md l
   return out;
 }
 
+function mapIgnorePredicate(rules) {   // single membership predicate: exact full relpath OR `*`-glob (fnmatch, `*` crosses `/`)
+  const globs = [...rules].filter((g) => g.includes('*'));
+  return (p) => rules.has(p) || globs.some((g) => core.globMatch(g, p));
+}
+
 const SEMANTIC_EXTS = new Set([...Array.from(MAP_EXTS), '.md', '.sh']);
 
 let _acorn = null;
@@ -199,12 +226,13 @@ function acornCtx() {
 function semanticUniverse(root) {
   const t = core.trackedFiles(root);
   const ig = loadMapIgnore(root);
+  const igHit = mapIgnorePredicate(ig);
   const out = [];
   for (const p of t.exact) {
     const e = path.extname(p), top = p.split('/')[0];
     if (!SEMANTIC_EXTS.has(e)) continue;
     if (top === '.gos' || MAP_SKIP_DIRS.has(top) || top.startsWith('test-')) continue;
-    if (ig.has(p) || [...ig].some((g) => g.includes('*') && core.globMatch(g, p))) continue;
+    if (igHit(p)) continue;
     out.push(p);
   }
   return out;
@@ -768,6 +796,7 @@ Object.assign(module.exports, {
   semanticUniverse,
   readUniverseLines,
   loadMapIgnore,
+  mapIgnorePredicate,
   buildExtractorCtx,
   runExtractors,
   fnSetFingerprint,

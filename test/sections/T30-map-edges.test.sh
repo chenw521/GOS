@@ -155,7 +155,7 @@ set +e; CL=$(cd "$GOS_ROOT" && node "$GOS" map closure bin/gos.cjs --no-refresh 
 assert_exit "T30.11c legacy consumers (closure) still work on v2 cache" 0 "$CLRC"
 rm -f "$GOS_ROOT/.gos/cache/deps.json"
 
-# --- .12 extractor call site + contract string + map-ignore (sandbox repo)
+# --- .12 extractor call site + contract string + map-ignore (sandbox repo, scan-layer vendor filter)
 t30_setup
 git init -q . && mkdir -p .gos docs bin
 printf 'x\n' > bin/gos.cjs   # anchor host for #cmd:map neighborhood query
@@ -164,7 +164,12 @@ printf '#!/usr/bin/env bash\nnode "$GOS" commit think\n' > run.sh
 printf 'ignored file mentions gos map scan\n' > ignored.md
 printf 'mentions <!-- gos-map:ignore --> gos gate all on this line\n' > lineexempt.md
 printf 'frozen string deps.json schema_version not supported by this CLI — refusing cached map appears here\n' > docs/compat.md
-printf 'ignored.md\n' > .gos/map-ignore
+# vendored JS: dup top-level fn across two files, one intra-vendor require edge,
+# one bare external — all three families must vanish under the vendor/* rule
+mkdir -p vendor
+printf 'function mxActor() {}\nconst peer = require("./extra.js");\nconst pad = require("leftpad");\n' > vendor/lib.js
+printf 'function mxActor() {}\n' > vendor/extra.js
+printf 'ignored.md\nvendor/*\nvendor/ghost.js\n' > .gos/map-ignore
 git add -A && git commit -qm t3012
 set +e; OUT=$(node "$GOS" map scan 2>&1); RC=$?; set -e
 assert_exit "T30.12a sandbox scan exits 0" 0 "$RC"
@@ -189,5 +194,27 @@ assert_exit "T30.12b semantic.calls/contracts content verified" 0 "$?"
 set +e; SHOW=$(node "$GOS" map show "bin/gos.cjs#cmd:map" 2>&1); SHOWRC=$?; set -e
 assert_exit "T30.12c map show <anchor> exits 0" 0 "$SHOWRC"
 assert_contains "T30.12d R-02: show lists non-import dependents" "usage.md" "$SHOW"
+python3 - <<'PYEOF'
+import json, sys
+d = json.load(open('.gos/cache/deps.json'))
+bad = []
+def leaks(nodes):
+    out = []
+    for e in nodes:
+        if isinstance(e, dict):
+            out += [e[k] for k in ('from', 'to', 'file') if isinstance(e.get(k), str) and e[k].startswith('vendor/')]
+    return out
+if [f for f in d.get('files', []) if f.startswith('vendor/')]: bad.append('vendored file in deps files')
+if leaks(d.get('edges', [])): bad.append('vendored path in edges')
+if leaks(d.get('externals', [])): bad.append('vendored path in externals')
+for fam, rows in d.get('semantic', {}).items():
+    if isinstance(rows, list) and leaks(rows): bad.append(f'vendored path in semantic.{fam}')
+if 'mxActor' in d.get('semantic', {}).get('fn_universe', []): bad.append('vendored dup fn entered fn_universe')
+if d.get('ignored') != ['vendor/extra.js', 'vendor/lib.js']: bad.append(f"ignored != sorted vendor relpaths (got {d.get('ignored')})")
+if d.get('ignore_dead') != ['vendor/ghost.js']: bad.append(f"ignore_dead != ['vendor/ghost.js'] (got {d.get('ignore_dead')})")
+print('  ✓ scan-layer map-ignore: vendored JS absent from files/edges/externals/semantic + ignored/ignore_dead keys' if not bad else '  ✗ ' + '; '.join(bad))
+sys.exit(1 if bad else 0)
+PYEOF
+assert_exit "T30.12e vendored JS filtered from scan universe" 0 "$?"
 
 t30_teardown

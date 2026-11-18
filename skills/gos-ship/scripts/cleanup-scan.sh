@@ -4,6 +4,22 @@
 set -uo pipefail
 F=0
 FILES=$(git ls-files 2>/dev/null | grep -Ev '\.(md|lock|json)$|^\.gos/' || true)
+# map-ignored exclusion: skip files excluded from the codemap universe
+# (.gos/codebase/map-ignored.txt, rematerialized by every `gos map scan`);
+# consumed only when its provenance HEAD matches the current HEAD — an
+# untracked list must never silently narrow a scan; missing, stale or
+# unreadable list = full scan (backward compatible)
+LIST=.gos/codebase/map-ignored.txt
+if [ -f "$LIST" ]; then
+  LHEAD=$(sed -n '1s/^generated-at: .* @ //p' "$LIST" 2>/dev/null | tr -d '\r')
+  CHEAD=$(git rev-parse HEAD 2>/dev/null | cut -c1-8)
+  if [ -n "$CHEAD" ] && [ "$LHEAD" = "$CHEAD" ]; then
+    ORIG=$FILES
+    FILES=$(printf '%s\n' "$FILES" | grep -vxFf "$LIST")
+    rc=$?
+    [ "$rc" -le 1 ] || FILES="$ORIG"   # grep error (unreadable list) → fall back to full scan
+  fi
+fi
 [ -z "$FILES" ] && { echo "(no tracked source files)"; exit 0; }
 
 echo "── debug artifacts ──"

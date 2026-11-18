@@ -185,6 +185,20 @@ function cmdMap(args) {
     const scan = engine.scanSources(root);
     const obj = engine.writeDeps(root, scan);
     console.log(`✓ scanned ${scan.files.length} source file(s) — ${scan.edges.length} edge(s), ${scan.externals.length} external(s), skipped ${scan.skipped_binary} binary / ${scan.skipped_huge} huge${scan.skipped_dir ? ` / ${scan.skipped_dir} unreadable dir(s)` : ''}${scan.unreadable_file ? ` / ${scan.unreadable_file} unreadable file(s)` : ''}`);
+    {   // map-ignore byproduct: rematerialized on every scan — written when ≥1
+        // path is excluded, deleted at 0 so a loosened rule cannot leave a
+        // stale list that ship scripts would keep skipping
+      const ig = scan.ignored || [];
+      if (ig.length) {
+        const headSha = core.gitHeadSha();
+        const provHeader = `generated-at: ${new Date().toISOString().replace(/\.\d+Z$/, 'Z')} @ ${headSha ? headSha.slice(0, 8) : 'unborn'}`;
+        try { fs.mkdirSync(path.join(root, '.gos', 'codebase'), { recursive: true }); core.writeAtomicText(path.join(root, '.gos', 'codebase', 'map-ignored.txt'), `${provHeader}\n${ig.join('\n')}\n`); } catch { /* list file is best-effort */ }
+        console.log(SC.mapIgnoreExcluded.replace('<N>', String(ig.length)));
+      } else {
+        try { fs.unlinkSync(path.join(root, '.gos', 'codebase', 'map-ignored.txt')); } catch { /* absent already — best-effort */ }
+      }
+      if (scan.ignore_dead) console.log(`⚠ ${SC.mapIgnoreDeadRule.replace('<rules>', scan.ignore_dead.join(', '))}`);
+    }
     for (const f of ['.dependency-cruiser.cjs', '.dependency-cruiser.json', '.import-linter.cfg']) {   // third-party config probe
       if (fs.existsSync(path.join(root, f))) { console.log(`⚠ ${SC.probeHint.replace('<file>', f)}`); break; }
     }

@@ -72,6 +72,20 @@ INTENT (对齐) → [自适应中段] → VERIFY (证明) → TRACE (记录)
 - **语义层**：计划↔决策双向精确覆盖、diff 命中检查、fn 级调用图影响闭合（`gos map closure`）在测试跑之前就告诉你这次改动连带决定了什么。
 - **跨会话记忆**：审计链式教训（tracked JSON 真值）、带 supersede 追踪的决策链、跨会话 `gos resume`。
 
+### 排除内嵌第三方代码——.gos/map-ignore
+
+codemap 与语义扫描自带两层硬编码跳过，关不掉——内置 skip-dirs（`node_modules`、`dist` 等）和压缩产物 `.min.js`。`.gos/map-ignore` 在其上叠加仓库自维护的排除层：一个 tracked 文件，每行一条规则（`#` 开头为注释），对每个被扫描文件（无论是否 tracked）按完整 relpath 求值：
+
+| 规则 | 语义 |
+|:---|:---|
+| `vendor/*` | `*` 跨 `/`——`vendor/a/b.js` 也命中 |
+| `vendor` | 什么都匹配不到——裸目录名没有前缀语义 |
+| `vendor/**` | 与 `vendor/*` 完全相同——`**` 无特殊语义 |
+| `src/gen/api.ts` | 精确匹配该 relpath——不含 `*` 的规则按完整路径字面匹配 |
+
+每次扫描都会重建副产品 `.gos/codebase/map-ignored.txt`：排除 ≥ 1 个文件时写入，0 个时删除；ship 脚本消费它作为排除记录。
+codemap gate 的 parse 失败与重复 fn 提示会指向这里——把问题源码加进 `.gos/map-ignore` 后重跑。
+
 ### 默认对抗
 
 THINK 与 PLAN 的产物会被全新上下文的红队轮番攻击（有人力时用异构模型）。每个发现必须有处置——ACCEPT / PARTIAL / REJECT-with-facts / DEFER。盖章式通过是流程违规，不是风格选择。

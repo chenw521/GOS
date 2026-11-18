@@ -1,9 +1,9 @@
 {
   "current": {
-    "total": 1560,
-    "callgraph": 984,
-    "testof_fn": 126,
-    "fn_count": 919,
+    "total": 1567,
+    "callgraph": 988,
+    "testof_fn": 127,
+    "fn_count": 921,
     "fns": [
       "absTaskPath",
       "ackWaitMs",
@@ -481,6 +481,8 @@
       "manifestRead",
       "manualRegion",
       "mapGitInfo",
+      "mapIgnorePredicate",
+      "mapIgnoredPathsAt",
       "mapKnownKeys",
       "mapLangOf",
       "mapResolveSpec",
@@ -1218,6 +1220,7 @@
       "fnSetFingerprint": "bin/lib/map/engine.cjs",
       "depsSelfHash": "bin/lib/map/engine.cjs",
       "loadMapIgnore": "bin/lib/map/engine.cjs",
+      "mapIgnorePredicate": "bin/lib/map/engine.cjs",
       "acornCtx": "bin/lib/map/engine.cjs",
       "semanticUniverse": "bin/lib/map/engine.cjs",
       "readUniverseLines": "bin/lib/map/engine.cjs",
@@ -1695,6 +1698,7 @@
       "cmdGateTrust": "bin/lib/ops/gate.cjs",
       "changelogObligationLeg": "bin/lib/ops/gate.cjs",
       "cmdGateChangelogObligation": "bin/lib/ops/gate.cjs",
+      "mapIgnoredPathsAt": "bin/lib/ops/gate.cjs",
       "computeGateVerdicts": "bin/lib/ops/gate.cjs",
       "renderGateReport": "bin/lib/ops/gate.cjs",
       "cmdGate": "bin/lib/ops/gate.cjs",
@@ -1846,8 +1850,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "b2842e877339a623",
-    "at": "2026-11-16T10:39:14.888Z"
+    "fp": "132d43f72b8969a8",
+    "at": "2026-11-17T10:38:13.672Z"
   },
   "peak": {
     "total": 2065,

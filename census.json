@@ -259,6 +259,11 @@
       "npm": false,
       "note": "gate codemap byproduct — regenerable, first line carries generated-at + HEAD provenance (renamed from untested-fns.txt, D-20)"
     },
+    ".gos/codebase/map-ignored.txt": {
+      "git": false,
+      "npm": false,
+      "note": "map scan byproduct — regenerable, first line carries generated-at + HEAD provenance (twin of unmapped-fns.txt)"
+    },
     "assets": {
       "git": true,
       "npm": false,
