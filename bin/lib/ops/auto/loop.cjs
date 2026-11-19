@@ -747,22 +747,72 @@ async function drive(ctx) {
     return { state: v };
   };
 
+  // Per-run persistence: one record at run end on every exit route — the
+  // stage outcomes accumulated so far plus the end state. This is the
+  // evidence substrate the re-enable gate reads; a failed write never
+  // masks the run result itself (best effort by design).
+  const runId = crypto.randomUUID();
+  const runTag = runId.slice(0, 8);
+  const runStartedAtIso = new Date(now()).toISOString();
+  let runTaskId = null;
+  const runStageOutcomes = () => iterations.map((it) => {
+    const e = {
+      stage: String(it.stage || ''),
+      signal: typeof it.signal === 'string' && it.signal ? it.signal : null,
+      advanced: it.advanced === true,
+      counted: it.counted === true,
+      spawnId: String(it.spawnId || ''),
+    };
+    if (typeof it.detail === 'string' && it.detail) e.detail = String(it.detail).slice(0, 400);
+    if (Array.isArray(it.steps) && it.steps.length) {
+      e.steps = it.steps.map((sp) => ({
+        id: String((sp && sp.id) || ''),
+        kind: sp && sp.kind === 'S' ? 'S' : 'P',
+        status: String((sp && sp.status) || ''),
+      }));
+    }
+    return e;
+  });
+  const persistRunRecord = (base) => {
+    try {
+      store.writeRunRecord({
+        runId,
+        runTag,
+        taskId: runTaskId,
+        startedAtIso: runStartedAtIso,
+        endedAtIso: new Date(now()).toISOString(),
+        endState: {
+          ok: base.ok === true,
+          status: String(base.status || 'unknown'),
+          reason: typeof base.reason === 'string' && base.reason ? base.reason : null,
+        },
+        stages: runStageOutcomes(),
+      }, rootDir);
+    } catch { /* best effort: a record failure never masks the run result */ }
+  };
+  // Pre-run exits (before the breaker exists) keep their null breaker view.
+  const endPre = (base) => {
+    persistRunRecord(base);
+    return report(base, { iterations, breaker: null });
+  };
+
   // Task must be active; a task already at a terminus ends the loop cleanly
   // with no spawn adapter involvement at all.
   const first = readTaskState();
-  if (first.err) return report(first.err, { iterations, breaker: null });
+  if (first.err) return endPre(first.err);
   if (first.none) {
-    return report({ ok: false, status: 'refused', reason: 'no-task', guidance: store.guidanceFor('auto.loop.noTask') }, { iterations, breaker: null });
+    return endPre({ ok: false, status: 'refused', reason: 'no-task', guidance: store.guidanceFor('auto.loop.noTask') });
   }
   let taskState = first.state;
   const taskId = core.currentTaskId(taskState) || 'task';
+  runTaskId = taskId;
 
   const stage0 = String(taskState.current_stage || '').toUpperCase();
   if (TERMINAL_STAGES.includes(stage0)) {
-    return report({
+    return endPre({
       ok: true, status: stage0 === 'SHIP' ? 'ship' : 'done', reason: `stage-${stage0.toLowerCase()}`,
       deliveryAdapter: false, guidance: store.guidanceFor('auto.loop.taskAtEnd', { stage: stage0 }),
-    }, { iterations, breaker: null });
+    });
   }
 
   // Dispatch table: load once under the run lock (every bound validated by
@@ -771,19 +821,17 @@ async function drive(ctx) {
   // stamp; drift is the external-mutation pause, never a reload.
   const tableLoad = workers.loadDispatchTable(typeof opts.tablePath === 'string' && opts.tablePath ? { tablePath: opts.tablePath } : undefined);
   if (!tableLoad.ok) {
-    return report({ ok: false, status: 'error', reason: 'dispatch-table-unavailable', detail: tableLoad.detail, file: tableLoad.file }, { iterations, breaker: null });
+    return endPre({ ok: false, status: 'error', reason: 'dispatch-table-unavailable', detail: tableLoad.detail, file: tableLoad.file });
   }
   const tableFile = tableLoad.file;
   const dispatchTable = tableLoad.table;
-  const runId = crypto.randomUUID();
-  const runTag = runId.slice(0, 8);
   const tableSha = hashFileSha256(tableFile);
   if (tableSha == null) {
-    return report({ ok: false, status: 'error', reason: 'dispatch-table-unreadable', file: tableFile }, { iterations, breaker: null });
+    return endPre({ ok: false, status: 'error', reason: 'dispatch-table-unreadable', file: tableFile });
   }
   const tableStamped = store.rollDispatchTableStamp(rootDir, { sha256: tableSha, rolledByWave: `${runTag}/start` });
   if (!tableStamped.ok) {
-    return report({ ok: false, status: tableStamped.status || 'error', reason: tableStamped.reason || 'table-stamp-failed', path: tableStamped.path }, { iterations, breaker: null });
+    return endPre({ ok: false, status: tableStamped.status || 'error', reason: tableStamped.reason || 'table-stamp-failed', path: tableStamped.path });
   }
   const verifyTable = () => verifyDispatchTableStamp(rootDir, tableFile);
 
@@ -794,11 +842,14 @@ async function drive(ctx) {
   // Breaker over the store limits (or the injected override).
   const made = breakerMod.createBreaker({ rootDir, limits: opts.limits || undefined });
   if (!made.ok) {
-    return report({ ok: false, status: made.status, reason: made.reason, path: made.path, guidance: made.guidance }, { iterations, breaker: null });
+    return endPre({ ok: false, status: made.status, reason: made.reason, path: made.path, guidance: made.guidance });
   }
   const b = made.breaker;
   const breakerView = () => b.state();
-  const endWith = (base) => report(base, { iterations, breaker: breakerView() });
+  const endWith = (base) => {
+    persistRunRecord(base);
+    return report(base, { iterations, breaker: breakerView() });
+  };
 
   // Never develop on the trunk: create/join the per-task work branch.
   const branched = ensureWorkBranch(gitRunner, rootDir, taskId);
@@ -913,8 +964,8 @@ async function drive(ctx) {
         });
       }
        const orphanLeg = { stage: String(orphan.stage).toUpperCase(), spawnId: best.sid, streamSha256: best.st.streamSha256, advanced: true, orphan: true };
-       const legRes = await withHeartbeat(() => delegatedLegs({ leg: orphanLeg, opts, env, rootDir, spawnRunner, tp, now, runTag, legs: { ratify: legRatify, redteam: legRedteam } }));
-       if (legRes.err) return report(legRes.err, { iterations, breaker: breakerView() });
+        const legRes = await withHeartbeat(() => delegatedLegs({ leg: orphanLeg, opts, env, rootDir, spawnRunner, tp, now, runTag, legs: { ratify: legRatify, redteam: legRedteam } }));
+        if (legRes.err) return endWith(legRes.err);
        iterations.push({ spawnId: orphanLeg.spawnId, stage: orphanLeg.stage, signal: 'orphan-legs', delegation: legRes.summary });
      }
    }
@@ -968,7 +1019,7 @@ async function drive(ctx) {
   for (;;) {
     // ---- identity revalidation: delta origin must be this loop ----
     const cur = readTaskState();
-    if (cur.err) return report(cur.err, { iterations, breaker: breakerView() });
+    if (cur.err) return endWith(cur.err);
     if (cur.none) {
       return endWith({ ok: false, status: 'refused', reason: 'no-task', guidance: store.guidanceFor('auto.loop.noTask') });
     }
@@ -1032,14 +1083,14 @@ async function drive(ctx) {
       const modRatify = legRatify();
       if (leg.advanced && modRatify.isDelegatedStage(leg.stage)) {
         const legRes = await withHeartbeat(() => delegatedLegs({ leg, opts, env, rootDir, spawnRunner, tp, now, runTag, legs: { ratify: legRatify, redteam: legRedteam } }));
-        if (legRes.err) return report(legRes.err, { iterations, breaker: breakerView() });
+        if (legRes.err) return endWith(legRes.err);
         const legIter = iterations.find((i) => i.spawnId === leg.spawnId);
         if (legIter) legIter.delegation = legRes.summary;
         // Ratification mutated tracked state (the PENDING became a cleared
         // record): re-read so the spawn below carries a fresh approvals
         // baseline, prompt, and identity view.
         const refreshed = readTaskState();
-        if (refreshed.err) return report(refreshed.err, { iterations, breaker: breakerView() });
+        if (refreshed.err) return endWith(refreshed.err);
         if (!refreshed.none) taskState = refreshed.state;
       }
     }
@@ -1148,7 +1199,7 @@ async function drive(ctx) {
         iterations.push(res.iter);
         seq = res.seq;
         const afterS = truthRead();
-        if (afterS.err) return report(afterS.err, { iterations, breaker: breakerView() });
+        if (afterS.err) return endWith(afterS.err);
         if (afterS.none) {
           return endWith({ ok: false, status: 'refused', reason: 'no-task', guidance: store.guidanceFor('auto.loop.noTask') });
         }
@@ -1173,14 +1224,14 @@ async function drive(ctx) {
     const hostStatus = registry.hostStatus(opts.host, { env, runner: opts.probeRunner, home: env.HOME || os.homedir() });
     if (!hostStatus.selectable) {
       const g = hostStatus.failure || {};
-      return report({
+      return endWith({
         ok: false, status: 'refused', reason: 'host-not-selectable', host: opts.host,
         hostFailure: g, guidance: store.guidanceFor('auto.loop.hostNotSelectable', { host: opts.host }),
-      }, { iterations, breaker: breakerView() });
+      });
     }
     const adapter = registry.requireAdapter(opts.host);
     if (!adapter || typeof adapter.buildSpawnSpec !== 'function' || typeof adapter.parseEventStream !== 'function') {
-      return report({ ok: false, status: 'refused', reason: 'host-not-selectable', host: opts.host, guidance: store.guidanceFor('auto.loop.hostNotSelectable', { host: opts.host }) }, { iterations, breaker: breakerView() });
+      return endWith({ ok: false, status: 'refused', reason: 'host-not-selectable', host: opts.host, guidance: store.guidanceFor('auto.loop.hostNotSelectable', { host: opts.host }) });
     }
 
     // ---- BUILD waves: iterate the frozen snapshot before the stage exit ----
@@ -1407,7 +1458,7 @@ async function drive(ctx) {
 
     // ---- post-spawn truth: read once, shared by scoring and the checks ----
     const after = truthRead();
-    if (after.err) return report(after.err, { iterations, breaker: breakerView() });
+    if (after.err) return endWith(after.err);
     if (after.none) {
       return endWith({ ok: false, status: 'refused', reason: 'no-task', guidance: store.guidanceFor('auto.loop.noTask') });
     }
@@ -1417,7 +1468,7 @@ async function drive(ctx) {
 
     // ---- score the outcome ----
     const scored = await score({ iter, spec, result, streamText, b, stage, gitRunner, rootDir, adapter, endedAtMs, idleMs: tp.idleSec * 1000, baseline, postIdentity, mutation, hits, outcome, stageAlreadyCompleted: Array.isArray(after.state.completed_stages) && after.state.completed_stages.map(String).includes(stage) });
-    if (scored.err) return report(scored.err, { iterations, breaker: breakerView() });
+    if (scored.err) return endWith(scored.err);
     if (scored.tripped) return tripNow();
 
     // Carry the delegated leg (ratification pairs this spawn's stamp); a

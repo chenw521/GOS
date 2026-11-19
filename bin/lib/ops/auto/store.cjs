@@ -1,8 +1,8 @@
 // ops/auto/store — machine-local runner trust store, external to every
 // spawned sandbox: schema-versioned records for the auto loop (mode/profile/
 // limits, cumulative counters, breaker records, stream stamps with their
-// window sidecars, dispositions, runner-held snapshots, probe results) plus
-// the exclusive run-lock family.
+// window sidecars, dispositions, runner-held snapshots, probe results,
+// per-run stage-outcome records) plus the exclusive run-lock family.
 //
 // Load semantics are fail-closed by construction: a missing, corrupt, or
 // future-versioned store NEVER yields a fresh writable store — the loader
@@ -102,6 +102,14 @@ const RUN_START_KEY_RE = /^[A-Za-z\d][A-Za-z\d._-]*\/start$/;
 // stays bounded. In-flight entries are always the newest, never trimmed.
 const CAPS = { breakerRecords: 100, dispositions: 200, probeResults: 50, stamps: 1000 };
 
+// Per-run records: one entry per run end — run identity, per-stage
+// outcomes (script-stage step statuses ride their stage entry), the end
+// state, and timestamps. Step kinds mirror the worker-plan classes and
+// step statuses their three terminal verdicts.
+const RUN_RECORDS_CAP = 50;
+const RUN_STEP_KINDS = new Set(['P', 'S']);
+const RUN_STEP_STATUSES = new Set(['passed', 'failed', 'refused']);
+
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 
 // ---- locale surfaces ----
@@ -173,6 +181,47 @@ function stampTelemetryWellTyped(s) {
   return true;
 }
 
+// Run-record shape validation: returns the first violation as a detail
+// string, null when well-formed. Shared by the store-shape validator
+// (present-but-malformed is structural damage) and the write path (a
+// malformed record is refused before the store ever sees it).
+function runRecordRejection(r) {
+  if (!isPlainObject(r)) return 'record must be an object';
+  if (typeof r.runId !== 'string' || !r.runId) return 'runId: non-empty string required';
+  if (typeof r.runTag !== 'string' || !r.runTag) return 'runTag: non-empty string required';
+  if (r.taskId != null && (typeof r.taskId !== 'string' || !r.taskId)) return 'taskId: non-empty string or null required';
+  if (typeof r.startedAtIso !== 'string' || !ISO_RE.test(r.startedAtIso)) return 'startedAtIso: ISO string required';
+  if (typeof r.endedAtIso !== 'string' || !ISO_RE.test(r.endedAtIso)) return 'endedAtIso: ISO string required';
+  if (!isPlainObject(r.endState)) return 'endState: object required';
+  if (typeof r.endState.ok !== 'boolean') return 'endState.ok: boolean required';
+  if (typeof r.endState.status !== 'string' || !r.endState.status) return 'endState.status: non-empty string required';
+  if (r.endState.reason != null && (typeof r.endState.reason !== 'string' || !r.endState.reason)) return 'endState.reason: non-empty string or null required';
+  if (!Array.isArray(r.stages)) return 'stages: array required';
+  for (let i = 0; i < r.stages.length; i += 1) {
+    const p = `stages[${i}]`;
+    const s = r.stages[i];
+    if (!isPlainObject(s)) return `${p}: object required`;
+    if (typeof s.stage !== 'string' || !s.stage) return `${p}.stage: non-empty string required`;
+    if (s.signal != null && (typeof s.signal !== 'string' || !s.signal)) return `${p}.signal: non-empty string or null required`;
+    if (typeof s.advanced !== 'boolean') return `${p}.advanced: boolean required`;
+    if (typeof s.counted !== 'boolean') return `${p}.counted: boolean required`;
+    if (typeof s.spawnId !== 'string' || !s.spawnId) return `${p}.spawnId: non-empty string required`;
+    if (s.detail != null && (typeof s.detail !== 'string' || !s.detail)) return `${p}.detail: non-empty string or absent`;
+    if (s.steps != null) {
+      if (!Array.isArray(s.steps)) return `${p}.steps: array or absent required`;
+      for (let j = 0; j < s.steps.length; j += 1) {
+        const q = `${p}.steps[${j}]`;
+        const sp = s.steps[j];
+        if (!isPlainObject(sp)) return `${q}: object required`;
+        if (typeof sp.id !== 'string' || !sp.id) return `${q}.id: non-empty string required`;
+        if (!RUN_STEP_KINDS.has(sp.kind)) return `${q}.kind: P|S required`;
+        if (!RUN_STEP_STATUSES.has(sp.status)) return `${q}.status: passed|failed|refused required`;
+      }
+    }
+  }
+  return null;
+}
+
 function validateStoreShape(st) {
   const errs = [];
   if (!isPlainObject(st)) return ['store: not an object'];
@@ -215,6 +264,15 @@ function validateStoreShape(st) {
   if (!Array.isArray(st.probeResults)) errs.push('probeResults: array required');
   else if (!st.probeResults.every((p) => isPlainObject(p) && typeof p.host === 'string' && typeof p.state === 'string')) {
     errs.push('probeResults: entries need string host+state');
+  }
+  // Optional run records (additive): absent on older stores, present-but-
+  // malformed is structural damage. The first violation names the field.
+  if (st.runRecords != null) {
+    if (!Array.isArray(st.runRecords)) errs.push('runRecords: array required');
+    else {
+      const first = st.runRecords.map(runRecordRejection).find(Boolean);
+      if (first) errs.push('runRecords: ' + first);
+    }
   }
   // Optional pinWorktrees key (additive): absent on older stores, but a
   // present-but-malformed one is structural damage.
@@ -372,6 +430,7 @@ function freshStore(opts) {
     dispositions: [],
     snapshots: {},
     probeResults: [],
+    runRecords: [],
   };
   if (opts.timeouts != null) st.timeouts = { wallSec: opts.timeouts.wallSec, idleSec: opts.timeouts.idleSec };
   if (opts.allowFull === true) st.allowFull = true;
@@ -919,6 +978,38 @@ function saveProbeResult(p, rootDir) {
     return st;
   });
   return r.ok ? { ok: true, path: r.path, result: r.store.probeResults[r.store.probeResults.length - 1] } : r;
+}
+
+// ---- run records (per-run persistence) ----
+
+// Append one per-run record: run identity (runId/runTag/taskId), per-stage
+// outcomes accumulated over the run (script-stage step statuses ride their
+// stage entry), the end state, and timestamps. Validated before the store
+// ever sees it — a malformed record is refused, never persisted; an older
+// store without the key adopts the array on the first append.
+function writeRunRecord(rec, rootDir) {
+  const detail = runRecordRejection(rec);
+  if (detail) return { ok: false, status: 'error', reason: 'invalid-run-record', detail };
+  const r = mutate(rootDir, (st) => {
+    if (!Array.isArray(st.runRecords)) st.runRecords = [];
+    st.runRecords = trimArray([...st.runRecords, rec], RUN_RECORDS_CAP);
+    return st;
+  });
+  return r.ok ? { ok: true, path: r.path, record: r.store.runRecords[r.store.runRecords.length - 1] } : r;
+}
+
+// Read-only view of every run record, oldest first.
+function readRunRecords(rootDir) {
+  const cur = load(rootDir);
+  if (!cur.ok) return cur;
+  return { ok: true, path: cur.path, runRecords: Array.isArray(cur.store.runRecords) ? cur.store.runRecords : [] };
+}
+
+// Latest run record (null when none) — the re-enable gate's read.
+function latestRunRecord(rootDir) {
+  const r = readRunRecords(rootDir);
+  if (!r.ok) return r;
+  return { ok: true, path: r.path, record: r.runRecords.length ? r.runRecords[r.runRecords.length - 1] : null };
 }
 
 // ---- counters + breaker records ----
@@ -1642,6 +1733,7 @@ function purgeStore(rootDir) {
 
 module.exports = {
   STORE_SCHEMA_VERSION,
+  RUN_RECORDS_CAP,
   DEFAULT_LIMITS: limits.DEFAULT_LIMITS,
   storeRoot,
   repoKey,
@@ -1666,6 +1758,9 @@ module.exports = {
   bumpSpawn,
   recordTrip,
   recordBreaker,
+  writeRunRecord,
+  readRunRecords,
+  latestRunRecord,
   mirrors,
   acquireRunLock,
   heartbeatRunLock,
