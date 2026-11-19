@@ -228,7 +228,9 @@ EOF
 C4_OUT="$(env T124_WS="$T124_WS" XDG_DATA_HOME="$T124_DIR/xdg" node "$T124_DIR/t124-classs.cjs" 2>&1)"; C4_RC=$?
 t124_exit "class-s probe runs clean" "0" "$C4_RC"
 t124_contains "Class S spec env = marker + spawn id over the compose channel vars" "C4-OK" "$C4_OUT"
-t124_contains "VERIFY stage still advances through the exit channel" "RUN[ship""/"ok]" "$C4_OUT"
+T124_NEEDLE="RUN[ship"
+T124_NEEDLE="$T124_NEEDLE/ok]"
+t124_contains "VERIFY stage still advances through the exit channel" "$T124_NEEDLE" "$C4_OUT"
 
 echo "--- T124 done: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]
