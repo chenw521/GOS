@@ -24,14 +24,14 @@ const USAGE = 'gos branch reap [--dry-run|--apply] --base <ref>';
 // Every git invocation here runs with object replacement disabled: the
 // delete verdict must reflect real repository objects, never a refs/replace
 // rewrite of them.
-function gitOut(argv) {
+function gitOutNoReplace(argv) {
   const env = Object.assign({}, process.env, { GIT_NO_REPLACE_OBJECTS: '1', LC_ALL: 'C', LANG: 'C' });
   return execFileSync('git', argv, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env }).toString();
 }
 
-function gitTry(argv) {
+function gitTryNoReplace(argv) {
   try {
-    return { ok: true, out: gitOut(argv), err: '' };
+    return { ok: true, out: gitOutNoReplace(argv), err: '' };
   } catch (e) {
     return { ok: false, out: '', err: String((e && (e.stderr || e.stdout)) || e.message || '') };
   }
@@ -65,7 +65,7 @@ function parseReapArgs(args) {
 function graftsActive() {
   let text;
   try {
-    text = fs.readFileSync(path.join(gitOut(['rev-parse', '--absolute-git-dir']).trim(), 'info', 'grafts'), 'utf8');
+    text = fs.readFileSync(path.join(gitOutNoReplace(['rev-parse', '--absolute-git-dir']).trim(), 'info', 'grafts'), 'utf8');
   } catch {
     return false;
   }
@@ -73,7 +73,7 @@ function graftsActive() {
 }
 
 function replaceRefCount() {
-  return gitTry(['for-each-ref', 'refs/replace/']).out.split('\n').filter(Boolean).length;
+  return gitTryNoReplace(['for-each-ref', 'refs/replace/']).out.split('\n').filter(Boolean).length;
 }
 
 // Branches checked out in any worktree. Pin-worktrees are ordinary linked
@@ -82,7 +82,7 @@ function replaceRefCount() {
 // state) still vetsoes deleting whatever it has checked out.
 function worktreeBranches() {
   const set = new Set();
-  const res = gitTry(['worktree', 'list', '--porcelain']);
+  const res = gitTryNoReplace(['worktree', 'list', '--porcelain']);
   if (res.ok) {
     for (const line of res.out.split('\n')) {
       const m = line.match(/^branch refs\/heads\/(.+)$/);
@@ -93,7 +93,7 @@ function worktreeBranches() {
   if (pins && pins.ok) {
     for (const rec of Object.values(pins.pins || {})) {
       if (typeof rec.path !== 'string' || !fs.existsSync(rec.path)) continue;
-      const b = gitTry(['-C', rec.path, 'branch', '--show-current']);
+      const b = gitTryNoReplace(['-C', rec.path, 'branch', '--show-current']);
       if (b.ok && b.out.trim()) set.add(b.out.trim());
     }
   }
@@ -142,9 +142,9 @@ function liveRunLockHolder() {
 // two leaves the branch intact (safe direction), never the reverse.
 function applyDeletion(branch, sha) {
   const reapedRef = `refs/reaped/${branch}`;
-  const made = gitTry(['update-ref', reapedRef, sha]);
+  const made = gitTryNoReplace(['update-ref', reapedRef, sha]);
   if (!made.ok) return { ok: false, stage: 'revive', err: made.err, reapedRef };
-  const del = gitTry(['update-ref', '-d', `refs/heads/${branch}`]);
+  const del = gitTryNoReplace(['update-ref', '-d', `refs/heads/${branch}`]);
   if (!del.ok) return { ok: false, stage: 'delete', err: del.err, reapedRef };
   return { ok: true, reapedRef };
 }
@@ -153,13 +153,13 @@ function cmdBranch(args) {
   const sub = (args[0] || '').toLowerCase();
   if (sub !== 'reap') core.die(core.t('branchReap.err.unknownSub', { sub: args[0] || '', usage: USAGE }));
   const opts = parseReapArgs(args.slice(1));
-  if (!gitTry(['rev-parse', '--is-inside-work-tree']).ok) core.die(core.t('branchReap.err.noRepo'));
+  if (!gitTryNoReplace(['rev-parse', '--is-inside-work-tree']).ok) core.die(core.t('branchReap.err.noRepo'));
   // History-rewrite refusal: tier-1 evidence is only trustworthy on the
   // real object graph.
   const nReplace = replaceRefCount();
   if (nReplace > 0) core.die(core.t('branchReap.err.replaceRefs', { n: nReplace }));
   if (graftsActive()) core.die(core.t('branchReap.err.grafts'));
-  const baseRes = gitTry(['rev-parse', '--verify', `${opts.base}^{commit}`]);
+  const baseRes = gitTryNoReplace(['rev-parse', '--verify', `${opts.base}^{commit}`]);
   if (!baseRes.ok) core.die(core.t('branchReap.err.baseMissing', { base: opts.base }));
   const baseSha = baseRes.out.trim();
   if (opts.mode === 'apply') {
@@ -169,11 +169,11 @@ function cmdBranch(args) {
   // Content-landed evidence: the set of every tree object reachable from
   // the base — a branch whose tip tree is a member adds no content the base
   // history does not already carry.
-  const baseTrees = new Set(gitOut(['log', '--format=%T', baseSha]).split('\n').filter(Boolean));
+  const baseTrees = new Set(gitOutNoReplace(['log', '--format=%T', baseSha]).split('\n').filter(Boolean));
   const checkedOut = worktreeBranches();
   const taskBranch = activeTaskBranch();
   const rows = [];
-  const listing = gitOut(['for-each-ref', '--format=%(refname:short)%09%(objectname)%09%(committerdate:iso8601)', 'refs/heads/']);
+  const listing = gitOutNoReplace(['for-each-ref', '--format=%(refname:short)%09%(objectname)%09%(committerdate:iso8601)', 'refs/heads/']);
   for (const line of listing.split('\n').filter(Boolean)) {
     const [branch, sha, when] = line.split('\t');
     const row = { branch, sha, lastCommitIso: when || null };
@@ -182,7 +182,7 @@ function cmdBranch(args) {
       row.action = 'keep';
       row.reason = exempt;
     } else {
-      const tree = gitTry(['rev-parse', `${sha}^{tree}`]);
+      const tree = gitTryNoReplace(['rev-parse', `${sha}^{tree}`]);
       if (tree.ok && baseTrees.has(tree.out.trim())) {
         row.action = 'delete';
         row.reason = 'content-landed-in-base';

@@ -610,12 +610,19 @@ const baseEnv = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
 const problems = [];
 const bwrapProbe = () => ({ engine: 'bwrap', version: '0.11.0' });
 
+// Fixture homes need a creatable scratch base: a sandboxed run can carry a
+// host TMPDIR that is not mounted, so fall back to /tmp when os.tmpdir()
+// is unusable.
+let tmpBase = os.tmpdir();
+try { fs.accessSync(tmpBase, fs.constants.W_OK); } catch { tmpBase = '/tmp'; }
+if (!fs.existsSync(tmpBase)) tmpBase = '/tmp';
+
 // fixture homes control which credential paths exist on the host side
-const richHome = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-rich-'));
-const bareHome = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-bare-'));
-const linkHome = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-link-'));
-const outsideAws = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-out-'));
-const xdg = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-xdg-'));
+const richHome = fs.mkdtempSync(path.join(tmpBase, 'd7-rich-'));
+const bareHome = fs.mkdtempSync(path.join(tmpBase, 'd7-bare-'));
+const linkHome = fs.mkdtempSync(path.join(tmpBase, 'd7-link-'));
+const outsideAws = fs.mkdtempSync(path.join(tmpBase, 'd7-out-'));
+const xdg = fs.mkdtempSync(path.join(tmpBase, 'd7-xdg-'));
 fs.mkdirSync(path.join(xdg, 'gos'), { recursive: true });
 fs.closeSync(fs.openSync(path.join(richHome, '.git-credentials'), 'w'));
 fs.mkdirSync(path.join(richHome, '.aws'), { recursive: true });
@@ -630,7 +637,7 @@ fs.closeSync(fs.openSync(path.join(linkHome, '.git-credentials'), 'w'));
 fs.mkdirSync(path.join(linkHome, '.gnupg'), { recursive: true });
 // host exec tree in the version-manager shape: bin entry symlinked into a
 // sibling lib tree, both under one root outside the system mounts
-const fxRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-fx-'));
+const fxRoot = fs.mkdtempSync(path.join(tmpBase, 'd7-fx-'));
 fs.mkdirSync(path.join(fxRoot, 'bin'), { recursive: true });
 fs.mkdirSync(path.join(fxRoot, 'lib', 'host-real'), { recursive: true });
 fs.writeFileSync(path.join(fxRoot, 'lib', 'host-real', 'run'), '#!/bin/sh\nexit 0\n');
@@ -763,10 +770,10 @@ if (real.tier === 'bubblewrap') {
 // model auth: the declared file binds read-only at its declared path with
 // the realpath as the source, inside whatever mask covers the directory
 {
-  const authSrc = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-auth-'));
+  const authSrc = fs.mkdtempSync(path.join(tmpBase, 'd7-auth-'));
   const authReal = path.join(authSrc, 'auth.json');
   fs.writeFileSync(authReal, '{}');
-  const declaredHome = fs.mkdtempSync(path.join(os.tmpdir(), 'd7-authdest-'));
+  const declaredHome = fs.mkdtempSync(path.join(tmpBase, 'd7-authdest-'));
   fs.mkdirSync(path.join(declaredHome, '.local', 'share', 'opencode'), { recursive: true });
   const declared = path.join(declaredHome, '.local', 'share', 'opencode', 'auth.json');
   fs.symlinkSync(authReal, declared);

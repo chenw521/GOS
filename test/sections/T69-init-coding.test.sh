@@ -114,8 +114,12 @@ if cmp -s docs/coding-standards/shell.md "$GOS_ROOT/templates/coding-standards/s
 else echo "  ✗ G3 content mismatch after overwrite"; FAIL=$((FAIL+1)); fi
 
 # --- H: non-git dir refused ---
+# The ceiling shield covers the actual section-base location: TESTBASE may
+# sit inside a git work tree (host literal base under the repo, sandbox base
+# under the spawn scratch), and discovery must stop before any ancestor
+# toplevel — the git-init hint is the contract under test.
 mkdir -p "$T69_DIR/nogit" && cd "$T69_DIR/nogit" || exit 1
-out=$(GIT_CEILING_DIRECTORIES="$GOS_ROOT" node "$GOS" init coding </dev/null 2>&1); rc=$?
+out=$(GIT_CEILING_DIRECTORIES="$TESTBASE:$GOS_ROOT" node "$GOS" init coding </dev/null 2>&1); rc=$?
 assert_exit "H1 non-git work-tree refused (exit 1)" 1 "$rc"
 assert_contains "H2 hint suggests git init" "git init" "$out"
 cd "$T69_DIR" || exit 1

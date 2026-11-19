@@ -45,6 +45,13 @@ EOF
 export GIT_CEILING_DIRECTORIES="$TESTBASE"
 # shared npx cache: single commitlint@19 fetch for the whole section
 export NPM_CONFIG_CACHE="$TESTBASE/npm-cache-t60"
+# hooks/commit-msg separates npx streams via mktemp under TMPDIR; with an
+# unusable TMPDIR (a sandboxed run carries the host value, unmounted) the
+# hook degrades to fail-closed before the H cases can exercise fail-open,
+# so pin the first usable base.
+T60_TMP="${TMPDIR:-/tmp}"
+{ [ -d "$T60_TMP" ] && [ -w "$T60_TMP" ]; } || T60_TMP=/tmp
+export TMPDIR="$T60_TMP"
 set +e; WARM=$(npx --yes commitlint@19 --version </dev/null 2>&1); set -e
 assert_contains "A0 pre-warm commitlint@19 via shared npx cache" "@commitlint/cli@" "$WARM"
 

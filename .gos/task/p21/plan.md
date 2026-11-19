@@ -84,7 +84,7 @@
 
 #### T9a: triage ledger (classification only, zero code)
 - **Covers**: D-107, R-01 (classification half)
-- **Files**: test/triage-ledger.md
+- **Files**: .gos/task/p21/triage-ledger.md
 - **Read first**: the 95-failure distribution in the 5419521c head log, the failing sections' sources
 - **Approach**: classify each of the 95 into families with a legal exit each (fixed-by-R1 / fixed-by-R2 / worktree-conversion / XDG-fixture-conversion); no skips, no writable widening. Ledger rows: section, failure count, family, planned exit, owning task.
 - **Done when**: ledger accounts for 95/95 with every row naming a legal exit and an owning task (T9b/T9c/T7-covered-by-R1/R2)
@@ -136,7 +136,7 @@
 
 #### T9b: sandbox-fixable family conversions
 - **Covers**: D-107, R-01
-- **Files**: test/sections/*.test.sh, test/triage-ledger.md
+- **Files**: test/sections/*.test.sh, .gos/task/p21/triage-ledger.md
 - **Read first**: T9a ledger rows, T1/T2 landed surfaces
 - **Approach**: verify each ledger row's failure actually clears under the landed R-1/R-2 surfaces; section edits only where the failure reveals a real defect (not sandbox noise); update ledger rows to landed state.
 - **Done when**: every `fixed-by-R1/R2` ledger row verified green in a sandbox run (partial suite acceptable, filter by full name)
@@ -144,7 +144,7 @@
 
 #### T9c: conversion families (worktree + XDG-fixture)
 - **Covers**: D-108, R-01
-- **Files**: test/sections/*.test.sh, test/triage-ledger.md
+- **Files**: test/sections/*.test.sh, .gos/task/p21/triage-ledger.md
 - **Read first**: T7 helper, T100/T104/T105 fixture precedents
 - **Approach**: convert self-repo sections to the worktree helper; convert machine-local-state sections to XDG/TESTBASE fixtures (lesson 047cbe80); no skips, no writable widening.
 - **Done when**: every converted section green in the sandbox AND ledger rows updated

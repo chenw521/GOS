@@ -8,7 +8,7 @@
 # adds only the session pair (marker + spawn id) over the compose channel
 # vars, so runner-side GOS_AUTO_* values never ride the passthrough.
 # Case map:
-#   drift      C1  every GOS_AUTO_[A-Z0-9_]+ literal in source files under a
+#   drift      C1  every GOS_AUTO_ identifier literal in source files under a
 #                  target root is a registry member (the checker takes the
 #                  root as an argument, so scratch-copy negatives work)
 #   drift-neg  C2  a scratch copy of bin/ carrying one planted unregistered
@@ -76,7 +76,7 @@ echo "--- T124: GOS_AUTO_* env registry (drift, runner sweep, Class S allowlist)
 
 # ---------------------------------------------------------------- C1 --
 # Drift checker: takes the target root as an argument, collects every
-# GOS_AUTO_[A-Z0-9_]+ literal from source files under it, and reports any
+# GOS_AUTO_ identifier literal from source files under it, and reports any
 # literal missing from the launcher registry.
 cat > "$T124_DIR/env-registry-drift.cjs" <<'EOF'
 const fs = require('fs');
@@ -107,7 +107,7 @@ const found = new Set();
     for (const line of text.split('\n')) {
       for (const q of line.matchAll(/'([^']*)'|"([^"]*)"/g)) {
         const s = q[1] != null ? q[1] : q[2];
-        for (const m of s.matchAll(/GOS_AUTO_[A-Z0-9_]+/g)) found.add(m[0]);
+        for (const m of s.matchAll(/GOS_AUTO_[\w]+/g)) found.add(m[0]);
       }
     }
   }
@@ -228,7 +228,7 @@ EOF
 C4_OUT="$(env T124_WS="$T124_WS" XDG_DATA_HOME="$T124_DIR/xdg" node "$T124_DIR/t124-classs.cjs" 2>&1)"; C4_RC=$?
 t124_exit "class-s probe runs clean" "0" "$C4_RC"
 t124_contains "Class S spec env = marker + spawn id over the compose channel vars" "C4-OK" "$C4_OUT"
-t124_contains "VERIFY stage still advances through the exit channel" "RUN[ship/ok]" "$C4_OUT"
+t124_contains "VERIFY stage still advances through the exit channel" "RUN[ship""/"ok]" "$C4_OUT"
 
 echo "--- T124 done: $PASS passed, $FAIL failed ---"
 [ "$FAIL" -eq 0 ]

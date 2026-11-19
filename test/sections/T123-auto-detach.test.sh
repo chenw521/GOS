@@ -75,7 +75,7 @@ trap t123_teardown EXIT
 echo "--- T123: auto default-detach survival ---"
 
 # One isolated case world per call: sandbox HOME + XDG_DATA_HOME + a git repo
-# with a minimal task state (same shape as the T104 fixture).
+# with a minimal task state (same shape as the auto-core fixture).
 t123_case() {
   T123_CASE="$T123_DIR/$1"
   mkdir -p "$T123_CASE/home" "$T123_CASE/xdg" "$T123_CASE/repo/.gos/logs"

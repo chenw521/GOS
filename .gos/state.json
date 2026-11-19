@@ -207,7 +207,7 @@
           "R-01"
         ],
         "files": [
-          "test/triage-ledger.md"
+          ".gos/task/p21/triage-ledger.md"
         ],
         "wave": 1
       },
@@ -284,7 +284,7 @@
         ],
         "files": [
           "test/sections/*.test.sh",
-          "test/triage-ledger.md"
+          ".gos/task/p21/triage-ledger.md"
         ],
         "wave": 3
       },
@@ -296,7 +296,7 @@
         ],
         "files": [
           "test/sections/*.test.sh",
-          "test/triage-ledger.md"
+          ".gos/task/p21/triage-ledger.md"
         ],
         "wave": 3
       },

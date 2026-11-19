@@ -29,7 +29,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 
 # Manifest lines look like: "npm notice 3.4kB skills/gos-verify/SKILL.md".
-paths="$(npm pack --dry-run 2>&1 | grep -E '^npm notice +[0-9.]+[kMG]?B ' | sed 's/^npm notice *[^ ]* //')"
+paths="$(npm pack --dry-run 2>&1 | grep -E '^npm notice +[0-9.]+[kMG]?B ' | sed 's/^npm notice *[^ ]* *//')"
 
 fail=0
 

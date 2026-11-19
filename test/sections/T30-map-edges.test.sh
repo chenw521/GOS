@@ -2,16 +2,50 @@
 # gos-map:cmd map
 # map 2.0 anchor layer — parseAnchor / five validator classes / universe / last-# split / bans / case normalization
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
+# Self-repo legs (.11) run inside a detached section worktree (worktree helper,
+# bin/lib/ops/auto/workers.cjs): the checkout owns its .gos lock+cache, so no
+# enclosing runner state or read-only checkout is ever touched.
 T30_DIR=""
+T30_WTB=""
+T30_WT=""
 
 t30_setup() {
   T30_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-t30"
   mkdir -p "$T30_DIR" && cd "$T30_DIR" || exit 1
 }
 
-t30_teardown() { cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$T30_DIR"; }
+# Detached HEAD checkout under the section base; the tracked .gos/state.json
+# is removed inside the checkout (tracked session state is unsupported in a
+# linked worktree — lock.cjs guard) — the scan legs below are stateless.
+t30_wtprep() {
+  T30_WTB="$T30_DIR/wt"
+  mkdir -p "$T30_WTB"
+  T30_WT="$(node -e '
+    const cp = require("child_process");
+    const path = require("path");
+    const root = process.env.GOS_ROOT;
+    const w = require(path.join(root, "bin/lib/ops/auto/workers.cjs"));
+    const pin = cp.spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout.trim();
+    const r = w.prepareSectionWorktree(root, { testBase: process.argv[1], pin });
+    if (!r.ok) { process.stderr.write("worktree prepare refused: " + r.reason + "\n"); process.exit(1); }
+    process.stdout.write(r.path);
+  ' "$T30_WTB")"
+  rm -f "$T30_WT/.gos/state.json"
+}
+
+t30_wtsweep() {
+  [ -n "${T30_WTB:-}" ] || return 0
+  node -e '
+    const path = require("path");
+    const w = require(path.join(process.env.GOS_ROOT, "bin/lib/ops/auto/workers.cjs"));
+    w.sweepSectionWorktrees(process.env.GOS_ROOT, { testBase: process.argv[1] });
+  ' "$T30_WTB" >/dev/null 2>&1 || true
+}
+
+t30_teardown() { t30_wtsweep; cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$T30_DIR"; }
 
 t30_setup
+trap t30_teardown EXIT
 echo "--- T30: anchor layer (parse + 5 validators + universe + bans) ---"
 
 # --- sandbox repo fixture (committed BEFORE queries — fixture-before-init chain) ---
@@ -135,11 +169,12 @@ else echo "  ✗ COMMANDS edge subs missing ($N_SUB)"; FAIL=$((FAIL+1)); fi
 if grep -q "const EXTRACTORS = \[" "$GOS_ROOT/bin/lib/map/engine.cjs"; then
   echo "  ✓ EXTRACTORS registry exists (extensible framework)"; PASS=$((PASS+1))
 else echo "  ✗ EXTRACTORS registry missing"; FAIL=$((FAIL+1)); fi
-set +e; SR=$(cd "$GOS_ROOT" && node "$GOS" map scan 2>/dev/null); SRC_RC=$?; set -e
+t30_wtprep
+set +e; SR=$(cd "$T30_WT" && node "$GOS" map scan 2>/dev/null); SRC_RC=$?; set -e
 assert_exit "T30.11a self-repo scan with extractors exits 0" 0 "$SRC_RC"
-python3 - <<'PYEOF'
+T30_WT="$T30_WT" python3 - <<'PYEOF'
 import json, os, sys
-d = json.load(open(os.path.join(os.environ['GOS_ROOT'], '.gos', 'cache', 'deps.json')))
+d = json.load(open(os.path.join(os.environ['T30_WT'], '.gos', 'cache', 'deps.json')))
 bad = []
 if d.get('schema_version') != 3: bad.append(f"schema_version != 3 (got {d.get('schema_version')})")   # [Phase P T2/D-40]
 sw = d.get('semantic', {}).get('switch', [])
@@ -151,9 +186,10 @@ print('  ✓ semantic.switch edges present (map→cmdMap, keyed {cmd,fn,file})' 
 sys.exit(1 if bad else 0)
 PYEOF
 assert_exit "T30.11b semantic.switch schema holds" 0 "$?"
-set +e; CL=$(cd "$GOS_ROOT" && node "$GOS" map closure bin/gos.cjs --no-refresh 2>&1); CLRC=$?; set -e
+set +e; CL=$(cd "$T30_WT" && node "$GOS" map closure bin/gos.cjs --no-refresh 2>&1); CLRC=$?; set -e
 assert_exit "T30.11c legacy consumers (closure) still work on v2 cache" 0 "$CLRC"
-rm -f "$GOS_ROOT/.gos/cache/deps.json"
+rm -f "$T30_WT/.gos/cache/deps.json"
+t30_wtsweep
 
 # --- .12 extractor call site + contract string + map-ignore (sandbox repo, scan-layer vendor filter)
 t30_setup

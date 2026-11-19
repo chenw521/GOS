@@ -4,25 +4,25 @@
 # sandboxed section suite runs on (workers.cjs helper + the run-sections.sh
 # manifest contract).
 # Case map:
-#   enum        W1  scriptWritableRoots gains the pre-created absolute TESTBASE
+#   enum        w1  scriptWritableRoots gains the pre-created absolute TESTBASE
 #                 pin (<scratch>/testbed): composeScriptSpawn pre-creates it,
 #                 exports TESTBASE there, binds it rw post-mask, keeps the
-#                 workspace bind set at .git/.gos/cache (T120 shape), and the
+#                 workspace bind set at .git/.gos/cache (compose-invariants shape), and the
 #                 pin sits inside the writable policy allow set (a pin-only
 #                 writableRoots refusal names the mask shadow, never
 #                 outside-policy)
-#   helper      W2  prepareSectionWorktree checks the pinned commit out under
+#   helper      w2  prepareSectionWorktree checks the pinned commit out under
 #                 TESTBASE (prefix dir), hardlinks node_modules from the repo
 #                 (same inode), refuses bad pin/testBase inputs, and prunes
 #                 its own prefix idempotently — two consecutive prepares
 #                 never accumulate registrations
-#   pinned-run  W3  a self-repo section passes inside the real restricted
+#   pinned-run  w3  a self-repo section passes inside the real restricted
 #                 sandbox compose with GOS_SECTIONS_TREE_OVERRIDE pinned at
 #                 HEAD; the manifest lands at $TESTBASE/run-manifest.json
 #                 with tree_source "pinned", pin <sha>, head_tree <sha>^{tree};
 #                 the real repo's worktree count returns to baseline after
 #                 each run and across two consecutive runs
-#   live-run    W4  without the override the manifest stays at the repo-root
+#   live-run    w4  without the override the manifest stays at the repo-root
 #                 path with tree_source "live" and pin null
 # The sandbox cases register their spawn through a fixture XDG store and a
 # fixture HOME (no machine-local store is touched); the real repo's worktree
@@ -91,7 +91,7 @@ trap t126_teardown EXIT
 
 echo "--- T126: worktree helper topology (pinned writable tree + manifest contract) ---"
 
-# Fixture HOME carries every mandatory mask destination (T120 precedent);
+# Fixture HOME carries every mandatory mask destination (compose-invariants precedent);
 # the store (spawn registrations, scratch dirs) lives under a fixture XDG
 # root so no machine-local state is touched.
 mkdir -p "$T126_DIR/env/home/.config/gh" "$T126_DIR/env/home/.config/git" \
@@ -105,7 +105,7 @@ mkdir -p "$T126_DIR/env/home/.config/gh" "$T126_DIR/env/home/.config/git" \
 export HOME="$T126_DIR/env/home"
 export XDG_DATA_HOME="$T126_DIR/env/xdg"
 
-# ---- W1+W2: helper API + enumerated writable set (fixture repo, stub engine)
+# ---- case one + two: helper API + enumerated writable set (fixture repo, stub engine)
 cat > "$T126_DIR/helper-api.cjs" <<'EOF'
 const fs = require('fs');
 const path = require('path');
@@ -244,7 +244,7 @@ t126_contains "W1 pin lands rw-bound post-mask" "PINBIND[1]" "$API_OUT"
 t126_contains "W1 workspace bind set unchanged (.git + .gos/cache)" "WSRW[.git,.gos/cache]" "$API_OUT"
 t126_contains "W1 pin-only bind fails on the shadow, never outside-policy" "PINALLOW[auto.launcher.writable-shadowed]" "$API_OUT"
 
-# ---- W3: pinned sandbox run of a self-repo section (real compose, real bwrap)
+# ---- case three: pinned sandbox run of a self-repo section (real compose, real bwrap)
 cat > "$T126_DIR/pinned-run.cjs" <<'EOF'
 const fs = require('fs');
 const path = require('path');
@@ -305,7 +305,7 @@ t126_exit "second pinned-run probe runs clean" "0" "$P2_RC"
 t126_contains "W3 second consecutive pinned run exits 0" "RC[0]" "$P2_OUT"
 t126_contains "W3 no accumulation across two consecutive runs" "WT[$T126_REAL_WT_BASE]" "$P2_OUT"
 
-# ---- W4: literal run keeps the repo-root manifest, tree_source live, pin null
+# ---- case four: literal run keeps the repo-root manifest, tree_source live, pin null
 LIT_BASE="$T126_DIR/lit"
 mkdir -p "$LIT_BASE"
 set +e

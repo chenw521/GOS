@@ -175,7 +175,7 @@ fi
 while IFS= read -r gos_auto_var; do
   [ -n "$gos_auto_var" ] && unset "$gos_auto_var"
 done <<< "$GOS_AUTO_ENV_REGISTRY"
-GOS_AUTO_SURVIVORS="$(env | sed -n 's/^\(GOS_AUTO_[A-Za-z0-9_]*\)=.*/\1/p' | sort -u | tr '\n' ' ')"
+GOS_AUTO_SURVIVORS="$(env | sed -n 's/^\(GOS_AUTO_[[:alnum:]_]*\)=.*/\1/p' | sort -u | tr '\n' ' ')"
 if [ -n "${GOS_AUTO_SURVIVORS// /}" ]; then
   echo "⚠ env-sweep-survivors (unregistered GOS_AUTO_* left in the runner env): ${GOS_AUTO_SURVIVORS}" >&2
 fi

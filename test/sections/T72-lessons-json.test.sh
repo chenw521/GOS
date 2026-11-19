@@ -65,7 +65,10 @@ J2=$(sha256sum .gos/lessons.json | cut -d' ' -f1)
 assert_eq "lessons.json bytes unchanged across md regen cycles" "$J1" "$J2"
 
 # --- .2: preserved-id mutation → fail-closed (F2)
-cp .gos/lessons.json /tmp-store.json 2>/dev/null || cp .gos/lessons.json t72-store.bak
+# The fixture backup bakes beside the store (under TESTBASE) — an absolute
+# /tmp target would succeed on a writable-tmpfs sandbox root and leave the
+# later restores with no baked backup.
+cp .gos/lessons.json t72-store.bak
 python3 - <<'PYEOF'
 import json
 p = '.gos/lessons.json'
@@ -319,5 +322,5 @@ else
 fi
 rm -rf "$T72B"
 
-rm -f t72-store.bak t72-good.json t72-global-good.json /tmp-store.json
+rm -f t72-store.bak t72-good.json t72-global-good.json
 t72_teardown
