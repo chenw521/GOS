@@ -92,6 +92,79 @@ function autoHostLine(mods, host) {
   return { state: 'failed', line: `host ${host}: ${f.message || hs.status}` };
 }
 
+// Distinct breaker layers currently reading TRIPPED in a loaded store:
+// layer-carrying breaker records are trips; class-only records (takeover
+// audit events) never gate the re-enable.
+function trippedLayersOf(st) {
+  const records = st != null && Array.isArray(st.breaker.records) ? st.breaker.records : [];
+  return [...new Set(records.filter((r) => r != null && r.layer).map((r) => String(r.layer)))];
+}
+
+// Evidence read for the re-enable gate: a run record reads green when the
+// end state is ok, every recorded stage advanced in INTENT->SHIP order,
+// and the sandboxed VERIFY entry carries at least one step with every
+// step status passed. Anything weaker is not evidence the gate accepts.
+function latestRunRecordReadsGreen(rec) {
+  if (!store.isPlainObject(rec)) return { green: false, detail: 'latest run record unreadable' };
+  const es = store.isPlainObject(rec.endState) ? rec.endState : null;
+  if (es == null || es.ok !== true) {
+    return { green: false, detail: `end state not ok (${es != null && es.status ? es.status : 'unknown'})` };
+  }
+  const stages = Array.isArray(rec.stages) ? rec.stages : [];
+  let prev = -1;
+  let verify = null;
+  for (const s of stages) {
+    const name = s != null && typeof s.stage === 'string' ? s.stage : '';
+    const idx = workers.STAGES.indexOf(name);
+    if (idx < 0) return { green: false, detail: `unknown stage ${JSON.stringify(name)}` };
+    if (idx < prev) return { green: false, detail: 'stage entries out of INTENT->SHIP order' };
+    prev = idx;
+    if (s.advanced !== true) return { green: false, detail: `stage ${name} did not advance` };
+    if (name === 'VERIFY') verify = s;
+  }
+  if (verify == null) return { green: false, detail: 'no VERIFY stage entry (sandboxed VERIFY evidence absent)' };
+  const steps = Array.isArray(verify.steps) ? verify.steps : [];
+  if (steps.length === 0) return { green: false, detail: 'VERIFY entry carries no step statuses' };
+  if (steps.some((sp) => !store.isPlainObject(sp) || sp.status !== 'passed')) {
+    return { green: false, detail: 'VERIFY steps not all passed' };
+  }
+  return { green: true, detail: `end state ${es.status}` };
+}
+
+// Explicit breaker reset (operator flag): drop the trip-layer records,
+// zero the spawn/trip counters, and append a disposition entry to the
+// store's dispositions ledger naming who reset what and when. Audit-only
+// breaker records (takeover class entries) ride over untouched.
+function resetBreakerState(mods, loaded) {
+  const st = loaded.store;
+  const layers = trippedLayersOf(st);
+  const prevSpawns = st.counters.spawnCount;
+  const prevTrips = st.counters.tripCount;
+  const next = {
+    ...st,
+    breaker: { records: st.breaker.records.filter((r) => !(r != null && r.layer)) },
+    counters: { spawnCount: 0, tripCount: 0 },
+  };
+  try { core.writeAtomicJson(loaded.path, next); }
+  catch (e) { core.die(`auto on --reset-breakers: store write failed: ${e.message}`); }
+  const ts = new Date().toISOString();
+  const by = `${(require('os').userInfo().username || process.env.USER || 'unknown')}@${require('os').hostname()}`;
+  const r = mods.store.recordDisposition({
+    runId: `breakers-reset-${ts}`,
+    ts,
+    reason: `auto on --reset-breakers: cleared trip layers [${layers.join(', ')}], counters spawns ${prevSpawns}->0 trips ${prevTrips}->0`,
+    by,
+  });
+  if (!r.ok) {
+    core.die(`auto on --reset-breakers: reset applied but the disposition write failed: ${r.reason}${r.detail ? `: ${r.detail}` : ''}`);
+  }
+  return core.t('auto.cli.on.reenable.breakersReset', {
+    layers: layers.length ? layers.join(', ') : 'none',
+    spawns: prevSpawns,
+    trips: prevTrips,
+  });
+}
+
 function autoOn(mods, rest, ui) {
   ui.refuseIfSpawned('on');
   const limits = { ...mods.store.DEFAULT_LIMITS };
@@ -99,6 +172,7 @@ function autoOn(mods, rest, ui) {
   let wall = null;
   let idle = null;
   let allowFull = false;
+  let resetBreakers = false;
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
     const val = () => {
@@ -113,6 +187,7 @@ function autoOn(mods, rest, ui) {
     else if (a === '--timeout-wall') wall = val();
     else if (a === '--timeout-idle') idle = val();
     else if (a === '--allow-full') allowFull = true;
+    else if (a === '--reset-breakers') resetBreakers = true;
     else core.die(core.t('auto.cli.unknownArg', { sub: 'on', arg: a }));
   }
   for (const k of ['N', 'K', 'B']) {
@@ -141,6 +216,39 @@ function autoOn(mods, rest, ui) {
   if (!tp.ok) ui.dieGuidance('auto on', tp.guidance);
   const timeouts = { wallSec: tp.wallSec, idleSec: tp.idleSec };
 
+  // Evidence-gated re-enable: a tripped breaker never re-enables blindly.
+  // With run records present the latest must read green; a store with no
+  // records yet is a cold start and proceeds with a logged disposition.
+  // The explicit operator reset clears trip layers and counters first and
+  // records its own disposition entry.
+  let reenableDisposition = null;
+  const pre = mods.store.load();
+  if (resetBreakers) {
+    if (pre.ok) reenableDisposition = resetBreakerState(mods, pre);
+  } else if (pre.ok) {
+    const layers = trippedLayersOf(pre.store);
+    if (layers.length) {
+      const records = Array.isArray(pre.store.runRecords) ? pre.store.runRecords : [];
+      if (records.length === 0) {
+        reenableDisposition = core.t('auto.cli.on.reenable.coldStart', { layers: layers.join(', ') });
+      } else {
+        const latest = records[records.length - 1];
+        const verdict = latestRunRecordReadsGreen(latest);
+        if (!verdict.green) {
+          const es = store.isPlainObject(latest.endState) ? latest.endState : {};
+          ui.dieGuidance('auto on refused', ui.guidanceOf('auto.cli.on.reenable.refused', {
+            layers: layers.join(', '),
+            runId: latest.runId,
+            end: es.status || 'unknown',
+            reason: es.reason || verdict.detail,
+            why: verdict.detail,
+          }));
+        }
+        reenableDisposition = core.t('auto.cli.on.reenable.greenEvidence', { runId: latest.runId, end: latest.endState.status });
+      }
+    }
+  }
+
   const made = mods.store.create({ mode: 'on', profile, limits, timeouts, allowFull });
   if (!made.ok) {
     if (made.guidance) ui.dieGuidance('auto on', made.guidance);
@@ -160,6 +268,7 @@ function autoOn(mods, rest, ui) {
     finalStore = rc.store;
     console.log(core.t('auto.cli.on.reconfigured', { path: rc.path }));
   }
+  if (reenableDisposition) console.log(reenableDisposition);
 
   // Three-state advisories: none fatal (the store itself already proved
   // writable by the create above).
