@@ -9,7 +9,7 @@ Nodes = path anchors (human and machine share the same key); edges = semantic de
 
 | family | count |
 |:--|:--|
-| calls (② call sites → cmd anchors) | 812 |
+| calls (② call sites → cmd anchors) | 811 |
 | contracts (③ contract-string consumers) | 88 |
 | switch (④case↔cmdXxx) | 39 |
 | testof (⑤ section annotations → cmd) | 169 |
@@ -609,7 +609,6 @@ graph TD
   n449["test/sections/T98a-track-core.test.sh"]
   n450["test/sections/T98b-track-txn.test.sh"]
   n451["test/sections/T99-gate-flip-leg.test.sh"]
-  n452["test/triage-ledger.md"]
   n1 -->|"calls"| n101
   n1 -->|"calls"| n104
   n2 -->|"calls"| n101
@@ -1718,7 +1717,6 @@ graph TD
   n451 -->|"calls"| n84
   n451 -->|"calls"| n86
   n451 -->|"calls"| n106
-  n452 -->|"calls"| n86
 ```
 
 <!-- MANUAL:notes -->

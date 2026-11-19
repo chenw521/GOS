@@ -306,10 +306,14 @@ t126_contains "W3 second consecutive pinned run exits 0" "RC[0]" "$P2_OUT"
 t126_contains "W3 no accumulation across two consecutive runs" "WT[$T126_REAL_WT_BASE]" "$P2_OUT"
 
 # ---- case four: literal run keeps the repo-root manifest, tree_source live, pin null
+# The nested runner strips any enclosing pinned-tree override: this case
+# exercises the literal (unpinned) manifest contract, which an inherited
+# override would silently replace with the pinned-worktree path.
 LIT_BASE="$T126_DIR/lit"
 mkdir -p "$LIT_BASE"
 set +e
 TESTBASE="$LIT_BASE" HOME="$T126_DIR/env/home" XDG_DATA_HOME="$T126_DIR/env/xdg" \
+  env -u GOS_SECTIONS_TREE_OVERRIDE -u GOS_SECTIONS_TREE \
   bash "$GOS_ROOT/test/run-sections.sh" T110-help-shortcircuit >"$T126_DIR/lit.out" 2>&1
 LIT_RC=$?
 set -e

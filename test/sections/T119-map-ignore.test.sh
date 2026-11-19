@@ -402,8 +402,35 @@ fi
 # all-leg may carry in-flight task debt (plan covers / changelog obligation /
 # ai-trace pin drift) but never a codemap-family failure, and any ai-trace
 # red is displaced legacy pins, not new anchor debt
-set +e; COUT=$(cd "$GOS_ROOT" && node "$GOS" gate codemap --audit 2>&1); CRC=$?; set -e
+# The codemap audit leg runs inside a detached section worktree (workers.cjs
+# helper): the checkout owns its .gos lock+cache, so the leg never depends on
+# a writable enclosing checkout. The tracked .gos/state.json is removed
+# inside the checkout (tracked session state is unsupported in a linked worktree
+# — lock.cjs guard); the leg is stateless, and trust is opted in for the fresh
+# checkout. The ai-trace probe pins the scratch base first: the lint honors
+# TMPDIR, and a sandboxed run can carry a host TMPDIR that is not mounted.
+T119_SRC="$(cd "$(dirname "$(dirname "$(readlink -f "$GOS")")")" && pwd)"
+T119_WTB="$T119_DIR/wt13"
+mkdir -p "$T119_WTB"
+T119_WT="$(node -e '
+  const cp = require("child_process");
+  const path = require("path");
+  const root = process.argv[1];
+  const w = require(path.join(root, "bin/lib/ops/auto/workers.cjs"));
+  const pin = cp.spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout.trim();
+  const r = w.prepareSectionWorktree(root, { testBase: process.argv[2], pin });
+  if (!r.ok) { process.stderr.write("worktree prepare refused: " + r.reason + "\n"); process.exit(1); }
+  process.stdout.write(r.path);
+' "$T119_SRC" "$T119_WTB")"
+rm -f "$T119_WT/.gos/state.json"
+(cd "$T119_WT" && node "$GOS" gate trust check.sh >/dev/null 2>&1)
+set +e; COUT=$(cd "$T119_WT" && node "$GOS" map scan >/dev/null 2>&1; node "$GOS" gate codemap --audit 2>&1); CRC=$?; set -e
 assert_exit "T119.13a self-repo gate codemap --audit exits 0" 0 "$CRC"
+node -e '
+  const path = require("path");
+  const w = require(path.join(process.argv[1], "bin/lib/ops/auto/workers.cjs"));
+  w.sweepSectionWorktrees(process.argv[1], { testBase: process.argv[2] });
+' "$T119_SRC" "$T119_WTB" >/dev/null 2>&1 || true
 set +e; AOUT=$(cd "$GOS_ROOT" && node "$GOS" gate all --audit 2>&1); set -e
 set +e; AFAILS=$(printf '%s\n' "$AOUT" | grep '✗' || true); set -e
 if printf '%s\n' "$AFAILS" | grep -Eq 'codemap|dup-fn|unmapped|parse-failures'; then
@@ -411,8 +438,13 @@ if printf '%s\n' "$AFAILS" | grep -Eq 'codemap|dup-fn|unmapped|parse-failures'; 
 else
   echo "  ✓ T119.13b self-repo gate all --audit carries no codemap-family failure"; PASS=$((PASS+1))
 fi
+# Pin the scratch base before the lint runs: it scratches via TMPDIR-honoring
+# bare mktemp, and a sandboxed run can carry a host TMPDIR that is not mounted
+# (first-usable-base fallback, same pin the ai-trace section applies).
+T119_TMP="${TMPDIR:-/tmp}"
+{ [ -d "$T119_TMP" ] && [ -w "$T119_TMP" ]; } || T119_TMP=/tmp
 set +e
-(cd "$GOS_ROOT" && bash test/checks/ai-trace-lint.sh --json) > "$T119_DIR/ai-trace.json" 2>/dev/null
+(cd "$GOS_ROOT" && TMPDIR="$T119_TMP" bash test/checks/ai-trace-lint.sh --json) > "$T119_DIR/ai-trace.json" 2>/dev/null
 python3 - "$T119_DIR/ai-trace.json" <<'PYEOF'
 import json, sys
 violations = json.load(open(sys.argv[1]))

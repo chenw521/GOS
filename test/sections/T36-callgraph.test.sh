@@ -3,7 +3,8 @@
 # fn-level drill-down — acorn lazy require + schema v3 + callgraph/testof_fn extractors
 # Env: GOS (CLI path), TESTBASE (repo root for sandbox), + assert helpers sourced by runner
 T36_DIR=""
-T36_REPO=""   # live repo root (subject of the lazy/mv experiments)
+T36_REPO=""   # subject tree for the self-repo legs (a detached section worktree)
+T36_WTB=""    # worktree registration base (swept in teardown)
 PASS=0; FAIL=0
 # inline helper fallback (skipped when run-sections.sh predefines them)
 command -v assert_exit >/dev/null || assert_exit() {
@@ -24,9 +25,40 @@ command -v assert_contains >/dev/null || assert_contains() {
 
 t36_setup() {
   T36_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-t36"
-  T36_REPO="$(cd "$(dirname "$(dirname "$(readlink -f "$GOS")")")" && pwd)"
+  T36_SRC="$(cd "$(dirname "$(dirname "$(readlink -f "$GOS")")")" && pwd)"
   mkdir -p "$T36_DIR" && cd "$T36_DIR" || exit 1
   git init -q . && git commit -q --allow-empty -m root
+}
+
+# Detached section worktree (workers.cjs helper) as the self-repo subject: the
+# checkout owns its .gos lock+cache, so the legs below never depend on a
+# writable enclosing checkout. The tracked .gos/state.json is removed inside
+# the checkout (tracked session state is unsupported in a linked worktree —
+# lock.cjs guard); every leg here is stateless.
+t36_subject() {
+  T36_WTB="$T36_DIR/wt"
+  mkdir -p "$T36_WTB"
+  T36_REPO="$(node -e '
+    const cp = require("child_process");
+    const path = require("path");
+    const root = process.argv[1];
+    const w = require(path.join(root, "bin/lib/ops/auto/workers.cjs"));
+    const pin = cp.spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout.trim();
+    const r = w.prepareSectionWorktree(root, { testBase: process.argv[2], pin });
+    if (!r.ok) { process.stderr.write("worktree prepare refused: " + r.reason + "\n"); process.exit(1); }
+    process.stdout.write(r.path);
+  ' "$T36_SRC" "$T36_WTB")"
+  rm -f "$T36_REPO/.gos/state.json"
+  (cd "$T36_REPO" && node "$GOS" gate trust check.sh >/dev/null 2>&1)
+}
+
+t36_subjectsweep() {
+  [ -n "${T36_WTB:-}" ] || return 0
+  node -e '
+    const path = require("path");
+    const w = require(path.join(process.argv[1], "bin/lib/ops/auto/workers.cjs"));
+    w.sweepSectionWorktrees(process.argv[1], { testBase: process.argv[2] });
+  ' "$T36_SRC" "$T36_WTB" >/dev/null 2>&1 || true
 }
 
 t36_teardown() {
@@ -34,11 +66,13 @@ t36_teardown() {
   if [ -n "$T36_REPO" ] && [ -d "$T36_REPO/node_modules/acorn.bak-t36" ]; then
     mv "$T36_REPO/node_modules/acorn.bak-t36" "$T36_REPO/node_modules/acorn" 2>/dev/null
   fi
+  t36_subjectsweep
   cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$T36_DIR"
-}
+};
 
 t36_setup
-trap t36_teardown EXIT # restore live-repo acorn even on Ctrl-C / assert-exit
+trap t36_teardown EXIT # restore worktree acorn even on Ctrl-C / assert-exit; sweep the subject
+t36_subject
 echo "--- T36: callgraph fn-level drilling ---"
 
 # --- .1 : lazy require — CLI boots without acorn (help = side-effect-free boot probe)
@@ -222,7 +256,15 @@ assert_contains "T36.6f FAIL text names dead annotations" "dead gos-map:fn annot
 mv "$T36_CLONE/.gos/cache/deps.json" "$T36_CLONE/.gos/cache/deps.json.bak"
 (cd "$T36_CLONE" && GOS_CI=1 node "$GOS" gate codemap >/dev/null 2>&1)
 assert_exit "T36.6g no deps.json → advisory exit 0" 0 "$?"
-N=$(cd "$T36_REPO" && node "$GOS" init 1 "codemap-gate-all-chain" >/dev/null 2>&1; node "$GOS" gate all 2>&1 | grep -c "codemap:")
+# gate-all chaining runs in its own clone: gos init commits .gos/state.json,
+# which would turn tracked inside a linked worktree and trip the lock guard
+# for every later leg (a plain clone is not a linked worktree, so init is
+# legal there; trust is opted in and the cache scanned before the run).
+T36_CLONE_GA="$TESTBASE/clone6h-$RANDOM-t36"
+git clone -q "$T36_REPO" "$T36_CLONE_GA" 2>/dev/null
+ln -s "$T36_REPO/node_modules" "$T36_CLONE_GA/node_modules"
+N=$(cd "$T36_CLONE_GA" && node "$GOS" gate trust check.sh >/dev/null 2>&1; node "$GOS" init 1 "codemap-gate-all-chain" >/dev/null 2>&1; node "$GOS" map scan >/dev/null 2>&1; node "$GOS" gate all 2>&1 | grep -c "codemap:")
+rm -rf "$T36_CLONE_GA"
 [ "$N" -ge 1 ] && { echo "  [ok] T36.6h gate all chains codemap ($N lines)"; PASS=$((PASS+1)); } || { echo "  X T36.6h gate all does not chain codemap"; FAIL=$((FAIL+1)); }
 OUT=$(cd "$T36_REPO" && node "$GOS" map closure "bin/gos.cjs#fn:pathOf" --graph 2>/dev/null)
 assert_contains "T36.6i closure --graph renders fn nodes" "fn:pathOf" "$OUT"
