@@ -1,41 +1,32 @@
 {
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
-  "level": 1,
-  "current_stage": "DONE",
-  "completed_stages": [
-    "INTENT",
-    "BUILD",
-    "VERIFY"
-  ],
+  "level": 3,
+  "current_stage": "INTENT",
+  "completed_stages": [],
   "intent": {
-    "summary": "Record the auto-loop dogfood cycle note as an ignored cache artifact",
+    "summary": "Restart-safe auto loop: persist a run record on SIGTERM (signal route bypasses the exception record) and keep the VERIFY pin worktree live across kill/restart (dogfood 9a07a154-pin incident)",
     "confirmed": true,
     "confirmation": {
       "mode": "headless-auto",
-      "ts": "2026-11-20T03:54:09.629Z"
+      "ts": "2026-11-20T09:08:35.940Z"
     }
   },
-  "approvals": {
-    "ARCHIVE": "2026-11-20T09:08:30.633Z"
-  },
-  "spec_path": ".gos/archive/2026-11-20-publicize-task-record-the-auto-loop-dogfood-c/task/f556a960/spec.md",
-  "plan_path": ".gos/archive/2026-11-20-publicize-task-record-the-auto-loop-dogfood-c/task/f556a960/plan.md",
+  "approvals": {},
+  "spec_path": ".gos/task/a06ea57f/spec.md",
+  "plan_path": ".gos/task/a06ea57f/plan.md",
   "project": false,
   "requirements": [
     {
       "id": "R-01",
-      "text": "Record the auto-loop dogfood cycle note as an ignored cache artifact",
+      "text": "Restart-safe auto loop: persist a run record on SIGTERM (signal route bypasses the exception record) and keep the VER...",
       "phase": null,
-      "level": 1
+      "level": 3
     }
   ],
   "decisions": [],
   "observable_truths": [],
   "gaps": [],
   "activation_source": "headless",
-  "task_head": "f556a9607a14348ab10190bdf459001dff9712f6",
-  "changelog_user_summary": "Floor the dig-closure section state-dependent advisory leg at its cross-state minimum so post-archive trees meet the baseline",
-  "checkpoints": [],
-  "completed_at": "2026-11-20T09:08:33.487Z"
+  "task_head": "a06ea57f88d924750fede6e463c1392832f8576f"
 }
