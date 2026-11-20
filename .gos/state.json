@@ -310,7 +310,8 @@
           "test/sections/baseline.json",
           "test/checks/manifest-coverage.sh",
           "test/sections/T25-map-selfcheck.test.sh",
-          "test/sections/T46-module-structure.test.sh"
+          "test/sections/T46-module-structure.test.sh",
+          "test/pack-check.sh"
         ],
         "wave": 4
       },

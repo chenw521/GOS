@@ -154,7 +154,7 @@
 
 #### T9z: baseline snapshot + manifest coverage + full green
 - **Covers**: D-107, R-01 (acceptance half)
-- **Files**: test/sections/baseline.json, test/checks/manifest-coverage.sh, test/sections/T25-map-selfcheck.test.sh, test/sections/T46-module-structure.test.sh
+- **Files**: test/sections/baseline.json, test/checks/manifest-coverage.sh, test/sections/T25-map-selfcheck.test.sh, test/sections/T46-module-structure.test.sh, test/pack-check.sh
 - **Read first**: T9b/T9c ledger end-state, the Shared Manifest Contract
 - **Approach**: snapshot per-section pass counts; coverage script asserts sandbox manifest `sections_run` ≡ full `T*.test.sh` set (name+count) and per-section pass ≥ baseline; then the full sandboxed suite runs `Sections total: N passed, 0 failed`.
 - **Done when**: `bash test/checks/manifest-coverage.sh "$TESTBASE/run-manifest.json"` exits 0 AND the sandboxed full suite prints 0 failed
