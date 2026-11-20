@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add Record the auto-loop dogfood cycle note as a machine-local cache artifact under .gos/cache with tracked evidence assertions. (R-01) [2026-11-20]
+- Change Harden operator surfaces: gos auto run detaches by default with a lock-acquired sentinel and run-log rotation, gos branch reap classifies landed branches under GIT_NO_REPLACE_OBJECTS with refs/reaped revive refs, decision records stamp dug evidence under a dig-closure floor, the loop persists per-run records, and gos auto on re-enables only through run-record evidence with an explicit breaker reset (R-01) [2026-11-20]
+- Add Make the sandboxed auto loop survivable end to end: an enumerated writable set with fail-closed compose, a GOS_AUTO env registry with source-side Class S whitelist, a pinned section worktree helper with the relocated run manifest, and command-kind-only deny scoring — the 95 sandbox section failures triage to a machine-checked zero with a baseline floor and manifest coverage gate (R-01) [2026-11-20]
 - Add Introduce the explicit init birth marker for decision rows: writes stamp the constant, DECISIONS.md renders init with a header note, init rows survive milestone close, and a one-time migration rewrites legacy P0/legacy values (R-01/R-29) [2026-11-18]
 - Add Anchor F-1 lesson/skip audit rows to the claiming task so archive no longer fails across UTC midnight (R-01) [2026-11-18]
 - Add close the two stage-back gap mirrors of the archived map-ignore scan task with in-flow resolutions covering registry ID alignment and the en.cjs Files declaration (R-01) [2026-11-18]

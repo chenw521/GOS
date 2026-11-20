@@ -5,6 +5,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const core = require('../core/index.cjs');
 
 // mutation commands auto-render the project views inline — an
@@ -84,6 +85,33 @@ function digEvidenceErr(dig, rootDir) {
     if (err) return err;
   }
   return null;
+}
+
+// Deepen-line closure grammar: the dialogue card's deepen tail line records
+// in one of two states - "closed - <what was dug>" (the dig enumerated its
+// points and finished) or the open closer "any option - ask for another
+// dig round". A decision records only in the closed state.
+function deepenClosed(line) {
+  if (typeof line !== 'string') return false;
+  const t = line.trim().replace(/^deepen:\s*/i, '');
+  return /^closed\b/.test(t);
+}
+
+// Dig-object hash: sha256 over the dig object with recursively sorted keys,
+// stamped as dug_sha at record time. The freeze-side closure check
+// recomputes it - a dig object that no longer matches its stamp was
+// swapped after recording.
+function digObjectSha(dig) {
+  const canonical = (v) => {
+    if (Array.isArray(v)) return v.map(canonical);
+    if (v && typeof v === 'object') {
+      const o = {};
+      for (const k of Object.keys(v).sort()) o[k] = canonical(v[k]);
+      return o;
+    }
+    return v;
+  };
+  return crypto.createHash('sha256').update(JSON.stringify(canonical(dig)), 'utf8').digest('hex');
 }
 
 function decisionParseOpts(rest, valueFlags) {
@@ -200,7 +228,7 @@ function cmdDecision(args) {
 
   if (sub === 'add') {
     if (state && state.level !== null && state.level < 3) core.die('decision add requires Lv3/Lv4 (Lv1-2 decisions live in spec.md prose).');
-    const { pos, opt } = decisionParseOpts(args.slice(1), ['--rationale', '--supersedes', '--anchor', '--phase', '--dig', '--dig-ruling', '--dig-waiver']);
+    const { pos, opt } = decisionParseOpts(args.slice(1), ['--rationale', '--supersedes', '--anchor', '--phase', '--dig', '--dig-ruling', '--dig-waiver', '--deepen']);
     let id = null;
     let title = null;
     if (pos.length >= 2) { id = pos[0]; title = pos.slice(1).join(' '); }
@@ -208,7 +236,7 @@ function cmdDecision(args) {
       if (/^[DR]-\d{2,3}$/.test(pos[0])) { id = pos[0]; title = ''; }
       else title = pos[0];
     }
-    if (title === null) core.die('Usage: gos decision add [id] "title" --rationale "..." [--supersedes D-XX] [--anchor spec.md#sec] [--phase "P1: name"] [--dig \'<json>\' | --dig-ruling "<date + ruling source>" | --dig-waiver "<reason>"]');
+    if (title === null) core.die('Usage: gos decision add [id] "title" --rationale "..." [--supersedes D-XX] [--anchor spec.md#sec] [--phase "P1: name"] [--dig \'<json>\' | --dig-ruling "<date + ruling source>" | --dig-waiver "<reason>"] [--deepen "closed - <what was dug>"]');
     if (id !== null && !/^D-\d{2,3}$/.test(id)) core.die(`bad id "${id}" — decision ids must be D-prefixed: ^D-\\d{2,3}$ (D-01..D-999)`);
     if (id === null) id = decisionNextId(state, project);
     const { sd: dupS, pd: dupP } = decisionFind(state, project, id);
@@ -262,8 +290,38 @@ function cmdDecision(args) {
     } else if (bornAt > DIG_FLOOR_ERA) {
       core.die(`dig floor: decisions born after ${DIG_FLOOR_ERA} require dig evidence at add — ${digShapesHint()}`);
     }
+    // waiver is a human-channel only shape: inside a marker session (the
+    // auto-spawn env, same literal as the loop's SPAWN_MARKER_ENV) a waiver
+    // cannot be granted, so the shape is refused outright - the spawned
+    // session must dig or cite a ruling instead.
+    const markerSession = /^(1|true)$/i.test(String(process.env.GOS_AUTO_SPAWNED || ''));
+    if (dig && dig.waiver !== undefined && markerSession) {
+      core.die('dig: waiver evidence is refused inside a marker session (GOS_AUTO_SPAWNED) - waiver is a human-channel only shape, rerun outside the spawned session or supply --dig/--dig-ruling');
+    }
+    // dig-closure: the deepen tail line must record in its closed state - an
+    // open deepen line is still asking for another dig round, and a decision
+    // may not record while its line is asking.
+    let deepenLine = null;
+    if (opt['--deepen'] !== undefined) {
+      const raw = opt['--deepen'];
+      if (raw === null) core.die('deepen: --deepen requires its value - "closed - <what was dug>" (the card deepen tail line in its closed state)');
+      const t = String(raw).trim();
+      if (core.cpLen(t) > 240) core.die('deepen: >240 codepoints');
+      const bt = core.badText(t);
+      if (bt) core.die(`deepen: rejected (${bt})`);
+      if (!deepenClosed(t)) core.die(`deepen: line not closed - a decision records only after its deepen line closes (got "${t.slice(0, 60)}${t.length > 60 ? '...' : ''}") - closed form: closed - <what was dug>`);
+      deepenLine = t;
+    }
     const d = { id, title, rationale, birth_phase: phaseL || (state && state.phase_name) || core.INIT_PHASE, status: 'open', anchor, covered: false, covered_by: null, born_at: bornAt };
-    if (dig) d.dig = dig;
+    if (dig) {
+      d.dig = dig;
+      // closure stamps: the dig instant plus the dig-object hash - the
+      // freeze check orders dug_at against the spec freeze and dug_sha
+      // catches evidence swapped after recording.
+      d.dug_at = bornAt;
+      d.dug_sha = digObjectSha(dig);
+    }
+    if (deepenLine) d.deepen = deepenLine;
     if (supersedes) d.supersedes = supersedes;
     let touchedProject = false;
     if (decisionDualStore() && project) {
@@ -409,8 +467,9 @@ function cmdDecision(args) {
   }
 
   console.log('Usage: gos decision <add|amend|cover|list|import> ...');
-  console.log('  add [id] "title" --rationale "..." [--supersedes D-XX] [--anchor spec.md#sec] [--phase "P1: name"] [--dig \'<json>\' | --dig-ruling "<...>" | --dig-waiver "<...>"]');
+  console.log('  add [id] "title" --rationale "..." [--supersedes D-XX] [--anchor spec.md#sec] [--phase "P1: name"] [--dig \'<json>\' | --dig-ruling "<...>" | --dig-waiver "<...>"] [--deepen "closed - <what was dug>"]');
   console.log('    dig evidence: {"command":"<cmd>","output_excerpt":"<output>","anchor":"<file>:<line>"} — or a ruling/waiver citation');
+  console.log('    deepen line: records only in the closed state — open lines ("any option") ask for another dig round');
   console.log('  amend <id> --title "..." [--rationale "..."]');
   console.log('  cover <id> --task T-NN');
   console.log('  list [--all]    current-phase decisions; --all = merged cross-phase audit incl. superseded (row status is write-time snapshot)');
@@ -422,6 +481,8 @@ Object.assign(module.exports, {
   digShapesHint,
   digAnchorErr,
   digEvidenceErr,
+  deepenClosed,
+  digObjectSha,
   decisionParseOpts,
   decisionFind,
   decisionTitleErr,

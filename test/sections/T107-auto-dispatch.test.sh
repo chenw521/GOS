@@ -711,9 +711,13 @@ fi
 # ---------------------------------------------------------------- C16 --
 echo "C16: testbase-pin (env-pinned TESTBASE + literal fallback)"
 cd "$T107_DIR" || exit 1
+# The nested runner legs strip the enclosing pinned-tree override: each leg
+# exercises the runner's own base-selection contract (env pin, literal
+# fallback), which an inherited override would silently replace with the
+# pinned-worktree path.
 T107_PIN="$T107_DIR/tb-pin"
 mkdir -p "$T107_PIN"
-env -u XDG_DATA_HOME TESTBASE="$T107_PIN" bash "$GOS_ROOT/test/run-sections.sh" T12-wiring > "$T107_DIR/pin-run.out" 2>&1; PIN_RC=$?
+env -u XDG_DATA_HOME -u GOS_SECTIONS_TREE_OVERRIDE -u GOS_SECTIONS_TREE TESTBASE="$T107_PIN" bash "$GOS_ROOT/test/run-sections.sh" T12-wiring > "$T107_DIR/pin-run.out" 2>&1; PIN_RC=$?
 t107_exit "pinned TESTBASE section run green" "0" "$PIN_RC"
 if grep -q "Sections total: [0-9]* passed, 0 failed" "$T107_DIR/pin-run.out"; then
   t107_ok "pinned run reports zero failures"
@@ -725,37 +729,52 @@ if [ -d "$T107_PIN/home" ]; then t107_ok "home artifact landed inside the pin (b
 if [ -d "$T107_PIN" ]; then t107_ok "pin survives the run (caller owns cleanup)"; else
   t107_bad "runner deleted the pinned base"; fi
 T107_BASES_BEFORE="$(ls -d "$GOS_ROOT"/test-sections-base-* 2>/dev/null | sort)"
-env -u TESTBASE -u XDG_DATA_HOME bash "$GOS_ROOT/test/run-sections.sh" T12-wiring > "$T107_DIR/lit-run.out" 2>&1; LIT_RC=$?
+# The literal-fallback legs run the runner from a writable clone of the
+# repository: the literal base lands under the runner's own repo root, which
+# a restricted compose mounts read-only — the clone gives both environments
+# the same writable-root precondition the literal contract is defined for.
+T107_LITREPO="$T107_DIR/litrepo"
+git clone -q "$GOS_ROOT" "$T107_LITREPO" 2>/dev/null
+[ -d "$GOS_ROOT/node_modules" ] && ln -s "$GOS_ROOT/node_modules" "$T107_LITREPO/node_modules"
+T107_CLONE_BASES_BEFORE="$(ls -d "$T107_LITREPO"/test-sections-base-* 2>/dev/null | sort)"
+env -u TESTBASE -u XDG_DATA_HOME -u GOS_SECTIONS_TREE_OVERRIDE -u GOS_SECTIONS_TREE bash "$T107_LITREPO/test/run-sections.sh" T12-wiring > "$T107_DIR/lit-run.out" 2>&1; LIT_RC=$?
 t107_exit "unset TESTBASE keeps the literal base path green" "0" "$LIT_RC"
 if grep -q "Sections total: [0-9]* passed, 0 failed" "$T107_DIR/lit-run.out"; then
   t107_ok "literal fallback run reports zero failures"
 else
   t107_bad "literal fallback run failing: $(grep 'Sections total' "$T107_DIR/lit-run.out" | head -c 120)"; fi
+T107_CLONE_BASES_AFTER="$(ls -d "$T107_LITREPO"/test-sections-base-* 2>/dev/null | sort)"
+if [ "$T107_CLONE_BASES_BEFORE" = "$T107_CLONE_BASES_AFTER" ]; then
+  t107_ok "literal base swept on exit (no new clone leftovers, enclosing base untouched)"
+else
+  t107_bad "base set drifted across the literal run: $(printf '%s' "$T107_CLONE_BASES_AFTER" | head -c 160)"
+fi
 T107_BASES_AFTER="$(ls -d "$GOS_ROOT"/test-sections-base-* 2>/dev/null | sort)"
 if [ "$T107_BASES_BEFORE" = "$T107_BASES_AFTER" ]; then
-  t107_ok "literal base swept on exit (no new repo leftovers, enclosing base untouched)"
+  t107_ok "enclosing repo keeps zero literal bases across the nested run"
 else
-  t107_bad "base set drifted across the literal run: $(printf '%s' "$T107_BASES_AFTER" | head -c 160)"
+  t107_bad "enclosing repo base set drifted: $(printf '%s' "$T107_BASES_AFTER" | head -c 160)"
 fi
-env -u XDG_DATA_HOME TESTBASE="$T107_DIR/no-such-pin" bash "$GOS_ROOT/test/run-sections.sh" T12-wiring > "$T107_DIR/pin-miss.out" 2>&1; MISS_RC=$?
+env -u XDG_DATA_HOME -u GOS_SECTIONS_TREE_OVERRIDE -u GOS_SECTIONS_TREE TESTBASE="$T107_DIR/no-such-pin" bash "$GOS_ROOT/test/run-sections.sh" T12-wiring > "$T107_DIR/pin-miss.out" 2>&1; MISS_RC=$?
 if [ "$MISS_RC" -ne 0 ] && grep -q "TESTBASE" "$T107_DIR/pin-miss.out"; then
   t107_ok "missing pin refuses loudly (no silent fallback)"
 else
   t107_bad "missing pin not refused loudly (rc=$MISS_RC)"
 fi
-env -u XDG_DATA_HOME TESTBASE=/dev/null bash "$GOS_ROOT/test/run-sections.sh" T12-wiring > "$T107_DIR/pin-file.out" 2>&1; FILE_RC=$?
+env -u XDG_DATA_HOME -u GOS_SECTIONS_TREE_OVERRIDE -u GOS_SECTIONS_TREE TESTBASE=/dev/null bash "$GOS_ROOT/test/run-sections.sh" T12-wiring > "$T107_DIR/pin-file.out" 2>&1; FILE_RC=$?
 if [ "$FILE_RC" -ne 0 ] && grep -q "TESTBASE" "$T107_DIR/pin-file.out"; then
   t107_ok "non-directory pin refuses loudly"
 else
   t107_bad "non-directory pin not refused (rc=$FILE_RC)"
 fi
-env -u XDG_DATA_HOME TESTBASE="rel-not-a-pin" bash "$GOS_ROOT/test/run-sections.sh" NO-SUCH-SECTION > "$T107_DIR/rel-run.out" 2>&1; REL_RC=$?
+env -u XDG_DATA_HOME -u GOS_SECTIONS_TREE_OVERRIDE -u GOS_SECTIONS_TREE TESTBASE="rel-not-a-pin" bash "$T107_LITREPO/test/run-sections.sh" NO-SUCH-SECTION > "$T107_DIR/rel-run.out" 2>&1; REL_RC=$?
 t107_exit "relative TESTBASE ignored (literal fallback, zero-section run)" "0" "$REL_RC"
 if grep -q "Sections total: 0 passed, 0 failed" "$T107_DIR/rel-run.out"; then
   t107_ok "relative pin ignored, literal base created and swept"
 else
   t107_bad "relative-pin run did not fall back cleanly"
 fi
+rm -rf "$T107_LITREPO"
 
 # ---------------------------------------------------------------- C17 --
 echo "C17: plan-resolve (execution classes, builtin VERIFY default, no-clear-class)"

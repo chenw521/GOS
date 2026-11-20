@@ -1,343 +1,36 @@
 {
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
-  "level": 3,
-  "current_stage": "DONE",
+  "level": 1,
+  "current_stage": "VERIFY",
   "completed_stages": [
     "INTENT",
-    "THINK",
-    "PLAN",
-    "BUILD",
-    "REVIEW",
-    "VERIFY"
+    "BUILD"
   ],
   "intent": {
-    "summary": "Two live papercuts fixed ahead of the thematic batches: #62 (F-1 lessons same-day check ages out across UTC midnight and blocks gos archive) and #1 (DECISIONS.md renders a phantom Phase P0 absent from ROADMAP.md). Small, independently shippable; clears the daily-friction class before the structural work begins. Issues #62 #1",
-    "confirmed": true
+    "summary": "Record the auto-loop dogfood cycle note as an ignored cache artifact",
+    "confirmed": true,
+    "confirmation": {
+      "mode": "headless-auto",
+      "ts": "2026-11-20T03:54:09.629Z"
+    }
   },
-  "approvals": {
-    "THINK": "2026-11-18T03:09:34.694Z",
-    "PLAN": "2026-11-18T03:15:29.915Z",
-    "ARCHIVE": "2026-11-18T05:20:36.097Z"
-  },
-  "spec_path": null,
-  "plan_path": null,
-  "project": true,
+  "approvals": {},
+  "spec_path": ".gos/task/f556a960/spec.md",
+  "plan_path": ".gos/task/f556a960/plan.md",
+  "project": false,
   "requirements": [
     {
       "id": "R-01",
-      "text": "Two live papercuts fixed ahead of the thematic batches: #62 (F-1 lessons same-day check ages out across UTC midnight ...",
+      "text": "Record the auto-loop dogfood cycle note as an ignored cache artifact",
       "phase": null,
-      "level": 3
-    },
-    {
-      "id": "R-29",
-      "text": "init-born decision rows survive milestone close visibly",
-      "phase": null,
-      "status": "active"
+      "level": 1
     }
   ],
-  "decisions": [
-    {
-      "id": "D-101",
-      "title": "F-1 lesson check anchors to task lifecycle: lesson.at >= claim UTC date replaces calendar-day match",
-      "rationale": "Same cure shape as #49 changelog precedent: anchor to task lifecycle, drop wall clock. No checking power lost (same-day never verified relevance). Claim anchor always available at archive time",
-      "birth_phase": "P25: quick-fix batch",
-      "status": "superseded",
-      "anchor": null,
-      "covered": false,
-      "covered_by": null,
-      "born_at": "2026-11-18T02:44:22.232Z",
-      "dig": {
-        "command": "sed -n 378,408p bin/lib/task/archive.cjs && jq .task_head_history .gos/state.json",
-        "output_excerpt": "const today = new Date().toISOString().slice(0,10); entries.some((e) => e && e.at === today) // claim anchor: at 2026-11-18T02:29:14.503Z what=claim",
-        "anchor": "bin/lib/task/archive.cjs:381"
-      }
-    },
-    {
-      "id": "D-102",
-      "title": "F-1 anchors to task identity: add/skip audit rows carry details.task; archive accepts this task's rows",
-      "rationale": "Time window was a proxy for identity, never a requirement. Audit details is the designed free surface. Kills midnight aging and foreign-row loopholes. Supersedes D-101",
-      "birth_phase": "P25: quick-fix batch",
-      "status": "open",
-      "anchor": null,
-      "covered": false,
-      "covered_by": null,
-      "born_at": "2026-11-18T02:53:25.230Z",
-      "dig": {
-        "command": "sed -n 186,212p bin/lib/knowledge/lessons-json.cjs && grep -n appendAuditRow bin/lib/knowledge/lessons.cjs",
-        "output_excerpt": "detail fields deliberately stay OUTSIDE the self-hash payload; add row details {new_id}; skip row has no details yet",
-        "anchor": "bin/lib/knowledge/lessons-json.cjs:188"
-      },
-      "supersedes": "D-101"
-    },
-    {
-      "id": "D-103",
-      "title": "init decisions get explicit init constant: unified writes, init-owned survive class, one-time legacy migration",
-      "rationale": "Ghost-wipe at milestone close is the real disease (D-01..D-04 would be silently wiped); render inconsistency is only the symptom. init is a real lifecycle stage, not missing data",
-      "birth_phase": "P25: quick-fix batch",
-      "status": "open",
-      "anchor": null,
-      "covered": false,
-      "covered_by": null,
-      "born_at": "2026-11-18T02:57:16.952Z",
-      "dig": {
-        "command": "grep -n ghost bin/lib/knowledge/milestone.cjs && jq .decisions[].birth_phase .gos/project/project.json",
-        "output_excerpt": "done-owned, null-phase, ghost and dropped rows go; D-01..D-04 -> P0, phases array has no P0",
-        "anchor": "bin/lib/knowledge/milestone.cjs:236"
-      }
-    },
-    {
-      "id": "D-104",
-      "title": "Lessons lifecycle redesign gets its own phase P26, queued before P22; P22 keeps non-lessons ledger work",
-      "rationale": "User ruling: the redesign is structural, not a quick-fix batch item. Positioned before P22 so its lessons digestion mechanics land on the new architecture, not the old flat ledger",
-      "birth_phase": "P25: quick-fix batch",
-      "status": "open",
-      "anchor": null,
-      "covered": false,
-      "covered_by": null,
-      "born_at": "2026-11-18T03:02:45.362Z",
-      "dig": {
-        "ruling": "User ruling 2026-11-18 during P25 THINK: this redesign work goes to an independent new phase"
-      }
-    },
-    {
-      "id": "D-105",
-      "title": "Ship as two feature branches, two PRs, serial squash-merge: feat/f1-task-anchor Fixes #62, feat/init-phase Fixes #1",
-      "rationale": "Required Gate (audit mode) check blocked merging PR 1 with the split's structural reds. User ruling 2026-11-18: one branch, one PR closing #62 and #1, audit-green merge.",
-      "birth_phase": "P25: quick-fix batch",
-      "status": "open",
-      "anchor": null,
-      "covered": false,
-      "covered_by": null,
-      "born_at": "2026-11-18T03:05:01.741Z",
-      "dig": {
-        "command": "git ls-files bin/lib/knowledge/lessons.cjs bin/lib/task/archive.cjs bin/lib/knowledge/decisions.cjs bin/lib/knowledge/milestone.cjs bin/lib/render/views.cjs test/sections/T18-f1-gate-lessons.test.sh test/sections/T3-decision.test.sh test/sections/T7-render.test.sh",
-        "output_excerpt": "all 8 files exist; #62 touches lessons.cjs+archive.cjs+T18, #1 touches decisions.cjs+milestone.cjs+views.cjs+T3/T7 — disjoint sets",
-        "anchor": "bin/lib/task/archive.cjs:378"
-      }
-    }
-  ],
-  "observable_truths": [
-    {
-      "id": "T1",
-      "description": "A task with incidents archives cleanly even when its lesson was recorded before UTC midnight: F-1 passes on this-task audit anchor (cross-midnight reproduction from issue #62 no longer blocks)",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\".gos/task/p25/evidence/t1.sh\"]",
-        "output_excerpt": "cross-midnight-exempts=1",
-        "artifact_path": ".gos/archive/2026-11-18-publicize-phase-p25-two-live-papercuts-fixed-ahead/task/p25/evidence/t1t2-raw.log",
-        "replay": true
-      }
-    },
-    {
-      "id": "T2",
-      "description": "A lesson or skip recorded in ANOTHER task's context no longer satisfies F-1 for this task (foreign-row loophole closed)",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\".gos/task/p25/evidence/t2.sh\"]",
-        "output_excerpt": "foreign-blocks=1 add-then-rm=1 stale-skip=1",
-        "artifact_path": ".gos/archive/2026-11-18-publicize-phase-p25-two-live-papercuts-fixed-ahead/task/p25/evidence/t1t2-raw.log",
-        "replay": true
-      }
-    },
-    {
-      "id": "T3",
-      "description": "gos decision add without a claimed task renders Phase as explicit init in DECISIONS.md with a header note; no phantom P0 anywhere in rendered views",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\".gos/task/p25/evidence/t3.sh\"]",
-        "output_excerpt": "note=1 nobareP0=1 cell=1 legacy=1",
-        "artifact_path": ".gos/archive/2026-11-18-publicize-phase-p25-two-live-papercuts-fixed-ahead/task/p25/evidence/t3-raw.log",
-        "replay": true
-      }
-    },
-    {
-      "id": "T4",
-      "description": "Decisions born with birth_phase init survive a milestone close (visible as init-owned in the close report) instead of being ghost-wiped",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\".gos/task/p25/evidence/t4.sh\"]",
-        "output_excerpt": "dec=1 req=1 strictP0=1 survivors=1",
-        "artifact_path": ".gos/archive/2026-11-18-publicize-phase-p25-two-live-papercuts-fixed-ahead/task/p25/evidence/t4-raw.log",
-        "replay": true
-      }
-    },
-    {
-      "id": "T5",
-      "description": "Two independently squash-merged PRs land the fixes; each merge auto-closes its issue (#62, #1)",
-      "verified": false,
-      "evidence": null,
-      "desc": "One merged PR (all checks green) lands both fixes; its merge auto-closes #62 and #1",
-      "waived": true,
-      "waive_reason": "delivery truth externally blocked pre-freeze: the squash merge and issue autoclose happen after the branch state freezes; asserted from merged main at ship reporting",
-      "waived_at": "2026-11-18T04:22:46.323Z"
-    }
-  ],
-  "gaps": [
-    {
-      "id": "G-1794973464495",
-      "type": "major",
-      "description": "Fluid back to PLAN: discovered during PLAN",
-      "status": "open"
-    },
-    {
-      "id": "G-1794974395639",
-      "type": "major",
-      "description": "Fluid back to PLAN: discovered during PLAN",
-      "status": "open"
-    },
-    {
-      "id": "G-1794975794723",
-      "type": "major",
-      "description": "Fluid back to PLAN: discovered during PLAN",
-      "status": "open"
-    },
-    {
-      "id": "G-1794977317727",
-      "type": "major",
-      "description": "Fluid back to PLAN: discovered during PLAN",
-      "status": "open"
-    }
-  ],
-  "phase_name": "P25: quick-fix batch",
-  "task_head": "b90100192a16c2606865c53abb20054a43279f8e",
-  "task_head_history": [
-    {
-      "sha": "b90100192a16c2606865c53abb20054a43279f8e",
-      "at": "2026-11-18T02:29:14.503Z",
-      "what": "claim"
-    }
-  ],
-  "spec_gate_version": 3,
-  "spec_sha256": "2caa6d3f051a240311bc4d5fae311367bde16954a0e05eb08dc2a724945b89ac",
-  "plan_snapshot": {
-    "tasks": [
-      {
-        "id": "T0",
-        "covers": [
-          "D-104"
-        ],
-        "files": [],
-        "wave": 1
-      },
-      {
-        "id": "T1",
-        "covers": [
-          "D-102",
-          "D-101"
-        ],
-        "files": [
-          "bin/lib/knowledge/lessons.cjs",
-          "test/sections/T46-module-structure.test.sh"
-        ],
-        "wave": 2
-      },
-      {
-        "id": "T2",
-        "covers": [
-          "D-102",
-          "D-101"
-        ],
-        "files": [
-          "bin/lib/task/archive.cjs"
-        ],
-        "wave": 2
-      },
-      {
-        "id": "T3",
-        "covers": [
-          "D-102",
-          "R-01"
-        ],
-        "files": [
-          "test/sections/T18-f1-gate-lessons.test.sh"
-        ],
-        "wave": 2
-      },
-      {
-        "id": "T4",
-        "covers": [
-          "D-103"
-        ],
-        "files": [
-          "bin/lib/knowledge/decisions.cjs"
-        ],
-        "wave": 3
-      },
-      {
-        "id": "T5",
-        "covers": [
-          "D-103",
-          "R-29"
-        ],
-        "files": [
-          "bin/lib/knowledge/milestone.cjs",
-          "bin/lib/core/locales/en.cjs",
-          "bin/lib/core/locales/zh.cjs"
-        ],
-        "wave": 3
-      },
-      {
-        "id": "T6",
-        "covers": [
-          "D-103"
-        ],
-        "files": [
-          "bin/lib/render/views.cjs"
-        ],
-        "wave": 3
-      },
-      {
-        "id": "T7",
-        "covers": [
-          "D-103"
-        ],
-        "files": [
-          "bin/lib/core/state.cjs"
-        ],
-        "wave": 3
-      },
-      {
-        "id": "T8",
-        "covers": [
-          "D-103",
-          "R-01",
-          "R-29"
-        ],
-        "files": [
-          "test/sections/T3-decision.test.sh",
-          "test/sections/T7-render.test.sh",
-          "test/sections/T114-milestone-open-close.test.sh"
-        ],
-        "wave": 3
-      },
-      {
-        "id": "T9",
-        "covers": [
-          "D-105",
-          "R-01"
-        ],
-        "files": [
-          ".gos/task/p25/plan.md"
-        ],
-        "wave": 4
-      }
-    ],
-    "audit": [
-      {
-        "at": "2026-11-18T03:45:05.823Z",
-        "what": "snapshot-force"
-      }
-    ],
-    "meta": {
-      "waveValidation": {
-        "ok": true,
-        "waves": 4
-      }
-    }
-  },
-  "changelog_user_summary": "Introduce the explicit init birth marker for decision rows: writes stamp the constant, DECISIONS.md renders init with a header note, init rows survive milestone close, and a one-time migration rewrites legacy P0/legacy values",
-  "checkpoints": [],
-  "completed_at": "2026-11-18T05:20:38.819Z"
+  "decisions": [],
+  "observable_truths": [],
+  "gaps": [],
+  "activation_source": "headless",
+  "task_head": "f556a9607a14348ab10190bdf459001dff9712f6",
+  "changelog_user_summary": "Record the auto-loop dogfood cycle note as a machine-local cache artifact under .gos/cache with tracked evidence assertions."
 }

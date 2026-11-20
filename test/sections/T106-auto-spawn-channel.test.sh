@@ -284,9 +284,14 @@ const fs = require('fs');
 const os = require('os');
 const launcher = require(process.env.GOS_ROOT + '/bin/lib/ops/auto/launcher.cjs');
 const problems = [];
+// A sandboxed run can carry a host TMPDIR that is not mounted; scratch
+// dirs fall back to /tmp when os.tmpdir() is unusable.
+let tmpBase = os.tmpdir();
+try { fs.accessSync(tmpBase, fs.constants.W_OK); } catch { tmpBase = '/tmp'; }
+if (!fs.existsSync(tmpBase)) tmpBase = '/tmp';
 // A fake host config dir with secrets, permission expansions, and an
 // executable tree.
-const host = fs.mkdtempSync(path.join(os.tmpdir(), 'hostcfg-'));
+const host = fs.mkdtempSync(path.join(tmpBase, 'hostcfg-'));
 fs.writeFileSync(path.join(host, 'opencode.json'), JSON.stringify({
   model: 'glm-4.7',
   provider: { zai: { npm: '@zai/openai', options: { apiKey: 'sk-secret' } } },
@@ -299,7 +304,7 @@ const s = launcher.sanitizeHostConfig({ HOME: path.dirname(host) });
 // Point the sanitizer at the fake dir by faking HOME resolution: it reads
 // \$HOME/.config/opencode, so re-run with a proper layout instead.
 fs.rmSync(host, { recursive: true, force: true });
-const home = fs.mkdtempSync(path.join(os.tmpdir(), 'home-'));
+const home = fs.mkdtempSync(path.join(tmpBase, 'home-'));
 const cfg = path.join(home, '.config', 'opencode');
 fs.mkdirSync(cfg, { recursive: true });
 fs.writeFileSync(path.join(cfg, 'opencode.json'), JSON.stringify({
@@ -323,7 +328,7 @@ if (!sanitized.stripped.some((x) => x.includes('apiKey'))) problems.push('apiKey
 if (!sanitized.stripped.some((x) => x.includes('agent/'))) problems.push('executable tree unrecorded');
 if ('agent' in sanitized.files) problems.push('agent tree seeded');
 // Seed-roots compose: the seed bind lands and the ordering invariant holds.
-const base = fs.mkdtempSync(path.join(os.tmpdir(), 'seedbase-'));
+const base = fs.mkdtempSync(path.join(tmpBase, 'seedbase-'));
 const dir = launcher.materializeSeedDir(sanitized.files, base, 'auto-seed');
 const composed = launcher.compose('restricted', { workspace: process.cwd(), env: { HOME: home }, seedRoots: { 'host-config': dir }, writableRoots: [process.cwd()] });
 if (!composed.ok) problems.push('compose failed: ' + composed.code);

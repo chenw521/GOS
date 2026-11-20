@@ -177,6 +177,14 @@ assert_eq "M1 .changes.md mtime unchanged" "$M1" "$M2"
 t54_teardown
 
 # ===== H: help/usage seam + lint stub =====
+# The seam probes run from the section's own scratch git root: the missing-file
+# advisory contract needs an unmanaged cwd, and the changelog root resolver
+# only treats a nested dir as unmanaged when the running CLI's checkout and
+# the discovered git toplevel coincide (a pinned section worktree breaks that
+# coincidence, resolving to the enclosing repository instead).
+T54_HDIR="$TESTBASE/test-$(date +%s)-$RANDOM-t54h"
+mkdir -p "$T54_HDIR" && cd "$T54_HDIR" || exit 1
+git init -q . && git commit -q --allow-empty -m t54h-seed
 set +e; HOUT=$(node "$GOS" help changelog 2>&1); HRC=$?; set -e
 assert_exit "H1 help changelog rc" 0 "$HRC"
 assert_contains "H1 usage rendered from registry" "gos changelog <sub>" "$HOUT"
@@ -186,6 +194,7 @@ assert_contains "H2 usage line" "Usage: gos changelog add" "$OUT"
 set +e; OUT=$(node "$GOS" changelog lint 2>&1); RC=$?; set -e
 assert_exit "H3 lint wired rc (T55 seam flipped)" 0 "$RC"
 assert_contains "H3 lint missing-file advisory" "gos changelog add" "$OUT"
+cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$T54_HDIR"
 
 # ===== Z: product source zero CJK =====
 CJK_HITS="$(grep -rlP '[\x{4e00}-\x{9fff}]' "$GOS_ROOT/bin/lib/task/changelog.cjs" 2>/dev/null || true)"

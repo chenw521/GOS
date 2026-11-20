@@ -9,7 +9,9 @@ T67_DIR=""
 
 t67_setup() {
   [ -n "$T67_DIR" ] && rm -rf "$T67_DIR"   # sweep the previous scenario dir — no /tmp leaks
-  T67_DIR="$(mktemp -d "${TMPDIR:-/tmp}/gos-t67-trust-XXXXXX")"
+  local base="${TMPDIR:-/tmp}"
+  { [ -d "$base" ] && [ -w "$base" ]; } || base=/tmp   # a sandboxed run can carry an unmounted host TMPDIR
+  T67_DIR="$(mktemp -d "$base/gos-t67-trust-XXXXXX")"
   cd "$T67_DIR" || exit 1
   git init -q . && git commit -q --allow-empty -m t67-seed
   printf ".gos/state.json\n.gos/cache/\n" > .gitignore && git add .gitignore && git commit -q -m gi

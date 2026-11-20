@@ -53,6 +53,12 @@ PASS=0; FAIL=0
 echo "--- T102: ai-trace lint boundary evidence ---"
 T102_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-t102"
 mkdir -p "$T102_DIR" || exit 1
+# The lint checks scratch via TMPDIR-honoring bare mktemp; a sandboxed run
+# can carry a host TMPDIR that is not mounted, so pin the first usable base
+# before any check runs.
+T102_TMP="${TMPDIR:-/tmp}"
+{ [ -d "$T102_TMP" ] && [ -w "$T102_TMP" ]; } || T102_TMP=/tmp
+export TMPDIR="$T102_TMP"
 
 # ===== A: scratch repo, fixtures unregistered — every hit is a violation =====
 RED="$(t102_scratch red)"

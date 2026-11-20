@@ -1464,6 +1464,19 @@ const COMMANDS = {
     next: ['gos push', 'gos changelog add'],
     contractKeys: [],
   },
+  'branch': {
+    desc: 'retire content-landed local branches: reap [--dry-run|--apply] --base <ref> (delete|manual|keep verdict JSON; deletions archived as refs/reaped/<branch> revive refs)',
+    class: 'read', aliases: [], core: false,
+    subs: ['reap [--dry-run|--apply] --base <ref>'],
+    flags: [
+      { name: '--dry-run', scope: 'reap', effect: 'print the per-branch verdict JSON without mutating anything (default)', risk: 'safe' },
+      { name: '--apply', scope: 'reap', effect: 'execute deletions: create refs/reaped/<branch> first, then delete the branch ref (refuses under a live auto run lock)', risk: 'mutating' },
+      { name: '--base', scope: 'reap', effect: 'base ref whose history proves content-landed (required)', risk: 'safe' },
+    ],
+    usage: 'gos branch reap [--dry-run|--apply] --base <ref>',
+    next: ['gos branch reap --dry-run --base origin/main'],
+    contractKeys: [],
+  },
   // [P4 T7a/T7b D-15] tracked-flip transaction gate: validated atomic surgery
   // flipping an ignored .gos file to tracked (pre-scan + .gos/.gitignore
   // negation + census-if-present + flip manifest + git add; rename-style

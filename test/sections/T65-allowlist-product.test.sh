@@ -171,12 +171,39 @@ assert_contains "h2 refusal says nothing to assert" "nothing to assert" "$HOUT2"
 if [ -e .gos/codebase/require-allowlist.json ]; then echo "  ✗ h3 refusal wrote a file"; else echo "  ✓ h3 no allowlist written"; fi
 
 # --- .i: gate output contains no self-repo phase numbering
-set +e; IOUT2=$(cd "$GOS_ROOT" && node "$GOS" map scan >/dev/null 2>&1; node "$GOS" gate codemap 2>&1); IRC2=$?; set -e
+# Runs inside a detached section worktree (workers.cjs helper): the checkout
+# owns its .gos lock+cache, so the scan and the codemap run never depend on a
+# writable enclosing checkout. The tracked .gos/state.json is removed inside
+# the checkout (tracked session state is unsupported in a linked worktree —
+# lock.cjs guard); the codemap leg is stateless, and trust is opted in for
+# the fresh checkout.
+T65_SRC="$(cd "$(dirname "$(dirname "$(readlink -f "$GOS")")")" && pwd)"
+T65_WTB="$TESTBASE/test-$(date +%s)-$RANDOM-t65i/wt"
+mkdir -p "$T65_WTB"
+T65_WT="$(node -e '
+  const cp = require("child_process");
+  const path = require("path");
+  const root = process.argv[1];
+  const w = require(path.join(root, "bin/lib/ops/auto/workers.cjs"));
+  const pin = cp.spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout.trim();
+  const r = w.prepareSectionWorktree(root, { testBase: process.argv[2], pin });
+  if (!r.ok) { process.stderr.write("worktree prepare refused: " + r.reason + "\n"); process.exit(1); }
+  process.stdout.write(r.path);
+' "$T65_SRC" "$T65_WTB")"
+rm -f "$T65_WT/.gos/state.json"
+(cd "$T65_WT" && node "$GOS" gate trust check.sh >/dev/null 2>&1)
+set +e; IOUT2=$(cd "$T65_WT" && node "$GOS" map scan >/dev/null 2>&1; node "$GOS" gate codemap 2>&1); IRC2=$?; set -e
 assert_exit "i1 self-repo gate codemap green" 0 "$IRC2"
 if printf '%s' "$IOUT2" | grep -q "Split-③"; then
   echo "  ✗ i2 gate output still contains self-repo phase numbering (Split-③)"; FAIL=$((FAIL+1))
 else
   echo "  ✓ i2 gate output free of self-repo phase numbering"; PASS=$((PASS+1))
 fi
+node -e '
+  const path = require("path");
+  const w = require(path.join(process.argv[1], "bin/lib/ops/auto/workers.cjs"));
+  w.sweepSectionWorktrees(process.argv[1], { testBase: process.argv[2] });
+' "$T65_SRC" "$T65_WTB" >/dev/null 2>&1 || true
+rm -rf "$(dirname "$T65_WTB")"
 
 t65_teardown

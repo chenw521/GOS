@@ -63,6 +63,8 @@ npm-debug.log*
 # truth-evidence logs inside tracked task dirs travel with state.json
 # (schema validation requires artifact_path on disk in clones)
 !.gos/task/**/*.log
+# harvested deny-slice fixture feeds the deny-scoring section
+!test/fixtures/5419521c-deny-slice.log
 
 # GOS concurrency lock (machine-local)
 .gos/.lock

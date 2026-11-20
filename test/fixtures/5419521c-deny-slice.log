@@ -1,0 +1,15 @@
+=== T85-security-depth ===
+--- T85: security.sh depth-aware DANGER truth table ---
+  [x] FAIL: rm -rf /
+  [x] FAIL: rm -rf /*
+  [x] FAIL: rm -rf "/" (quoted target)
+  [x] FAIL: rm -rf $HOME (bare var root)
+  [x] FAIL: rm -rf /home
+  [x] FAIL: rm -rf /etc
+  [x] PASS: rm -rf /tmp/build-cache
+--- T85 summary: 7 passed, 0 failed ---
+=== T104: auto core ===
+--- C4: dispatch-refuse (named fail-closed reasons) ---
+  [x] verb 'sudo' -> unknown-verb
+  [x] extra stage key -> unknown-stage
+--- T104 summary: 2 passed, 0 failed ---

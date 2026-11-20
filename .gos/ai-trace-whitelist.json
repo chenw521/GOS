@@ -18,7 +18,7 @@
     "pin": {
       "type": "region-sha256",
       "minLine": 75,
-      "regionSha256": "96ff79551bf03345bec55a85e6e0c41ebb0564af485387bbed44a6e89e59e70c"
+      "regionSha256": "f0fca4b17258fa9cde8570b8692c8a88f4b6c88899445f544de7fe8549e84a3e"
     }
   },
   {
@@ -62,7 +62,7 @@
         "sha256": "b93988fe86491dbf88c246e2eb795a5ed2f8248632ddc475d7b3c3144aca78f5"
       },
       {
-        "line": 265,
+        "line": 266,
         "sha256": "917879b435bf6edecc0d8608990938fee016405f06b02d829270a25e8efc49b1"
       }
     ]
@@ -292,7 +292,7 @@
         "sha256": "f844494e3ebcc483d9e03525c5fa7e75397862b27fbed6f89e9a0c93541333ce"
       },
       {
-        "line": 1467,
+        "line": 1480,
         "sha256": "bdc502fca27a64bba42503b69d9518aa43d98cb47c79a1e9d71c515488c395f5"
       }
     ]
@@ -730,39 +730,39 @@
         "sha256": "e49968e9ccfbd292bfc7d3c73575e12ff82e1719f00ff52975fc78f4613e6681"
       },
       {
-        "line": 939,
+        "line": 953,
         "sha256": "f69cdae81003f8cdcf1de1b2a11b77fd714f66025a5d8894939329d35669756f"
       },
       {
-        "line": 961,
+        "line": 975,
         "sha256": "3fd79ac83f68a6d17bcbbeb4c41d1eb44234e37a39a5c9a3cbe8de52e7bc37db"
       },
       {
-        "line": 1009,
+        "line": 1023,
         "sha256": "9e738a1abff613739e7cd9ddeb2f253493c672c18734ea82afbbb8f788f603f3"
       },
       {
-        "line": 1014,
+        "line": 1028,
         "sha256": "aa8d30ee0dbf4e2b2bd9f1cb75fc54495b6a76232e236aa8bc43a6079877107a"
       },
       {
-        "line": 1213,
+        "line": 1227,
         "sha256": "5d6c9768aabde105b966bc8ed23bab733dc648e376e2ba1dc4a9998650ec07cc"
       },
       {
-        "line": 1223,
+        "line": 1237,
         "sha256": "6d3196b5e6a8ffbffa3a81b00146cbe43f0993099f3a37f75cfcd87e2910a6dc"
       },
       {
-        "line": 1528,
+        "line": 1542,
         "sha256": "3471b41ccdef2d24fb7a74200e8483f22be994e0e242eed44e74ee4f33f2a2a5"
       },
       {
-        "line": 1564,
+        "line": 1578,
         "sha256": "af52abb2e8bb517c35de7f3eefb9506167750108c4f946e3a1fda9f3f69c6b65"
       },
       {
-        "line": 1601,
+        "line": 1615,
         "sha256": "76b61f6ea9edff48418c510972f1a37168708b30c4ec1969ae883ca70632f7db"
       }
     ]
@@ -1067,7 +1067,7 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 92,
+        "line": 98,
         "sha256": "ce56c664db6abf69430a9850e8078d1151ed3a2e885a99846882000f2a9a2b07"
       }
     ]
@@ -1493,7 +1493,7 @@
     "reason": "Functional fixture data: heredoc plan and whitelist parse inputs quote digit ids by design; pinned as frozen surface.",
     "lines": [
       {
-        "line": 144,
+        "line": 179,
         "sha256": "b0f51b7742b34b52984ea31bb171e0951e801d837ec29bc02ab7d4d610419611"
       }
     ]
@@ -1653,7 +1653,7 @@
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
     "lines": [
       {
-        "line": 156,
+        "line": 159,
         "sha256": "ea8ee61be92ab575da8ae9e4ea1991d1589d6e99312a0e3988a76b3e8be8d0aa"
       }
     ]

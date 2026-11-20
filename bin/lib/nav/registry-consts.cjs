@@ -15,11 +15,15 @@ const SUBCLASS_OVERRIDES = {
 // Same read-class dispatch for `push`: it mutates only the git remote (one
 // aggregate commit), never local .gos state, and git itself serializes
 // remote updates — the shared die-on-contention .gos/.lock must not gate it.
-const KNOWN_CASES = ['', 'next', 'instructions', 'status', 'init', 'resume', 'stage', 'context', 'checkpoint', 'commit', 'archive', 'setup', 'teardown', 'doctor', '_contract', 'paths', 'gate', 'section', 'resolve-model', 'config', 'trace', 'decision', 'requirement', 'phase', 'milestone', 'anchor', 'render', 'auto', 'approve', 'lessons', 'truth', 'logs', 'gap', 'map', 'concerns', 'changelog', 'feedback', 'push', 'track', 'brownfield', 'help', '--help', '-h', '--version', '-v'];
+// Same read-class dispatch for `branch`: reap --apply mutates only git refs
+// (revive refs + branch deletions, never .gos state) and serializes against
+// the auto runner through the store's run lock — the shared
+// die-on-contention .gos/.lock must not gate it either.
+const KNOWN_CASES = ['', 'next', 'instructions', 'status', 'init', 'resume', 'stage', 'context', 'checkpoint', 'commit', 'archive', 'setup', 'teardown', 'doctor', '_contract', 'paths', 'gate', 'section', 'resolve-model', 'config', 'trace', 'decision', 'requirement', 'phase', 'milestone', 'anchor', 'render', 'auto', 'approve', 'lessons', 'truth', 'logs', 'gap', 'map', 'concerns', 'changelog', 'feedback', 'push', 'branch', 'track', 'brownfield', 'help', '--help', '-h', '--version', '-v'];
 
 const WRITE_CMDS = new Set(['init', 'commit', 'archive', 'approve', 'checkpoint', 'config', 'auto', 'stage', 'requirement', 'decision', 'render', 'phase', 'milestone', 'anchor', 'lessons', 'truth', 'gap', 'paths', 'feedback', 'track']);
 
-const READ_CMDS = new Set(['', 'next', 'instructions', 'status', 'resume', 'context', 'trace', 'resolve-model', 'map', 'concerns', 'changelog', 'push', 'logs']);
+const READ_CMDS = new Set(['', 'next', 'instructions', 'status', 'resume', 'context', 'trace', 'resolve-model', 'map', 'concerns', 'changelog', 'push', 'branch', 'logs']);
 
 const EXEC_CMDS = new Set(['gate', 'section']);
 

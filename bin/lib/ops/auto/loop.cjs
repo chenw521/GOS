@@ -383,10 +383,64 @@ function loopSpawnRunner(spec, ctx) {
   });
 }
 
+// Detach contract constants: the child proves "started" by acquiring the run
+// lock and stamping a sentinel file; the parent bounded-waits for that proof
+// (never trusting the fork alone), and run logs prune to a keep-last-N tail.
+const DETACH_SENTINEL_ENV = 'GOS_AUTO_DETACH_SENTINEL';
+const DETACH_SENTINEL_WAIT_MS = 5000;
+const DETACH_POLL_MS = 100;
+const RUN_LOG_KEEP = 5;
+
+// Command-kind deny hits (a bash command field match) are the only ones
+// that may fail a step; text-kind echoes stay reported. Both scoring
+// paths share this classifier so the gating semantics cannot drift.
+function commandHitsOf(hits) {
+  return (Array.isArray(hits) ? hits : []).filter((h) => h && h.kind === 'command');
+}
+
+function denyDetail(commandHits) {
+  return commandHits.map((h) => `deny '${h.pattern}': ${h.line.slice(0, 120)}`).join('; ');
+}
+
+const detachSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Detached child argv: the forwarded invocation minus every detach-class
+// flag, always carrying exactly one trailing --fg -- a detached child must
+// never re-detach (forward equivalence, no detach chain).
+function detachChildArgv(argv) {
+  const carried = (Array.isArray(argv) ? argv : []).filter((a) => a !== '--detach' && a !== '--fg');
+  carried.push('--fg');
+  return carried;
+}
+
+// Run-log rotation: keep the newest N auto-run logs (mtime descending, name
+// as the tiebreak), unlink the rest. Runs at detach start so a churn of
+// short detached runs cannot grow the log dir unbounded.
+function rotateRunLogs(logDir, keep) {
+  let names;
+  try { names = fs.readdirSync(logDir); } catch { return; }
+  const logs = [];
+  for (const name of names) {
+    if (!/^auto-run-.*\.log$/.test(name)) continue;
+    const file = path.join(logDir, name);
+    let mtimeMs = 0;
+    try { mtimeMs = fs.statSync(file).mtimeMs; } catch { /* raced away */ }
+    logs.push({ file, name, mtimeMs });
+  }
+  logs.sort((a, b) => (b.mtimeMs - a.mtimeMs) || (a.name < b.name ? 1 : -1));
+  for (const entry of logs.slice(keep)) {
+    try { fs.unlinkSync(entry.file); } catch { /* raced away */ }
+  }
+}
+
 // Real detach: spawns the CLI run command detached from this parent. The
-// child's output tees into a machine-local run log so a silent exit is
-// diagnosable from an artifact instead of a black hole.
-function defaultDetacher(command, args, opts) {
+// child's output tees into a machine-local run log; the sentinel carries the
+// child's lock verdict back -- refusal or missing proof fails the parent,
+// while a lock-acquired sentinel either detaches (child outlives the window)
+// or surfaces the child's exit code when it finishes inside the window. The
+// wait streams the child's log output to this terminal so an early refusal
+// is visible without opening the log.
+async function defaultDetacher(command, args, opts) {
   const logDir = path.join(opts.rootDir || process.cwd(), '.gos', 'logs');
   try { fs.mkdirSync(logDir, { recursive: true }); } catch { /* unwritable: fall back to ignore */ }
   let stdio = 'ignore';
@@ -396,8 +450,82 @@ function defaultDetacher(command, args, opts) {
     const fd = fs.openSync(logPath, 'a');
     stdio = ['ignore', fd, fd];
   } catch { logPath = null; }
-  const child = spawnrun.spawnDetached(command, args, { stdio, env: opts.env });
-  return { pid: child.pid, log: logPath };
+  rotateRunLogs(logDir, RUN_LOG_KEEP);
+  const sentinelPath = path.join(logDir, `auto-detach-${process.pid}-${Date.now()}.json`);
+  const child = spawnrun.spawnDetached(command, args, {
+    stdio,
+    env: { ...(opts.env || {}), [DETACH_SENTINEL_ENV]: sentinelPath },
+  });
+  let exited = false;
+  let exitCode = null;
+  try {
+    child.on('exit', (code) => { exited = true; exitCode = code; });
+    child.on('error', () => { exited = true; });
+  } catch { /* child handle already closed */ }
+
+  let forwarded = 0;
+  const forwardLog = () => {
+    if (!logPath) return;
+    try {
+      const size = fs.statSync(logPath).size;
+      if (size <= forwarded) return;
+      const fd = fs.openSync(logPath, 'r');
+      try {
+        const want = size - forwarded;
+        const buf = Buffer.allocUnsafe(want);
+        let done = 0;
+        while (done < want) {
+          const n = fs.readSync(fd, buf, done, want - done, forwarded + done);
+          if (n <= 0) break;
+          done += n;
+        }
+        if (done > 0) process.stdout.write(buf.subarray(0, done));
+        forwarded += done;
+      } finally { fs.closeSync(fd); }
+    } catch { /* log vanished or shrank mid-read */ }
+  };
+  const readSentinel = () => {
+    let raw;
+    try { raw = fs.readFileSync(sentinelPath, 'utf8'); } catch { return null; }
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch { return null; }
+  };
+
+  const deadline = Date.now() + DETACH_SENTINEL_WAIT_MS;
+  let verdict = null;
+  while (verdict == null) {
+    forwardLog();
+    const sentinel = readSentinel();
+    if (sentinel && sentinel.ok === false) {
+      while (!exited && Date.now() < deadline) { await detachSleep(DETACH_POLL_MS); forwardLog(); }
+      verdict = { ok: false, status: 'refused', reason: sentinel.reason || 'lock-refused' };
+    } else if (sentinel && sentinel.ok === true) {
+      while (!exited && Date.now() < deadline) { await detachSleep(DETACH_POLL_MS); forwardLog(); }
+      verdict = exited
+        ? { ok: exitCode === 0, status: 'detached', completed: exitCode }
+        : { ok: true, status: 'detached', completed: null };
+    } else if (exited) {
+      verdict = { ok: false, status: 'sentinel-missing', reason: 'child-exit-unproven' };
+    } else if (Date.now() >= deadline) {
+      verdict = { ok: false, status: 'sentinel-timeout', reason: 'timeout' };
+    } else {
+      await detachSleep(DETACH_POLL_MS);
+    }
+  }
+  forwardLog();
+  try { fs.unlinkSync(sentinelPath); } catch { /* already gone */ }
+  return { pid: child.pid, log: logPath, ...verdict };
+}
+
+// Sentinel writer for the runner side: a detached child (and only one -- the
+// env key is set solely by the detacher) stamps its lock verdict here so the
+// bounded-wait parent proves "started" from the lock, not from the fork.
+function writeDetachSentinel(env, payload) {
+  const target = env && env[DETACH_SENTINEL_ENV];
+  if (!target) return;
+  try { fs.writeFileSync(target, JSON.stringify(payload)); } catch { /* best effort */ }
 }
 
 function defaultCliEntry() {
@@ -424,7 +552,12 @@ function defaultCliEntryArgs() {
 //   maxIterations      safety ceiling on iterations (default: none)
 //   breakLock          pass-through to the store run-lock acquisition
 //   detach             run as a detached child instead of in-process
-//   detacher           (command, args, {rootDir, env}) -> {pid}
+//   detachArgv         forwarded CLI argv for the detached child (default
+//                      ['auto', 'run']); detach-class flags are stripped and
+//                      --fg appended so the child never re-detaches
+//   detacher           (command, args, {rootDir, env}) -> {pid, log, ok?,
+//                      status?, completed?}; the real default bounded-waits
+//                      for the child's lock-acquired sentinel
 //   gitRunner          (args, cwd) -> spawnSync shape
 //   stateReader        () -> GOS state object | null | {corrupt}
 //   spawnRunner        (spec, {wallMs}) -> spawnSync shape (sync or promise)
@@ -480,13 +613,26 @@ async function runLoop(opts) {
 
   // Detach mode: spawn the CLI run command as a detached child and return.
   // The child performs branch/lock/iteration work; the parent holds nothing
-  // (no marker — the child IS the runner, not a spawned stage session).
+  // (no marker — the child IS the runner, not a spawned stage session). The
+  // child argv carries the forwarded invocation with every detach-class flag
+  // stripped and --fg appended (forward equivalence — no re-detach chain).
   if (opts.detach) {
     const detacher = typeof opts.detacher === 'function' ? opts.detacher : defaultDetacher;
     const command = defaultCliEntry();
-    const args = [...defaultCliEntryArgs(), 'auto', 'run'];
+    const forwarded = Array.isArray(opts.detachArgv) && opts.detachArgv.length ? opts.detachArgv.slice() : ['auto', 'run'];
+    const args = [...defaultCliEntryArgs(), ...detachChildArgv(forwarded)];
     const res = await detacher(command, args, { rootDir, env: { ...env } });
-    return report({ ok: true, status: 'detached', pid: res && res.pid, log: res && res.log, argv: [command, ...args] });
+    const ok = !(res && res.ok === false);
+    return report({
+      ok,
+      status: ok ? 'detached' : (res && res.status) || 'detach-failed',
+      pid: res && res.pid,
+      log: res && res.log,
+      reason: res && res.reason,
+      completed: res ? res.completed : undefined,
+      argv: [command, ...args],
+      waitSec: Math.round(DETACH_SENTINEL_WAIT_MS / 1000),
+    });
   }
 
   // Trust store: fail-closed load, then the mode gate (resume never
@@ -512,8 +658,12 @@ async function runLoop(opts) {
   // Exclusive run lock: a second instance is refused and the holder named.
   const lock = store.acquireRunLock({ rootDir, breakLock: opts.breakLock === true });
   if (!lock.ok) {
+    writeDetachSentinel(env, { ok: false, reason: lock.reason });
     return report({ ok: false, status: 'refused', reason: lock.reason, holder: lock.holder || null, path: lock.path, guidance: lock.guidance });
   }
+  // Detach sentinel: lock acquisition is the proof of "started" that the
+  // bounded-wait parent observes (the fork alone proves nothing).
+  writeDetachSentinel(env, { ok: true, pid: process.pid, ts: now() });
 
   const stateReader = typeof opts.stateReader === 'function' ? opts.stateReader : () => defaultStateReader(rootDir);
   const spawnRunner = opts.spawnRunner || loopSpawnRunner;
@@ -547,6 +697,22 @@ async function runLoop(opts) {
 
   try {
     return await drive({ opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs, loaded, seedRoots: seedState.seedRoots });
+  } catch (e) {
+    // An in-process throw escapes drive() before its own exit routes run;
+    // the run must still leave a record (the re-enable gate reads the
+    // latest one) before the exception propagates.
+    try {
+      store.writeRunRecord({
+        runId: crypto.randomUUID(),
+        runTag: 'exception',
+        taskId: null,
+        startedAtIso: new Date(now()).toISOString(),
+        endedAtIso: new Date(now()).toISOString(),
+        endState: { ok: false, status: 'exception', reason: String((e && e.message) || 'exception').slice(0, 400) },
+        stages: [],
+      }, rootDir);
+    } catch { /* best effort: a record failure never masks the thrown error */ }
+    throw e;
   } finally {
     if (seedState.cleanup) { try { fs.rmSync(seedState.cleanup, { recursive: true, force: true }); } catch { /* best effort */ } }
     try {
@@ -608,22 +774,72 @@ async function drive(ctx) {
     return { state: v };
   };
 
+  // Per-run persistence: one record at run end on every exit route — the
+  // stage outcomes accumulated so far plus the end state. This is the
+  // evidence substrate the re-enable gate reads; a failed write never
+  // masks the run result itself (best effort by design).
+  const runId = crypto.randomUUID();
+  const runTag = runId.slice(0, 8);
+  const runStartedAtIso = new Date(now()).toISOString();
+  let runTaskId = null;
+  const runStageOutcomes = () => iterations.map((it) => {
+    const e = {
+      stage: String(it.stage || ''),
+      signal: typeof it.signal === 'string' && it.signal ? it.signal : null,
+      advanced: it.advanced === true,
+      counted: it.counted === true,
+      spawnId: String(it.spawnId || ''),
+    };
+    if (typeof it.detail === 'string' && it.detail) e.detail = String(it.detail).slice(0, 400);
+    if (Array.isArray(it.steps) && it.steps.length) {
+      e.steps = it.steps.map((sp) => ({
+        id: String((sp && sp.id) || ''),
+        kind: sp && sp.kind === 'S' ? 'S' : 'P',
+        status: String((sp && sp.status) || ''),
+      }));
+    }
+    return e;
+  });
+  const persistRunRecord = (base) => {
+    try {
+      store.writeRunRecord({
+        runId,
+        runTag,
+        taskId: runTaskId,
+        startedAtIso: runStartedAtIso,
+        endedAtIso: new Date(now()).toISOString(),
+        endState: {
+          ok: base.ok === true,
+          status: String(base.status || 'unknown'),
+          reason: typeof base.reason === 'string' && base.reason ? base.reason : null,
+        },
+        stages: runStageOutcomes(),
+      }, rootDir);
+    } catch { /* best effort: a record failure never masks the run result */ }
+  };
+  // Pre-run exits (before the breaker exists) keep their null breaker view.
+  const endPre = (base) => {
+    persistRunRecord(base);
+    return report(base, { iterations, breaker: null });
+  };
+
   // Task must be active; a task already at a terminus ends the loop cleanly
   // with no spawn adapter involvement at all.
   const first = readTaskState();
-  if (first.err) return report(first.err, { iterations, breaker: null });
+  if (first.err) return endPre(first.err);
   if (first.none) {
-    return report({ ok: false, status: 'refused', reason: 'no-task', guidance: store.guidanceFor('auto.loop.noTask') }, { iterations, breaker: null });
+    return endPre({ ok: false, status: 'refused', reason: 'no-task', guidance: store.guidanceFor('auto.loop.noTask') });
   }
   let taskState = first.state;
   const taskId = core.currentTaskId(taskState) || 'task';
+  runTaskId = taskId;
 
   const stage0 = String(taskState.current_stage || '').toUpperCase();
   if (TERMINAL_STAGES.includes(stage0)) {
-    return report({
+    return endPre({
       ok: true, status: stage0 === 'SHIP' ? 'ship' : 'done', reason: `stage-${stage0.toLowerCase()}`,
       deliveryAdapter: false, guidance: store.guidanceFor('auto.loop.taskAtEnd', { stage: stage0 }),
-    }, { iterations, breaker: null });
+    });
   }
 
   // Dispatch table: load once under the run lock (every bound validated by
@@ -632,19 +848,17 @@ async function drive(ctx) {
   // stamp; drift is the external-mutation pause, never a reload.
   const tableLoad = workers.loadDispatchTable(typeof opts.tablePath === 'string' && opts.tablePath ? { tablePath: opts.tablePath } : undefined);
   if (!tableLoad.ok) {
-    return report({ ok: false, status: 'error', reason: 'dispatch-table-unavailable', detail: tableLoad.detail, file: tableLoad.file }, { iterations, breaker: null });
+    return endPre({ ok: false, status: 'error', reason: 'dispatch-table-unavailable', detail: tableLoad.detail, file: tableLoad.file });
   }
   const tableFile = tableLoad.file;
   const dispatchTable = tableLoad.table;
-  const runId = crypto.randomUUID();
-  const runTag = runId.slice(0, 8);
   const tableSha = hashFileSha256(tableFile);
   if (tableSha == null) {
-    return report({ ok: false, status: 'error', reason: 'dispatch-table-unreadable', file: tableFile }, { iterations, breaker: null });
+    return endPre({ ok: false, status: 'error', reason: 'dispatch-table-unreadable', file: tableFile });
   }
   const tableStamped = store.rollDispatchTableStamp(rootDir, { sha256: tableSha, rolledByWave: `${runTag}/start` });
   if (!tableStamped.ok) {
-    return report({ ok: false, status: tableStamped.status || 'error', reason: tableStamped.reason || 'table-stamp-failed', path: tableStamped.path }, { iterations, breaker: null });
+    return endPre({ ok: false, status: tableStamped.status || 'error', reason: tableStamped.reason || 'table-stamp-failed', path: tableStamped.path });
   }
   const verifyTable = () => verifyDispatchTableStamp(rootDir, tableFile);
 
@@ -655,11 +869,14 @@ async function drive(ctx) {
   // Breaker over the store limits (or the injected override).
   const made = breakerMod.createBreaker({ rootDir, limits: opts.limits || undefined });
   if (!made.ok) {
-    return report({ ok: false, status: made.status, reason: made.reason, path: made.path, guidance: made.guidance }, { iterations, breaker: null });
+    return endPre({ ok: false, status: made.status, reason: made.reason, path: made.path, guidance: made.guidance });
   }
   const b = made.breaker;
   const breakerView = () => b.state();
-  const endWith = (base) => report(base, { iterations, breaker: breakerView() });
+  const endWith = (base) => {
+    persistRunRecord(base);
+    return report(base, { iterations, breaker: breakerView() });
+  };
 
   // Never develop on the trunk: create/join the per-task work branch.
   const branched = ensureWorkBranch(gitRunner, rootDir, taskId);
@@ -774,8 +991,8 @@ async function drive(ctx) {
         });
       }
        const orphanLeg = { stage: String(orphan.stage).toUpperCase(), spawnId: best.sid, streamSha256: best.st.streamSha256, advanced: true, orphan: true };
-       const legRes = await withHeartbeat(() => delegatedLegs({ leg: orphanLeg, opts, env, rootDir, spawnRunner, tp, now, runTag, legs: { ratify: legRatify, redteam: legRedteam } }));
-       if (legRes.err) return report(legRes.err, { iterations, breaker: breakerView() });
+        const legRes = await withHeartbeat(() => delegatedLegs({ leg: orphanLeg, opts, env, rootDir, spawnRunner, tp, now, runTag, legs: { ratify: legRatify, redteam: legRedteam } }));
+        if (legRes.err) return endWith(legRes.err);
        iterations.push({ spawnId: orphanLeg.spawnId, stage: orphanLeg.stage, signal: 'orphan-legs', delegation: legRes.summary });
      }
    }
@@ -829,7 +1046,7 @@ async function drive(ctx) {
   for (;;) {
     // ---- identity revalidation: delta origin must be this loop ----
     const cur = readTaskState();
-    if (cur.err) return report(cur.err, { iterations, breaker: breakerView() });
+    if (cur.err) return endWith(cur.err);
     if (cur.none) {
       return endWith({ ok: false, status: 'refused', reason: 'no-task', guidance: store.guidanceFor('auto.loop.noTask') });
     }
@@ -893,14 +1110,14 @@ async function drive(ctx) {
       const modRatify = legRatify();
       if (leg.advanced && modRatify.isDelegatedStage(leg.stage)) {
         const legRes = await withHeartbeat(() => delegatedLegs({ leg, opts, env, rootDir, spawnRunner, tp, now, runTag, legs: { ratify: legRatify, redteam: legRedteam } }));
-        if (legRes.err) return report(legRes.err, { iterations, breaker: breakerView() });
+        if (legRes.err) return endWith(legRes.err);
         const legIter = iterations.find((i) => i.spawnId === leg.spawnId);
         if (legIter) legIter.delegation = legRes.summary;
         // Ratification mutated tracked state (the PENDING became a cleared
         // record): re-read so the spawn below carries a fresh approvals
         // baseline, prompt, and identity view.
         const refreshed = readTaskState();
-        if (refreshed.err) return report(refreshed.err, { iterations, breaker: breakerView() });
+        if (refreshed.err) return endWith(refreshed.err);
         if (!refreshed.none) taskState = refreshed.state;
       }
     }
@@ -1009,7 +1226,7 @@ async function drive(ctx) {
         iterations.push(res.iter);
         seq = res.seq;
         const afterS = truthRead();
-        if (afterS.err) return report(afterS.err, { iterations, breaker: breakerView() });
+        if (afterS.err) return endWith(afterS.err);
         if (afterS.none) {
           return endWith({ ok: false, status: 'refused', reason: 'no-task', guidance: store.guidanceFor('auto.loop.noTask') });
         }
@@ -1034,14 +1251,14 @@ async function drive(ctx) {
     const hostStatus = registry.hostStatus(opts.host, { env, runner: opts.probeRunner, home: env.HOME || os.homedir() });
     if (!hostStatus.selectable) {
       const g = hostStatus.failure || {};
-      return report({
+      return endWith({
         ok: false, status: 'refused', reason: 'host-not-selectable', host: opts.host,
         hostFailure: g, guidance: store.guidanceFor('auto.loop.hostNotSelectable', { host: opts.host }),
-      }, { iterations, breaker: breakerView() });
+      });
     }
     const adapter = registry.requireAdapter(opts.host);
     if (!adapter || typeof adapter.buildSpawnSpec !== 'function' || typeof adapter.parseEventStream !== 'function') {
-      return report({ ok: false, status: 'refused', reason: 'host-not-selectable', host: opts.host, guidance: store.guidanceFor('auto.loop.hostNotSelectable', { host: opts.host }) }, { iterations, breaker: breakerView() });
+      return endWith({ ok: false, status: 'refused', reason: 'host-not-selectable', host: opts.host, guidance: store.guidanceFor('auto.loop.hostNotSelectable', { host: opts.host }) });
     }
 
     // ---- BUILD waves: iterate the frozen snapshot before the stage exit ----
@@ -1239,7 +1456,7 @@ async function drive(ctx) {
       ? result.preTruncationDenyHits
       : launcher.scanSpawnOutput(streamText, { deny: denyForScan });
     const outcome = adapter.parseEventStream(streamText);
-    const telemetry = { denyHits: hits.length, denyCommandHits: hits.filter((h) => h && h.kind === 'command').length };
+    const telemetry = { denyHits: hits.length, denyCommandHits: commandHitsOf(hits).length };
     if (pinnedModel != null) telemetry.modelPinned = pinnedModel;
     if (typeof adapter.extractTelemetry === 'function') {
       const selfReport = adapter.extractTelemetry(outcome);
@@ -1268,7 +1485,7 @@ async function drive(ctx) {
 
     // ---- post-spawn truth: read once, shared by scoring and the checks ----
     const after = truthRead();
-    if (after.err) return report(after.err, { iterations, breaker: breakerView() });
+    if (after.err) return endWith(after.err);
     if (after.none) {
       return endWith({ ok: false, status: 'refused', reason: 'no-task', guidance: store.guidanceFor('auto.loop.noTask') });
     }
@@ -1277,8 +1494,8 @@ async function drive(ctx) {
     const mutation = mutationBetween(baseline, postIdentity, loopBranch, currentBranch(gitRunner, rootDir));
 
     // ---- score the outcome ----
-    const scored = await score({ iter, spec, result, streamText, b, stage, gitRunner, rootDir, adapter, endedAtMs, idleMs: tp.idleSec * 1000, baseline, postIdentity, mutation, hits, outcome });
-    if (scored.err) return report(scored.err, { iterations, breaker: breakerView() });
+    const scored = await score({ iter, spec, result, streamText, b, stage, gitRunner, rootDir, adapter, endedAtMs, idleMs: tp.idleSec * 1000, baseline, postIdentity, mutation, hits, outcome, stageAlreadyCompleted: Array.isArray(after.state.completed_stages) && after.state.completed_stages.map(String).includes(stage) });
+    if (scored.err) return endWith(scored.err);
     if (scored.tripped) return tripNow();
 
     // Carry the delegated leg (ratification pairs this spawn's stamp); a
@@ -1411,14 +1628,19 @@ async function scriptIteration(a) {
         stepFailures.push(`Class S compose ${step.id}: ${composed.reason}${composed.detail ? ': ' + composed.detail : ''}`);
         break;
       }
+      // Spec env whitelist: the passthrough base carries no GOS_AUTO_*
+      // values (runner-side leaks never cross), the compose channel vars
+      // land from composed.env, and the session pair (marker + spawn id)
+      // is everything the loop adds itself. The approvals baseline rides
+      // the runner-held exit channel instead — a sandboxed sections spawn
+      // never commits.
       const spec = {
         argv: composed.argv,
         env: {
-          ...registry.sanitizedSpawnEnv(env === process.env ? undefined : env),
+          ...launcher.stripGosAutoEnv(registry.sanitizedSpawnEnv(env === process.env ? undefined : env)),
           ...composed.env,
           [SPAWN_MARKER_ENV]: '1',
           GOS_AUTO_SPAWN_ID: spawnId,
-          [baselineEnvName]: baselineSha,
         },
         cwd: rootDir,
         stage,
@@ -1449,8 +1671,11 @@ async function scriptIteration(a) {
       const hits = (result && Array.isArray(result.preTruncationDenyHits) && result.preTruncationDenyHits.length)
         ? result.preTruncationDenyHits
         : launcher.scanSpawnOutput(streamText, { deny: denyForScan });
+      // Step-failing hits are command-kind only (a bash command field match);
+      // text-kind echoes of the deny strings stay reported in the stamp below.
+      const commandHits = commandHitsOf(hits);
       escapeTotal += hits.length;
-      const stamp = store.stampStream(spawnId, stage, streamSha256, new Date(now()).toISOString(), rootDir, { denyHits: hits.length, denyCommandHits: hits.filter((h) => h && h.kind === 'command').length });
+      const stamp = store.stampStream(spawnId, stage, streamSha256, new Date(now()).toISOString(), rootDir, { denyHits: hits.length, denyCommandHits: commandHits.length });
       if (!stamp.ok) {
         return { err: endWith({ ok: false, status: 'paused', paused: true, reason: 'stamp-failed', detail: stamp.reason, path: stamp.path, guidance: store.guidanceFor('auto.loop.stampFailed', { detail: String(stamp.reason) }) }) };
       }
@@ -1458,10 +1683,10 @@ async function scriptIteration(a) {
         try { store.saveWindows(spawnId, { head: result.windowHead.stdout, tail: result.windowTail.stdout }, rootDir); } catch { /* advisory */ }
       }
       const runnerFailed = !!(result && (result.error != null || (result.status != null && result.status !== 0)));
-      if (runnerFailed || hits.length) {
+      if (runnerFailed || commandHits.length) {
         stepFailures.push(
-          hits.length
-            ? hits.map((h) => `deny '${h.pattern}': ${h.line.slice(0, 120)}`).join('; ')
+          commandHits.length
+            ? denyDetail(commandHits)
             : `${step.id}: ${String((result && result.error && result.error.message) || (result && result.stderr) || 'script step failed').slice(0, 240)}`,
         );
         stepsSeen.push({ id: step.id, kind: 'S', status: 'failed' });
@@ -1568,9 +1793,11 @@ async function score(ctx) {
   // cannot push deny lines out of the captured window); the post-hoc scan
   // stays as the floor for runners that captured without a scanner. The
   // caller stamps the same hits into the telemetry, so both consumers read
-  // one computation.
+  // one computation. Only command-kind hits (a bash command field match)
+  // fail the step; text-kind echoes stay reported in iter.escapeHits.
   const hits = Array.isArray(ctx.hits) ? ctx.hits : launcher.scanSpawnOutput(streamText, { deny: Array.isArray(spec.deny) ? spec.deny : undefined });
   iter.escapeHits = hits.length;
+  const commandHits = commandHitsOf(hits);
 
   const outcome = ctx.outcome || adapter.parseEventStream(streamText);
 
@@ -1579,9 +1806,9 @@ async function score(ctx) {
   if (idleKilled) { signal = 'idle-timeout'; detail = 'stream stalled: no output chunk for the idle limit (killed live)'; }
   else if (timedOut) { signal = 'wall-timeout'; detail = 'spawn exceeded the wall clock'; }
   else if (spawnBroke) { signal = 'spawn-error'; detail = String(runnerError.message || 'spawn error'); }
-  else if (hits.length) {
+  else if (commandHits.length) {
     signal = 'task-failed';
-    detail = hits.map((h) => `deny '${h.pattern}': ${h.line.slice(0, 120)}`).join('; ');
+    detail = denyDetail(commandHits);
   } else if (result && result.status !== 0 && result.status != null) {
     signal = 'task-failed';
     detail = `host exited rc=${result.status}${String(result.stderr || '').trim() ? ': ' + String(result.stderr).trim().slice(0, 240) : ''}`;
@@ -1602,7 +1829,7 @@ async function score(ctx) {
     // any progress the same session made. Only command-kind hits carry
     // that veto: an echo of the deny strings in config or docs is prose,
     // not an execution attempt.
-    const escapeDriven = hits.some((h) => h && h.kind === 'command');
+    const escapeDriven = commandHits.length > 0;
     const advEarly = breakerMod.detectAdvance({ preSpawnHead: iter.preSpawnHead, cwd: rootDir, gitRunner, stage: iter.stage });
     if (!escapeDriven && advEarly.ok && advEarly.advanced === true) {
       iter.head = advEarly.head;
@@ -1653,6 +1880,21 @@ async function score(ctx) {
         ok: false, status: 'paused', paused: true, reason: 'external-mutation',
         expected: baseline, observed: postIdentity, detail: mutation.detail,
         guidance: store.guidanceFor('auto.loop.externalMutation', { detail: mutation.detail }),
+      },
+    };
+  }
+  if (ctx.stageAlreadyCompleted === true) {
+    // The stage's advance landed before this spawn: the pointer names a
+    // stage already in completed_stages, and the duplicate-advance guard
+    // refuses a second stage-labeled commit, so no re-drive can ever
+    // satisfy attribution. A clean session here is a pointer repair need,
+    // not a spawn failure — pause instead of burning the consecutive
+    // budget on sessions that did nothing wrong.
+    return {
+      err: {
+        ok: false, status: 'paused', paused: true, reason: 'stage-already-advanced',
+        expected: baseline, observed: postIdentity,
+        detail: `stage ${stage} is in completed_stages but current_stage still names it; the advance commit already exists and a re-drive can never produce a new one — repair the pointer (re-run the stage commit or move the pointer past ${stage}) and resume`,
       },
     };
   }

@@ -194,8 +194,28 @@ assert_exit "G1 probe-family monopoly holds (gate.cjs clean)" "0" "$?"
 
 # --- S1: self-repo negative assertion + self-repo leg green
 # Guide trio (.gos/codebase cover key) + concerns + lessons stay git:false in
-# the REAL census.json; `gate flip` on this repository must pass.
-cd "$GOS_ROOT" || exit 1
+# the census.json of a detached section worktree (worktree helper, workers.cjs):
+# the checkout owns its .gos lock+cache, so the enclosing runner's lock and
+# read-only checkout never interfere. The tracked .gos/state.json is removed
+# inside the checkout (tracked session state is unsupported in a linked
+# worktree — lock.cjs guard); the flip leg is stateless. Fresh checkouts ship
+# the tracked custom gate untrusted, so trust is opted in first (same step
+# run-sections.sh --fresh performs for CI parity).
+T99_WTB="$TESTBASE/test-$(date +%s)-$RANDOM-t99s1/wt"
+mkdir -p "$T99_WTB"
+T99_WT="$(node -e '
+  const cp = require("child_process");
+  const path = require("path");
+  const root = process.env.GOS_ROOT;
+  const w = require(path.join(root, "bin/lib/ops/auto/workers.cjs"));
+  const pin = cp.spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout.trim();
+  const r = w.prepareSectionWorktree(root, { testBase: process.argv[1], pin });
+  if (!r.ok) { process.stderr.write("worktree prepare refused: " + r.reason + "\n"); process.exit(1); }
+  process.stdout.write(r.path);
+' "$T99_WTB")"
+rm -f "$T99_WT/.gos/state.json"
+cd "$T99_WT" || exit 1
+node "$GOS" gate trust check.sh >/dev/null 2>&1
 S1C=$(python3 -c "
 import json
 c = json.load(open('census.json'))
@@ -207,6 +227,12 @@ assert_contains "S1 self-repo census: trio cover + concerns + lessons git:false"
 set +e; OUT=$(node "$GOS" gate flip 2>&1); RC=$?; set -e
 assert_exit "S1 self-repo gate flip exit 0" "0" "$RC"
 assert_contains "S1 self-repo flip-reconcile pass line" "flip-reconcile" "$OUT"
+node -e '
+  const path = require("path");
+  const w = require(path.join(process.env.GOS_ROOT, "bin/lib/ops/auto/workers.cjs"));
+  w.sweepSectionWorktrees(process.env.GOS_ROOT, { testBase: process.argv[1] });
+' "$T99_WTB" >/dev/null 2>&1 || true
+rm -rf "$(dirname "$T99_WTB")"
 cd "$TESTBASE" >/dev/null 2>&1 || true
 
 if [ "$FAIL" -gt 0 ]; then

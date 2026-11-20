@@ -92,6 +92,94 @@ function autoHostLine(mods, host) {
   return { state: 'failed', line: `host ${host}: ${f.message || hs.status}` };
 }
 
+// Distinct breaker layers currently reading TRIPPED in a loaded store:
+// layer-carrying breaker records are trips; class-only records (takeover
+// audit events) never gate the re-enable.
+function trippedLayersOf(st) {
+  const records = st != null && Array.isArray(st.breaker.records) ? st.breaker.records : [];
+  return [...new Set(records.filter((r) => r != null && r.layer).map((r) => String(r.layer)))];
+}
+
+// Evidence read for the re-enable gate: a run record reads green when the
+// end state is ok, every recorded stage advanced in INTENT->SHIP order,
+// and the sandboxed VERIFY entry carries at least one step with every
+// step status passed. Anything weaker is not evidence the gate accepts.
+function latestRunRecordReadsGreen(rec) {
+  if (!store.isPlainObject(rec)) return { green: false, detail: 'latest run record unreadable' };
+  const es = store.isPlainObject(rec.endState) ? rec.endState : null;
+  if (es == null || es.ok !== true) {
+    return { green: false, detail: `end state not ok (${es != null && es.status ? es.status : 'unknown'})` };
+  }
+  const stages = Array.isArray(rec.stages) ? rec.stages : [];
+  let prev = -1;
+  let verify = null;
+  for (const s of stages) {
+    const name = s != null && typeof s.stage === 'string' ? s.stage : '';
+    const idx = workers.STAGES.indexOf(name);
+    if (idx < 0) return { green: false, detail: `unknown stage ${JSON.stringify(name)}` };
+    if (idx < prev) return { green: false, detail: 'stage entries out of INTENT->SHIP order' };
+    prev = idx;
+    if (s.advanced !== true) return { green: false, detail: `stage ${name} did not advance` };
+    if (name === 'VERIFY') verify = s;
+  }
+  if (verify == null) return { green: false, detail: 'no VERIFY stage entry (sandboxed VERIFY evidence absent)' };
+  const steps = Array.isArray(verify.steps) ? verify.steps : [];
+  if (steps.length === 0) return { green: false, detail: 'VERIFY entry carries no step statuses' };
+  if (steps.some((sp) => !store.isPlainObject(sp) || sp.status !== 'passed')) {
+    return { green: false, detail: 'VERIFY steps not all passed' };
+  }
+  return { green: true, detail: `end state ${es.status}` };
+}
+
+// Explicit breaker reset (operator flag): drop the trip-layer records,
+// zero the spawn/trip counters, and append a disposition entry to the
+// store's dispositions ledger naming who reset what and when. Audit-only
+// breaker records (takeover class entries) ride over untouched. The whole
+// reset runs through the store mutation mutex (a live detached runner's
+// stamp writes must never be lost under this reset) and refuses while a
+// run-lock holder that could still be alive exists.
+function resetBreakerState(mods, loaded) {
+  const st = loaded.store;
+  const lock = mods.store.readRunLock();
+  if (lock) {
+    const os = require('os');
+    const crossHost = lock.hostname !== os.hostname();
+    let bootMismatch = false;
+    try {
+      const boot = require('fs').readFileSync('/proc/sys/kernel/random/boot_id', 'utf8').trim();
+      bootMismatch = Boolean(boot && lock.boot_id && boot !== lock.boot_id);
+    } catch { /* unavailable — fail closed */ }
+    const alive = crossHost || (!bootMismatch && core.pidAlive(Number(lock.pid)));
+    if (alive) {
+      core.die(core.t('auto.cli.on.reenable.resetRefusedLive', { pid: lock.pid, host: lock.hostname }));
+    }
+  }
+  const layers = trippedLayersOf(st);
+  const prevSpawns = st.counters.spawnCount;
+  const prevTrips = st.counters.tripCount;
+  const ts = new Date().toISOString();
+  const by = `${(require('os').userInfo().username || process.env.USER || 'unknown')}@${require('os').hostname()}`;
+  const r = mods.store.mutate(undefined, (cur) => {
+    cur.breaker = { records: cur.breaker.records.filter((row) => !(row != null && row.layer)) };
+    cur.counters = { spawnCount: 0, tripCount: 0 };
+    cur.dispositions = [...(cur.dispositions || []), {
+      runId: `breakers-reset-${ts}`,
+      ts,
+      reason: `auto on --reset-breakers: cleared trip layers [${layers.join(', ')}], counters spawns ${prevSpawns}->0 trips ${prevTrips}->0`,
+      by,
+    }].slice(-200);
+    return cur;
+  });
+  if (!r.ok) {
+    core.die(`auto on --reset-breakers: store mutation failed: ${r.reason}${r.detail ? `: ${r.detail}` : ''}`);
+  }
+  return core.t('auto.cli.on.reenable.breakersReset', {
+    layers: layers.length ? layers.join(', ') : 'none',
+    spawns: prevSpawns,
+    trips: prevTrips,
+  });
+}
+
 function autoOn(mods, rest, ui) {
   ui.refuseIfSpawned('on');
   const limits = { ...mods.store.DEFAULT_LIMITS };
@@ -99,6 +187,7 @@ function autoOn(mods, rest, ui) {
   let wall = null;
   let idle = null;
   let allowFull = false;
+  let resetBreakers = false;
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
     const val = () => {
@@ -113,6 +202,7 @@ function autoOn(mods, rest, ui) {
     else if (a === '--timeout-wall') wall = val();
     else if (a === '--timeout-idle') idle = val();
     else if (a === '--allow-full') allowFull = true;
+    else if (a === '--reset-breakers') resetBreakers = true;
     else core.die(core.t('auto.cli.unknownArg', { sub: 'on', arg: a }));
   }
   for (const k of ['N', 'K', 'B']) {
@@ -141,6 +231,39 @@ function autoOn(mods, rest, ui) {
   if (!tp.ok) ui.dieGuidance('auto on', tp.guidance);
   const timeouts = { wallSec: tp.wallSec, idleSec: tp.idleSec };
 
+  // Evidence-gated re-enable: a tripped breaker never re-enables blindly.
+  // With run records present the latest must read green; a store with no
+  // records yet is a cold start and proceeds with a logged disposition.
+  // The explicit operator reset clears trip layers and counters first and
+  // records its own disposition entry.
+  let reenableDisposition = null;
+  const pre = mods.store.load();
+  if (resetBreakers) {
+    if (pre.ok) reenableDisposition = resetBreakerState(mods, pre);
+  } else if (pre.ok) {
+    const layers = trippedLayersOf(pre.store);
+    if (layers.length) {
+      const records = Array.isArray(pre.store.runRecords) ? pre.store.runRecords : [];
+      if (records.length === 0) {
+        reenableDisposition = core.t('auto.cli.on.reenable.coldStart', { layers: layers.join(', ') });
+      } else {
+        const latest = records[records.length - 1];
+        const verdict = latestRunRecordReadsGreen(latest);
+        if (!verdict.green) {
+          const es = store.isPlainObject(latest.endState) ? latest.endState : {};
+          ui.dieGuidance('auto on refused', ui.guidanceOf('auto.cli.on.reenable.refused', {
+            layers: layers.join(', '),
+            runId: latest.runId,
+            end: es.status || 'unknown',
+            reason: es.reason || verdict.detail,
+            why: verdict.detail,
+          }));
+        }
+        reenableDisposition = core.t('auto.cli.on.reenable.greenEvidence', { runId: latest.runId, end: latest.endState.status });
+      }
+    }
+  }
+
   const made = mods.store.create({ mode: 'on', profile, limits, timeouts, allowFull });
   if (!made.ok) {
     if (made.guidance) ui.dieGuidance('auto on', made.guidance);
@@ -160,6 +283,7 @@ function autoOn(mods, rest, ui) {
     finalStore = rc.store;
     console.log(core.t('auto.cli.on.reconfigured', { path: rc.path }));
   }
+  if (reenableDisposition) console.log(reenableDisposition);
 
   // Three-state advisories: none fatal (the store itself already proved
   // writable by the create above).
@@ -356,9 +480,12 @@ function autoRun(mods, rest, ui) {
   // top-level command-lock break), so the run subcommand recovers it from
   // the raw process argv — for `auto run` it targets the store's run lock.
   const breakLock = rest.includes('--break-lock') || process.argv.slice(2).includes('--break-lock');
-  let detach = false;
+  // Detach is the survival default (the enclosing operator terminal may time
+  // out and group-kill its process tree); --fg opts back into the foreground.
+  let detach = true;
   for (const a of rest) {
     if (a === '--detach') detach = true;
+    else if (a === '--fg') detach = false;
     else if (a === '--break-lock') continue;
     else core.die(core.t('auto.cli.unknownArg', { sub: 'run', arg: a }));
   }
@@ -374,6 +501,15 @@ function autoRun(mods, rest, ui) {
   }
   const loaded = mods.store.load();
   const opts = { detach };
+  if (detach) {
+    // The detached child is a GOS invocation in its own right and takes the
+    // repo command lock at its entry; the parent holds nothing past the
+    // fork point (its remaining work is read-and-print only).
+    core.releaseLock();
+    // Forward the original invocation to the detached child; the loop strips
+    // detach-class flags and appends --fg (the child never re-detaches).
+    opts.detachArgv = process.argv.slice(2);
+  }
   if (loaded.ok) {
     opts.profile = loaded.store.profile;
     opts.limits = loaded.store.limits;
@@ -385,8 +521,13 @@ function autoRun(mods, rest, ui) {
     core.die(`auto run: ${created.reason}${created.detail ? `: ${created.detail}` : ''}`);
   }
   created.loop.run().then((report) => {
-    if (report.ok && report.status === 'detached') {
-      console.log(core.t('auto.cli.run.detached', { pid: report.pid, log: report.log || '.gos/logs/auto-run-*.log' }));
+    if (report.status === 'detached') {
+      if (Number.isInteger(report.completed)) {
+        console.log(core.t('autoDetach.completed', { code: report.completed, log: report.log || '(none)' }));
+      } else {
+        console.log(core.t('auto.cli.run.detached', { pid: report.pid, log: report.log || '.gos/logs/auto-run-*.log' }));
+      }
+      process.exitCode = report.ok ? 0 : 1;
       return;
     }
     console.log(core.t('auto.cli.run.report', { status: report.status, reason: report.reason || '' }));
@@ -406,6 +547,12 @@ function autoRun(mods, rest, ui) {
       console.log(`✗ ${g.what}`);
       if (g.why) console.log(`    why: ${g.why}`);
       if (g.fix) console.log(`    fix: ${g.fix}`);
+    }
+    if (report.status === 'sentinel-timeout') {
+      console.log(`  ${core.t('autoDetach.waitTimeout', { sec: report.waitSec || 5, log: report.log || '(none)' })}`);
+    }
+    if (report.status === 'sentinel-missing') {
+      console.log(`  ${core.t('autoDetach.exitedUnproven', { log: report.log || '(none)' })}`);
     }
     process.exitCode = report.ok ? 0 : 1;
   }).catch((e) => {

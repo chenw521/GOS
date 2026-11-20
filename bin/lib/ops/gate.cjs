@@ -604,6 +604,20 @@ function semanticChecks(opts = {}) {
     }
   }
 
+  // dig-closure floor: registry-external state read (the probe registry
+  // returns the first passing floor, so this leg sits on the same side as
+  // the freeze-time dig floor, never inside the sequence). dug_at must
+  // predate the freeze stamp, dug_sha must still hash the dig object, and
+  // a recorded deepen line must sit closed.
+  {
+    const closure = digClosureFailures(state);
+    if (closure.failures.length) failures.push(...closure.failures);
+    else {
+      console.log(`✓ dig-closure floor: ${closure.stamped} stamped record(s) hold ordering + hash binding, ${closure.grandfathered} pre-era grandfathered`);
+      passes++;
+    }
+  }
+
   return { failures, passes };
 }
 
@@ -1992,6 +2006,24 @@ function specCardStampCheck(state) {
 // ---------------------------------------------------------------------------
 
 function digFloorFreezeCheck(state, specText) {
+  // dig-closure leg: forged or tampered anchors refuse the freeze before
+  // the era loop's evidence messaging runs.
+  const closure = digClosureFailures(state);
+  if (closure.failures.length) {
+    console.error(`${core.CONTRACTS.state_semantics.commitBlocked} (dig-closure floor):`);
+    for (const f of closure.failures) {
+      console.error(`  ✗ ${f.code}: ${f.verdict}`);
+      console.error(`  fix: ${f.fix}`);
+    }
+    process.exit(1);
+  }
+  // Freeze instant for the closure ordering: stamped here (the caller
+  // persists state only on a passing freeze) and compared on every later
+  // run - a dug_at newer than this stamp is a forged-post-freeze anchor.
+  // Store stamps are deliberately not consulted: their spawnId-keyed
+  // telemetry shape (with bounded eviction) is not decision anchoring
+  // material.
+  state.dig_closure_frozen_at = new Date().toISOString();
   const era = knowledge.DIG_FLOOR_ERA;
   const decisions = Array.isArray(state.decisions) ? state.decisions : [];
   const known = new Set([...decisions.map((d) => d && d.id).filter(Boolean), ...projectDecisionIds()]);
@@ -2030,4 +2062,90 @@ function digFloorFreezeCheck(state, specText) {
   console.log(`✓ dig floor: ${dug} decision(s) carry dig evidence, ${grandfathered} grandfathered`);
 }
 
-module.exports = { getSemanticPlanTasks, checkBidirectional, loadSemanticAllowlist, semanticAllowlisted, semanticBaselineShas, diffHitCheck, semanticDiffPhase, readExemptions, consumeExemptions, checkManifest, impactClosurePhase, semanticChecks, loadTrustStore, cmdGateTrust, cmdGate, computeGateVerdicts, renderGateReport, cmdLogs, specCardFloorFailures, projectDecisionIds, stripSpecForScan, flipReconcileLeg, renderGateFailures, SPEC_CARD_FLOORS, CLI_MAX, probeSpecFloor, specGateVersionUnknownFailure, digFloorFreezeCheck };
+// ---------------------------------------------------------------------------
+// Dig-closure floor (registry-external, beside the dig floor above): every
+// closure-era record carries dug_at + dug_sha stamps from decision add.
+// dug_at must predate the freeze stamp - a newer dug_at is a
+// forged-post-freeze anchor; dug_sha must still hash the record's dig
+// object - a mismatch is evidence swapped after recording; a recorded
+// deepen line must sit in its closed state. Records without dug_at
+// predate the closure era and grandfather with a loud advisory, never
+// silently.
+// ---------------------------------------------------------------------------
+
+function digClosureFailures(state) {
+  const failures = [];
+  const decisions = Array.isArray(state.decisions) ? state.decisions : [];
+  const frozenAt = typeof state.dig_closure_frozen_at === 'string' ? state.dig_closure_frozen_at : null;
+  let stamped = 0;
+  let grandfathered = 0;
+  for (const d of decisions) {
+    if (!d || !d.id) continue;
+    if (d.dug_at === undefined) {
+      if (d.dig !== undefined) {
+        const closureEra = frozenAt && typeof d.born_at === 'string' && d.born_at >= frozenAt;
+        if (closureEra) {
+          failures.push(core.gateFail('dig-closure-stamp-missing', {
+            verdict: `decision ${d.id} was born inside the closure era (born_at ${d.born_at} >= freeze ${frozenAt}) but carries no dug_at stamp - stamps are not deletable`,
+            evidence: [`.gos/state.json: decision ${d.id} born_at=${d.born_at}`],
+            fix: 're-record the decision through decision add so the stamp pair is written by the CLI',
+          }));
+        } else {
+          grandfathered++;
+          console.log(`⚠ dig-closure: grandfathered ${d.id} - dig evidence predates the closure era (no dug_at stamp)`);
+        }
+      }
+      continue;
+    }
+    if (typeof d.dug_at !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(d.dug_at)) {
+      failures.push(core.gateFail('dig-closure-dug-at-malformed', {
+        verdict: `decision ${d.id} dug_at is not an ISO timestamp (${JSON.stringify(d.dug_at)})`,
+        evidence: [`.gos/state.json: decision ${d.id} dug_at`],
+        fix: 're-record the decision through decision add so the stamp is written by the CLI',
+      }));
+      continue;
+    }
+    stamped++;
+    if (frozenAt && d.dug_at > frozenAt) {
+      failures.push(core.gateFail('dig-closure-forged-anchor', {
+        verdict: `decision ${d.id} dug_at ${d.dug_at} postdates the freeze ${frozenAt} - forged-post-freeze anchor`,
+        evidence: [`.gos/state.json: decision ${d.id} dug_at=${d.dug_at}`],
+        fix: 're-record the decision with a fresh dig before the next freeze - dug_at is not back-fillable by hand',
+      }));
+    }
+    if (d.dug_sha === undefined) {
+      if (d.dig !== undefined) {
+        failures.push(core.gateFail('dig-closure-stamp-incomplete', {
+          verdict: `decision ${d.id} carries a dug_at stamp and dig evidence but no dug_sha - the hash binding half of the stamp pair is not deletable`,
+          evidence: [`.gos/state.json: decision ${d.id} dug_at=${d.dug_at}`],
+          fix: 're-record the decision through decision add so the stamp pair travels together',
+        }));
+      }
+    }
+    if (d.dug_sha !== undefined) {
+      if (d.dig === undefined) {
+        failures.push(core.gateFail('dig-closure-evidence-tampered', {
+          verdict: `decision ${d.id} carries dug_sha but no dig object - evidence removed after stamping`,
+          evidence: [`.gos/state.json: decision ${d.id}`],
+          fix: 're-record the decision through decision add (dig evidence and stamp travel together)',
+        }));
+      } else if (typeof d.dug_sha !== 'string' || d.dug_sha !== knowledge.digObjectSha(d.dig)) {
+        failures.push(core.gateFail('dig-closure-evidence-tampered', {
+          verdict: `decision ${d.id} dig object does not hash to its dug_sha stamp - evidence swapped after recording`,
+          evidence: [`.gos/state.json: decision ${d.id} dug_sha=${JSON.stringify(d.dug_sha)}`],
+          fix: 're-record the decision through decision add so evidence and stamp agree',
+        }));
+      }
+    }
+    if (d.deepen !== undefined && !knowledge.deepenClosed(d.deepen)) {
+      failures.push(core.gateFail('dig-closure-open-deepen', {
+        verdict: `decision ${d.id} deepen line is not closed (${JSON.stringify(String(d.deepen).slice(0, 60))}) - an open deepen line asks for another dig round`,
+        evidence: [`.gos/state.json: decision ${d.id} deepen`],
+        fix: 'finish the dig round, then re-record with --deepen "closed - <what was dug>"',
+      }));
+    }
+  }
+  return { failures, stamped, grandfathered };
+}
+
+module.exports = { getSemanticPlanTasks, checkBidirectional, loadSemanticAllowlist, semanticAllowlisted, semanticBaselineShas, diffHitCheck, semanticDiffPhase, readExemptions, consumeExemptions, checkManifest, impactClosurePhase, semanticChecks, loadTrustStore, cmdGateTrust, cmdGate, computeGateVerdicts, renderGateReport, cmdLogs, specCardFloorFailures, projectDecisionIds, stripSpecForScan, flipReconcileLeg, renderGateFailures, SPEC_CARD_FLOORS, CLI_MAX, probeSpecFloor, specGateVersionUnknownFailure, digFloorFreezeCheck, digClosureFailures };

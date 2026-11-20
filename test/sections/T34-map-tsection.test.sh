@@ -2,23 +2,59 @@
 # gos-map:cmd map
 # test-of extractor (⑤) — section header annotations → semantic.testof edges;
 # unannotatedCount soft hint; migration completeness; pure metadata (never eval)
+# Self-repo legs (.1/.4) run inside a detached section worktree (worktree helper,
+# bin/lib/ops/auto/workers.cjs): the checkout owns its .gos lock+cache, so no
+# enclosing runner state or read-only checkout is ever touched.
 T34_DIR=""
+T34_WTB=""
+T34_WT=""
 
 t34_setup() {
   T34_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-t34"
   mkdir -p "$T34_DIR" && cd "$T34_DIR" || exit 1
 }
-t34_teardown() { cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$T34_DIR"; }
+
+# Detached HEAD checkout under the section base; the tracked .gos/state.json
+# is removed inside the checkout (tracked session state is unsupported in a
+# linked worktree — lock.cjs guard) — the scan/show legs below are stateless.
+t34_wtprep() {
+  T34_WTB="$T34_DIR/wt"
+  mkdir -p "$T34_WTB"
+  T34_WT="$(node -e '
+    const cp = require("child_process");
+    const path = require("path");
+    const root = process.env.GOS_ROOT;
+    const w = require(path.join(root, "bin/lib/ops/auto/workers.cjs"));
+    const pin = cp.spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout.trim();
+    const r = w.prepareSectionWorktree(root, { testBase: process.argv[1], pin });
+    if (!r.ok) { process.stderr.write("worktree prepare refused: " + r.reason + "\n"); process.exit(1); }
+    process.stdout.write(r.path);
+  ' "$T34_WTB")"
+  rm -f "$T34_WT/.gos/state.json"
+}
+
+t34_wtsweep() {
+  [ -n "${T34_WTB:-}" ] || return 0
+  node -e '
+    const path = require("path");
+    const w = require(path.join(process.env.GOS_ROOT, "bin/lib/ops/auto/workers.cjs"));
+    w.sweepSectionWorktrees(process.env.GOS_ROOT, { testBase: process.argv[1] });
+  ' "$T34_WTB" >/dev/null 2>&1 || true
+}
+
+t34_teardown() { t34_wtsweep; cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$T34_DIR"; }
 
 t34_setup
+trap t34_teardown EXIT
+t34_wtprep
 echo "--- T34: test-of extractor + section annotations (R-06/R-10) ---"
 
 # --- .1 self-repo scan: testof edges + unannotatedCount=0
-set +e; SCAN_OUT=$(cd "$GOS_ROOT" && node "$GOS" map scan 2>&1); SCAN_RC=$?; set +e
+set +e; SCAN_OUT=$(cd "$T34_WT" && node "$GOS" map scan 2>&1); SCAN_RC=$?; set +e
 assert_exit "T34.1a self-repo scan exits 0" 0 "$SCAN_RC"
-python3 - <<'PYEOF'
+T34_WT="$T34_WT" python3 - <<'PYEOF'
 import json, os, sys
-d = json.load(open(os.path.join(os.environ['GOS_ROOT'], '.gos', 'cache', 'deps.json')))
+d = json.load(open(os.path.join(os.environ['T34_WT'], '.gos', 'cache', 'deps.json')))
 sem = d.get('semantic', {})
 to = sem.get('testof', [])
 bad = []
@@ -53,7 +89,7 @@ else
 fi
 
 # --- .4 sec anchors + testof neighborhood queryable (show integration)
-set +e; SHOW=$(cd "$GOS_ROOT" && node "$GOS" map show "bin/gos.cjs#cmd:map" 2>/dev/null | grep -c "T30-map-edges\|T31-map-gate\|T34"); set +e
+set +e; SHOW=$(cd "$T34_WT" && node "$GOS" map show "bin/gos.cjs#cmd:map" 2>/dev/null | grep -c "T30-map-edges\|T31-map-gate\|T34"); set +e
 if [ "${SHOW:-0}" -ge 1 ]; then echo "  ✓ show <cmd:anchor> lists test-of sections"; PASS=$((PASS+1))
 else echo "  ✗ show does not surface testof edges"; FAIL=$((FAIL+1)); fi
 
@@ -65,5 +101,5 @@ done
 if [ "$MISS" -eq 0 ]; then echo "  ✓ every section file carries a gos-map header"; PASS=$((PASS+1))
 else echo "  ✗ $MISS section(s) missing header"; FAIL=$((FAIL+1)); fi
 
-rm -f "$GOS_ROOT/.gos/cache/deps.json"
+rm -f "$T34_WT/.gos/cache/deps.json"
 t34_teardown

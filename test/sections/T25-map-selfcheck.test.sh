@@ -2,28 +2,68 @@
 # gos-map:cmd map
 # golden-set sanity (GOS self-repo) + main-suite regression + static discipline grep
 # Env: GOS (CLI path), TESTBASE (sandbox base), assert helpers sourced by runner
+# The self-repo legs run inside a detached section worktree (worktree helper,
+# bin/lib/ops/auto/workers.cjs): the checkout owns its .gos lock+cache, so no
+# enclosing runner state or read-only checkout is ever touched.
 T25_DIR=""
+T25_WTB=""
+T25_WT=""
 
 t25_setup() {
   T25_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-t25"
   mkdir -p "$T25_DIR" && cd "$T25_DIR" || exit 1
 }
 
-t25_teardown() { cd "$TESTBASE" >/dev/null 2>&1; rm -rf "$T25_DIR"; }
+# Detached HEAD checkout under the section base (workers.cjs helper); the
+# tracked .gos/state.json is removed inside the checkout because tracked
+# session state is unsupported in a linked worktree (lock.cjs guard) — the
+# scan/golden legs below are stateless.
+t25_wtprep() {
+  T25_WTB="$T25_DIR/wt"
+  mkdir -p "$T25_WTB"
+  T25_WT="$(node -e '
+    const cp = require("child_process");
+    const path = require("path");
+    const root = process.env.GOS_ROOT;
+    const w = require(path.join(root, "bin/lib/ops/auto/workers.cjs"));
+    const pin = cp.spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout.trim();
+    const r = w.prepareSectionWorktree(root, { testBase: process.argv[1], pin });
+    if (!r.ok) { process.stderr.write("worktree prepare refused: " + r.reason + "\n"); process.exit(1); }
+    process.stdout.write(r.path);
+  ' "$T25_WTB")"
+  rm -f "$T25_WT/.gos/state.json"
+}
+
+t25_wtsweep() {
+  [ -n "${T25_WTB:-}" ] || return 0
+  node -e '
+    const path = require("path");
+    const w = require(path.join(process.env.GOS_ROOT, "bin/lib/ops/auto/workers.cjs"));
+    w.sweepSectionWorktrees(process.env.GOS_ROOT, { testBase: process.argv[1] });
+  ' "$T25_WTB" >/dev/null 2>&1 || true
+}
+
+t25_teardown() {
+  t25_wtsweep
+  cd "$TESTBASE" >/dev/null 2>&1
+  rm -rf "$T25_DIR"
+}
 
 t25_setup
+trap t25_teardown EXIT
+t25_wtprep
 echo "--- T25: self-repo golden sanity + main-suite regression ---"
 
 # --- .1: GOS self-repo scan — frozen-set equality + expected entry projection edge set
 # Frozen set shares its source with ; expected edge set = projection of deps.json edges
 # with from==bin/gos.cjs (dual-source cross-check: independent grep of require('./lib/ in bin/gos.cjs)
-set +e; OUT=$(cd "$GOS_ROOT" && node "$GOS" map scan 2>/dev/null); RC=$?; set -e
+set +e; OUT=$(cd "$T25_WT" && node "$GOS" map scan 2>/dev/null); RC=$?; set -e
 assert_exit "self-repo scan exits 0" 0 "$RC"
-python3 - <<'PYEOF'
+T25_WT="$T25_WT" python3 - <<'PYEOF'
 import json, os, re, sys
-d = json.load(open(os.path.join(os.environ['GOS_ROOT'], '.gos', 'cache', 'deps.json')))
+d = json.load(open(os.path.join(os.environ['T25_WT'], '.gos', 'cache', 'deps.json')))
 bad = []
-FROZEN = {'.opencode/plugins/gos.js', 'bin/gos.cjs', 'bin/lib/core/fsio.cjs', 'bin/lib/core/gitprobe.cjs', 'bin/lib/core/i18n.cjs', 'bin/lib/core/index.cjs', 'bin/lib/core/locales/en.cjs', 'bin/lib/core/locales/zh.cjs', 'bin/lib/core/lock.cjs', 'bin/lib/core/sanitize.cjs', 'bin/lib/core/spawnreg.cjs', 'bin/lib/core/state.cjs', 'bin/lib/knowledge/concerns.cjs', 'bin/lib/knowledge/decisions.cjs', 'bin/lib/knowledge/index.cjs', 'bin/lib/knowledge/lessons-json.cjs', 'bin/lib/knowledge/lessons.cjs', 'bin/lib/knowledge/milestone.cjs', 'bin/lib/knowledge/phase.cjs', 'bin/lib/knowledge/requirements.cjs', 'bin/lib/knowledge/truth.cjs', 'bin/lib/map/allowlist.cjs', 'bin/lib/map/anchor.cjs', 'bin/lib/map/contract.cjs', 'bin/lib/map/edges.cjs', 'bin/lib/map/engine.cjs', 'bin/lib/map/index.cjs', 'bin/lib/map/views.cjs', 'bin/lib/nav/cmds.cjs', 'bin/lib/nav/help.cjs', 'bin/lib/nav/index.cjs', 'bin/lib/nav/registry-consts.cjs', 'bin/lib/nav/registry.cjs', 'bin/lib/nav/status.cjs', 'bin/lib/ops/auto/adapters/codex.cjs', 'bin/lib/ops/auto/adapters/opencode.cjs', 'bin/lib/ops/auto/adapters/registry.cjs', 'bin/lib/ops/auto/breaker.cjs', 'bin/lib/ops/auto/cli.cjs', 'bin/lib/ops/auto/delivery-publish.cjs', 'bin/lib/ops/auto/delivery.cjs', 'bin/lib/ops/auto/launcher.cjs', 'bin/lib/ops/auto/limits.cjs', 'bin/lib/ops/auto/loop.cjs', 'bin/lib/ops/auto/ratify.cjs', 'bin/lib/ops/auto/redteam.cjs', 'bin/lib/ops/auto/spawnrun.cjs', 'bin/lib/ops/auto/store.cjs', 'bin/lib/ops/auto/workers.cjs', 'bin/lib/ops/brownfield-probe.cjs', 'bin/lib/ops/brownfield.cjs', 'bin/lib/ops/changelog-core.cjs', 'bin/lib/ops/config.cjs', 'bin/lib/ops/doctor.cjs', 'bin/lib/ops/feedback.cjs', 'bin/lib/ops/gate.cjs', 'bin/lib/ops/gitseed.cjs', 'bin/lib/ops/index.cjs', 'bin/lib/ops/paths.cjs', 'bin/lib/ops/push.cjs', 'bin/lib/ops/section.cjs', 'bin/lib/ops/setup.cjs', 'bin/lib/ops/track.cjs', 'bin/lib/render/index.cjs', 'bin/lib/render/views.cjs', 'bin/lib/task/archive.cjs', 'bin/lib/task/changelog.cjs', 'bin/lib/task/checkpoint.cjs', 'bin/lib/task/commit.cjs', 'bin/lib/task/context.cjs', 'bin/lib/task/index.cjs', 'bin/lib/task/init.cjs', 'bin/lib/task/plansnap.cjs', 'bin/lib/task/stage.cjs'}
+FROZEN = {'.opencode/plugins/gos.js', 'bin/gos.cjs', 'bin/lib/core/fsio.cjs', 'bin/lib/core/gitprobe.cjs', 'bin/lib/core/i18n.cjs', 'bin/lib/core/index.cjs', 'bin/lib/core/locales/en.cjs', 'bin/lib/core/locales/zh.cjs', 'bin/lib/core/lock.cjs', 'bin/lib/core/sanitize.cjs', 'bin/lib/core/spawnreg.cjs', 'bin/lib/core/state.cjs', 'bin/lib/knowledge/concerns.cjs', 'bin/lib/knowledge/decisions.cjs', 'bin/lib/knowledge/index.cjs', 'bin/lib/knowledge/lessons-json.cjs', 'bin/lib/knowledge/lessons.cjs', 'bin/lib/knowledge/milestone.cjs', 'bin/lib/knowledge/phase.cjs', 'bin/lib/knowledge/requirements.cjs', 'bin/lib/knowledge/truth.cjs', 'bin/lib/map/allowlist.cjs', 'bin/lib/map/anchor.cjs', 'bin/lib/map/contract.cjs', 'bin/lib/map/edges.cjs', 'bin/lib/map/engine.cjs', 'bin/lib/map/index.cjs', 'bin/lib/map/views.cjs', 'bin/lib/nav/cmds.cjs', 'bin/lib/nav/help.cjs', 'bin/lib/nav/index.cjs', 'bin/lib/nav/registry-consts.cjs', 'bin/lib/nav/registry.cjs', 'bin/lib/nav/status.cjs', 'bin/lib/ops/auto/adapters/codex.cjs', 'bin/lib/ops/auto/adapters/opencode.cjs', 'bin/lib/ops/auto/adapters/registry.cjs', 'bin/lib/ops/auto/breaker.cjs', 'bin/lib/ops/auto/cli.cjs', 'bin/lib/ops/auto/delivery-publish.cjs', 'bin/lib/ops/auto/delivery.cjs', 'bin/lib/ops/auto/launcher.cjs', 'bin/lib/ops/auto/limits.cjs', 'bin/lib/ops/auto/loop.cjs', 'bin/lib/ops/auto/ratify.cjs', 'bin/lib/ops/auto/redteam.cjs', 'bin/lib/ops/auto/spawnrun.cjs', 'bin/lib/ops/auto/store.cjs', 'bin/lib/ops/auto/workers.cjs', 'bin/lib/ops/branch-reap.cjs', 'bin/lib/ops/brownfield-probe.cjs', 'bin/lib/ops/brownfield.cjs', 'bin/lib/ops/changelog-core.cjs', 'bin/lib/ops/config.cjs', 'bin/lib/ops/doctor.cjs', 'bin/lib/ops/feedback.cjs', 'bin/lib/ops/gate.cjs', 'bin/lib/ops/gitseed.cjs', 'bin/lib/ops/index.cjs', 'bin/lib/ops/paths.cjs', 'bin/lib/ops/push.cjs', 'bin/lib/ops/section.cjs', 'bin/lib/ops/setup.cjs', 'bin/lib/ops/track.cjs', 'bin/lib/render/index.cjs', 'bin/lib/render/views.cjs', 'bin/lib/task/archive.cjs', 'bin/lib/task/changelog.cjs', 'bin/lib/task/checkpoint.cjs', 'bin/lib/task/commit.cjs', 'bin/lib/task/context.cjs', 'bin/lib/task/index.cjs', 'bin/lib/task/init.cjs', 'bin/lib/task/plansnap.cjs', 'bin/lib/task/stage.cjs'}
 files = set(d['files'])
 if files != FROZEN:
     bad.append(f'scan set drift: +{sorted(files-FROZEN)} -{sorted(FROZEN-files)}')
@@ -33,7 +73,7 @@ WANT = [('bin/gos.cjs', 'bin/lib/core/index.cjs'), ('bin/gos.cjs', 'bin/lib/map/
 if proj != sorted(WANT):
     bad.append(f'entry projection edges: got {proj} want {WANT}')
 # Dual-source cross-check: independent grep of require('./lib/ literals in entry source
-gos_src = open(os.path.join(os.environ['GOS_ROOT'], 'bin', 'gos.cjs')).read()
+gos_src = open(os.path.join(os.environ['T25_WT'], 'bin', 'gos.cjs')).read()
 grep_side = sorted(set(re.findall(r"require\('\./lib/([^']+)'\)", gos_src)))
 want_grep = ['core/index.cjs', 'map/index.cjs', 'knowledge/index.cjs', 'task/index.cjs', 'nav/index.cjs', 'render/index.cjs', 'ops/index.cjs']
 if grep_side != sorted(want_grep):
@@ -46,10 +86,10 @@ sys.exit(1 if bad else 0)
 PYEOF
 assert_exit "self-repo golden invariants" 0 "$?"
 # Self-anchor loop: closure query consumes deps.json successfully (anchor verified by loadDeps)
-set +e; OUT=$(cd "$GOS_ROOT" && node "$GOS" map closure bin/gos.cjs --no-refresh 2>/dev/null); RC=$?; set -e
+set +e; OUT=$(cd "$T25_WT" && node "$GOS" map closure bin/gos.cjs --no-refresh 2>/dev/null); RC=$?; set -e
 assert_exit "closure consumes self-repo deps.json (anchor verified)" 0 "$RC"
 assert_contains "self in closure result" "bin/gos.cjs" "$OUT"
-rm -f "$GOS_ROOT/.gos/cache/deps.json"   # cleanup: leave no in-repo cache
+rm -f "$T25_WT/.gos/cache/deps.json"   # cleanup: the sweep removes the checkout wholesale
 
 # --- .2: static discipline — atomic deps.json write + no string-concatenated git calls (multi-file grep)
 # grep patterns frozen: targets = the -shared frozen set; patterns track the namespaced form (core.writeAtomicJson + core.GOS_PATHS)

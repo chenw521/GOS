@@ -8,10 +8,13 @@ T61_DIR=""
 
 # t61_bare must live OUTSIDE any GOS-managed tree: a stateless exec command
 # under a managed ancestor is correctly refused by the cwd guard, while the
-# audit scenario models a standalone CI checkout. Default mktemp base is used
-# with strict per-scenario teardown below.
+# audit scenario models a standalone CI checkout. The mktemp base is the
+# first usable of TMPDIR or /tmp (a sandboxed run can carry a host TMPDIR
+# that is not mounted), with strict per-scenario teardown below.
 t61_bare() {
-  T61_DIR="$(mktemp -d "${TMPDIR:-/tmp}/gos-t61-audit-XXXXXX")"
+  local base="${TMPDIR:-/tmp}"
+  { [ -d "$base" ] && [ -w "$base" ]; } || base=/tmp
+  T61_DIR="$(mktemp -d "$base/gos-t61-audit-XXXXXX")"
   cd "$T61_DIR" || exit 1
   git init -q . && git commit -q --allow-empty -m t61-seed
 }
