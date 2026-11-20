@@ -16,9 +16,11 @@
       "ts": "2026-11-20T03:54:09.629Z"
     }
   },
-  "approvals": {},
-  "spec_path": ".gos/task/f556a960/spec.md",
-  "plan_path": ".gos/task/f556a960/plan.md",
+  "approvals": {
+    "ARCHIVE": "2026-11-20T09:08:30.633Z"
+  },
+  "spec_path": ".gos/archive/2026-11-20-publicize-task-record-the-auto-loop-dogfood-c/task/f556a960/spec.md",
+  "plan_path": ".gos/archive/2026-11-20-publicize-task-record-the-auto-loop-dogfood-c/task/f556a960/plan.md",
   "project": false,
   "requirements": [
     {
@@ -33,5 +35,7 @@
   "gaps": [],
   "activation_source": "headless",
   "task_head": "f556a9607a14348ab10190bdf459001dff9712f6",
-  "changelog_user_summary": "Floor the dig-closure section state-dependent advisory leg at its cross-state minimum so post-archive trees meet the baseline"
+  "changelog_user_summary": "Floor the dig-closure section state-dependent advisory leg at its cross-state minimum so post-archive trees meet the baseline",
+  "checkpoints": [],
+  "completed_at": "2026-11-20T09:08:33.487Z"
 }
