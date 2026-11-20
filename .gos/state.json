@@ -2,7 +2,7 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "SHIP",
+  "current_stage": "DONE",
   "completed_stages": [
     "INTENT",
     "THINK",
@@ -17,7 +17,8 @@
   },
   "approvals": {
     "THINK": "2026-11-18T07:26:07.232Z",
-    "PLAN": "2026-11-18T07:47:15.596Z"
+    "PLAN": "2026-11-18T07:47:15.596Z",
+    "ARCHIVE": "2026-11-20T03:52:20.123Z"
   },
   "spec_path": null,
   "plan_path": null,
@@ -364,15 +365,7 @@
     "source": "plan.md"
   },
   "changelog_user_summary": "Harden operator surfaces: gos auto run detaches by default with a lock-acquired sentinel and run-log rotation, gos branch reap classifies landed branches under GIT_NO_REPLACE_OBJECTS with refs/reaped revive refs, decision records stamp dug evidence under a dig-closure floor, the loop persists per-run records, and gos auto on re-enables only through run-record evidence with an explicit breaker reset",
-  "checkpoints": [
-    {
-      "stage": "BUILD",
-      "unit": "all-waves (auto at commit)",
-      "done": "T1,T3,T4a,T5a,T6,T9a,T2,T4b,T5b,T8,T7,T9b,T9c,T9z,T10a,T10b,T11",
-      "remaining": "",
-      "at": "2026-11-20T02:02:46.187Z"
-    }
-  ],
+  "checkpoints": [],
   "review_findings": [
     {
       "severity": "major",
@@ -436,5 +429,6 @@
       "status": "fixed",
       "fix": "mutual-exclusion refusal + baseValue error key"
     }
-  ]
+  ],
+  "completed_at": "2026-11-20T03:52:27.484Z"
 }
