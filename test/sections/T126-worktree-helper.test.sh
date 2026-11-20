@@ -263,6 +263,14 @@ const c = workers.composeScriptSpawn(
 );
 if (!c.ok) {
   console.log(`COMPOSE[refused:${c.code || c.reason}]`);
+  // Fail-closed aftermath: a refusal before env assembly carries no TESTBASE
+  // pin at all and must leave no materialized worktree.
+  const tb = c.env && c.env.TESTBASE;
+  console.log(`MANIFEST[${tb ? (fs.existsSync(path.join(tb, 'run-manifest.json')) ? 'present' : 'absent') : 'no-testbase'}]`);
+  const wtr = spawnSync('git', ['worktree', 'list'], { cwd: GR, encoding: 'utf8' });
+  console.log(`WT[${wtr.stdout.trim().split('\n').length}]`);
+  console.log('RC[skipped]');
+  console.log('TOTAL[refused]');
   process.exit(0);
 }
 console.log(`COMPOSE[ok:${c.tier}]`);
@@ -292,6 +300,7 @@ console.log(`WT[${wt.stdout.trim().split('\n').length}]`);
 EOF
 P1_OUT="$(node "$T126_DIR/pinned-run.cjs" a 2>&1)"; P1_RC=$?
 t126_exit "pinned-run probe runs clean" "0" "$P1_RC"
+if command -v bwrap >/dev/null 2>&1; then
 t126_contains "W3 compose resolves the kernel tier" "COMPOSE[ok:bubblewrap]" "$P1_OUT"
 t126_contains "W3 sandboxed pinned run exits 0" "RC[0]" "$P1_OUT"
 t126_contains "W3 self-repo section passes inside the sandbox" "0 failed" "$P1_OUT"
@@ -304,6 +313,14 @@ P2_OUT="$(node "$T126_DIR/pinned-run.cjs" b 2>&1)"; P2_RC=$?
 t126_exit "second pinned-run probe runs clean" "0" "$P2_RC"
 t126_contains "W3 second consecutive pinned run exits 0" "RC[0]" "$P2_OUT"
 t126_contains "W3 no accumulation across two consecutive runs" "WT[$T126_REAL_WT_BASE]" "$P2_OUT"
+else
+# No kernel engine on PATH: script-step composes must refuse (kernel-tier
+# floor) and the refusal must leave no partial state. These legs prove the
+# fail-closed degradation contract on engine-less hosts.
+t126_contains "W3 compose refuses without a kernel engine" "refused:auto.launcher.kernel-tier-required]" "$P1_OUT"
+t126_contains "W3 refusal carries no TESTBASE pin" "MANIFEST[no-testbase]" "$P1_OUT"
+t126_contains "W3 refusal leaves worktree count at baseline" "WT[$T126_REAL_WT_BASE]" "$P1_OUT"
+fi
 
 # ---- case four: literal run keeps the repo-root manifest, tree_source live, pin null
 # The nested runner strips any enclosing pinned-tree override: this case
