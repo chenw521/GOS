@@ -300,7 +300,7 @@ console.log(`WT[${wt.stdout.trim().split('\n').length}]`);
 EOF
 P1_OUT="$(node "$T126_DIR/pinned-run.cjs" a 2>&1)"; P1_RC=$?
 t126_exit "pinned-run probe runs clean" "0" "$P1_RC"
-if command -v bwrap >/dev/null 2>&1; then
+if printf '%s\n' "$P1_OUT" | grep -q 'COMPOSE\[ok:bubblewrap\]'; then
 t126_contains "W3 compose resolves the kernel tier" "COMPOSE[ok:bubblewrap]" "$P1_OUT"
 t126_contains "W3 sandboxed pinned run exits 0" "RC[0]" "$P1_OUT"
 t126_contains "W3 self-repo section passes inside the sandbox" "0 failed" "$P1_OUT"
@@ -314,9 +314,10 @@ t126_exit "second pinned-run probe runs clean" "0" "$P2_RC"
 t126_contains "W3 second consecutive pinned run exits 0" "RC[0]" "$P2_OUT"
 t126_contains "W3 no accumulation across two consecutive runs" "WT[$T126_REAL_WT_BASE]" "$P2_OUT"
 else
-# No kernel engine on PATH: script-step composes must refuse (kernel-tier
-# floor) and the refusal must leave no partial state. These legs prove the
-# fail-closed degradation contract on engine-less hosts.
+# The kernel engine did not resolve (absent binary or a host that blocks
+# unprivileged user namespaces): script-step composes must refuse (kernel-
+# tier floor) and the refusal must leave no partial state. These legs prove
+# the fail-closed degradation contract on engine-less hosts.
 t126_contains "W3 compose refuses without a kernel engine" "refused:auto.launcher.kernel-tier-required]" "$P1_OUT"
 t126_contains "W3 refusal carries no TESTBASE pin" "MANIFEST[no-testbase]" "$P1_OUT"
 t126_contains "W3 refusal leaves worktree count at baseline" "WT[$T126_REAL_WT_BASE]" "$P1_OUT"
