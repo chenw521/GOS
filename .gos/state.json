@@ -2,12 +2,13 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "REVIEW",
+  "current_stage": "VERIFY",
   "completed_stages": [
     "INTENT",
     "THINK",
     "PLAN",
-    "BUILD"
+    "BUILD",
+    "REVIEW"
   ],
   "intent": {
     "summary": "Make gos auto survivable on a real host: the VERIFY script worker cannot run the section suite inside a read-only bwrap sandbox (burned 30/30 spawn budget 2026-11-10) — needs a writable TESTBASE pin or workspace-profile compose; spawned BUILD workers die by group-kill when the enclosing operator terminal times out — detach-by-default or heartbeat liveness; branch-reaping machinery for chain/pre-* anchors and the 16 unlanded-looking local branches needing content-landed verification; only then re-enable gos auto.",
