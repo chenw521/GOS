@@ -358,5 +358,6 @@
       }
     },
     "source": "plan.md"
-  }
+  },
+  "changelog_user_summary": "Harden operator surfaces: gos auto run detaches by default with a lock-acquired sentinel and run-log rotation, gos branch reap classifies landed branches under GIT_NO_REPLACE_OBJECTS with refs/reaped revive refs, decision records stamp dug evidence under a dig-closure floor, the loop persists per-run records, and gos auto on re-enables only through run-record evidence with an explicit breaker reset"
 }
