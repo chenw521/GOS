@@ -1,9 +1,9 @@
 {
   "current": {
-    "total": 1618,
-    "callgraph": 1030,
+    "total": 1623,
+    "callgraph": 1035,
     "testof_fn": 131,
-    "fn_count": 954,
+    "fn_count": 956,
     "fns": [
       "absTaskPath",
       "ackWaitMs",
@@ -194,6 +194,7 @@
       "cmdTrack",
       "cmdTruth",
       "cmpVersion",
+      "commandHitsOf",
       "commitStageArg",
       "compareTag",
       "completedWaveProblem",
@@ -258,6 +259,7 @@
       "deliveryGhRunner",
       "deliveryGitRunner",
       "deliveryProbeGreen",
+      "denyDetail",
       "depsIsFresh",
       "depsSelfHash",
       "deriveDirections",
@@ -1461,6 +1463,8 @@
       "loopGitRunner": "bin/lib/ops/auto/loop.cjs",
       "defaultStateReader": "bin/lib/ops/auto/loop.cjs",
       "loopSpawnRunner": "bin/lib/ops/auto/loop.cjs",
+      "commandHitsOf": "bin/lib/ops/auto/loop.cjs",
+      "denyDetail": "bin/lib/ops/auto/loop.cjs",
       "detachChildArgv": "bin/lib/ops/auto/loop.cjs",
       "rotateRunLogs": "bin/lib/ops/auto/loop.cjs",
       "defaultDetacher": "bin/lib/ops/auto/loop.cjs",
@@ -1916,8 +1920,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "51727b9068c596ff",
-    "at": "2026-11-20T01:52:27.736Z"
+    "fp": "884abb8c8fce77dc",
+    "at": "2026-11-20T03:39:09.232Z"
   },
   "peak": {
     "total": 2065,
