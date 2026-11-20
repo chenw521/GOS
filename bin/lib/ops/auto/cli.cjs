@@ -134,29 +134,44 @@ function latestRunRecordReadsGreen(rec) {
 // Explicit breaker reset (operator flag): drop the trip-layer records,
 // zero the spawn/trip counters, and append a disposition entry to the
 // store's dispositions ledger naming who reset what and when. Audit-only
-// breaker records (takeover class entries) ride over untouched.
+// breaker records (takeover class entries) ride over untouched. The whole
+// reset runs through the store mutation mutex (a live detached runner's
+// stamp writes must never be lost under this reset) and refuses while a
+// run-lock holder that could still be alive exists.
 function resetBreakerState(mods, loaded) {
   const st = loaded.store;
+  const lock = mods.store.readRunLock();
+  if (lock) {
+    const os = require('os');
+    const crossHost = lock.hostname !== os.hostname();
+    let bootMismatch = false;
+    try {
+      const boot = require('fs').readFileSync('/proc/sys/kernel/random/boot_id', 'utf8').trim();
+      bootMismatch = Boolean(boot && lock.boot_id && boot !== lock.boot_id);
+    } catch { /* unavailable — fail closed */ }
+    const alive = crossHost || (!bootMismatch && core.pidAlive(Number(lock.pid)));
+    if (alive) {
+      core.die(core.t('auto.cli.on.reenable.resetRefusedLive', { pid: lock.pid, host: lock.hostname }));
+    }
+  }
   const layers = trippedLayersOf(st);
   const prevSpawns = st.counters.spawnCount;
   const prevTrips = st.counters.tripCount;
-  const next = {
-    ...st,
-    breaker: { records: st.breaker.records.filter((r) => !(r != null && r.layer)) },
-    counters: { spawnCount: 0, tripCount: 0 },
-  };
-  try { core.writeAtomicJson(loaded.path, next); }
-  catch (e) { core.die(`auto on --reset-breakers: store write failed: ${e.message}`); }
   const ts = new Date().toISOString();
   const by = `${(require('os').userInfo().username || process.env.USER || 'unknown')}@${require('os').hostname()}`;
-  const r = mods.store.recordDisposition({
-    runId: `breakers-reset-${ts}`,
-    ts,
-    reason: `auto on --reset-breakers: cleared trip layers [${layers.join(', ')}], counters spawns ${prevSpawns}->0 trips ${prevTrips}->0`,
-    by,
+  const r = mods.store.mutate(undefined, (cur) => {
+    cur.breaker = { records: cur.breaker.records.filter((row) => !(row != null && row.layer)) };
+    cur.counters = { spawnCount: 0, tripCount: 0 };
+    cur.dispositions = [...(cur.dispositions || []), {
+      runId: `breakers-reset-${ts}`,
+      ts,
+      reason: `auto on --reset-breakers: cleared trip layers [${layers.join(', ')}], counters spawns ${prevSpawns}->0 trips ${prevTrips}->0`,
+      by,
+    }].slice(-200);
+    return cur;
   });
   if (!r.ok) {
-    core.die(`auto on --reset-breakers: reset applied but the disposition write failed: ${r.reason}${r.detail ? `: ${r.detail}` : ''}`);
+    core.die(`auto on --reset-breakers: store mutation failed: ${r.reason}${r.detail ? `: ${r.detail}` : ''}`);
   }
   return core.t('auto.cli.on.reenable.breakersReset', {
     layers: layers.length ? layers.join(', ') : 'none',

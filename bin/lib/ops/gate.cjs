@@ -2083,8 +2083,17 @@ function digClosureFailures(state) {
     if (!d || !d.id) continue;
     if (d.dug_at === undefined) {
       if (d.dig !== undefined) {
-        grandfathered++;
-        console.log(`⚠ dig-closure: grandfathered ${d.id} - dig evidence predates the closure era (no dug_at stamp)`);
+        const closureEra = frozenAt && typeof d.born_at === 'string' && d.born_at >= frozenAt;
+        if (closureEra) {
+          failures.push(core.gateFail('dig-closure-stamp-missing', {
+            verdict: `decision ${d.id} was born inside the closure era (born_at ${d.born_at} >= freeze ${frozenAt}) but carries no dug_at stamp - stamps are not deletable`,
+            evidence: [`.gos/state.json: decision ${d.id} born_at=${d.born_at}`],
+            fix: 're-record the decision through decision add so the stamp pair is written by the CLI',
+          }));
+        } else {
+          grandfathered++;
+          console.log(`⚠ dig-closure: grandfathered ${d.id} - dig evidence predates the closure era (no dug_at stamp)`);
+        }
       }
       continue;
     }
@@ -2103,6 +2112,15 @@ function digClosureFailures(state) {
         evidence: [`.gos/state.json: decision ${d.id} dug_at=${d.dug_at}`],
         fix: 're-record the decision with a fresh dig before the next freeze - dug_at is not back-fillable by hand',
       }));
+    }
+    if (d.dug_sha === undefined) {
+      if (d.dig !== undefined) {
+        failures.push(core.gateFail('dig-closure-stamp-incomplete', {
+          verdict: `decision ${d.id} carries a dug_at stamp and dig evidence but no dug_sha - the hash binding half of the stamp pair is not deletable`,
+          evidence: [`.gos/state.json: decision ${d.id} dug_at=${d.dug_at}`],
+          fix: 're-record the decision through decision add so the stamp pair travels together',
+        }));
+      }
     }
     if (d.dug_sha !== undefined) {
       if (d.dig === undefined) {

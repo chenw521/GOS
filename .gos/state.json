@@ -370,5 +370,69 @@
       "remaining": "",
       "at": "2026-11-20T02:02:46.187Z"
     }
+  ],
+  "review_findings": [
+    {
+      "severity": "major",
+      "issue": "dig-closure tamper defeatable by stamp deletion (era unpinned, hash binding skippable)",
+      "status": "fixed",
+      "fix": "gate.cjs digClosureFailures: born_at era pin + dug_sha-missing failure"
+    },
+    {
+      "severity": "major",
+      "issue": "run-record persistence missed the drive() exception exit route",
+      "status": "fixed",
+      "fix": "loop.cjs runLoop catch writes an exception record before rethrow"
+    },
+    {
+      "severity": "major",
+      "issue": "reset-breakers bypassed the store mutation mutex and ran without a live-lock guard",
+      "status": "fixed",
+      "fix": "cli.cjs resetBreakerState routes through store.mutate and refuses on a live run-lock holder"
+    },
+    {
+      "severity": "major",
+      "issue": "manifest-coverage validated a pinned manifest against the live tree section listing",
+      "status": "fixed",
+      "fix": "manifest-coverage.sh MANIFEST_COVERAGE_SECTIONS override"
+    },
+    {
+      "severity": "minor",
+      "issue": "orphaned detach sentinel files accumulate on sentinel-timeout with a slow-starting child",
+      "status": "deferred"
+    },
+    {
+      "severity": "minor",
+      "issue": "detached-child early refusals before lock acquisition surface as generic sentinel-missing instead of the real reason",
+      "status": "deferred"
+    },
+    {
+      "severity": "minor",
+      "issue": "worktree disk preflight degrades open on read failures and estimates the live tree, not the pin; cross-fs node_modules copy uncounted",
+      "status": "deferred"
+    },
+    {
+      "severity": "minor",
+      "issue": "refreeze re-advances dig_closure_frozen_at unconditionally, laundering prior ordering failures; post-freeze legal adds read as forged until refreeze",
+      "status": "deferred"
+    },
+    {
+      "severity": "minor",
+      "issue": "deny classification detail template and command-kind filter duplicated across scoring paths",
+      "status": "fixed",
+      "fix": "loop.cjs commandHitsOf/denyDetail shared helpers"
+    },
+    {
+      "severity": "minor",
+      "issue": "sweepSectionWorktrees reported unverified removals",
+      "status": "fixed",
+      "fix": "push only when the path no longer exists"
+    },
+    {
+      "severity": "minor",
+      "issue": "branch reap accepted --dry-run --apply together (last wins) and gave a misleading missing-value error for --base",
+      "status": "fixed",
+      "fix": "mutual-exclusion refusal + baseValue error key"
+    }
   ]
 }

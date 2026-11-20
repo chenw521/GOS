@@ -440,7 +440,9 @@ function sweepSectionWorktrees(rootDir, opts = {}) {
       if ((rm && rm.status !== 0) || fs.existsSync(wt)) {
         try { fs.rmSync(wt, { recursive: true, force: true }); } catch { /* best effort */ }
       }
-      removed.push(wt);
+      // Report only verified removal — callers assert on the worktree
+      // count returning to baseline; a survivor must not be papered over.
+      if (!fs.existsSync(wt)) removed.push(wt);
     }
   }
   if (testBase) {

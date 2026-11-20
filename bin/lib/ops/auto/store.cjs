@@ -1753,6 +1753,7 @@ module.exports = {
   saveWindows,
   recordReviewRound,
   recordDisposition,
+  mutate,
   saveSnapshot,
   saveProbeResult,
   bumpSpawn,

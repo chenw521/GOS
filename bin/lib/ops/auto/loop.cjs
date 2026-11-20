@@ -391,6 +391,17 @@ const DETACH_SENTINEL_WAIT_MS = 5000;
 const DETACH_POLL_MS = 100;
 const RUN_LOG_KEEP = 5;
 
+// Command-kind deny hits (a bash command field match) are the only ones
+// that may fail a step; text-kind echoes stay reported. Both scoring
+// paths share this classifier so the gating semantics cannot drift.
+function commandHitsOf(hits) {
+  return (Array.isArray(hits) ? hits : []).filter((h) => h && h.kind === 'command');
+}
+
+function denyDetail(commandHits) {
+  return commandHits.map((h) => `deny '${h.pattern}': ${h.line.slice(0, 120)}`).join('; ');
+}
+
 const detachSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Detached child argv: the forwarded invocation minus every detach-class
@@ -686,6 +697,22 @@ async function runLoop(opts) {
 
   try {
     return await drive({ opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs, loaded, seedRoots: seedState.seedRoots });
+  } catch (e) {
+    // An in-process throw escapes drive() before its own exit routes run;
+    // the run must still leave a record (the re-enable gate reads the
+    // latest one) before the exception propagates.
+    try {
+      store.writeRunRecord({
+        runId: crypto.randomUUID(),
+        runTag: 'exception',
+        taskId: null,
+        startedAtIso: new Date(now()).toISOString(),
+        endedAtIso: new Date(now()).toISOString(),
+        endState: { ok: false, status: 'exception', reason: String((e && e.message) || 'exception').slice(0, 400) },
+        stages: [],
+      }, rootDir);
+    } catch { /* best effort: a record failure never masks the thrown error */ }
+    throw e;
   } finally {
     if (seedState.cleanup) { try { fs.rmSync(seedState.cleanup, { recursive: true, force: true }); } catch { /* best effort */ } }
     try {
@@ -1429,7 +1456,7 @@ async function drive(ctx) {
       ? result.preTruncationDenyHits
       : launcher.scanSpawnOutput(streamText, { deny: denyForScan });
     const outcome = adapter.parseEventStream(streamText);
-    const telemetry = { denyHits: hits.length, denyCommandHits: hits.filter((h) => h && h.kind === 'command').length };
+    const telemetry = { denyHits: hits.length, denyCommandHits: commandHitsOf(hits).length };
     if (pinnedModel != null) telemetry.modelPinned = pinnedModel;
     if (typeof adapter.extractTelemetry === 'function') {
       const selfReport = adapter.extractTelemetry(outcome);
@@ -1646,7 +1673,7 @@ async function scriptIteration(a) {
         : launcher.scanSpawnOutput(streamText, { deny: denyForScan });
       // Step-failing hits are command-kind only (a bash command field match);
       // text-kind echoes of the deny strings stay reported in the stamp below.
-      const commandHits = hits.filter((h) => h && h.kind === 'command');
+      const commandHits = commandHitsOf(hits);
       escapeTotal += hits.length;
       const stamp = store.stampStream(spawnId, stage, streamSha256, new Date(now()).toISOString(), rootDir, { denyHits: hits.length, denyCommandHits: commandHits.length });
       if (!stamp.ok) {
@@ -1659,7 +1686,7 @@ async function scriptIteration(a) {
       if (runnerFailed || commandHits.length) {
         stepFailures.push(
           commandHits.length
-            ? commandHits.map((h) => `deny '${h.pattern}': ${h.line.slice(0, 120)}`).join('; ')
+            ? denyDetail(commandHits)
             : `${step.id}: ${String((result && result.error && result.error.message) || (result && result.stderr) || 'script step failed').slice(0, 240)}`,
         );
         stepsSeen.push({ id: step.id, kind: 'S', status: 'failed' });
@@ -1770,7 +1797,7 @@ async function score(ctx) {
   // fail the step; text-kind echoes stay reported in iter.escapeHits.
   const hits = Array.isArray(ctx.hits) ? ctx.hits : launcher.scanSpawnOutput(streamText, { deny: Array.isArray(spec.deny) ? spec.deny : undefined });
   iter.escapeHits = hits.length;
-  const commandHits = hits.filter((h) => h && h.kind === 'command');
+  const commandHits = commandHitsOf(hits);
 
   const outcome = ctx.outcome || adapter.parseEventStream(streamText);
 
@@ -1781,7 +1808,7 @@ async function score(ctx) {
   else if (spawnBroke) { signal = 'spawn-error'; detail = String(runnerError.message || 'spawn error'); }
   else if (commandHits.length) {
     signal = 'task-failed';
-    detail = commandHits.map((h) => `deny '${h.pattern}': ${h.line.slice(0, 120)}`).join('; ');
+    detail = denyDetail(commandHits);
   } else if (result && result.status !== 0 && result.status != null) {
     signal = 'task-failed';
     detail = `host exited rc=${result.status}${String(result.stderr || '').trim() ? ': ' + String(result.stderr).trim().slice(0, 240) : ''}`;

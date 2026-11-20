@@ -76,11 +76,15 @@ else
   check 1 "manifest $MANIFEST: $(printf '%s' "$VERDICT" | cut -d'|' -f2-)"
 fi
 
-# Coverage + floors verdict: one python pass over the manifest, the live
+# Coverage + floors verdict: one python pass over the manifest, the
 # section listing, and the baseline file. Precise diffs (missing names,
 # unknown names, per-section count shortfalls) ride the verdict line so a
-# red run points straight at the gap.
-VERDICT2="$(python3 - "$MANIFEST" "$GOS_ROOT/test/sections" "$BASELINE" <<'PY'
+# red run points straight at the gap. The section listing defaults to the
+# live checkout; a pinned manifest (a run over another tree) overrides it
+# via MANIFEST_COVERAGE_SECTIONS so coverage compares against the tree the
+# manifest actually ran — never the wrong checkout.
+SECTIONS_DIR="${MANIFEST_COVERAGE_SECTIONS:-$GOS_ROOT/test/sections}"
+VERDICT2="$(python3 - "$MANIFEST" "$SECTIONS_DIR" "$BASELINE" <<'PY'
 import json, os, re, sys
 from collections import Counter
 

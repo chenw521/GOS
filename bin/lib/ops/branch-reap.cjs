@@ -42,11 +42,13 @@ function parseReapArgs(args) {
   let base = null;
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
-    if (a === '--dry-run') mode = 'dry-run';
-    else if (a === '--apply') mode = 'apply';
+    if (a === '--dry-run' || a === '--apply') {
+      if (mode !== null) core.die(core.t('branchReap.err.modeExclusive', { usage: USAGE }));
+      mode = a === '--apply' ? 'apply' : 'dry-run';
+    }
     else if (a === '--base') {
       const v = args[i + 1];
-      if (v == null || v.startsWith('--')) core.die(core.t('branchReap.err.unknownArg', { arg: a, usage: USAGE }));
+      if (v == null || v.startsWith('--')) core.die(core.t('branchReap.err.baseValue', { arg: a, usage: USAGE }));
       base = v;
       i++;
     } else if (a.startsWith('--base=')) {

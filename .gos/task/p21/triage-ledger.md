@@ -29,13 +29,13 @@ two rows; the failures column is the split, not the section total.
 | T25-map-selfcheck | 2 | worktree-conversion | T7 worktree helper: self-repo map scan runs in a detached worktree with its own .gos/cache | T9c (converted+verified 2026-11-19) |
 | T30-map-edges | 2 | worktree-conversion | T7 worktree helper (T30.11a self-repo scan with extractors writes the same cache) | T9c (converted+verified 2026-11-19) |
 | T34-map-tsection | 2 | worktree-conversion | T7 worktree helper (T34.1a self-repo scan; the window also shows the deps.json cleanup rm failing read-only) | T9c (converted+verified 2026-11-19) |
-| T36-callgraph | 7 | worktree-conversion | T7 worktree helper isolates .gos lock+cache from the enclosing runner | T9c (blocked-needs-source 2026-11-19: duplicate fn names gitOut/gitTry at bin/lib/ops/branch-reap.cjs:27,32 and bin/lib/ops/push.cjs:85,92 — every fresh-scan gate codemap exit-0 leg fails codemap-dup-fn-name; see evidence notes) |
-| T47-module-require-direction | 1 | worktree-conversion | T7 worktree helper (self-repo gate codemap leg) | T9c (blocked-needs-source 2026-11-19: same duplicate-fn defect as T36 — the converted leg's fresh scan fails codemap-dup-fn-name) |
-| T48-byname-tiers | 3 | worktree-conversion | T7 worktree helper (self-repo gate codemap + zero-duplicate legs hit the live-runner lock) | T9c (blocked-needs-source 2026-11-19: same duplicate-fn defect as T36 — the zero-duplicate green line asserts exactly what HEAD violates) |
+| T36-callgraph | 7 | worktree-conversion | T7 worktree helper isolates .gos lock+cache from the enclosing runner | T9c converted; unblocked in-window (helpers renamed module-qualified; full-suite green 2026-11-20) — see evidence notes |
+| T47-module-require-direction | 1 | worktree-conversion | T7 worktree helper (self-repo gate codemap leg) | T9c converted; unblocked in-window (duplicate-fn cure; full-suite green 2026-11-20) |
+| T48-byname-tiers | 3 | worktree-conversion | T7 worktree helper (self-repo gate codemap + zero-duplicate legs hit the live-runner lock) | T9c converted; unblocked in-window (duplicate-fn cure; full-suite green 2026-11-20) |
 | T60-commitlint-hook | 1 | fixed-by-R1 landed | T1 writable set carries TMPDIR so the hook's mktemp succeeds and the documented fail-open stream separation engages | T9b |
 | T61-gate-wiring | 1 | fixed-by-R1 landed | T1 writable set carries TMPDIR (section dies at mktemp before any assertion) | T9b |
-| T65-allowlist-product | 1 | worktree-conversion | T7 worktree helper (i1 self-repo gate codemap leg) | T9c (blocked-needs-source 2026-11-19: same duplicate-fn defect as T36) |
-| T66-census-reconcile | 7 | XDG-fixture-conversion | T9c converts the section off machine-local toolchain assumptions: sandbox PATH resolves npm 10.2.4 (column-padded listing) while the host toolchain (nvm npm 11.9.0) is unmounted; pack-check's dir-presence greps must tolerate the 10.x listing format | T9c (blocked-needs-source 2026-11-19: test/pack-check.sh:32 sed leaves npm 10.x column padding on the paths so the ^dir/ greps at test/pack-check.sh:42 miss skills/, templates/, .opencode/, hooks/ — no section-side conversion can cure a parse bug in the checked script without shimming npm; see evidence notes) |
+| T65-allowlist-product | 1 | worktree-conversion | T7 worktree helper (i1 self-repo gate codemap leg) | T9c converted; unblocked in-window (duplicate-fn cure; full-suite green 2026-11-20) |
+| T66-census-reconcile | 7 | XDG-fixture-conversion | T9c converts the section off machine-local toolchain assumptions: sandbox PATH resolves npm 10.2.4 (column-padded listing) while the host toolchain (nvm npm 11.9.0) is unmounted; pack-check's dir-presence greps must tolerate the 10.x listing format | T9c converted; unblocked in-window (pack-check manifest parse now tolerates npm 10.x column padding; full-suite green 2026-11-20) — see evidence notes |
 | T67-gates-trust | 1 | fixed-by-R1 | T1 writable set carries TMPDIR (section dies at mktemp before any assertion) | T9b |
 | T69-init-coding | 1 | XDG-fixture-conversion | T9c TESTBASE-fixture conversion: the non-git fixture's ceiling shield must cover the actual TESTBASE location, which sits inside the spawn scratch git work tree | T9c (converted+verified 2026-11-19) |
 | T72-lessons-json | 18 | XDG-fixture-conversion | T9c fixture conversion: bake the backup under TESTBASE instead of preferring an absolute /tmp-store.json that only fails on the host (bwrap's tmpfs root is writable, so the first cp succeeds, no .bak exists, and every later restore fails) | T9c (converted+verified 2026-11-19) |
@@ -59,13 +59,15 @@ two rows; the failures column is the split, not the section total.
     T65-allowlist-product 1, T99-gate-flip-leg 3
   - T9c status: T25/T30/T34/T99 converted+verified (2026-11-19,
     worktree-helper conversion green in the restricted sandbox);
-    T36/T47/T48/T65 (12 failures) blocked-needs-source on the duplicate
-    fn-name defect below — not convertible to green until the source is
-    cured, no skip and no assertion weakening available.
+    T36/T47/T48/T65 (12 failures) were blocked-needs-source on the
+    duplicate fn-name defect below until the in-window rename cure —
+    all five sections green in the 2026-11-20 full suite.
 - XDG-fixture-conversion (machine-local state / fixture placement; owning T9c): 26
   - T66-census-reconcile 7, T69-init-coding 1, T72-lessons-json 18
   - T9c status: T69/T72 converted+verified (2026-11-19); T66 (7 failures)
-    blocked-needs-source on the pack-check npm-10 listing parse below.
+    was blocked-needs-source on the pack-check npm-10 listing parse
+    below until the in-window parse fix — green in the 2026-11-20 full
+    suite.
 - T7-direct (failure covered by the helper itself, no conversion): 0
 - unclassified-blocker: 0
 
