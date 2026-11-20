@@ -2,10 +2,11 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 1,
-  "current_stage": "VERIFY",
+  "current_stage": "DONE",
   "completed_stages": [
     "INTENT",
-    "BUILD"
+    "BUILD",
+    "VERIFY"
   ],
   "intent": {
     "summary": "Record the auto-loop dogfood cycle note as an ignored cache artifact",
