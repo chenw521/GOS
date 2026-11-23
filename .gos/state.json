@@ -2,12 +2,13 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "REVIEW",
+  "current_stage": "VERIFY",
   "completed_stages": [
     "INTENT",
     "THINK",
     "PLAN",
-    "BUILD"
+    "BUILD",
+    "REVIEW"
   ],
   "intent": {
     "summary": "Restart-safe auto loop: persist a run record on SIGTERM (signal route bypasses the exception record) and keep the VERIFY pin worktree live across kill/restart (dogfood 9a07a154-pin incident)",
