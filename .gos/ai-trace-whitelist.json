@@ -1018,6 +1018,12 @@
     ]
   },
   {
+    "path": "test/checks/dogfood-no-require.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
     "path": "test/checks/stale-verbs.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",
@@ -1799,6 +1805,12 @@
         "sha256": "b48c456784e029f450667af4f06b7dbdcc8b3570545834aa6e4bbf5b870bdbe8"
       }
     ]
+  },
+  {
+    "path": "test/sections/fixtures/dogfood/RUNBOOK.md",
+    "category": "in-flight-sweep",
+    "maxHits": 1,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/sections/fixtures/dogfood/build.sh",
