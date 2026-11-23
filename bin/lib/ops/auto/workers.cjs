@@ -697,6 +697,79 @@ function runPinnedLeg(pin, relPath, fnName, args, opts = {}) {
   return { ok: true, relPath, fn: fnName, runTag: load.runTag, treeSha: load.treeSha, verdict };
 }
 
+// Failure reasons a heal may address: only an unresolvable or tampered
+// pinned worktree (the recorded code is intact — the checkout holding it
+// is not). A module that cannot load from a healthy tree, an unknown run
+// tag, or a malformed pin are content problems a re-materialize cannot
+// fix, so they return the original failure untouched.
+const PIN_HEAL_REASONS = Object.freeze(['pin-tampered']);
+
+// loadPinnedModuleWithHeal(pin, relPath, opts?) — bounded self-heal choke
+// point around loadPinnedModule. opts: { rootDir, gitRunner?,
+// expectedLoopStartCommit, budget } where budget is a per-RUN counter
+// object { heals, cap } owned by the caller; this function only reads and
+// increments it. A load that fails with a healable reason may be rebuilt
+// once per accounted heal, and only when the store record still proves all
+// three trust anchors: (a) the record's loopStartCommit is the expected
+// loop-start commit, (b) a fresh rev-parse of the expected commit's tree
+// at the live repo root equals the recorded treeSha, and (c) the record's
+// path resolves to the pin-worktrees slot for the run tag — the same
+// containment recordPin enforces on write. The heal composes existing
+// primitives only (recyclePin, materializePin at the same run tag, one
+// retry of loadPinnedModule); any anchor mismatch, budget exhaustion, or
+// malformed accounting fails closed with nothing removed or materialized.
+function loadPinnedModuleWithHeal(pin, relPath, opts = {}) {
+  const expected = opts.expectedLoopStartCommit;
+  if (typeof expected !== 'string' || !GIT_SHA_RE.test(expected)) {
+    return stepFail('pin-commit-invalid', 'expectedLoopStartCommit must be a git commit hash (7-64 hex chars)');
+  }
+  const budget = opts.budget;
+  const budgetInvalid = budget == null || typeof budget !== 'object' || Array.isArray(budget)
+    || !Number.isInteger(budget.heals) || budget.heals < 0
+    || !Number.isInteger(budget.cap) || budget.cap < 1;
+  if (budgetInvalid) {
+    return stepFail('heal-budget-invalid', 'budget must be a plain object with integer heals >= 0 and integer cap >= 1');
+  }
+  const first = loadPinnedModule(pin, relPath, opts);
+  if (first.ok) return first;
+  if (!PIN_HEAL_REASONS.includes(first.reason)) return first;
+  if (!pin || typeof pin !== 'object' || typeof pin.runTag !== 'string' || !pin.runTag) return first;
+  const rootDir = typeof opts.rootDir === 'string' && opts.rootDir ? opts.rootDir : pin.rootDir;
+  if (!rootDir) return first;
+  const store = storeOf();
+  if (!store) return first;
+  const pins = store.readPins(rootDir);
+  if (!pins.ok) return first;
+  const rec = pins.pins[pin.runTag];
+  if (!rec) return first;
+  if (rec.loopStartCommit !== expected) {
+    return stepFail('heal-anchor-mismatch', `commit-identity: record loopStartCommit ${rec.loopStartCommit} is not the expected loop-start commit ${expected}`);
+  }
+  const git = gitRunnerOf(opts, rootDir);
+  let v = null;
+  try { v = git(['rev-parse', `${expected}^{tree}`], rootDir); }
+  catch (e) { v = { status: 1, stdout: '', stderr: e.message }; }
+  const freshTree = v && v.status === 0 ? String(v.stdout || '').trim() : '';
+  if (!GIT_SHA_RE.test(freshTree) || freshTree !== rec.treeSha) {
+    return stepFail('heal-anchor-mismatch', `tree-sha: expected loop-start commit resolves to ${freshTree || '<unresolved>'} but the record carries ${rec.treeSha}`);
+  }
+  const pinDir = store.pinWorktreesDir(rootDir);
+  if (pinDir == null || path.resolve(rec.path) !== path.join(pinDir, pin.runTag)) {
+    return stepFail('heal-anchor-mismatch', `path-containment: record path ${rec.path} is not the ${pinDir == null ? '<unresolvable>' : path.join(pinDir, pin.runTag)} slot for run tag ${pin.runTag}`);
+  }
+  if (budget.heals >= budget.cap) {
+    return stepFail('heal-budget-exhausted', `heals ${budget.heals} >= cap ${budget.cap}`);
+  }
+  const recycled = recyclePin(rootDir, pin.runTag, { gitRunner: opts.gitRunner });
+  if (!recycled.ok) return recycled;
+  const materialized = materializePin(rootDir, { loopStartCommit: expected, gitRunner: opts.gitRunner, runTag: pin.runTag });
+  if (!materialized.ok) return materialized;
+  budget.heals += 1;
+  const retry = loadPinnedModule({ runTag: pin.runTag, rootDir }, relPath, opts);
+  if (retry.ok) return { ...retry, healed: true, heals: budget.heals };
+  return retry;
+}
+
 // Best-effort removal of a worktree path plus its repo metadata.
 function sweepWorktree(git, rootDir, wtPath) {
   try { git(['worktree', 'remove', '--force', wtPath], rootDir); } catch { /* best effort */ }
@@ -1717,6 +1790,7 @@ module.exports = {
   sweepSectionWorktrees,
   materializePin,
   loadPinnedModule,
+  loadPinnedModuleWithHeal,
   runPinnedLeg,
   recyclePin,
   lazyRecyclePins,

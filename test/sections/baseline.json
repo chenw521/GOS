@@ -35,6 +35,7 @@
     "T12_wiring": 29,
     "T130_spawn_children": 23,
     "T131_store_surface": 4,
+    "T132_pin_heal": 6,
     "T13_semantic_contracts": 30,
     "T14_state_b": 49,
     "T15_lessons": 63,

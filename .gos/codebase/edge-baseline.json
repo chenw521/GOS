@@ -1,9 +1,9 @@
 {
   "current": {
-    "total": 1631,
-    "callgraph": 1043,
+    "total": 1637,
+    "callgraph": 1049,
     "testof_fn": 131,
-    "fn_count": 964,
+    "fn_count": 965,
     "fns": [
       "absTaskPath",
       "ackWaitMs",
@@ -481,6 +481,7 @@
       "loadOrDie",
       "loadPinnedBaseline",
       "loadPinnedModule",
+      "loadPinnedModuleWithHeal",
       "loadProfile",
       "loadProject",
       "loadRegistryFile",
@@ -1636,6 +1637,7 @@
       "pinnedRecordFor": "bin/lib/ops/auto/workers.cjs",
       "loadPinnedModule": "bin/lib/ops/auto/workers.cjs",
       "runPinnedLeg": "bin/lib/ops/auto/workers.cjs",
+      "loadPinnedModuleWithHeal": "bin/lib/ops/auto/workers.cjs",
       "sweepWorktree": "bin/lib/ops/auto/workers.cjs",
       "recyclePin": "bin/lib/ops/auto/workers.cjs",
       "lazyRecyclePins": "bin/lib/ops/auto/workers.cjs",
@@ -1936,8 +1938,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "65040cb53980569a",
-    "at": "2026-11-23T03:19:29.117Z"
+    "fp": "72438043da818a32",
+    "at": "2026-11-23T03:52:35.221Z"
   },
   "peak": {
     "total": 2065,
