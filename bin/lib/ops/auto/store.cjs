@@ -190,10 +190,14 @@ function stampTelemetryWellTyped(s) {
 
 // Run-record shape validation: returns the first violation as a detail
 // string, null when well-formed. Shared by the store-shape validator
-// (present-but-malformed is structural damage) and the write path (a
-// malformed record is refused before the store ever sees it).
+// (present-but-malformed is structural damage), the write path (a
+// malformed record is refused before the store ever sees it), and the
+// drain validator. Optional boolean droppedRecord marks a record adopted
+// from the crash-side drop queue — absent stays valid, present must be a
+// boolean.
 function runRecordRejection(r) {
   if (!isPlainObject(r)) return 'record must be an object';
+  if (r.droppedRecord != null && typeof r.droppedRecord !== 'boolean') return 'droppedRecord: boolean or absent required';
   if (typeof r.runId !== 'string' || !r.runId) return 'runId: non-empty string required';
   if (typeof r.runTag !== 'string' || !r.runTag) return 'runTag: non-empty string required';
   if (r.taskId != null && (typeof r.taskId !== 'string' || !r.taskId)) return 'taskId: non-empty string or null required';
@@ -1005,6 +1009,25 @@ function writeRunRecord(rec, rootDir, opts = {}) {
     return st;
   }, opts);
   return r.ok ? { ok: true, path: r.path, record: r.store.runRecords[r.store.runRecords.length - 1] } : r;
+}
+
+// Adopt drained sidecar records in ONE mutate: the drain's multi-record
+// adoption is atomic (never a partial adoption interrupted by a concurrent
+// writer), and trimArray keeps the same cap parity as writeRunRecord.
+// Records arrive pre-validated and pre-marked (droppedRecord) by the drain
+// caller — a malformed entry here is a caller bug and refuses whole.
+function appendDrainedRunRecords(rootDir, records) {
+  if (!Array.isArray(records) || records.length === 0) {
+    return { ok: false, status: 'error', reason: 'invalid-drain-records', detail: 'non-empty array of validated records required' };
+  }
+  const detail = records.map(runRecordRejection).find(Boolean);
+  if (detail) return { ok: false, status: 'error', reason: 'invalid-run-record', detail };
+  const r = mutate(rootDir, (st) => {
+    if (!Array.isArray(st.runRecords)) st.runRecords = [];
+    st.runRecords = trimArray([...st.runRecords, ...records], RUN_RECORDS_CAP);
+    return st;
+  });
+  return r.ok ? { ok: true, path: r.path, appended: records.length } : r;
 }
 
 // Read-only view of every run record, oldest first.
@@ -1896,6 +1919,7 @@ module.exports = {
   recordTrip,
   recordBreaker,
   writeRunRecord,
+  appendDrainedRunRecords,
   readRunRecords,
   latestRunRecord,
   runRecordRejection,

@@ -516,6 +516,12 @@ module.exports = {
     why: '红队发现与失败的评审轮次绝不自动清除——auto 模式下绝不代工作阶段写处置',
     fix: '审查红队证据后：修复阶段工作并重新发起 auto run，或由人工亲自批准该阶段',
   },
+  'auto.loop.recoveryLiveHolder': {
+    what: '运行启动恢复暂停：被打破的锁持有者（pid {pid}）在本机仍然存活',
+    why: '看似存活的持有者可能仍在运行——其残留不归本次运行处置，清扫可能破坏另一个在途 runner',
+    fix: '等待 pid {pid} 退出（或确认其已死亡）后重新运行',
+  },
+  'auto.loop.recoveryDrained': 'auto 恢复：回收 {drained} 条丢弃的运行记录、隔离 {corrupt} 行坏数据、回收 {pins} 个 pin、清扫 {spawns} 个残留 spawn 登记、删除 {seeds} 个 auto-seed 目录',
 
   // ---- auto 模式：批准边界（委派审批） ----
   'auto.ratify.pendingRecorded': '阶段 {stage} 的审批已记为 PENDING（auto）：仅做结构性检查——runner 会在会话退出后依据捕获流戳记完成批准',

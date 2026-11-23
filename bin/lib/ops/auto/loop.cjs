@@ -600,6 +600,176 @@ function report(base, extra) {
   return { ...base, ...(extra || {}) };
 }
 
+// ---------- run-start recovery ----------
+
+// Drain bound: at most this many sidecar lines process per run (run-record
+// cap parity — a crash queue longer than the bound survives for the next run).
+const RUN_RECORDS_DRAIN_BOUND = store.RUN_RECORDS_CAP;
+
+// Drain the crash-side record queue (the store's runrecords-drop.ndjson
+// sidecar) into runRecords. Valid lines adopt once, flagged droppedRecord
+// (a lost record is never silent); parse failures and shape violations
+// quarantine verbatim; the processed bound truncates with the overflow
+// re-queued for the next run. Every failure lands in the result — an
+// unreadable sidecar never crashes the run.
+function drainDroppedRunRecords(rootDir) {
+  const out = { drained: 0, droppedCorrupt: 0, error: null };
+  let lines;
+  try {
+    const read = store.readRunRecordDrops(rootDir);
+    if (!read.ok) { out.error = read.reason || 'drop-read-failed'; return out; }
+    lines = read.lines;
+  } catch (e) { out.error = (e && e.message) || 'drop-read-failed'; return out; }
+  if (!lines.length) return out;
+  const bounded = lines.slice(0, RUN_RECORDS_DRAIN_BOUND);
+  const overflow = lines.slice(RUN_RECORDS_DRAIN_BOUND);
+  const good = [];
+  const corrupt = [];
+  for (const line of bounded) {
+    let rec = null;
+    try { rec = JSON.parse(line); } catch { rec = null; }
+    if (rec != null && store.runRecordRejection({ ...rec, droppedRecord: true }) == null) {
+      good.push({ ...rec, droppedRecord: true });
+    } else {
+      corrupt.push(line);
+    }
+  }
+  if (corrupt.length) {
+    try {
+      const moved = store.moveCorruptDropLines(rootDir, corrupt);
+      if (moved.ok) out.droppedCorrupt = moved.moved;
+      else out.error = moved.reason || 'quarantine-failed';
+    } catch (e) { out.error = (e && e.message) || 'quarantine-failed'; }
+  }
+  if (good.length) {
+    try {
+      const appended = store.appendDrainedRunRecords(rootDir, good);
+      if (appended.ok) out.drained = good.length;
+      else out.error = appended.reason || 'drain-append-failed';
+    } catch (e) { out.error = (e && e.message) || 'drain-append-failed'; }
+  }
+  // Rebuild the queue only when the adoption landed — the sidecar family
+  // only moves lines (quarantine the rejects, truncate, re-append the
+  // unprocessed overflow); a failed append keeps the whole queue on disk
+  // for the next run's retry, and quarantined lines already have their
+  // copies so re-judging them next run is idempotent.
+  if (out.error == null) {
+    try {
+      const trunc = store.truncateRunRecordDrops(rootDir);
+      if (!trunc.ok) out.error = trunc.reason || 'truncate-failed';
+      else {
+        for (const line of overflow) {
+          let rec = null;
+          try { rec = JSON.parse(line); } catch { rec = line; }
+          store.appendRunRecordDrop(rootDir, rec);
+        }
+      }
+    } catch (e) { out.error = (e && e.message) || 'truncate-failed'; }
+  }
+  return out;
+}
+
+// Run-start recovery (restart-safe auto loop): everything a killed run left
+// behind, swept once at startup under the run lock this run holds — before
+// the seed materialization (the sweep can never delete this run's own seed
+// dir) and before the drive (a lost record or stray worktree cleans before
+// any iteration runs). All failures land in the result; the run continues
+// unless paused.
+//   1. Pause precedence: a takeover whose broken holder still looks alive on
+//      this host (any reason but dead-pid) is not ours to judge — the run
+//      pauses with guidance and touches NOTHING.
+//   2. Drain: the crash-side record queue adopts into runRecords.
+//   3. Stray-pin recycle: a fresh run has materialized no pins yet, so
+//      every recorded pin recycles (liveRunTags is empty by construction).
+//   4. Spawnreg sweep: an entry whose holder pid is absent or dead, or
+//      caught as a recycled pid by a starttime mismatch, is a stray under
+//      the single-runner lock invariant; each stray sweeps its sections-
+//      tree only through its recorded test_base (a forged entry without one
+//      never has a path rm'd) and is then removed. One worktree prune after
+//      the loop.
+//   5. Seed sweep: auto-seed-* dirs a killed run stranded under .gos/cache
+//      clear (the finally's seed cleanup is skipped by process.exit).
+function runStartRecovery(ctx) {
+  const rootDir = ctx.rootDir;
+  const gitRunner = ctx.gitRunner;
+  const lock = ctx.lock;
+  const result = {
+    ok: true, drained: 0, droppedCorrupt: 0,
+    recycledPins: [], sweptEntries: [], removedSeeds: 0,
+    errors: [], paused: null,
+  };
+
+  const tookOver = lock && lock.tookOver;
+  if (tookOver && tookOver.hostname === os.hostname()
+    && tookOver.reason !== 'dead-pid'
+    && Number.isInteger(tookOver.pid) && core.pidAlive(tookOver.pid)) {
+    return {
+      ...result, ok: false,
+      paused: {
+        reason: 'recovery-live-holder',
+        pid: tookOver.pid,
+        guidance: store.guidanceFor('auto.loop.recoveryLiveHolder', { pid: tookOver.pid }),
+      },
+    };
+  }
+
+  const drain = drainDroppedRunRecords(rootDir);
+  result.drained = drain.drained;
+  result.droppedCorrupt = drain.droppedCorrupt;
+  if (drain.error) result.errors.push({ step: 'drain', error: String(drain.error) });
+
+  try {
+    const pins = workers.lazyRecyclePins(rootDir, { liveRunTags: [], gitRunner });
+    if (pins && Array.isArray(pins.recycled)) result.recycledPins = pins.recycled;
+    const failures = pins && Array.isArray(pins.failures) ? pins.failures : [];
+    for (const f of failures) {
+      result.errors.push({ step: 'pin-recycle', runTag: f.runTag, error: String(f.reason || f.detail || 'pin-recycle-failed') });
+    }
+  } catch (e) { result.errors.push({ step: 'pin-recycle', error: String((e && e.message) || e) }); }
+
+  try {
+    const listed = store.listSpawnEntries(rootDir);
+    if (!listed.ok) {
+      result.errors.push({ step: 'spawn-sweep', error: String(listed.reason || 'list-failed') });
+    } else {
+      for (const { spawnId, entry } of listed.entries) {
+        const pid = Number.isInteger(entry.pid) ? entry.pid : null;
+        const start = pid != null ? spawnreg.procStartTime(pid) : null;
+        const stray = pid == null || !core.pidAlive(pid)
+          || (entry.starttime != null && start !== entry.starttime);
+        if (!stray) continue;
+        if (typeof entry.test_base === 'string' && entry.test_base !== '' && path.isAbsolute(entry.test_base)) {
+          try { workers.sweepSectionWorktrees(rootDir, { testBase: entry.test_base, gitRunner }); }
+          catch (e) { result.errors.push({ step: 'section-sweep', spawnId, error: String((e && e.message) || e) }); }
+        }
+        try { store.removeSpawn(spawnId, rootDir); } catch { /* already gone */ }
+        result.sweptEntries.push(spawnId);
+      }
+      if (result.sweptEntries.length) {
+        try { gitRunner(['worktree', 'prune'], rootDir); } catch { /* best effort */ }
+      }
+    }
+  } catch (e) { result.errors.push({ step: 'spawn-sweep', error: String((e && e.message) || e) }); }
+
+  const cacheDir = path.join(rootDir, '.gos', 'cache');
+  try {
+    for (const name of fs.readdirSync(cacheDir)) {
+      if (!name.startsWith('auto-seed-')) continue;
+      const p = path.join(cacheDir, name);
+      let st = null;
+      try { st = fs.lstatSync(p); } catch { continue; }
+      if (!st.isDirectory()) continue;
+      try {
+        fs.rmSync(p, { recursive: true, force: true });
+        result.removedSeeds += 1;
+      } catch { /* best effort */ }
+    }
+  } catch { /* no cache dir — nothing to sweep */ }
+
+  result.ok = result.errors.length === 0;
+  return result;
+}
+
 async function runLoop(opts) {
   const env = opts.env || process.env;
   const now = typeof opts.now === 'function' ? opts.now : Date.now;
@@ -664,6 +834,36 @@ async function runLoop(opts) {
   // Detach sentinel: lock acquisition is the proof of "started" that the
   // bounded-wait parent observes (the fork alone proves nothing).
   writeDetachSentinel(env, { ok: true, pid: process.pid, ts: now() });
+
+  // Run-start recovery: drain the crash-side record queue, recycle stray
+  // pins, sweep stray sections-tree registrations, and clear orphaned seed
+  // dirs — under the run lock this run holds, before seeding (the sweep can
+  // never delete this run's own seed dir). A live-looking takeover holder
+  // pauses the run before anything is touched: its strays are not ours to
+  // judge. The sentinel rewrites so a bounded-wait detach parent never
+  // reads a "started" proof for a paused run.
+  const recovery = runStartRecovery({ rootDir, gitRunner, lock, now });
+  if (recovery.paused) {
+    writeDetachSentinel(env, { ok: false, reason: recovery.paused.reason });
+    const pausedReport = report({
+      ok: false, status: 'paused', paused: true,
+      reason: recovery.paused.reason,
+      guidance: recovery.paused.guidance,
+      path: lock.path,
+    });
+    try { store.releaseRunLock(rootDir); } catch { /* best effort */ }
+    return pausedReport;
+  }
+  if (recovery.drained || recovery.droppedCorrupt || recovery.recycledPins.length
+    || recovery.sweptEntries.length || recovery.removedSeeds) {
+    console.error(core.t('auto.loop.recoveryDrained', {
+      drained: recovery.drained,
+      corrupt: recovery.droppedCorrupt,
+      pins: recovery.recycledPins.length,
+      spawns: recovery.sweptEntries.length,
+      seeds: recovery.removedSeeds,
+    }));
+  }
 
   const stateReader = typeof opts.stateReader === 'function' ? opts.stateReader : () => defaultStateReader(rootDir);
   const spawnRunner = opts.spawnRunner || loopSpawnRunner;

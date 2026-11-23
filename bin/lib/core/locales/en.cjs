@@ -523,6 +523,12 @@ module.exports = {
     why: 'red-team findings and failed review rounds never auto-clear — in auto mode dispositions are never written for the working stage',
     fix: 'review the red-team evidence, then either fix the stage work and start a fresh auto run or approve the stage yourself as the human gate',
   },
+  'auto.loop.recoveryLiveHolder': {
+    what: 'run-start recovery paused: the broken lock holder (pid {pid}) still looks alive on this host',
+    why: 'a live-looking holder may still be running — its strays are not ours to judge, and sweeping could destroy another runner in flight',
+    fix: 'wait for pid {pid} to exit (or verify it is dead), then re-run',
+  },
+  'auto.loop.recoveryDrained': 'auto recovery: drained {drained} dropped run record(s), quarantined {corrupt} bad line(s), recycled {pins} pin(s), swept {spawns} stray spawn entr(y|ies), removed {seeds} auto-seed director(y|ies)',
 
   // ---- auto mode: ratification boundary (delegated approvals) ----
   'auto.ratify.pendingRecorded': 'stage {stage} approval recorded as PENDING (auto): structural checks only — the runner ratifies it from the captured-stream stamp after this session exits',
