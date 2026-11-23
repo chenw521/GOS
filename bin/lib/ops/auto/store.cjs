@@ -194,10 +194,12 @@ function stampTelemetryWellTyped(s) {
 // malformed record is refused before the store ever sees it), and the
 // drain validator. Optional boolean droppedRecord marks a record adopted
 // from the crash-side drop queue — absent stays valid, present must be a
-// boolean.
+// boolean. Optional integer heals carries the per-run pin heal count —
+// absent stays valid, present must be a non-negative integer.
 function runRecordRejection(r) {
   if (!isPlainObject(r)) return 'record must be an object';
   if (r.droppedRecord != null && typeof r.droppedRecord !== 'boolean') return 'droppedRecord: boolean or absent required';
+  if (r.heals != null && (!Number.isInteger(r.heals) || r.heals < 0)) return 'heals: non-negative integer or absent required';
   if (typeof r.runId !== 'string' || !r.runId) return 'runId: non-empty string required';
   if (typeof r.runTag !== 'string' || !r.runTag) return 'runTag: non-empty string required';
   if (r.taskId != null && (typeof r.taskId !== 'string' || !r.taskId)) return 'taskId: non-empty string or null required';

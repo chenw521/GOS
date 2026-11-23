@@ -38,6 +38,7 @@
     "T132_pin_heal": 6,
     "T133_run_start_recovery": 8,
     "T134_signal_handler": 16,
+    "T135_auto_observability": 13,
     "T13_semantic_contracts": 30,
     "T14_state_b": 49,
     "T15_lessons": 63,

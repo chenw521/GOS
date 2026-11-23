@@ -857,6 +857,26 @@ function disarmKillHandlers(registered) {
   }
 }
 
+// Worktree registration directory for a pinned run tag: <gitDir>/worktrees/<tag>
+// where gitDir is the repo's .git directory, or the directory a .git gitfile
+// names. A missing registration makes every in-worktree git read fail — the
+// same absence loadPinnedModule's verification refuses on — so its existence
+// is a cheap stand-in for "the pin can still load". Returns null when the
+// repo root carries no readable .git.
+function pinMetadataPath(rootDir, runTag) {
+  const dotGit = path.join(rootDir, '.git');
+  let st = null;
+  try { st = fs.statSync(dotGit); } catch { return null; }
+  if (st.isDirectory()) return path.join(dotGit, 'worktrees', runTag);
+  if (st.isFile()) {
+    let text = '';
+    try { text = fs.readFileSync(dotGit, 'utf8'); } catch { return null; }
+    const m = text.match(/^gitdir:\s*(.+)$/m);
+    return m ? path.join(m[1].trim(), 'worktrees', runTag) : null;
+  }
+  return null;
+}
+
 async function runLoop(opts) {
   const env = opts.env || process.env;
   const now = typeof opts.now === 'function' ? opts.now : Date.now;
@@ -1136,13 +1156,20 @@ async function drive(ctx) {
   const runId = runnerState.runId;
   const runTag = runnerState.runTag;
   let seq = 0;
+  // Per-run heal accounting for the pinned worktree (declared above the
+  // record writer so pre-run exits read a defined budget, never a TDZ
+  // reference): loadPinnedModuleWithHeal reads and increments it; the cap
+  // bounds re-materializations per run no matter how many legs ask. Retry
+  // capability lives in getPin — lazy-once, every load retries through the
+  // heal choke point instead.
+  const pinBudget = { heals: 0, cap: 2 };
   const persistRunRecord = (base) => {
     // Disarm before any real end record lands: a signal arriving after the
     // write must keep default behavior (a killed record here would shadow
     // the truth with a second, contradicting record).
     disarmKillHandlers(killHandlers);
     try {
-      store.writeRunRecord({
+      const rec = {
         runId,
         runTag,
         taskId: runnerState.taskId,
@@ -1154,7 +1181,14 @@ async function drive(ctx) {
           reason: typeof base.reason === 'string' && base.reason ? base.reason : null,
         },
         stages: recordStages(`${runId}-${seq + 1}-inflight`),
-      }, rootDir);
+      };
+      // Per-run pin heal count rides the record top level (additive integer,
+      // absent when zero): the record is the only per-run persisted artifact,
+      // so the status latest-run line reads its heals from here. The kill-path
+      // record stays without it — the handlers install before the budget
+      // object exists, and the restart's own record supersedes it as latest.
+      if (pinBudget.heals > 0) rec.heals = pinBudget.heals;
+      store.writeRunRecord(rec, rootDir);
     } catch { /* best effort: a record failure never masks the run result */ }
   };
   // Pre-run exits (before the breaker exists) keep their null breaker view.
@@ -1247,11 +1281,6 @@ async function drive(ctx) {
   // transition: repos without the exec tree in their history keep running).
   const loopStartCommit = readHead(gitRunner, rootDir);
   const pinState = { tried: false, pin: null };
-  // Per-run heal accounting for the pinned worktree: loadPinnedModuleWithHeal
-  // reads and increments it; the cap bounds re-materializations per run no
-  // matter how many legs ask. Retry capability lives here — getPin stays
-  // lazy-once and every load retries through the heal choke point instead.
-  const pinBudget = { heals: 0, cap: 2 };
   const getPin = () => {
     if (!pinState.tried) {
       pinState.tried = true;
@@ -1263,11 +1292,30 @@ async function drive(ctx) {
     }
     return pinState.pin;
   };
+  // Pin-liveness probe: one terse stderr line per call — `pin-live: <phase>
+  // runTag=<tag> live=<yes|no>` — while a pin exists (a pin that was never
+  // materialized has nothing to bracket). Cheap fs check on the worktree
+  // registration only; never triggers materialization, never throws.
+  const pinLive = (phase) => {
+    const pin = pinState.pin;
+    if (!pin) return;
+    let live = false;
+    try {
+      const meta = pinMetadataPath(rootDir, pin.runTag);
+      live = meta != null && fs.existsSync(meta);
+    } catch { live = false; }
+    try { fs.writeSync(2, `pin-live: ${phase} runTag=${pin.runTag} live=${live ? 'yes' : 'no'}\n`); } catch { /* telemetry only */ }
+  };
   const loadLeg = (relPath, liveRequire) => {
     const pin = getPin();
     if (pin) {
       const r = workers.loadPinnedModuleWithHeal(pin, relPath, { rootDir, gitRunner, expectedLoopStartCommit: loopStartCommit, budget: pinBudget });
-      if (r.ok) return { module: r.module, source: 'pin' };
+      if (r.ok) {
+        if (r.healed) {
+          try { fs.writeSync(2, `pin-heal: runTag=${pin.runTag} heals=${pinBudget.heals}/${pinBudget.cap}\n`); } catch { /* telemetry only */ }
+        }
+        return { module: r.module, source: 'pin' };
+      }
       const detail = String(r.detail || '').split('\n')[0].slice(0, 160);
       console.error(`⚠ auto legs: pinned ${relPath} unavailable (${r.reason}${detail ? ': ' + detail : ''}) — loading the live-tree module`);
       if (r.reason === 'heal-budget-exhausted') {
@@ -1571,7 +1619,7 @@ async function drive(ctx) {
       const res = await scriptIteration({
         stage, entry, tableLoad, verifyTable, opts, env, rootDir, gitRunner, spawnRunner, tp, b,
         runId, seq, baselineSha, preStageHead, dirtyBaseline, getPin, withHeartbeat, now,
-        runnerState, loopStartCommit, pinBudget,
+        runnerState, loopStartCommit, pinBudget, pinLive,
         baselineEnvName: APPROVALS_BASELINE_ENV, endWith, tripNow,
       });
       if (res.err) return report(res.err, { iterations, breaker: breakerView() });
@@ -1907,7 +1955,7 @@ async function scriptIteration(a) {
   const {
     stage, entry, tableLoad, verifyTable, opts, env, rootDir, gitRunner, spawnRunner, tp, b,
     runId, seq, baselineSha, preStageHead, dirtyBaseline, getPin, withHeartbeat, now,
-    runnerState, loopStartCommit, pinBudget,
+    runnerState, loopStartCommit, pinBudget, pinLive,
     baselineEnvName, endWith, tripNow,
   } = a;
 
@@ -1947,6 +1995,9 @@ async function scriptIteration(a) {
           ? workers.loadPinnedModuleWithHeal(pin, step.module, { rootDir, gitRunner, expectedLoopStartCommit: loopStartCommit, budget: pinBudget })
           : { ok: false, reason: 'pin-unavailable' };
         if (loaded.ok) {
+          if (loaded.healed) {
+            try { fs.writeSync(2, `pin-heal: runTag=${pin.runTag} heals=${pinBudget.heals}/${pinBudget.cap}\n`); } catch { /* telemetry only */ }
+          }
           const fn = loaded.module && loaded.module[step.fn];
           if (typeof fn !== 'function') {
             leg = { ok: false, reason: 'leg-fn-missing', detail: `${step.module} exports no function named ${step.fn}` };
@@ -2019,6 +2070,7 @@ async function scriptIteration(a) {
         kind: 'script',
       };
       store.heartbeatRunLock(rootDir);
+      pinLive('pre-spawn');
       let result;
       try {
         result = await withHeartbeat(() => spawnRunner(spec, { wallMs: tp.wallSec * 1000, idleMs: tp.idleSec * 1000, ackTick: () => store.serviceRequests(rootDir, spawnId) }));
@@ -2027,6 +2079,7 @@ async function scriptIteration(a) {
       }
       try { store.removeSpawn(spawnId, rootDir); } catch { /* already gone */ }
       store.heartbeatRunLock(rootDir);
+      pinLive('post-settle');
       const bumped = store.bumpSpawn(rootDir);
       if (!bumped.ok) {
         return { err: endWith({ ok: false, status: 'paused', paused: true, reason: 'budget-write-failed', path: bumped.path, guidance: bumped.guidance }) };
