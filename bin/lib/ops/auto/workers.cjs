@@ -45,6 +45,7 @@ const { spawnSync } = require('child_process');
 const limits = require('./limits.cjs');
 const launcher = require('./launcher.cjs');
 const registry = require('./adapters/registry.cjs');
+const spawnreg = require('../../core/spawnreg.cjs');
 
 const DISPATCH_TABLE_NAME = 'auto-dispatch.json';
 const DISPATCH_SCHEMA_VERSION = 1;
@@ -336,6 +337,14 @@ function composeScriptSpawn(step, ctx = {}) {
   catch (e) {
     store.removeSpawn(ctx.spawnId, ctx.rootDir);
     return { ok: false, reason: 'testbase-pin-unwritable', detail: `${testBasePin}: ${e.message}`, spawnId: ctx.spawnId };
+  }
+  // Entry-side testbed liveness: the pin path is only derivable from the
+  // scratch registerSpawn returns, so the entry doc gains its test_base
+  // here — audit and drain reads see where this spawn keeps its testbed.
+  const liveness = spawnreg.updateEntryFields(ctx.rootDir, ctx.spawnId, { test_base: testBasePin });
+  if (!liveness.ok) {
+    store.removeSpawn(ctx.spawnId, ctx.rootDir);
+    return { ok: false, reason: liveness.reason || 'entry-liveness-failed', detail: liveness.detail, spawnId: ctx.spawnId };
   }
   const writable = scriptWritableRoots(ctx.workspace || ctx.rootDir, { scratch: reg.scratch });
   const composed = launcher.compose(entry.profile, {

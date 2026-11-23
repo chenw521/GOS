@@ -116,8 +116,9 @@ function claimsPath(rootDir) {
 // ---- entry records ----
 
 // Persist a complete entry doc as-is. The doc shape ({spawn_id, kind, stage,
-// grants, use_cap, uses, window_expiry, pid}) is this module's file format;
-// policy validation belongs to the writer that composed it.
+// grants, use_cap, uses, window_expiry, pid} plus the optional liveness
+// fields starttime and test_base) is this module's file format; policy
+// validation belongs to the writer that composed it.
 function saveEntryDoc(rootDir, doc) {
   if (!doc || typeof doc !== 'object' || typeof doc.spawn_id !== 'string' || !SPAWN_ID_FILE_RE.test(doc.spawn_id)) {
     throw new Error('spawnreg entry doc requires a filename-safe spawn_id');
@@ -169,6 +170,42 @@ function readEntry(root, spawnId) {
   if (!doc || typeof doc !== 'object') return null;
   if (Number(doc.window_expiry) < Date.now()) return null;
   return doc;
+}
+
+// Targeted entry-doc update for fields only known after registration: the
+// sections suite derives its testbed pin from the scratch path registerSpawn
+// returns, so the entry gains its test_base here once the pin exists. The
+// updatable field set is closed (today: test_base only — counters, grants,
+// and caps are policy-owned and never patchable); test_base must be an
+// absolute path when present. Reads the entry file directly, so an entry
+// past its window stays updatable; a missing or unreadable entry refuses
+// fail-closed. Returns { ok, entry } or { ok: false, reason, detail }.
+function updateEntryFields(rootDir, spawnId, fields) {
+  if (!spawnId || typeof spawnId !== 'string' || !SPAWN_ID_FILE_RE.test(spawnId)) {
+    return { ok: false, status: 'error', reason: 'invalid-spawn-id', detail: 'spawnId must be filename-safe (letters, digits, dot, dash, underscore)' };
+  }
+  if (!fields || typeof fields !== 'object' || Array.isArray(fields)) {
+    return { ok: false, status: 'error', reason: 'invalid-fields', detail: 'fields object required' };
+  }
+  const UPDATABLE = new Set(['test_base']);
+  const unknown = Object.keys(fields).filter((k) => !UPDATABLE.has(k));
+  if (unknown.length) {
+    return { ok: false, status: 'error', reason: 'invalid-fields', detail: `fields outside the updatable set (${[...UPDATABLE].join('|')}): ${unknown.join(', ')}` };
+  }
+  if (fields.test_base != null && (typeof fields.test_base !== 'string' || !path.isAbsolute(fields.test_base))) {
+    return { ok: false, status: 'error', reason: 'invalid-test-base', detail: 'test_base must be an absolute path string' };
+  }
+  const p = entryPath(rootDir, spawnId);
+  if (p == null) return { ok: false, status: 'error', reason: 'unwritable', detail: 'no data home resolvable for the spawn registry' };
+  let doc = null;
+  try { doc = JSON.parse(fs.readFileSync(p, 'utf8')); } catch { doc = null; }
+  if (!doc || typeof doc !== 'object' || typeof doc.spawn_id !== 'string') {
+    return { ok: false, status: 'error', reason: 'no-entry', detail: `no entry file for spawn ${spawnId}` };
+  }
+  for (const [k, v] of Object.entries(fields)) doc[k] = v;
+  try { saveEntryDoc(rootDir, doc); }
+  catch (e) { return { ok: false, status: 'error', reason: 'write-failed', detail: e.message }; }
+  return { ok: true, entry: doc };
 }
 
 // A spawn's effective verb set: grant-carrying entries carry their dispatch
@@ -489,6 +526,7 @@ module.exports = {
   writeEntry,
   removeEntry,
   readEntry,
+  updateEntryFields,
   resolvedGrantsOf,
   judgeClaim,
   settleClaim,
