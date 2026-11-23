@@ -263,19 +263,19 @@ if (!store.appendRunRecordDrop(world, { nonsense: true }).ok) {
 }
 const nullAppend = store.appendRunRecordDrop(world, null);
 if (nullAppend.ok || nullAppend.reason !== 'invalid-drop-record') problems.push('null record not refused');
-const read1 = store.readRunRecordDrops(world);
-if (!read1.ok || read1.lines.length !== 2) problems.push('queue holds ' + (read1.lines || []).length + ' lines (want 2)');
+const dropRead = store.readRunRecordDrops(world);
+if (!dropRead.ok || dropRead.lines.length !== 2) problems.push('queue holds ' + (dropRead.lines || []).length + ' lines (want 2)');
 else {
-  const good = JSON.parse(read1.lines[0]);
+  const good = JSON.parse(dropRead.lines[0]);
   if (store.runRecordRejection(good) !== null) problems.push('runRecordRejection refuses a valid record');
-  const rejection = store.runRecordRejection(JSON.parse(read1.lines[1]));
+  const rejection = store.runRecordRejection(JSON.parse(dropRead.lines[1]));
   if (typeof rejection !== 'string' || !rejection) problems.push('runRecordRejection accepts a crafted bad record');
 }
-const move = store.moveCorruptDropLines(world, [read1.lines[1]]);
+const move = store.moveCorruptDropLines(world, [dropRead.lines[1]]);
 if (!move.ok || move.moved !== 1) problems.push('quarantine move failed: ' + JSON.stringify(move));
 else {
   const quarantined = fs.readFileSync(corruptPath, 'utf8').trim().split('\n');
-  if (quarantined.length !== 1 || quarantined[0] !== read1.lines[1]) problems.push('quarantine file holds the wrong lines');
+  if (quarantined.length !== 1 || quarantined[0] !== dropRead.lines[1]) problems.push('quarantine file holds the wrong lines');
   if (store.readRunRecordDrops(world).lines.length !== 2) problems.push('quarantine move mutated the live queue');
 }
 if (store.moveCorruptDropLines(world, 'not-an-array').ok) problems.push('non-array quarantine move accepted');

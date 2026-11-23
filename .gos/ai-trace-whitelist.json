@@ -1801,6 +1801,18 @@
     ]
   },
   {
+    "path": "test/sections/fixtures/dogfood/build.sh",
+    "category": "in-flight-sweep",
+    "maxHits": 3,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
+    "path": "test/sections/fixtures/dogfood/seed-notes.md",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
+  },
+  {
     "path": "test/workflow-lint.sh",
     "category": "frozen-string",
     "reason": "Contract strings, regex character classes and prompt text quote anchor-shaped tokens by design; pinned as frozen product surface.",

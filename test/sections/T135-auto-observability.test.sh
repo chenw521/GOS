@@ -55,7 +55,7 @@ trap t135_teardown EXIT
 echo "--- T135: auto liveness telemetry + status latest-run ---"
 
 # One isolated case world per call: sandbox HOME + XDG_DATA_HOME + a git
-# repo with a minimal task state (same shape as T104/T128 cases).
+# repo with a minimal task state (the auto section case-world shape).
 t135_case() {
   T135_CASE="$T135_DIR/$1"
   mkdir -p "$T135_CASE/home" "$T135_CASE/xdg" "$T135_CASE/repo/.gos/logs"

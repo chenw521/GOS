@@ -100,10 +100,10 @@ const tree = String(git(['rev-parse', 'HEAD^{tree}']).stdout || '').trim();
 if (!/^[0-9a-f]{40}$/.test(head) || !/^[0-9a-f]{40}$/.test(tree)) problems.push('fixture head/tree unresolvable');
 if (!store.create({ mode: 'on', rootDir: repo }).ok) problems.push('store create refused');
 const budget = { heals: 0, cap: 2 };
-const pin = workers.materializePin(repo, { loopStartCommit: head, runTag: 'pin-t132-c1' });
+const pin = workers.materializePin(repo, { loopStartCommit: head, runTag: 'pin-heal-first' });
 if (!pin.ok) problems.push('materializePin refused: ' + pin.reason + '/' + (pin.detail || ''));
 if (pin.ok) {
-  const healthy = workers.loadPinnedModuleWithHeal({ runTag: 'pin-t132-c1', rootDir: repo }, 'legs/trust-leg.cjs',
+  const healthy = workers.loadPinnedModuleWithHeal({ runTag: 'pin-heal-first', rootDir: repo }, 'legs/trust-leg.cjs',
     { rootDir: repo, expectedLoopStartCommit: head, budget });
   if (!healthy.ok) problems.push('healthy load refused: ' + healthy.reason + '/' + (healthy.detail || ''));
   else {
@@ -115,7 +115,7 @@ if (pin.ok) {
   if (budget.heals !== 0) problems.push('healthy passthrough consumed budget (heals=' + budget.heals + ')');
   fs.rmSync(pin.path, { recursive: true, force: true });
   if (fs.existsSync(pin.path)) problems.push('worktree kill left the directory on disk');
-  const healed = workers.loadPinnedModuleWithHeal({ runTag: 'pin-t132-c1', rootDir: repo }, 'legs/trust-leg.cjs',
+  const healed = workers.loadPinnedModuleWithHeal({ runTag: 'pin-heal-first', rootDir: repo }, 'legs/trust-leg.cjs',
     { rootDir: repo, expectedLoopStartCommit: head, budget });
   if (!healed.ok) problems.push('heal refused: ' + healed.reason + '/' + (healed.detail || ''));
   else {
@@ -129,7 +129,7 @@ if (pin.ok) {
   }
   if (!fs.existsSync(pin.path)) problems.push('re-materialized worktree missing on disk');
   const pins = store.readPins(repo);
-  const rec = pins.ok ? pins.pins['pin-t132-c1'] : null;
+  const rec = pins.ok ? pins.pins['pin-heal-first'] : null;
   if (!rec) problems.push('pin record dropped after heal');
   else if (rec.treeSha !== tree || rec.loopStartCommit !== head) problems.push('rewritten record fields wrong');
 }
@@ -160,11 +160,11 @@ if (git(['commit', '-q', '-m', 'seed-leg']).status !== 0) problems.push('fixture
 const head = String(git(['rev-parse', 'HEAD']).stdout || '').trim();
 const tree = String(git(['rev-parse', 'HEAD^{tree}']).stdout || '').trim();
 if (!store.create({ mode: 'on', rootDir: repo }).ok) problems.push('store create refused');
-const pin = workers.materializePin(repo, { loopStartCommit: head, runTag: 'pin-t132-c2' });
+const pin = workers.materializePin(repo, { loopStartCommit: head, runTag: 'pin-heal-cap' });
 if (!pin.ok) problems.push('materializePin refused: ' + pin.reason + '/' + (pin.detail || ''));
 if (pin.ok) {
   const budget = { heals: 0, cap: 2 };
-  const call = () => workers.loadPinnedModuleWithHeal({ runTag: 'pin-t132-c2', rootDir: repo }, 'legs/trust-leg.cjs',
+  const call = () => workers.loadPinnedModuleWithHeal({ runTag: 'pin-heal-cap', rootDir: repo }, 'legs/trust-leg.cjs',
     { rootDir: repo, expectedLoopStartCommit: head, budget });
   const kill = () => fs.rmSync(pin.path, { recursive: true, force: true });
   kill();
@@ -184,7 +184,7 @@ if (pin.ok) {
   }
   if (budget.heals !== 2) problems.push('exhaustion refusal bumped the budget to ' + budget.heals);
   const pins = store.readPins(repo);
-  const rec = pins.ok ? pins.pins['pin-t132-c2'] : null;
+  const rec = pins.ok ? pins.pins['pin-heal-cap'] : null;
   if (!rec) problems.push('record dropped on budget exhaustion');
   else if (rec.treeSha !== tree || rec.loopStartCommit !== head) problems.push('record fields drifted on exhaustion');
 }
@@ -216,14 +216,14 @@ if (git(['add', 'legs']).status !== 0) problems.push('fixture add failed');
 if (git(['commit', '-q', '-m', 'seed-leg']).status !== 0) problems.push('fixture commit failed');
 const head = String(git(['rev-parse', 'HEAD']).stdout || '').trim();
 if (!store.create({ mode: 'on', rootDir: repo }).ok) problems.push('store create refused');
-const pin = workers.materializePin(repo, { loopStartCommit: head, runTag: 'pin-t132-c3a' });
+const pin = workers.materializePin(repo, { loopStartCommit: head, runTag: 'pin-heal-sha' });
 if (!pin.ok) problems.push('materializePin refused: ' + pin.reason + '/' + (pin.detail || ''));
 if (pin.ok) {
-  const forged = store.recordPin(repo, { runTag: 'pin-t132-c3a', path: pin.path, treeSha: 'e'.repeat(40), loopStartCommit: head });
+  const forged = store.recordPin(repo, { runTag: 'pin-heal-sha', path: pin.path, treeSha: 'e'.repeat(40), loopStartCommit: head });
   if (!forged.ok) problems.push('poisoned recordPin refused: ' + forged.reason);
   fs.writeFileSync(path.join(pin.path, '.git'), 'gitdir: /nonexistent-t132/gitdir\n');
-  const before = JSON.stringify((store.readPins(repo).pins || {})['pin-t132-c3a']);
-  const out = workers.loadPinnedModuleWithHeal({ runTag: 'pin-t132-c3a', rootDir: repo }, 'legs/trust-leg.cjs',
+  const before = JSON.stringify((store.readPins(repo).pins || {})['pin-heal-sha']);
+  const out = workers.loadPinnedModuleWithHeal({ runTag: 'pin-heal-sha', rootDir: repo }, 'legs/trust-leg.cjs',
     { rootDir: repo, expectedLoopStartCommit: head, budget: { heals: 0, cap: 2 } });
   if (out.ok) problems.push('healed under a poisoned record tree sha');
   else {
@@ -231,7 +231,7 @@ if (pin.ok) {
     if (!/tree-sha/.test(out.detail || '')) problems.push('poisoned treeSha detail does not name the tree-sha anchor: ' + out.detail);
   }
   if (!fs.existsSync(pin.path)) problems.push('worktree directory removed on anchor refusal');
-  const after = JSON.stringify((store.readPins(repo).pins || {})['pin-t132-c3a']);
+  const after = JSON.stringify((store.readPins(repo).pins || {})['pin-heal-sha']);
   if (after !== before) problems.push('record mutated on anchor refusal');
 }
 console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
@@ -266,12 +266,12 @@ if (git(['commit', '-q', '-m', 'second']).status !== 0) problems.push('fixture c
 const headB = String(git(['rev-parse', 'HEAD']).stdout || '').trim();
 if (headA === headB) problems.push('fixture commits collapsed into one');
 if (!store.create({ mode: 'on', rootDir: repo }).ok) problems.push('store create refused');
-const pin = workers.materializePin(repo, { loopStartCommit: headA, runTag: 'pin-t132-c3b' });
+const pin = workers.materializePin(repo, { loopStartCommit: headA, runTag: 'pin-heal-commit' });
 if (!pin.ok) problems.push('materializePin refused: ' + pin.reason + '/' + (pin.detail || ''));
 if (pin.ok) {
   fs.writeFileSync(path.join(pin.path, '.git'), 'gitdir: /nonexistent-t132/gitdir\n');
-  const before = JSON.stringify((store.readPins(repo).pins || {})['pin-t132-c3b']);
-  const out = workers.loadPinnedModuleWithHeal({ runTag: 'pin-t132-c3b', rootDir: repo }, 'legs/trust-leg.cjs',
+  const before = JSON.stringify((store.readPins(repo).pins || {})['pin-heal-commit']);
+  const out = workers.loadPinnedModuleWithHeal({ runTag: 'pin-heal-commit', rootDir: repo }, 'legs/trust-leg.cjs',
     { rootDir: repo, expectedLoopStartCommit: headB, budget: { heals: 0, cap: 2 } });
   if (out.ok) problems.push('healed under a mismatched expected loop-start commit');
   else {
@@ -279,7 +279,7 @@ if (pin.ok) {
     if (!/commit-identity/.test(out.detail || '')) problems.push('mismatched commit detail does not name the commit-identity anchor: ' + out.detail);
   }
   if (!fs.existsSync(pin.path)) problems.push('worktree directory removed on anchor refusal');
-  const after = JSON.stringify((store.readPins(repo).pins || {})['pin-t132-c3b']);
+  const after = JSON.stringify((store.readPins(repo).pins || {})['pin-heal-commit']);
   if (after !== before) problems.push('record mutated on anchor refusal');
 }
 console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
@@ -310,7 +310,7 @@ if (git(['add', 'legs']).status !== 0) problems.push('fixture add failed');
 if (git(['commit', '-q', '-m', 'seed-leg']).status !== 0) problems.push('fixture commit failed');
 const head = String(git(['rev-parse', 'HEAD']).stdout || '').trim();
 if (!store.create({ mode: 'on', rootDir: repo }).ok) problems.push('store create refused');
-const pin = workers.materializePin(repo, { loopStartCommit: head, runTag: 'pin-t132-c3c' });
+const pin = workers.materializePin(repo, { loopStartCommit: head, runTag: 'pin-heal-slot' });
 if (!pin.ok) problems.push('materializePin refused: ' + pin.reason + '/' + (pin.detail || ''));
 if (pin.ok) {
   const sentinel = path.join(path.dirname(repo), 'outside-slot-sentinel');
@@ -318,9 +318,9 @@ if (pin.ok) {
   fs.writeFileSync(path.join(sentinel, 'keep'), 'sentinel');
   const storeFile = path.join(store.storeRoot(repo), 'store.json');
   const doc = JSON.parse(fs.readFileSync(storeFile, 'utf8'));
-  doc.pinWorktrees['pin-t132-c3c'].path = sentinel;
+  doc.pinWorktrees['pin-heal-slot'].path = sentinel;
   fs.writeFileSync(storeFile, JSON.stringify(doc));
-  const out = workers.loadPinnedModuleWithHeal({ runTag: 'pin-t132-c3c', rootDir: repo }, 'legs/trust-leg.cjs',
+  const out = workers.loadPinnedModuleWithHeal({ runTag: 'pin-heal-slot', rootDir: repo }, 'legs/trust-leg.cjs',
     { rootDir: repo, expectedLoopStartCommit: head, budget: { heals: 0, cap: 2 } });
   if (out.ok) problems.push('healed under an out-of-slot record path');
   else {
@@ -330,7 +330,7 @@ if (pin.ok) {
   if (!fs.existsSync(path.join(sentinel, 'keep'))) problems.push('sentinel target removed on anchor refusal');
   if (!fs.existsSync(pin.path)) problems.push('true worktree removed on anchor refusal');
   const after = JSON.parse(fs.readFileSync(storeFile, 'utf8'));
-  if (after.pinWorktrees['pin-t132-c3c'].path !== sentinel) problems.push('record path mutated on anchor refusal');
+  if (after.pinWorktrees['pin-heal-slot'].path !== sentinel) problems.push('record path mutated on anchor refusal');
 }
 console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
 EOF
@@ -360,37 +360,37 @@ if (git(['commit', '-q', '-m', 'seed-leg']).status !== 0) problems.push('fixture
 const head = String(git(['rev-parse', 'HEAD']).stdout || '').trim();
 if (!store.create({ mode: 'on', rootDir: repo }).ok) problems.push('store create refused');
 const budget = { heals: 0, cap: 2 };
-const dead = workers.materializePin(repo, { loopStartCommit: head, runTag: 'pin-t132-c4' });
+const dead = workers.materializePin(repo, { loopStartCommit: head, runTag: 'pin-heal-unknown' });
 if (!dead.ok) problems.push('materializePin (dead) refused: ' + dead.reason + '/' + (dead.detail || ''));
-const live = workers.materializePin(repo, { loopStartCommit: head, runTag: 'pin-t132-c4b' });
+const live = workers.materializePin(repo, { loopStartCommit: head, runTag: 'pin-heal-live' });
 if (!live.ok) problems.push('materializePin (live) refused: ' + live.reason + '/' + (live.detail || ''));
 if (dead.ok) {
-  store.dropPin(repo, 'pin-t132-c4');
+  store.dropPin(repo, 'pin-heal-unknown');
   fs.rmSync(dead.path, { recursive: true, force: true });
-  const unknown = workers.loadPinnedModuleWithHeal({ runTag: 'pin-t132-c4', rootDir: repo }, 'legs/trust-leg.cjs',
+  const unknown = workers.loadPinnedModuleWithHeal({ runTag: 'pin-heal-unknown', rootDir: repo }, 'legs/trust-leg.cjs',
     { rootDir: repo, expectedLoopStartCommit: head, budget });
   if (unknown.ok || unknown.reason !== 'pin-unknown') {
     problems.push('dropped record not refused pin-unknown: ' + (unknown.ok ? 'ok' : unknown.reason));
   }
 }
 if (live.ok) {
-  const unloadable = workers.loadPinnedModuleWithHeal({ runTag: 'pin-t132-c4b', rootDir: repo }, 'legs/never-committed.cjs',
+  const unloadable = workers.loadPinnedModuleWithHeal({ runTag: 'pin-heal-live', rootDir: repo }, 'legs/never-committed.cjs',
     { rootDir: repo, expectedLoopStartCommit: head, budget });
   if (unloadable.ok || unloadable.reason !== 'pin-module-unloadable') {
     problems.push('missing module not refused pin-module-unloadable: ' + (unloadable.ok ? 'ok' : unloadable.reason));
   }
   if (!fs.existsSync(live.path)) problems.push('non-healable failure recycled the worktree');
   const pins = store.readPins(repo);
-  if (!pins.ok || !pins.pins['pin-t132-c4b']) problems.push('record dropped on a non-healable failure');
+  if (!pins.ok || !pins.pins['pin-heal-live']) problems.push('record dropped on a non-healable failure');
   const badBudgets = [null, {}, { heals: 0 }, { heals: -1, cap: 2 }, { heals: 0.5, cap: 2 }, { heals: 0, cap: 0 }];
   for (const bb of badBudgets) {
-    const r = workers.loadPinnedModuleWithHeal({ runTag: 'pin-t132-c4b', rootDir: repo }, 'legs/trust-leg.cjs',
+    const r = workers.loadPinnedModuleWithHeal({ runTag: 'pin-heal-live', rootDir: repo }, 'legs/trust-leg.cjs',
       { rootDir: repo, expectedLoopStartCommit: head, budget: bb });
     if (r.ok || r.reason !== 'heal-budget-invalid') {
       problems.push('budget ' + JSON.stringify(bb) + ' not refused heal-budget-invalid: ' + (r.ok ? 'ok' : r.reason));
     }
   }
-  const badCommit = workers.loadPinnedModuleWithHeal({ runTag: 'pin-t132-c4b', rootDir: repo }, 'legs/trust-leg.cjs',
+  const badCommit = workers.loadPinnedModuleWithHeal({ runTag: 'pin-heal-live', rootDir: repo }, 'legs/trust-leg.cjs',
     { rootDir: repo, expectedLoopStartCommit: 'nothash', budget: { heals: 0, cap: 2 } });
   if (badCommit.ok || badCommit.reason !== 'pin-commit-invalid') {
     problems.push('malformed expectedLoopStartCommit not refused pin-commit-invalid: ' + (badCommit.ok ? 'ok' : badCommit.reason));

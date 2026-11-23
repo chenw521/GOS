@@ -14,8 +14,8 @@ configured; the workspace owns its whole history.
 - `test/run-sections.sh` — minimal deterministic section runner (discovers
   `T*.test.sh`, counts ✓/✗, tees to `.gos/cache/section-runs/`, writes
   `.gos/cache/run-manifest.json`)
-- `test/sections/T1-fixture-trivial.test.sh` — always-green section
-- `test/sections/T2-fixture-sentinel.test.sh` — two-pass arming sentinel
+- a minimal always-green section and a two-pass arming sentinel section
+  under the fixture's `test/sections/`
 - `.gitignore` — `.gos/cache/` (machine-local run state)
 
 ## Sentinel behavior
@@ -29,5 +29,5 @@ configured; the workspace owns its whole history.
 
 ## Post-ship cycle
 
-- Run one real kill/restart dogfood cycle after this task ships; a
-  skip-only record leaves the regression surface uncovered.
+- Run one real kill/restart dogfood cycle once the restart-safety work
+  lands; a skip-only record leaves the regression surface uncovered.
