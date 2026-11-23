@@ -2,9 +2,10 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "THINK",
+  "current_stage": "PLAN",
   "completed_stages": [
-    "INTENT"
+    "INTENT",
+    "THINK"
   ],
   "intent": {
     "summary": "Restart-safe auto loop: persist a run record on SIGTERM (signal route bypasses the exception record) and keep the VERIFY pin worktree live across kill/restart (dogfood 9a07a154-pin incident)",
@@ -14,7 +15,9 @@
       "ts": "2026-11-20T09:08:35.940Z"
     }
   },
-  "approvals": {},
+  "approvals": {
+    "THINK": "2026-11-23T01:33:37.328Z"
+  },
   "spec_path": ".gos/task/a06ea57f/spec.md",
   "plan_path": ".gos/task/a06ea57f/plan.md",
   "project": false,
@@ -24,11 +27,136 @@
       "text": "Restart-safe auto loop: persist a run record on SIGTERM (signal route bypasses the exception record) and keep the VER...",
       "phase": null,
       "level": 3
+    },
+    {
+      "id": "R-31",
+      "text": "A SIGTERM'd detached auto run leaves a killed run record in the store (endState killed, accumulated stage outcomes) and releases the run lock before exiting",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-32",
+      "text": "Pin legs survive a mid-suite pin death: the dead worktree re-materializes once per load at the recorded commit with treeSha re-verified; liveness telemetry brackets the suite window",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-33",
+      "text": "A SIGTERM'd runner terminates its spawned suite children (process-group kill); stray pins and sections-tree registrations recycle at the next run start under the run lock",
+      "phase": null,
+      "status": "active"
+    },
+    {
+      "id": "R-34",
+      "text": "The section suite runs a simulated dogfood cycle: real --fg runner on a fixture store, scripted mid-VERIFY SIGTERM, restart, green-record assert",
+      "phase": null,
+      "status": "active"
     }
   ],
-  "decisions": [],
-  "observable_truths": [],
+  "decisions": [
+    {
+      "id": "D-111",
+      "title": "Finding A cure: SIGTERM handler persists a killed run record and releases the run lock; no reconciliation backfill",
+      "rationale": "latestRunRecordReadsGreen reads the latest record only; exception route loop.cjs:705-713 proves in-process persistence; acceptance is SIGTERM-only so reconciliation buys nothing today",
+      "birth_phase": "init",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null,
+      "born_at": "2026-11-20T09:50:13.209Z",
+      "dig": {
+        "command": "bwrap mask experiments + store runRecords dump + loop.cjs read",
+        "output_excerpt": "killed run 15f78531 absent from runRecords; restarted 9a07a154 died on its OWN pin in the sections window",
+        "anchor": "bin/lib/ops/auto/loop.cjs:700"
+      },
+      "dug_at": "2026-11-20T09:50:13.209Z",
+      "dug_sha": "07af5c3694564c5d25d5494a0317c44f20968e2c6eb7df39504653296e49c22a"
+    },
+    {
+      "id": "D-112",
+      "title": "Finding B cure: bounded pin self-heal at load time + liveness telemetry + run-start stray-pin recycle",
+      "rationale": "killer unidentified (3 bwrap-refuted hypotheses), fix must be killer-agnostic; treeSha re-verified per load keeps the trust chain; store record is sandbox-unreachable; same-load re-death fails closed",
+      "birth_phase": "init",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null,
+      "born_at": "2026-11-20T09:52:20.835Z",
+      "dig": {
+        "command": "bwrap masked prune/collision-add experiments + workers.cjs loadPinnedModule read",
+        "output_excerpt": "masked prune keeps pin metadata; collision-add suffixes; pin died once mid-suite and stayed dead (tried latch)",
+        "anchor": "bin/lib/ops/auto/workers.cjs:646"
+      },
+      "dug_at": "2026-11-20T09:52:20.835Z",
+      "dug_sha": "905cb69bff4c879ae49933a657e0a7cb947a5e519c5c0d35878f71ce851c90ed"
+    },
+    {
+      "id": "D-113",
+      "title": "GA3: SIGTERM handler kills the process group; stranded sections-tree metadata left to the run-start stray sweep",
+      "rationale": "AMENDED R2: spawnreg pid is the RUNNER's own pid (loop.cjs:1336) — kill by it is suicide; spawnRun returns the child pid, loop backfills child_pid; handler kills only live child_pid entries",
+      "birth_phase": "init",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null,
+      "born_at": "2026-11-20T10:35:48.067Z",
+      "dig": {
+        "command": "store stamps + spawnreg scratch listing",
+        "output_excerpt": "killed run 15f78531 suite stamps continue to 04:35+, scratch survives today",
+        "anchor": "bin/lib/core/spawnreg.cjs:159"
+      },
+      "dug_at": "2026-11-20T10:35:48.067Z",
+      "dug_sha": "f7db0f6f19a68e4260f55ece2d386aa4ec3a3e99dd744ce34a39ec68741fdf24"
+    },
+    {
+      "id": "D-114",
+      "title": "GA4: simulated dogfood section in VERIFY (real --fg runner, scripted SIGTERM+restart) + post-ship real cycle",
+      "rationale": "live cycle cannot run while this task is current (p21 double-drive); evidence gate reads the real store, simulation cannot feed it; lesson 881b50bc demands real execution over argv asserts",
+      "birth_phase": "init",
+      "status": "open",
+      "anchor": null,
+      "covered": false,
+      "covered_by": null,
+      "born_at": "2026-11-20T10:38:45.879Z",
+      "dig": {
+        "command": "p21 archived runbook + re-enable gate code path",
+        "output_excerpt": "the dogfood cycle runs after this task ships; latestRunRecordReadsGreen reads the real store",
+        "anchor": ".gos/archive/2026-11-20-publicize-phase-p21-make-gos-auto-survivable-on-a-/task/p21/dogfood-runbook.md:9"
+      },
+      "dug_at": "2026-11-20T10:38:45.879Z",
+      "dug_sha": "575e476be6b97bb1b3c165678961d32337bfd497c0e3d1415cc08d436f19745e"
+    }
+  ],
+  "observable_truths": [
+    {
+      "id": "T1",
+      "description": "A mid-VERIFY SIGTERM of a detached auto run leaves a killed run record in the machine-local store runRecords (status killed, stage outcomes present)",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T2",
+      "description": "The simulated dogfood section (real --fg runner, fixture store, scripted SIGTERM mid-VERIFY, restart) ends green: the restarted run completes VERIFY with pin legs passing and writes a green run record",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T3",
+      "description": "After SIGTERM of a detached runner, no descendant suite/bwrap processes survive the kill",
+      "verified": false,
+      "evidence": null
+    },
+    {
+      "id": "T4",
+      "description": "A run log carries pin-liveness telemetry lines bracketing the sections suite window",
+      "verified": false,
+      "evidence": null
+    }
+  ],
   "gaps": [],
   "activation_source": "headless",
-  "task_head": "a06ea57f88d924750fede6e463c1392832f8576f"
+  "task_head": "a06ea57f88d924750fede6e463c1392832f8576f",
+  "spec_gate_version": 3,
+  "spec_sha256": "18b162a5ec391c7a5d11ea9beee5d5ac02c31b028db5f3c0f81e99fd232a1083",
+  "dig_closure_frozen_at": "2026-11-23T01:34:32.785Z"
 }
