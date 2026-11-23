@@ -162,6 +162,12 @@
       "type": "major",
       "description": "Fluid back to PLAN: discovered during PLAN",
       "status": "open"
+    },
+    {
+      "id": "G-1795437567506",
+      "type": "major",
+      "description": "Fluid back to BUILD: discovered during BUILD",
+      "status": "open"
     }
   ],
   "activation_source": "headless",
@@ -376,6 +382,13 @@
       "done": "T1,T2,T3,T8a,T4,T8b,T6a,T6b,T5,T7,T9a,T9b,T10",
       "remaining": "",
       "at": "2026-11-23T12:29:53.129Z"
+    },
+    {
+      "stage": "BUILD",
+      "unit": "all-waves (auto at commit)",
+      "done": "T1,T2,T3,T8a,T4,T8b,T6a,T6b,T5,T7,T9a,T9b,T10",
+      "remaining": "",
+      "at": "2026-11-23T12:54:13.871Z"
     }
   ]
 }
