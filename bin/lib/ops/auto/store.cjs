@@ -1116,6 +1116,28 @@ function truncateRunRecordDrops(rootDir) {
   return { ok: true };
 }
 
+// Atomically replace the live queue's content with exactly `lines` (tmp
+// file + rename over the target, same directory). The drain's rebuild step:
+// until the rename lands the source file still holds every original line,
+// so a crash anywhere before it preserves the whole queue, and a failed
+// rewrite leaves it untouched for the next run's retry.
+function rewriteRunRecordDrops(rootDir, lines) {
+  const p = runRecordsDropPath(rootDir);
+  if (p == null) return { ok: false, status: 'error', reason: 'unwritable', detail: 'no XDG data home resolvable' };
+  if (!Array.isArray(lines)) return { ok: false, status: 'error', reason: 'invalid-lines', detail: 'array of raw line strings required' };
+  const body = lines.filter((l) => typeof l === 'string' && l !== '');
+  const tmp = p + '.tmp';
+  try {
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(tmp, body.length ? body.join('\n') + '\n' : '', 'utf8');
+    fs.renameSync(tmp, p);
+  } catch (e) {
+    try { fs.unlinkSync(tmp); } catch { /* best effort */ }
+    return { ok: false, status: 'error', reason: 'rewrite-failed', path: p, detail: e.message };
+  }
+  return { ok: true, kept: body.length, path: p };
+}
+
 // ---- counters + breaker records ----
 
 // Cumulative spawn counter; the returned mirrors are what the caller
@@ -1926,6 +1948,7 @@ module.exports = {
   latestRunRecord,
   runRecordRejection,
   appendRunRecordDrop,
+  rewriteRunRecordDrops,
   readRunRecordDrops,
   moveCorruptDropLines,
   truncateRunRecordDrops,

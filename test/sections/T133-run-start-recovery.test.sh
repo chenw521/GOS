@@ -8,8 +8,8 @@
 # A live-looking takeover holder pauses the run before any destructive step.
 # Case map:
 #   C1  drain: valid sidecar lines land in runRecords flagged droppedRecord,
-#       crafted-invalid and malformed lines quarantine, the live queue file
-#       disappears, and the persisted store still validates
+#       crafted-invalid and malformed lines quarantine, the live queue
+#       clears to absent-or-empty, and the persisted store still validates
 #   C1b drain bound: 60 queued lines process at most 50 per run — the
 #       overflow stays queued for the next run (truncate re-queues it)
 #   C2  testBase gate: a stray entry with a recorded test_base sweeps its
@@ -23,6 +23,11 @@
 #       sections-tree dir and is removed
 #   C5  seed sweep: fake auto-seed-* dirs under .gos/cache are removed,
 #       unrelated cache entries stay
+#   C7  rewrite-failure injection: the overflow rebuild goes through the
+#       store's tmp+rename rewrite — a failed rewrite sets the drain error
+#       and leaves the sidecar holding every original line for the next run
+#   C8  recovery-error surfacing: a failed drain reaches stderr as
+#       `⚠ auto recovery: <error>` before the recoveryDrained summary line
 # HOME and XDG_DATA_HOME are pinned per case under TESTBASE. Standalone-safe.
 
 T133_STANDALONE=0
@@ -94,11 +99,46 @@ loop.createLoop(opts).loop.run().then((r) => {
 EOF
 }
 
+# Rewrite-failure harness: the same no-task driver, but the store's overflow
+# rewrite primitive is patched to fail after require (the driver requires
+# the repo modules directly, so the patch lands on the shared module
+# instance the loop calls through). The patch records every invocation and
+# the original is restored once the run settles.
+t133_write_rewrite_fail_harness() {
+  cat > run-t133-rf.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const loop = require(path.join(GR, 'bin/lib/ops/auto/loop.cjs'));
+const origRewrite = store.rewriteRunRecordDrops;
+const calls = [];
+store.rewriteRunRecordDrops = function patchedRewrite(rootDir, lines) {
+  calls.push({ lines: Array.isArray(lines) ? lines.slice() : null });
+  return { ok: false, status: 'error', reason: 'rewrite-failed' };
+};
+const world = process.cwd();
+store.create({ mode: 'on', rootDir: world, limits: { N: 3, K: 9, B: 9 } });
+const env = { ...process.env, GOS_AUTO_TEST_FIXTURE: '1' };
+const noSpawn = () => { throw new Error('a no-task run must never spawn'); };
+const opts = {
+  rootDir: world, host: 'gos-fixture-host', env, maxIterations: 1,
+  spawnRunner: noSpawn, probeRunner: noSpawn,
+};
+loop.createLoop(opts).loop.run().then((r) => {
+  store.rewriteRunRecordDrops = origRewrite;
+  fs.writeFileSync('rewrite-call.json', JSON.stringify(calls));
+  console.log('RESULT ' + JSON.stringify({ ok: r.ok, status: r.status, reason: r.reason || null, paused: r.paused === true }));
+}).catch((e) => { console.error(e); process.exit(1); });
+EOF
+}
+
 # ---------------------------------------------------------------- C1 --
 t133_case c1
 # Drain cycle: two valid queued records adopt into runRecords flagged
 # droppedRecord, the crafted-invalid and malformed lines quarantine verbatim,
-# the live queue file disappears, and the persisted store still loads clean.
+# the live queue clears to absent-or-empty, and the persisted store still
+# loads clean.
 t133_write_harness
 cat > seed-c1.cjs <<'EOF'
 const fs = require('fs');
@@ -132,7 +172,9 @@ const problems = [];
 const root = store.storeRoot(world);
 const dropPath = path.join(root, 'runrecords-drop.ndjson');
 const corruptPath = path.join(root, 'runrecords-drop.corrupt.ndjson');
-if (fs.existsSync(dropPath)) problems.push('live queue file survived the drain');
+if (fs.existsSync(dropPath) && fs.readFileSync(dropPath, 'utf8') !== '') {
+  problems.push('live queue survived the drain holding content');
+}
 if (!fs.existsSync(corruptPath)) problems.push('quarantine file missing');
 else {
   const lines = fs.readFileSync(corruptPath, 'utf8').split('\n').filter((l) => l !== '');
@@ -411,6 +453,106 @@ if [ ! -d .gos/cache/auto-seed-fake1 ] && [ ! -d .gos/cache/auto-seed-fake2 ] &&
   t133_ok "C5: stray auto-seed-* dirs under .gos/cache are swept, unrelated entries stay"
 else
   t133_bad "C5: seed sweep left auto-seed dirs or removed unrelated cache entries"
+fi
+
+# ---------------------------------------------------------------- C7 --
+t133_case c7
+# Rewrite-failure injection: 52 valid queued lines drain (50 adopt, 2 stay
+# as overflow), the overflow rebuild runs through the store's tmp+rename
+# rewrite — patched to fail — and the failure leaves the sidecar holding
+# every original line for the next run's retry, with the adopted records
+# already in the store (append lands before the rewrite).
+t133_write_rewrite_fail_harness
+cat > seed-c7.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const world = process.cwd();
+const now = new Date().toISOString();
+const root = store.storeRoot(world);
+fs.mkdirSync(root, { recursive: true });
+const lines = [];
+for (let i = 1; i <= 52; i += 1) {
+  lines.push(JSON.stringify({
+    runId: '00000000-0000-0000-0000-' + String(i).padStart(12, '0'),
+    runTag: 'tag' + i, taskId: null, startedAtIso: now, endedAtIso: now,
+    endState: { ok: false, status: 'paused', reason: 'fixture' }, stages: [],
+  }));
+}
+fs.writeFileSync(path.join(root, 'runrecords-drop.ndjson'), lines.join('\n') + '\n');
+EOF
+node seed-c7.cjs
+T133_OUT="$(node run-t133-rf.cjs 2>&1 | tail -n 1)"
+case "$T133_OUT" in *'"reason":"no-task"'*) ;; *) echo "harness did not refuse no-task: $T133_OUT" >&2 ;; esac
+cat > check-c7.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const world = process.cwd();
+const problems = [];
+const root = store.storeRoot(world);
+const dropPath = path.join(root, 'runrecords-drop.ndjson');
+const lines = fs.readFileSync(dropPath, 'utf8').split('\n').filter((l) => l !== '');
+if (lines.length !== 52) problems.push('sidecar holds ' + lines.length + ' lines (want all 52 originals)');
+if (lines.length === 52) {
+  if (!lines[0].includes('"runTag":"tag1"')) problems.push('sidecar line 1 is not the original first record');
+  if (!lines[51].includes('"runTag":"tag52"')) problems.push('sidecar line 52 is not the original last record');
+}
+const calls = JSON.parse(fs.readFileSync('rewrite-call.json', 'utf8'));
+if (calls.length !== 1) problems.push('rewrite primitive calls: ' + calls.length + ' (want 1)');
+else if (!Array.isArray(calls[0].lines) || calls[0].lines.length !== 2) {
+  problems.push('rewrite received ' + (calls[0].lines || []).length + ' lines (want the 2-line overflow)');
+}
+const recs = store.readRunRecords(world);
+if (!recs.ok) problems.push('readRunRecords failed: ' + recs.reason);
+else {
+  const dropped = recs.runRecords.filter((r) => r.droppedRecord === true).length;
+  // cap parity: 50 drained then the no-task record trims the oldest drained
+  if (recs.runRecords.length !== 50) problems.push('runRecords length ' + recs.runRecords.length + ' (want the 50 cap)');
+  if (dropped !== 49) problems.push('droppedRecord count ' + dropped + ' (want 49 after the cap trim)');
+  const tail = recs.runRecords[recs.runRecords.length - 1];
+  if (!tail || tail.endState.reason !== 'no-task') problems.push('store tail is not the no-task record');
+}
+console.log(problems.length ? 'BAD ' + problems.join('; ') : 'OK');
+EOF
+C7_OUT="$(node check-c7.cjs 2>&1 | tail -n 1)"
+t133_eq "C7: a failed overflow rewrite sets the drain error and leaves the sidecar holding all 52 original lines" "OK" "$C7_OUT"
+
+# ---------------------------------------------------------------- C8 --
+t133_case c8
+# Recovery-error surfacing: with the rewrite failing, the recovery error
+# reaches stderr as `⚠ auto recovery: <error>` BEFORE the recoveryDrained
+# summary line — a failed step never sits silently in a result object
+# nobody reads. GOS_LANG pinned so the summary-line order grep is stable.
+t133_write_rewrite_fail_harness
+cat > seed-c8.cjs <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const GR = process.env.GOS_ROOT;
+const store = require(path.join(GR, 'bin/lib/ops/auto/store.cjs'));
+const world = process.cwd();
+const now = new Date().toISOString();
+const root = store.storeRoot(world);
+fs.mkdirSync(root, { recursive: true });
+fs.writeFileSync(path.join(root, 'runrecords-drop.ndjson'), JSON.stringify({
+  runId: '00000000-0000-0000-0000-000000000001', runTag: 'tag1', taskId: null,
+  startedAtIso: now, endedAtIso: now,
+  endState: { ok: false, status: 'paused', reason: 'fixture' }, stages: [],
+}) + '\n');
+EOF
+node seed-c8.cjs
+T133_ERRLOG="$T133_CASE/repo/recovery-stderr.log"
+T133_OUT="$(GOS_LANG=en node run-t133-rf.cjs 2>"$T133_ERRLOG" | tail -n 1)"
+case "$T133_OUT" in *'"reason":"no-task"'*) ;; *) echo "harness did not refuse no-task: $T133_OUT" >&2 ;; esac
+C8_WARN="$(grep -n '⚠ auto recovery:' "$T133_ERRLOG" | head -n 1 | cut -d: -f1)"
+C8_REASON="$(grep -c 'rewrite-failed' "$T133_ERRLOG")"
+C8_SUM="$(grep -n 'dropped run record' "$T133_ERRLOG" | head -n 1 | cut -d: -f1)"
+if [ -n "$C8_WARN" ] && [ "$C8_REASON" -ge 1 ] && [ -n "$C8_SUM" ] && [ "$C8_WARN" -lt "$C8_SUM" ]; then
+  t133_ok "C8: the recovery error surfaces on stderr before the recoveryDrained summary"
+else
+  t133_bad "C8: recovery error not surfaced before the summary (warn line: ${C8_WARN:-none}, reason hits: $C8_REASON, summary line: ${C8_SUM:-none})"
 fi
 
 # ------------------------------------------------------- locale parity --

@@ -36,7 +36,7 @@
     "T130_spawn_children": 23,
     "T131_store_surface": 4,
     "T132_pin_heal": 6,
-    "T133_run_start_recovery": 8,
+    "T133_run_start_recovery": 10,
     "T134_signal_handler": 16,
     "T135_auto_observability": 13,
     "T13_semantic_contracts": 30,

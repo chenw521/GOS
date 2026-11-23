@@ -648,23 +648,15 @@ function drainDroppedRunRecords(rootDir) {
       else out.error = appended.reason || 'drain-append-failed';
     } catch (e) { out.error = (e && e.message) || 'drain-append-failed'; }
   }
-  // Rebuild the queue only when the adoption landed — the sidecar family
-  // only moves lines (quarantine the rejects, truncate, re-append the
-  // unprocessed overflow); a failed append keeps the whole queue on disk
-  // for the next run's retry, and quarantined lines already have their
-  // copies so re-judging them next run is idempotent.
+  // Rebuild the queue atomically: the overflow lines replace the file's
+  // whole content via tmp+rename - until the rename lands the source still
+  // holds every original line, so a crash anywhere in the drain preserves
+  // the queue, and a failed rewrite leaves it untouched for the next run.
   if (out.error == null) {
     try {
-      const trunc = store.truncateRunRecordDrops(rootDir);
-      if (!trunc.ok) out.error = trunc.reason || 'truncate-failed';
-      else {
-        for (const line of overflow) {
-          let rec = null;
-          try { rec = JSON.parse(line); } catch { rec = line; }
-          store.appendRunRecordDrop(rootDir, rec);
-        }
-      }
-    } catch (e) { out.error = (e && e.message) || 'truncate-failed'; }
+      const rewrote = store.rewriteRunRecordDrops(rootDir, overflow);
+      if (!rewrote.ok) out.error = rewrote.reason || 'rewrite-failed';
+    } catch (e) { out.error = (e && e.message) || 'rewrite-failed'; }
   }
   return out;
 }
@@ -767,6 +759,9 @@ function runStartRecovery(ctx) {
   } catch { /* no cache dir — nothing to sweep */ }
 
   result.ok = result.errors.length === 0;
+  // The caller surfaces one operator line; flatten the per-step failures
+  // into the single field it reads (every failure stays named in errors[]).
+  if (result.errors.length) result.error = result.errors.map((x) => `${x.step}: ${x.error}`).join('; ');
   return result;
 }
 
@@ -960,6 +955,12 @@ async function runLoop(opts) {
     });
     try { store.releaseRunLock(rootDir); } catch { /* best effort */ }
     return pausedReport;
+  }
+  if (recovery.error) {
+    // A recovery failure means killed-run evidence or stray resources were
+    // NOT cleaned — that must reach the operator, never sit in a result
+    // object nobody reads.
+    console.error(`⚠ auto recovery: ${recovery.error} — the run continues; the next run-start retries the failed step`);
   }
   if (recovery.drained || recovery.droppedCorrupt || recovery.recycledPins.length
     || recovery.sweptEntries.length || recovery.removedSeeds) {
