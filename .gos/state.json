@@ -155,7 +155,14 @@
       "evidence": null
     }
   ],
-  "gaps": [],
+  "gaps": [
+    {
+      "id": "G-1795436978420",
+      "type": "major",
+      "description": "Fluid back to PLAN: discovered during PLAN",
+      "status": "open"
+    }
+  ],
   "activation_source": "headless",
   "task_head": "a06ea57f88d924750fede6e463c1392832f8576f",
   "spec_gate_version": 3,
@@ -189,7 +196,8 @@
           "bin/lib/ops/auto/loop.cjs",
           "bin/lib/ops/auto/redteam.cjs",
           "test/sections/T131-store-surface.test.sh",
-          "test/sections/baseline.json"
+          "test/sections/baseline.json",
+          "test/sections/T46-module-structure.test.sh"
         ],
         "wave": 1
       },
@@ -239,6 +247,7 @@
         ],
         "files": [
           "test/sections/fixtures/dogfood/build.sh",
+          "test/sections/fixtures/dogfood/seed-store.sh",
           "test/sections/fixtures/dogfood/seed-notes.md"
         ],
         "wave": 3
@@ -321,7 +330,8 @@
         "files": [
           "test/sections/T136-auto-dogfood-restart.test.sh",
           "test/run-sections.sh",
-          "test/checks/manifest-coverage.sh"
+          "test/checks/manifest-coverage.sh",
+          "bin/lib/ops/section.cjs"
         ],
         "wave": 8
       },

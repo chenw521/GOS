@@ -72,7 +72,7 @@
 
 #### T2: store/spawnreg surface — record opts, tookOver, sidecar, entry liveness
 - **Covers**: D-111, D-113
-- **Files**: bin/lib/ops/auto/store.cjs, bin/lib/core/spawnreg.cjs, bin/lib/ops/auto/workers.cjs, bin/lib/ops/auto/loop.cjs, bin/lib/ops/auto/redteam.cjs, test/sections/T131-store-surface.test.sh, test/sections/baseline.json
+- **Files**: bin/lib/ops/auto/store.cjs, bin/lib/core/spawnreg.cjs, bin/lib/ops/auto/workers.cjs, bin/lib/ops/auto/loop.cjs, bin/lib/ops/auto/redteam.cjs, test/sections/T131-store-surface.test.sh, test/sections/baseline.json, test/sections/T46-module-structure.test.sh
 - **Read first**: bin/lib/ops/auto/store.cjs:643-699 (mutate takeover), 990-1013 (writeRunRecord), 1126-1196 (acquireRunLock), 1270-1341 (registerSpawn), bin/lib/core/spawnreg.cjs:98-172 (paths, saveEntryDoc, readEntry)
 - **Approach**: additive surface changes. (1) `writeRunRecord(rec, rootDir,
   opts)` passes opts into `mutate` (bounded `waitMs` for the handler).
@@ -175,7 +175,7 @@
 
 #### T8b: fixture smoke — real CLI drives a green cycle
 - **Covers**: D-114, R-34
-- **Files**: test/sections/fixtures/dogfood/build.sh, test/sections/fixtures/dogfood/seed-notes.md
+- **Files**: test/sections/fixtures/dogfood/build.sh, test/sections/fixtures/dogfood/seed-store.sh, test/sections/fixtures/dogfood/seed-notes.md
 - **Read first**: T8a output, bin/lib/ops/auto/cli.cjs:200-206 (`auto on --timeout-wall/--timeout-idle`, breaker N=1 as the iteration ceiling — `opts.maxIterations` has no CLI flag, loop.cjs:552/1152), bin/lib/ops/auto/store.cjs (mode/profile/timeouts shape)
 - **Approach**: extend build.sh to seed the fixture STORE (XDG_DATA_HOME/
   HOME overridden into the fixture dir; `auto on` with breaker N=1, small
@@ -291,7 +291,7 @@
 
 #### T9a: dogfood section — happy path + SKIP result type
 - **Covers**: D-111, D-112, D-113, D-114, R-01, R-31, R-32, R-33, R-34
-- **Files**: test/sections/T136-auto-dogfood-restart.test.sh, test/run-sections.sh, test/checks/manifest-coverage.sh
+- **Files**: test/sections/T136-auto-dogfood-restart.test.sh, test/run-sections.sh, test/checks/manifest-coverage.sh, bin/lib/ops/section.cjs
 - **Read first**: T8a/T8b fixtures, T5/T6a/T6b/T7 surfaces, test/run-sections.sh:330-345 (results counting), test/checks/manifest-coverage.sh (results contract)
 - **Approach**: the acceptance section plus the runner support it needs.
   (1) SKIP result type: run-sections.sh recognizes a sentinel line
