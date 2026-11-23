@@ -29,5 +29,18 @@ configured; the workspace owns its whole history.
 
 ## Post-ship cycle
 
-- Run one real kill/restart dogfood cycle once the restart-safety work
-  lands; a skip-only record leaves the regression surface uncovered.
+Once the restart-safety changes land on the dogfood host, run one real
+post-ship cycle on that host — operational, not harnessable by the section
+alone:
+
+1. Start one real detached auto cycle through the CLI, as the dogfood
+   host runs it.
+2. Kill the enclosing runner mid-VERIFY, inside the sentinel's block
+   window.
+3. Restart, and confirm the restarted run reaches a green record end to
+   end.
+4. A host where the section only ever SKIPs does not satisfy this cycle —
+   the kill/restart regression surface stays uncovered (pairs with the
+   T136 SKIP accounting).
+5. Evidence lives in the run log (`.gos/cache/section-runs/<ts>.log`) and
+   the store record written by the restarted run.
