@@ -770,6 +770,93 @@ function runStartRecovery(ctx) {
   return result;
 }
 
+// ---------- kill-signal path (restart-safe shutdown) ----------
+
+// Signals the runner answers with a killed record: SIGTERM (supervisors and
+// manual kills), SIGHUP (terminal hangup), SIGINT (^C). Exit code is
+// 128 + signum (143 / 129 / 130).
+const KILL_SIGNALS = Object.freeze([
+  Object.freeze([15, 'SIGTERM']),
+  Object.freeze([1, 'SIGHUP']),
+  Object.freeze([2, 'SIGINT']),
+]);
+
+// One-shot latch for the kill path: the first signal starts the shutdown
+// sequence; later signals are no-ops (exiting is already in progress), so
+// a signal burst can never double-write the killed record. Module-level so
+// the latch outlives handler closures; installKillHandlers resets it so
+// each runLoop invocation re-arms (tests drive runLoop repeatedly in one
+// process) while the one-shot still holds within a single run.
+let killLatch = false;
+
+// One bounded stderr telemetry line for the kill path: summary counts plus
+// the per-child names when few, truncated to a fixed width.
+function killChildrenLine(killRes) {
+  const killed = killRes && Array.isArray(killRes.killed) ? killRes.killed : [];
+  const skipped = killRes && Array.isArray(killRes.skipped) ? killRes.skipped : [];
+  let line = `auto kill: killed=${killed.length} skipped=${skipped.length}`;
+  const names = killed.map((k) => `${k.spawnId}(pid=${k.pid})`)
+    .concat(skipped.map((k) => `${k.spawnId}(pid=${k.pid}):${k.reason}`));
+  if (names.length && names.length <= 5) line += ` [${names.join(', ')}]`;
+  return line.slice(0, 400);
+}
+
+// Arm the kill path: one shared synchronous handler for the three shutdown
+// signals. Called once per runLoop invocation, only after the run lock is
+// held, the recovery block has run, and the runner state exists — signals
+// landing earlier keep default behavior. Handler order: tracked children
+// die first (per-child group kill, never this process's own group), then
+// the killed record lands (store; store-busy or failure queues the drop
+// sidecar), then process.exit(128 + signum) lets the run lock's exit hook
+// release the lock — the handler never unlinks the lock itself. Returns
+// the listener pairs disarmKillHandlers removes.
+function installKillHandlers(ctx) {
+  killLatch = false;
+  const onKillSignal = (signum, name) => {
+    if (killLatch) return;
+    killLatch = true;
+    try {
+      const killRes = spawnrun.killTrackedChildren();
+      try { fs.writeSync(2, killChildrenLine(killRes) + '\n'); } catch { /* stderr gone */ }
+      const rs = ctx.runnerState;
+      const rec = {
+        runId: rs.runId,
+        runTag: rs.runTag,
+        taskId: rs.taskId,
+        startedAtIso: rs.startedAtIso,
+        endedAtIso: new Date(ctx.now()).toISOString(),
+        endState: { ok: false, status: 'killed', reason: name },
+        stages: ctx.recordStages(`${rs.runId}-killed-inflight`),
+      };
+      let wrote = null;
+      try { wrote = store.writeRunRecord(rec, ctx.rootDir, { waitMs: 2000 }); }
+      catch (e) { wrote = { ok: false, reason: 'write-threw', detail: String((e && e.message) || e) }; }
+      if (!wrote || wrote.ok !== true) {
+        try { store.appendRunRecordDrop(ctx.rootDir, rec); } catch { /* best effort */ }
+      }
+    } catch { /* best effort: the exit below is the shutdown contract */ }
+    try { process.exit(128 + signum); } catch { process.exit(1); }
+  };
+  const registered = [];
+  for (const [signum, name] of KILL_SIGNALS) {
+    const fn = () => onKillSignal(signum, name);
+    process.on(name, fn);
+    registered.push([name, fn]);
+  }
+  return registered;
+}
+
+// Remove the kill listeners. Every normal exit route disarms before its
+// record write (persistRunRecord, the exception catch) so a teardown-window
+// signal can never append a killed record after the real end record; the
+// finally disarms again as belt-and-suspenders before teardown. Idempotent.
+function disarmKillHandlers(registered) {
+  if (!Array.isArray(registered)) return;
+  for (const [name, fn] of registered) {
+    try { process.removeListener(name, fn); } catch { /* best effort */ }
+  }
+}
+
 async function runLoop(opts) {
   const env = opts.env || process.env;
   const now = typeof opts.now === 'function' ? opts.now : Date.now;
@@ -949,8 +1036,13 @@ async function runLoop(opts) {
     return stages;
   };
 
+  // Kill path arms here: the run lock is held, recovery has run, and the
+  // runner state is live — anything before this point keeps default signal
+  // behavior. Normal exits disarm through persistRunRecord and the finally.
+  const killHandlers = installKillHandlers({ rootDir, runnerState, recordStages, now });
+
   try {
-    return await drive({ opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs, loaded, seedRoots: seedState.seedRoots, runnerState, recordStages });
+    return await drive({ opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs, loaded, seedRoots: seedState.seedRoots, runnerState, recordStages, killHandlers });
   } catch (e) {
     // An in-process throw escapes drive() before its own exit routes run;
     // the run must still leave a record (the re-enable gate reads the
@@ -958,6 +1050,7 @@ async function runLoop(opts) {
     // hoisted runnerState — one identity per run, the same fields every
     // other exit route records under.
     try {
+      disarmKillHandlers(killHandlers);
       store.writeRunRecord({
         runId: runnerState.runId,
         runTag: runnerState.runTag,
@@ -970,6 +1063,7 @@ async function runLoop(opts) {
     } catch { /* best effort: a record failure never masks the thrown error */ }
     throw e;
   } finally {
+    disarmKillHandlers(killHandlers);
     if (seedState.cleanup) { try { fs.rmSync(seedState.cleanup, { recursive: true, force: true }); } catch { /* best effort */ } }
     try {
       // Lazy pin sweep at run end: every worktree this run materialized (and
@@ -1020,7 +1114,7 @@ function ensureWorkBranch(gitRunner, rootDir, taskId) {
 // ---------- the iteration engine ----------
 
 async function drive(ctx) {
-  const { opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs, loaded, seedRoots, runnerState, recordStages } = ctx;
+  const { opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs, loaded, seedRoots, runnerState, recordStages, killHandlers } = ctx;
 
   // The run's stage-outcome ledger lives on the hoisted runnerState; the
   // local alias keeps every existing push/read site unchanged.
@@ -1043,6 +1137,10 @@ async function drive(ctx) {
   const runTag = runnerState.runTag;
   let seq = 0;
   const persistRunRecord = (base) => {
+    // Disarm before any real end record lands: a signal arriving after the
+    // write must keep default behavior (a killed record here would shadow
+    // the truth with a second, contradicting record).
+    disarmKillHandlers(killHandlers);
     try {
       store.writeRunRecord({
         runId,
