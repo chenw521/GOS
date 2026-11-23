@@ -695,18 +695,74 @@ async function runLoop(opts) {
     }
   })();
 
+  // Runner state hoisted to the runLoop scope: one identity per run plus
+  // the live outcome ledger. stageOutcomes IS the iteration array the
+  // drive closure pushes stage outcomes onto; inFlight mirrors the open
+  // iteration (completed steps only, maintained synchronously at step
+  // boundaries) so a record write at any point mid-run sees the freshest
+  // view of what was running.
+  const runnerRunId = crypto.randomUUID();
+  const runnerState = {
+    runId: runnerRunId,
+    runTag: runnerRunId.slice(0, 8),
+    taskId: null,
+    startedAtIso: new Date(now()).toISOString(),
+    stageOutcomes: [],
+    inFlight: null,
+  };
+
+  // Stage-entry normalizer shared by every stage list a record write
+  // builds — completed outcomes and the in-flight snapshot pass through
+  // the same shape contract so a record always survives the store's
+  // runRecordRejection (non-empty stage/spawnId strings, strict booleans,
+  // statuses from the closed passed|failed|refused set).
+  const normalizeStageEntry = (it) => {
+    const e = {
+      stage: String(it.stage || ''),
+      signal: typeof it.signal === 'string' && it.signal ? it.signal : null,
+      advanced: it.advanced === true,
+      counted: it.counted === true,
+      spawnId: String(it.spawnId || ''),
+    };
+    if (typeof it.detail === 'string' && it.detail) e.detail = String(it.detail).slice(0, 400);
+    if (Array.isArray(it.steps) && it.steps.length) {
+      e.steps = it.steps.map((sp) => ({
+        id: String((sp && sp.id) || ''),
+        kind: sp && sp.kind === 'S' ? 'S' : 'P',
+        status: String((sp && sp.status) || ''),
+      }));
+    }
+    return e;
+  };
+
+  // Stage snapshot for a record write: completed outcomes plus, when an
+  // iteration is open, one extra in-flight entry — unadvanced, uncounted,
+  // no signal — with a caller-supplied spawnId fallback naming the spawn
+  // slot the interrupted iteration had not reached yet.
+  const recordStages = (inflightSpawnIdFallback) => {
+    const stages = runnerState.stageOutcomes.map(normalizeStageEntry);
+    if (runnerState.inFlight) {
+      const entry = normalizeStageEntry(runnerState.inFlight);
+      if (!entry.spawnId) entry.spawnId = String(inflightSpawnIdFallback || '');
+      stages.push(entry);
+    }
+    return stages;
+  };
+
   try {
-    return await drive({ opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs, loaded, seedRoots: seedState.seedRoots });
+    return await drive({ opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs, loaded, seedRoots: seedState.seedRoots, runnerState, recordStages });
   } catch (e) {
     // An in-process throw escapes drive() before its own exit routes run;
     // the run must still leave a record (the re-enable gate reads the
-    // latest one) before the exception propagates.
+    // latest one) before the exception propagates. Identity comes from the
+    // hoisted runnerState — one identity per run, the same fields every
+    // other exit route records under.
     try {
       store.writeRunRecord({
-        runId: crypto.randomUUID(),
-        runTag: 'exception',
-        taskId: null,
-        startedAtIso: new Date(now()).toISOString(),
+        runId: runnerState.runId,
+        runTag: runnerState.runTag,
+        taskId: runnerState.taskId,
+        startedAtIso: runnerState.startedAtIso,
         endedAtIso: new Date(now()).toISOString(),
         endState: { ok: false, status: 'exception', reason: String((e && e.message) || 'exception').slice(0, 400) },
         stages: [],
@@ -764,9 +820,11 @@ function ensureWorkBranch(gitRunner, rootDir, taskId) {
 // ---------- the iteration engine ----------
 
 async function drive(ctx) {
-  const { opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs, loaded, seedRoots } = ctx;
+  const { opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs, loaded, seedRoots, runnerState, recordStages } = ctx;
 
-  const iterations = [];
+  // The run's stage-outcome ledger lives on the hoisted runnerState; the
+  // local alias keeps every existing push/read site unchanged.
+  const iterations = runnerState.stageOutcomes;
   const readTaskState = () => {
     const v = stateReader();
     if (v && v.corrupt) return { err: report({ ok: false, status: 'paused', paused: true, reason: 'state-corrupt', detail: v.error, guidance: store.guidanceFor('auto.loop.stateCorrupt') }) };
@@ -775,45 +833,29 @@ async function drive(ctx) {
   };
 
   // Per-run persistence: one record at run end on every exit route — the
-  // stage outcomes accumulated so far plus the end state. This is the
-  // evidence substrate the re-enable gate reads; a failed write never
-  // masks the run result itself (best effort by design).
-  const runId = crypto.randomUUID();
-  const runTag = runId.slice(0, 8);
-  const runStartedAtIso = new Date(now()).toISOString();
-  let runTaskId = null;
-  const runStageOutcomes = () => iterations.map((it) => {
-    const e = {
-      stage: String(it.stage || ''),
-      signal: typeof it.signal === 'string' && it.signal ? it.signal : null,
-      advanced: it.advanced === true,
-      counted: it.counted === true,
-      spawnId: String(it.spawnId || ''),
-    };
-    if (typeof it.detail === 'string' && it.detail) e.detail = String(it.detail).slice(0, 400);
-    if (Array.isArray(it.steps) && it.steps.length) {
-      e.steps = it.steps.map((sp) => ({
-        id: String((sp && sp.id) || ''),
-        kind: sp && sp.kind === 'S' ? 'S' : 'P',
-        status: String((sp && sp.status) || ''),
-      }));
-    }
-    return e;
-  });
+  // stage outcomes accumulated so far (plus the open iteration, if any, as
+  // one in-flight entry) and the end state. This is the evidence substrate
+  // the re-enable gate reads; a failed write never masks the run result
+  // itself (best effort by design). Identity comes from the hoisted
+  // runnerState; seq counts spawn slots across the run and sits above the
+  // closure so pre-run exits can name the in-flight fallback slot too.
+  const runId = runnerState.runId;
+  const runTag = runnerState.runTag;
+  let seq = 0;
   const persistRunRecord = (base) => {
     try {
       store.writeRunRecord({
         runId,
         runTag,
-        taskId: runTaskId,
-        startedAtIso: runStartedAtIso,
+        taskId: runnerState.taskId,
+        startedAtIso: runnerState.startedAtIso,
         endedAtIso: new Date(now()).toISOString(),
         endState: {
           ok: base.ok === true,
           status: String(base.status || 'unknown'),
           reason: typeof base.reason === 'string' && base.reason ? base.reason : null,
         },
-        stages: runStageOutcomes(),
+        stages: recordStages(`${runId}-${seq + 1}-inflight`),
       }, rootDir);
     } catch { /* best effort: a record failure never masks the run result */ }
   };
@@ -832,7 +874,7 @@ async function drive(ctx) {
   }
   let taskState = first.state;
   const taskId = core.currentTaskId(taskState) || 'task';
-  runTaskId = taskId;
+  runnerState.taskId = taskId;
 
   const stage0 = String(taskState.current_stage || '').toUpperCase();
   if (TERMINAL_STAGES.includes(stage0)) {
@@ -898,7 +940,6 @@ async function drive(ctx) {
   // consumed after identity revalidation so a mutation pauses the loop
   // before any review spawn runs.
   let pendingLeg = null;
-  let seq = 0;
 
   // Pinned worktree at the loop-start commit: materialized lazily on first
   // need (wave dispatch, Class P legs, runner-trust leg modules). Consumers
@@ -908,6 +949,11 @@ async function drive(ctx) {
   // transition: repos without the exec tree in their history keep running).
   const loopStartCommit = readHead(gitRunner, rootDir);
   const pinState = { tried: false, pin: null };
+  // Per-run heal accounting for the pinned worktree: loadPinnedModuleWithHeal
+  // reads and increments it; the cap bounds re-materializations per run no
+  // matter how many legs ask. Retry capability lives here — getPin stays
+  // lazy-once and every load retries through the heal choke point instead.
+  const pinBudget = { heals: 0, cap: 2 };
   const getPin = () => {
     if (!pinState.tried) {
       pinState.tried = true;
@@ -922,10 +968,13 @@ async function drive(ctx) {
   const loadLeg = (relPath, liveRequire) => {
     const pin = getPin();
     if (pin) {
-      const r = workers.loadPinnedModule(pin, relPath, { rootDir, gitRunner });
+      const r = workers.loadPinnedModuleWithHeal(pin, relPath, { rootDir, gitRunner, expectedLoopStartCommit: loopStartCommit, budget: pinBudget });
       if (r.ok) return { module: r.module, source: 'pin' };
       const detail = String(r.detail || '').split('\n')[0].slice(0, 160);
       console.error(`⚠ auto legs: pinned ${relPath} unavailable (${r.reason}${detail ? ': ' + detail : ''}) — loading the live-tree module`);
+      if (r.reason === 'heal-budget-exhausted') {
+        console.error(`⚠ auto legs: pin heal budget exhausted (${pinBudget.heals}/${pinBudget.cap} heals this run) — pinned ${relPath} stays down for the rest of the run`);
+      }
     }
     return { module: liveRequire(), source: 'live' };
   };
@@ -1213,11 +1262,18 @@ async function drive(ctx) {
     // baseline (guard off) rather than a multi-megabyte env.
     const dirtyBaseline = dirtyBaselineOf(gitRunner, rootDir);
 
+    // The iteration is open from here until its outcome lands in the
+    // ledger: the in-flight entry (step-less until scriptIteration attaches
+    // its live step ledger) keeps a record written at any point mid-run
+    // truthful about which stage was being driven.
+    runnerState.inFlight = { stage };
+
     // ---- script stages: no host, no model, pinned legs + fixed argv ----
     if (entry.worker !== 'agent') {
       const res = await scriptIteration({
         stage, entry, tableLoad, verifyTable, opts, env, rootDir, gitRunner, spawnRunner, tp, b,
         runId, seq, baselineSha, preStageHead, dirtyBaseline, getPin, withHeartbeat, now,
+        runnerState, loopStartCommit, pinBudget,
         baselineEnvName: APPROVALS_BASELINE_ENV, endWith, tripNow,
       });
       if (res.err) return report(res.err, { iterations, breaker: breakerView() });
@@ -1225,6 +1281,7 @@ async function drive(ctx) {
       if (res.iter) {
         iterations.push(res.iter);
         seq = res.seq;
+        runnerState.inFlight = null;
         const afterS = truthRead();
         if (afterS.err) return endWith(afterS.err);
         if (afterS.none) {
@@ -1482,6 +1539,9 @@ async function drive(ctx) {
       ...(waveSummary ? { waves: waveSummary } : {}),
     };
     iterations.push(iter);
+    // The iteration's outcome landed in the ledger — the in-flight entry
+    // closes with it (its steps already rode the shared array reference).
+    runnerState.inFlight = null;
 
     // ---- post-spawn truth: read once, shared by scoring and the checks ----
     const after = truthRead();
@@ -1549,6 +1609,7 @@ async function scriptIteration(a) {
   const {
     stage, entry, tableLoad, verifyTable, opts, env, rootDir, gitRunner, spawnRunner, tp, b,
     runId, seq, baselineSha, preStageHead, dirtyBaseline, getPin, withHeartbeat, now,
+    runnerState, loopStartCommit, pinBudget,
     baselineEnvName, endWith, tripNow,
   } = a;
 
@@ -1558,6 +1619,11 @@ async function scriptIteration(a) {
   }
   const startedAtMs = now();
   const stepsSeen = [];
+  // In-flight ledger for the record: stepsSeen (completed steps only) is
+  // shared by reference, so a record write at any step boundary snapshots
+  // the freshest step set without copying. Cleared when the iteration's
+  // outcome lands in the stage ledger.
+  runnerState.inFlight = { stage, steps: stepsSeen };
   const stepFailures = [];
   let lastStreamSha256 = null;
   let escapeTotal = 0;
@@ -1580,7 +1646,7 @@ async function scriptIteration(a) {
         catch (e) { leg = { ok: false, reason: 'leg-threw', detail: e instanceof Error ? e.message : String(e) }; }
       } else {
         const loaded = pin
-          ? workers.loadPinnedModule(pin, step.module, { rootDir, gitRunner })
+          ? workers.loadPinnedModuleWithHeal(pin, step.module, { rootDir, gitRunner, expectedLoopStartCommit: loopStartCommit, budget: pinBudget })
           : { ok: false, reason: 'pin-unavailable' };
         if (loaded.ok) {
           const fn = loaded.module && loaded.module[step.fn];
@@ -1594,6 +1660,9 @@ async function scriptIteration(a) {
           leg = { ok: false, reason: 'pin-tampered', detail: loaded.detail };
         } else {
           console.error(`⚠ auto verify: pinned ${step.module} unavailable (${loaded.reason}) — running the live-tree module`);
+          if (loaded.reason === 'heal-budget-exhausted') {
+            console.error(`⚠ auto verify: pin heal budget exhausted (${pinBudget.heals}/${pinBudget.cap} heals this run) — pinned ${step.module} stays down for the rest of the run`);
+          }
           try {
             const mod = require(path.join(core.GOS_SELF_ROOT, step.module));
             const fn = mod && mod[step.fn];
@@ -1735,7 +1804,10 @@ async function scriptIteration(a) {
     }
   } catch { /* unwritable: the channel reports it at the child */ }
   const childEnv = {
-    ...(env === process.env ? {} : env),
+    // Credential-stripped passthrough, same base the Class S spawns get: a
+    // CLI-driven runner sees env === process.env, and a bare-marker child
+    // would lose HOME/XDG and look up the spawn channel in the wrong store.
+    ...launcher.stripGosAutoEnv(registry.sanitizedSpawnEnv(env === process.env ? undefined : env)),
     [SPAWN_MARKER_ENV]: '1',
     GOS_AUTO_SPAWN_ID: exitSpawnId,
     [baselineEnvName]: baselineSha,
