@@ -65,6 +65,8 @@ npm-debug.log*
 !.gos/task/**/*.log
 # harvested deny-slice fixture feeds the deny-scoring section
 !test/fixtures/5419521c-deny-slice.log
+# truth-evidence logs for recorded observable truths travel with the clone
+!test/evidence/*.log
 
 # GOS concurrency lock (machine-local)
 .gos/.lock

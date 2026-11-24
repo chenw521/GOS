@@ -17,7 +17,7 @@
     "reason": "Anchor-style history quotes in ignore-rule comments document why machine-local zones are ignored.",
     "pin": {
       "type": "region-sha256",
-      "minLine": 75,
+      "minLine": 77,
       "regionSha256": "f0fca4b17258fa9cde8570b8692c8a88f4b6c88899445f544de7fe8549e84a3e"
     }
   },
@@ -1037,6 +1037,12 @@
         "sha256": "e2042baa34d2f9cc8071676837d38962bbcd5c9bb8e0af9040b4af0279f0be2d"
       }
     ]
+  },
+  {
+    "path": "test/evidence/verify-T136-dogfood-restart.log",
+    "category": "in-flight-sweep",
+    "maxHits": 2,
+    "reason": "Legacy AI-process anchor comments pending the domain sweep; the count tracks unswept hits and must shrink to removal."
   },
   {
     "path": "test/fixtures/ai-trace/anchors.json",

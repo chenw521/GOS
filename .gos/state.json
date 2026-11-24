@@ -2,7 +2,7 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "SHIP",
+  "current_stage": "DONE",
   "completed_stages": [
     "INTENT",
     "THINK",
@@ -21,10 +21,11 @@
   },
   "approvals": {
     "THINK": "2026-11-23T01:33:37.328Z",
-    "PLAN": "2026-11-23T02:03:39.586Z"
+    "PLAN": "2026-11-23T02:03:39.586Z",
+    "ARCHIVE": "2026-11-24T01:37:24.930Z"
   },
-  "spec_path": ".gos/task/a06ea57f/spec.md",
-  "plan_path": ".gos/task/a06ea57f/plan.md",
+  "spec_path": ".gos/archive/2026-11-24-publicize-task-restart-safe-auto-loop-persist/task/a06ea57f/spec.md",
+  "plan_path": ".gos/archive/2026-11-24-publicize-task-restart-safe-auto-loop-persist/task/a06ea57f/plan.md",
   "project": false,
   "requirements": [
     {
@@ -140,7 +141,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T136\"]",
         "output_excerpt": "✓ C1: sentinel marker armed (first pass blocking in the 600s window)",
-        "artifact_path": ".gos/cache/section-runs/20261123T125534Z-full4219.log",
+        "artifact_path": "test/evidence/verify-T136-dogfood-restart.log",
         "replay": true
       }
     },
@@ -151,7 +152,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T136\"]",
         "output_excerpt": "✓ C1: sentinel marker armed (first pass blocking in the 600s window)",
-        "artifact_path": ".gos/cache/section-runs/20261123T125534Z-full4219.log",
+        "artifact_path": "test/evidence/verify-T136-dogfood-restart.log",
         "replay": true
       }
     },
@@ -162,7 +163,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T136\"]",
         "output_excerpt": "✓ C1: sentinel marker armed (first pass blocking in the 600s window)",
-        "artifact_path": ".gos/cache/section-runs/20261123T125534Z-full4219.log",
+        "artifact_path": "test/evidence/verify-T136-dogfood-restart.log",
         "replay": true
       }
     },
@@ -173,7 +174,7 @@
       "evidence": {
         "command": "[\"bash\",\"test/run-sections.sh\",\"T136\"]",
         "output_excerpt": "✓ C1: sentinel marker armed (first pass blocking in the 600s window)",
-        "artifact_path": ".gos/cache/section-runs/20261123T125534Z-full4219.log",
+        "artifact_path": "test/evidence/verify-T136-dogfood-restart.log",
         "replay": true
       }
     }
@@ -397,21 +398,7 @@
       }
     }
   },
-  "checkpoints": [
-    {
-      "stage": "BUILD",
-      "unit": "all-waves (auto at commit)",
-      "done": "T1,T2,T3,T8a,T4,T8b,T6a,T6b,T5,T7,T9a,T9b,T10",
-      "remaining": "",
-      "at": "2026-11-23T12:29:53.129Z"
-    },
-    {
-      "stage": "BUILD",
-      "unit": "all-waves (auto at commit)",
-      "done": "T1,T2,T3,T8a,T4,T8b,T6a,T6b,T5,T7,T9a,T9b,T10",
-      "remaining": "",
-      "at": "2026-11-23T12:54:13.871Z"
-    }
-  ],
-  "changelog_user_summary": "Auto loop survives a mid-VERIFY kill: a SIGTERM/SIGHUP runner now leaves a killed run record, takes its suite children down, and a restarted run heals the pin worktree and reaches a green record end to end"
+  "checkpoints": [],
+  "changelog_user_summary": "Auto loop survives a mid-VERIFY kill: a SIGTERM/SIGHUP runner now leaves a killed run record, takes its suite children down, and a restarted run heals the pin worktree and reaches a green record end to end",
+  "completed_at": "2026-11-24T01:37:29.139Z"
 }
