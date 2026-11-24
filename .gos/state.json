@@ -2,13 +2,14 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 3,
-  "current_stage": "VERIFY",
+  "current_stage": "SHIP",
   "completed_stages": [
     "INTENT",
     "THINK",
     "PLAN",
     "BUILD",
-    "REVIEW"
+    "REVIEW",
+    "VERIFY"
   ],
   "intent": {
     "summary": "Restart-safe auto loop: persist a run record on SIGTERM (signal route bypasses the exception record) and keep the VERIFY pin worktree live across kill/restart (dogfood 9a07a154-pin incident)",
@@ -135,26 +136,46 @@
     {
       "id": "T1",
       "description": "A mid-VERIFY SIGTERM of a detached auto run leaves a killed run record in the machine-local store runRecords (status killed, stage outcomes present)",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T136\"]",
+        "output_excerpt": "✓ C1: sentinel marker armed (first pass blocking in the 600s window)",
+        "artifact_path": ".gos/cache/section-runs/20261123T125534Z-full4219.log",
+        "replay": true
+      }
     },
     {
       "id": "T2",
       "description": "The simulated dogfood section (real --fg runner, fixture store, scripted SIGTERM mid-VERIFY, restart) ends green: the restarted run completes VERIFY with pin legs passing and writes a green run record",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T136\"]",
+        "output_excerpt": "✓ C1: sentinel marker armed (first pass blocking in the 600s window)",
+        "artifact_path": ".gos/cache/section-runs/20261123T125534Z-full4219.log",
+        "replay": true
+      }
     },
     {
       "id": "T3",
       "description": "After SIGTERM of a detached runner, no descendant suite/bwrap processes survive the kill",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T136\"]",
+        "output_excerpt": "✓ C1: sentinel marker armed (first pass blocking in the 600s window)",
+        "artifact_path": ".gos/cache/section-runs/20261123T125534Z-full4219.log",
+        "replay": true
+      }
     },
     {
       "id": "T4",
       "description": "A run log carries pin-liveness telemetry lines bracketing the sections suite window",
-      "verified": false,
-      "evidence": null
+      "verified": true,
+      "evidence": {
+        "command": "[\"bash\",\"test/run-sections.sh\",\"T136\"]",
+        "output_excerpt": "✓ C1: sentinel marker armed (first pass blocking in the 600s window)",
+        "artifact_path": ".gos/cache/section-runs/20261123T125534Z-full4219.log",
+        "replay": true
+      }
     }
   ],
   "gaps": [
@@ -391,5 +412,6 @@
       "remaining": "",
       "at": "2026-11-23T12:54:13.871Z"
     }
-  ]
+  ],
+  "changelog_user_summary": "Auto loop survives a mid-VERIFY kill: a SIGTERM/SIGHUP runner now leaves a killed run record, takes its suite children down, and a restarted run heals the pin worktree and reaches a green record end to end"
 }
