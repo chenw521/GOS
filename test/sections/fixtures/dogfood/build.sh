@@ -26,7 +26,7 @@
 # the per-task semantic allowlist because it is root-level seed data no
 # plan task declares.
 # Usage: build.sh <target-dir>  (target must not exist or be empty)
-# Output: exactly one line on success — "fixture: <target-dir>"
+# Output: exactly one line on success — "fixture: <target basename>"
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
@@ -334,4 +334,4 @@ git -C "$TARGET" commit -q -m "fixture: gos task state at verify"
 rm -f "$TARGET/.git/index"
 git -C "$TARGET" read-tree HEAD
 
-echo "fixture: $TARGET"
+echo "fixture: $(basename "$TARGET")"

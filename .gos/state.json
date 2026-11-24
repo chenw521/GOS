@@ -139,7 +139,7 @@
       "description": "A mid-VERIFY SIGTERM of a detached auto run leaves a killed run record in the machine-local store runRecords (status killed, stage outcomes present)",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\"test/run-sections.sh\",\"T136\"]",
+        "command": "[\"bash\",\"test/sections/T136-auto-dogfood-restart.test.sh\"]",
         "output_excerpt": "✓ C1: sentinel marker armed (first pass blocking in the 600s window)",
         "artifact_path": "test/evidence/verify-T136-dogfood-restart.log",
         "replay": true
@@ -150,7 +150,7 @@
       "description": "The simulated dogfood section (real --fg runner, fixture store, scripted SIGTERM mid-VERIFY, restart) ends green: the restarted run completes VERIFY with pin legs passing and writes a green run record",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\"test/run-sections.sh\",\"T136\"]",
+        "command": "[\"bash\",\"test/sections/T136-auto-dogfood-restart.test.sh\"]",
         "output_excerpt": "✓ C1: sentinel marker armed (first pass blocking in the 600s window)",
         "artifact_path": "test/evidence/verify-T136-dogfood-restart.log",
         "replay": true
@@ -161,7 +161,7 @@
       "description": "After SIGTERM of a detached runner, no descendant suite/bwrap processes survive the kill",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\"test/run-sections.sh\",\"T136\"]",
+        "command": "[\"bash\",\"test/sections/T136-auto-dogfood-restart.test.sh\"]",
         "output_excerpt": "✓ C1: sentinel marker armed (first pass blocking in the 600s window)",
         "artifact_path": "test/evidence/verify-T136-dogfood-restart.log",
         "replay": true
@@ -172,7 +172,7 @@
       "description": "A run log carries pin-liveness telemetry lines bracketing the sections suite window",
       "verified": true,
       "evidence": {
-        "command": "[\"bash\",\"test/run-sections.sh\",\"T136\"]",
+        "command": "[\"bash\",\"test/sections/T136-auto-dogfood-restart.test.sh\"]",
         "output_excerpt": "✓ C1: sentinel marker armed (first pass blocking in the 600s window)",
         "artifact_path": "test/evidence/verify-T136-dogfood-restart.log",
         "replay": true
