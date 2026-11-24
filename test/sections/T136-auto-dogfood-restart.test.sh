@@ -154,7 +154,7 @@ t136_round() { # $1=kill signal name (TERM|HUP) $2=case label
   local sig="$1" label="$2" sig_num want_rc
   sig_num="$(kill -l "$sig")"
   want_rc=$((128 + sig_num))
-  T136_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-t136-$label"
+  T136_DIR="$TESTBASE/test-$(date +%s)-$RANDOM-dogfood-$label"
   mkdir -p "$T136_DIR"
   T136_DIRS="$T136_DIRS $T136_DIR"
   T136_FIX="$T136_DIR/fix"

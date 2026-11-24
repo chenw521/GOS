@@ -4,8 +4,9 @@
 #
 # The restart-safe auto loop's real runner (bin/lib/ops/auto/loop.cjs and
 # workers.cjs) is only reachable as a subprocess through the CLI. The
-# dogfood acceptance section (test/sections/T136-auto-dogfood-restart.test.sh)
-# must therefore never require those modules directly — a direct require
+# dogfood acceptance section (the one file this check scans, matched by
+# filename below) must therefore never require those modules directly — a
+# direct require
 # would exercise the harness instead of the shipped CLI boundary that
 # restart-safety depends on. The other sections that harness those modules
 # directly are the sanctioned test pattern; this guard bites on the dogfood

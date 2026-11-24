@@ -399,6 +399,6 @@
     }
   },
   "checkpoints": [],
-  "changelog_user_summary": "Auto loop survives a mid-VERIFY kill: a SIGTERM/SIGHUP runner now leaves a killed run record, takes its suite children down, and a restarted run heals the pin worktree and reaches a green record end to end",
+  "changelog_user_summary": "Truth-evidence logs travel with the clone under a tracked evidence directory",
   "completed_at": "2026-11-24T01:37:29.139Z"
 }
