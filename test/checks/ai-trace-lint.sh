@@ -22,8 +22,10 @@
 # "*" continuation lines for JS-like files; markdown scans every line.
 # Structural plan-format exemption: Wave headings and Covers / Depends-on
 # lines inside *.md never count as hits (the product's own plan grammar).
-# Path carve-outs: CHANGELOG.md, .changes.md and .gos/** are never
-# violations; the .gos/** anchor hit count is printed as a sidecar metric
+# Path carve-outs: CHANGELOG.md, .changes.md, test/sections/fixtures/** and
+# test/evidence/** are never violations (fixture worlds and evidence logs are
+# machine-consumed content, anchor-shaped by design); the .gos/** anchor hit
+# count is printed as a sidecar metric
 # so exempt-layer debt stays visible.
 #
 # Whitelist (default .gos/ai-trace-whitelist.json): an array of entries
@@ -229,8 +231,12 @@ function record(path, line, tier, matched) {
 for (const p of files) {
   // Path carve-outs: the changelog layers are not scanned at all; .gos/**
   // is scanned for the sidecar debt metric only (record() drops the hit
-  // from the census).
+  // from the census). Fixture worlds and harvested evidence logs are
+  // machine-consumed content whose grammar is anchor-shaped by design —
+  // a fixture task's plan ids or a runner log's case labels are data, not
+  // process lineage.
   if (p === 'CHANGELOG.md' || p === '.changes.md') continue;
+  if (p.startsWith('test/sections/fixtures/') || p.startsWith('test/evidence/')) continue;
   let buf;
   try { buf = fs.readFileSync(p); }
   catch (e) { die('cannot read tracked file: ' + p + ' (' + e.code + ')'); }

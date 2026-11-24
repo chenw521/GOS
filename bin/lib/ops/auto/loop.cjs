@@ -600,6 +600,278 @@ function report(base, extra) {
   return { ...base, ...(extra || {}) };
 }
 
+// ---------- run-start recovery ----------
+
+// Drain bound: at most this many sidecar lines process per run (run-record
+// cap parity — a crash queue longer than the bound survives for the next run).
+const RUN_RECORDS_DRAIN_BOUND = store.RUN_RECORDS_CAP;
+
+// Drain the crash-side record queue (the store's runrecords-drop.ndjson
+// sidecar) into runRecords. Valid lines adopt once, flagged droppedRecord
+// (a lost record is never silent); parse failures and shape violations
+// quarantine verbatim; the processed bound truncates with the overflow
+// re-queued for the next run. Every failure lands in the result — an
+// unreadable sidecar never crashes the run.
+function drainDroppedRunRecords(rootDir) {
+  const out = { drained: 0, droppedCorrupt: 0, error: null };
+  let lines;
+  try {
+    const read = store.readRunRecordDrops(rootDir);
+    if (!read.ok) { out.error = read.reason || 'drop-read-failed'; return out; }
+    lines = read.lines;
+  } catch (e) { out.error = (e && e.message) || 'drop-read-failed'; return out; }
+  if (!lines.length) return out;
+  const bounded = lines.slice(0, RUN_RECORDS_DRAIN_BOUND);
+  const overflow = lines.slice(RUN_RECORDS_DRAIN_BOUND);
+  const good = [];
+  const corrupt = [];
+  for (const line of bounded) {
+    let rec = null;
+    try { rec = JSON.parse(line); } catch { rec = null; }
+    if (rec != null && store.runRecordRejection({ ...rec, droppedRecord: true }) == null) {
+      good.push({ ...rec, droppedRecord: true });
+    } else {
+      corrupt.push(line);
+    }
+  }
+  if (corrupt.length) {
+    try {
+      const moved = store.moveCorruptDropLines(rootDir, corrupt);
+      if (moved.ok) out.droppedCorrupt = moved.moved;
+      else out.error = moved.reason || 'quarantine-failed';
+    } catch (e) { out.error = (e && e.message) || 'quarantine-failed'; }
+  }
+  if (good.length) {
+    try {
+      const appended = store.appendDrainedRunRecords(rootDir, good);
+      if (appended.ok) out.drained = good.length;
+      else out.error = appended.reason || 'drain-append-failed';
+    } catch (e) { out.error = (e && e.message) || 'drain-append-failed'; }
+  }
+  // Rebuild the queue atomically: the overflow lines replace the file's
+  // whole content via tmp+rename - until the rename lands the source still
+  // holds every original line, so a crash anywhere in the drain preserves
+  // the queue, and a failed rewrite leaves it untouched for the next run.
+  if (out.error == null) {
+    try {
+      const rewrote = store.rewriteRunRecordDrops(rootDir, overflow);
+      if (!rewrote.ok) out.error = rewrote.reason || 'rewrite-failed';
+    } catch (e) { out.error = (e && e.message) || 'rewrite-failed'; }
+  }
+  return out;
+}
+
+// Run-start recovery (restart-safe auto loop): everything a killed run left
+// behind, swept once at startup under the run lock this run holds — before
+// the seed materialization (the sweep can never delete this run's own seed
+// dir) and before the drive (a lost record or stray worktree cleans before
+// any iteration runs). All failures land in the result; the run continues
+// unless paused.
+//   1. Pause precedence: a takeover whose broken holder still looks alive on
+//      this host (any reason but dead-pid) is not ours to judge — the run
+//      pauses with guidance and touches NOTHING.
+//   2. Drain: the crash-side record queue adopts into runRecords.
+//   3. Stray-pin recycle: a fresh run has materialized no pins yet, so
+//      every recorded pin recycles (liveRunTags is empty by construction).
+//   4. Spawnreg sweep: an entry whose holder pid is absent or dead, or
+//      caught as a recycled pid by a starttime mismatch, is a stray under
+//      the single-runner lock invariant; each stray sweeps its sections-
+//      tree only through its recorded test_base (a forged entry without one
+//      never has a path rm'd) and is then removed. One worktree prune after
+//      the loop.
+//   5. Seed sweep: auto-seed-* dirs a killed run stranded under .gos/cache
+//      clear (the finally's seed cleanup is skipped by process.exit).
+function runStartRecovery(ctx) {
+  const rootDir = ctx.rootDir;
+  const gitRunner = ctx.gitRunner;
+  const lock = ctx.lock;
+  const result = {
+    ok: true, drained: 0, droppedCorrupt: 0,
+    recycledPins: [], sweptEntries: [], removedSeeds: 0,
+    errors: [], paused: null,
+  };
+
+  const tookOver = lock && lock.tookOver;
+  if (tookOver && tookOver.hostname === os.hostname()
+    && tookOver.reason !== 'dead-pid'
+    && Number.isInteger(tookOver.pid) && core.pidAlive(tookOver.pid)) {
+    return {
+      ...result, ok: false,
+      paused: {
+        reason: 'recovery-live-holder',
+        pid: tookOver.pid,
+        guidance: store.guidanceFor('auto.loop.recoveryLiveHolder', { pid: tookOver.pid }),
+      },
+    };
+  }
+
+  const drain = drainDroppedRunRecords(rootDir);
+  result.drained = drain.drained;
+  result.droppedCorrupt = drain.droppedCorrupt;
+  if (drain.error) result.errors.push({ step: 'drain', error: String(drain.error) });
+
+  try {
+    const pins = workers.lazyRecyclePins(rootDir, { liveRunTags: [], gitRunner });
+    if (pins && Array.isArray(pins.recycled)) result.recycledPins = pins.recycled;
+    const failures = pins && Array.isArray(pins.failures) ? pins.failures : [];
+    for (const f of failures) {
+      result.errors.push({ step: 'pin-recycle', runTag: f.runTag, error: String(f.reason || f.detail || 'pin-recycle-failed') });
+    }
+  } catch (e) { result.errors.push({ step: 'pin-recycle', error: String((e && e.message) || e) }); }
+
+  try {
+    const listed = store.listSpawnEntries(rootDir);
+    if (!listed.ok) {
+      result.errors.push({ step: 'spawn-sweep', error: String(listed.reason || 'list-failed') });
+    } else {
+      for (const { spawnId, entry } of listed.entries) {
+        const pid = Number.isInteger(entry.pid) ? entry.pid : null;
+        const start = pid != null ? spawnreg.procStartTime(pid) : null;
+        const stray = pid == null || !core.pidAlive(pid)
+          || (entry.starttime != null && start !== entry.starttime);
+        if (!stray) continue;
+        if (typeof entry.test_base === 'string' && entry.test_base !== '' && path.isAbsolute(entry.test_base)) {
+          try { workers.sweepSectionWorktrees(rootDir, { testBase: entry.test_base, gitRunner }); }
+          catch (e) { result.errors.push({ step: 'section-sweep', spawnId, error: String((e && e.message) || e) }); }
+        }
+        try { store.removeSpawn(spawnId, rootDir); } catch { /* already gone */ }
+        result.sweptEntries.push(spawnId);
+      }
+      if (result.sweptEntries.length) {
+        try { gitRunner(['worktree', 'prune'], rootDir); } catch { /* best effort */ }
+      }
+    }
+  } catch (e) { result.errors.push({ step: 'spawn-sweep', error: String((e && e.message) || e) }); }
+
+  const cacheDir = path.join(rootDir, '.gos', 'cache');
+  try {
+    for (const name of fs.readdirSync(cacheDir)) {
+      if (!name.startsWith('auto-seed-')) continue;
+      const p = path.join(cacheDir, name);
+      let st = null;
+      try { st = fs.lstatSync(p); } catch { continue; }
+      if (!st.isDirectory()) continue;
+      try {
+        fs.rmSync(p, { recursive: true, force: true });
+        result.removedSeeds += 1;
+      } catch { /* best effort */ }
+    }
+  } catch { /* no cache dir — nothing to sweep */ }
+
+  result.ok = result.errors.length === 0;
+  // The caller surfaces one operator line; flatten the per-step failures
+  // into the single field it reads (every failure stays named in errors[]).
+  if (result.errors.length) result.error = result.errors.map((x) => `${x.step}: ${x.error}`).join('; ');
+  return result;
+}
+
+// ---------- kill-signal path (restart-safe shutdown) ----------
+
+// Signals the runner answers with a killed record: SIGTERM (supervisors and
+// manual kills), SIGHUP (terminal hangup), SIGINT (^C). Exit code is
+// 128 + signum (143 / 129 / 130).
+const KILL_SIGNALS = Object.freeze([
+  Object.freeze([15, 'SIGTERM']),
+  Object.freeze([1, 'SIGHUP']),
+  Object.freeze([2, 'SIGINT']),
+]);
+
+// One-shot latch for the kill path: the first signal starts the shutdown
+// sequence; later signals are no-ops (exiting is already in progress), so
+// a signal burst can never double-write the killed record. Module-level so
+// the latch outlives handler closures; installKillHandlers resets it so
+// each runLoop invocation re-arms (tests drive runLoop repeatedly in one
+// process) while the one-shot still holds within a single run.
+let killLatch = false;
+
+// One bounded stderr telemetry line for the kill path: summary counts plus
+// the per-child names when few, truncated to a fixed width.
+function killChildrenLine(killRes) {
+  const killed = killRes && Array.isArray(killRes.killed) ? killRes.killed : [];
+  const skipped = killRes && Array.isArray(killRes.skipped) ? killRes.skipped : [];
+  let line = `auto kill: killed=${killed.length} skipped=${skipped.length}`;
+  const names = killed.map((k) => `${k.spawnId}(pid=${k.pid})`)
+    .concat(skipped.map((k) => `${k.spawnId}(pid=${k.pid}):${k.reason}`));
+  if (names.length && names.length <= 5) line += ` [${names.join(', ')}]`;
+  return line.slice(0, 400);
+}
+
+// Arm the kill path: one shared synchronous handler for the three shutdown
+// signals. Called once per runLoop invocation, only after the run lock is
+// held, the recovery block has run, and the runner state exists — signals
+// landing earlier keep default behavior. Handler order: tracked children
+// die first (per-child group kill, never this process's own group), then
+// the killed record lands (store; store-busy or failure queues the drop
+// sidecar), then process.exit(128 + signum) lets the run lock's exit hook
+// release the lock — the handler never unlinks the lock itself. Returns
+// the listener pairs disarmKillHandlers removes.
+function installKillHandlers(ctx) {
+  killLatch = false;
+  const onKillSignal = (signum, name) => {
+    if (killLatch) return;
+    killLatch = true;
+    try {
+      const killRes = spawnrun.killTrackedChildren();
+      try { fs.writeSync(2, killChildrenLine(killRes) + '\n'); } catch { /* stderr gone */ }
+      const rs = ctx.runnerState;
+      const rec = {
+        runId: rs.runId,
+        runTag: rs.runTag,
+        taskId: rs.taskId,
+        startedAtIso: rs.startedAtIso,
+        endedAtIso: new Date(ctx.now()).toISOString(),
+        endState: { ok: false, status: 'killed', reason: name },
+        stages: ctx.recordStages(`${rs.runId}-killed-inflight`),
+      };
+      let wrote = null;
+      try { wrote = store.writeRunRecord(rec, ctx.rootDir, { waitMs: 2000 }); }
+      catch (e) { wrote = { ok: false, reason: 'write-threw', detail: String((e && e.message) || e) }; }
+      if (!wrote || wrote.ok !== true) {
+        try { store.appendRunRecordDrop(ctx.rootDir, rec); } catch { /* best effort */ }
+      }
+    } catch { /* best effort: the exit below is the shutdown contract */ }
+    try { process.exit(128 + signum); } catch { process.exit(1); }
+  };
+  const registered = [];
+  for (const [signum, name] of KILL_SIGNALS) {
+    const fn = () => onKillSignal(signum, name);
+    process.on(name, fn);
+    registered.push([name, fn]);
+  }
+  return registered;
+}
+
+// Remove the kill listeners. Every normal exit route disarms before its
+// record write (persistRunRecord, the exception catch) so a teardown-window
+// signal can never append a killed record after the real end record; the
+// finally disarms again as belt-and-suspenders before teardown. Idempotent.
+function disarmKillHandlers(registered) {
+  if (!Array.isArray(registered)) return;
+  for (const [name, fn] of registered) {
+    try { process.removeListener(name, fn); } catch { /* best effort */ }
+  }
+}
+
+// Worktree registration directory for a pinned run tag: <gitDir>/worktrees/<tag>
+// where gitDir is the repo's .git directory, or the directory a .git gitfile
+// names. A missing registration makes every in-worktree git read fail — the
+// same absence loadPinnedModule's verification refuses on — so its existence
+// is a cheap stand-in for "the pin can still load". Returns null when the
+// repo root carries no readable .git.
+function pinMetadataPath(rootDir, runTag) {
+  const dotGit = path.join(rootDir, '.git');
+  let st = null;
+  try { st = fs.statSync(dotGit); } catch { return null; }
+  if (st.isDirectory()) return path.join(dotGit, 'worktrees', runTag);
+  if (st.isFile()) {
+    let text = '';
+    try { text = fs.readFileSync(dotGit, 'utf8'); } catch { return null; }
+    const m = text.match(/^gitdir:\s*(.+)$/m);
+    return m ? path.join(m[1].trim(), 'worktrees', runTag) : null;
+  }
+  return null;
+}
+
 async function runLoop(opts) {
   const env = opts.env || process.env;
   const now = typeof opts.now === 'function' ? opts.now : Date.now;
@@ -665,6 +937,42 @@ async function runLoop(opts) {
   // bounded-wait parent observes (the fork alone proves nothing).
   writeDetachSentinel(env, { ok: true, pid: process.pid, ts: now() });
 
+  // Run-start recovery: drain the crash-side record queue, recycle stray
+  // pins, sweep stray sections-tree registrations, and clear orphaned seed
+  // dirs — under the run lock this run holds, before seeding (the sweep can
+  // never delete this run's own seed dir). A live-looking takeover holder
+  // pauses the run before anything is touched: its strays are not ours to
+  // judge. The sentinel rewrites so a bounded-wait detach parent never
+  // reads a "started" proof for a paused run.
+  const recovery = runStartRecovery({ rootDir, gitRunner, lock, now });
+  if (recovery.paused) {
+    writeDetachSentinel(env, { ok: false, reason: recovery.paused.reason });
+    const pausedReport = report({
+      ok: false, status: 'paused', paused: true,
+      reason: recovery.paused.reason,
+      guidance: recovery.paused.guidance,
+      path: lock.path,
+    });
+    try { store.releaseRunLock(rootDir); } catch { /* best effort */ }
+    return pausedReport;
+  }
+  if (recovery.error) {
+    // A recovery failure means killed-run evidence or stray resources were
+    // NOT cleaned — that must reach the operator, never sit in a result
+    // object nobody reads.
+    console.error(`⚠ auto recovery: ${recovery.error} — the run continues; the next run-start retries the failed step`);
+  }
+  if (recovery.drained || recovery.droppedCorrupt || recovery.recycledPins.length
+    || recovery.sweptEntries.length || recovery.removedSeeds) {
+    console.error(core.t('auto.loop.recoveryDrained', {
+      drained: recovery.drained,
+      corrupt: recovery.droppedCorrupt,
+      pins: recovery.recycledPins.length,
+      spawns: recovery.sweptEntries.length,
+      seeds: recovery.removedSeeds,
+    }));
+  }
+
   const stateReader = typeof opts.stateReader === 'function' ? opts.stateReader : () => defaultStateReader(rootDir);
   const spawnRunner = opts.spawnRunner || loopSpawnRunner;
   const heartbeatIntervalMs = Number.isInteger(opts.heartbeatIntervalMs) ? opts.heartbeatIntervalMs : DEFAULT_HEARTBEAT_INTERVAL_MS;
@@ -695,18 +1003,80 @@ async function runLoop(opts) {
     }
   })();
 
+  // Runner state hoisted to the runLoop scope: one identity per run plus
+  // the live outcome ledger. stageOutcomes IS the iteration array the
+  // drive closure pushes stage outcomes onto; inFlight mirrors the open
+  // iteration (completed steps only, maintained synchronously at step
+  // boundaries) so a record write at any point mid-run sees the freshest
+  // view of what was running.
+  const runnerRunId = crypto.randomUUID();
+  const runnerState = {
+    runId: runnerRunId,
+    runTag: runnerRunId.slice(0, 8),
+    taskId: null,
+    startedAtIso: new Date(now()).toISOString(),
+    stageOutcomes: [],
+    inFlight: null,
+  };
+
+  // Stage-entry normalizer shared by every stage list a record write
+  // builds — completed outcomes and the in-flight snapshot pass through
+  // the same shape contract so a record always survives the store's
+  // runRecordRejection (non-empty stage/spawnId strings, strict booleans,
+  // statuses from the closed passed|failed|refused set).
+  const normalizeStageEntry = (it) => {
+    const e = {
+      stage: String(it.stage || ''),
+      signal: typeof it.signal === 'string' && it.signal ? it.signal : null,
+      advanced: it.advanced === true,
+      counted: it.counted === true,
+      spawnId: String(it.spawnId || ''),
+    };
+    if (typeof it.detail === 'string' && it.detail) e.detail = String(it.detail).slice(0, 400);
+    if (Array.isArray(it.steps) && it.steps.length) {
+      e.steps = it.steps.map((sp) => ({
+        id: String((sp && sp.id) || ''),
+        kind: sp && sp.kind === 'S' ? 'S' : 'P',
+        status: String((sp && sp.status) || ''),
+      }));
+    }
+    return e;
+  };
+
+  // Stage snapshot for a record write: completed outcomes plus, when an
+  // iteration is open, one extra in-flight entry — unadvanced, uncounted,
+  // no signal — with a caller-supplied spawnId fallback naming the spawn
+  // slot the interrupted iteration had not reached yet.
+  const recordStages = (inflightSpawnIdFallback) => {
+    const stages = runnerState.stageOutcomes.map(normalizeStageEntry);
+    if (runnerState.inFlight) {
+      const entry = normalizeStageEntry(runnerState.inFlight);
+      if (!entry.spawnId) entry.spawnId = String(inflightSpawnIdFallback || '');
+      stages.push(entry);
+    }
+    return stages;
+  };
+
+  // Kill path arms here: the run lock is held, recovery has run, and the
+  // runner state is live — anything before this point keeps default signal
+  // behavior. Normal exits disarm through persistRunRecord and the finally.
+  const killHandlers = installKillHandlers({ rootDir, runnerState, recordStages, now });
+
   try {
-    return await drive({ opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs, loaded, seedRoots: seedState.seedRoots });
+    return await drive({ opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs, loaded, seedRoots: seedState.seedRoots, runnerState, recordStages, killHandlers });
   } catch (e) {
     // An in-process throw escapes drive() before its own exit routes run;
     // the run must still leave a record (the re-enable gate reads the
-    // latest one) before the exception propagates.
+    // latest one) before the exception propagates. Identity comes from the
+    // hoisted runnerState — one identity per run, the same fields every
+    // other exit route records under.
     try {
+      disarmKillHandlers(killHandlers);
       store.writeRunRecord({
-        runId: crypto.randomUUID(),
-        runTag: 'exception',
-        taskId: null,
-        startedAtIso: new Date(now()).toISOString(),
+        runId: runnerState.runId,
+        runTag: runnerState.runTag,
+        taskId: runnerState.taskId,
+        startedAtIso: runnerState.startedAtIso,
         endedAtIso: new Date(now()).toISOString(),
         endState: { ok: false, status: 'exception', reason: String((e && e.message) || 'exception').slice(0, 400) },
         stages: [],
@@ -714,6 +1084,7 @@ async function runLoop(opts) {
     } catch { /* best effort: a record failure never masks the thrown error */ }
     throw e;
   } finally {
+    disarmKillHandlers(killHandlers);
     if (seedState.cleanup) { try { fs.rmSync(seedState.cleanup, { recursive: true, force: true }); } catch { /* best effort */ } }
     try {
       // Lazy pin sweep at run end: every worktree this run materialized (and
@@ -764,9 +1135,11 @@ function ensureWorkBranch(gitRunner, rootDir, taskId) {
 // ---------- the iteration engine ----------
 
 async function drive(ctx) {
-  const { opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs, loaded, seedRoots } = ctx;
+  const { opts, env, now, rootDir, gitRunner, stateReader, spawnRunner, heartbeatIntervalMs, loaded, seedRoots, runnerState, recordStages, killHandlers } = ctx;
 
-  const iterations = [];
+  // The run's stage-outcome ledger lives on the hoisted runnerState; the
+  // local alias keeps every existing push/read site unchanged.
+  const iterations = runnerState.stageOutcomes;
   const readTaskState = () => {
     const v = stateReader();
     if (v && v.corrupt) return { err: report({ ok: false, status: 'paused', paused: true, reason: 'state-corrupt', detail: v.error, guidance: store.guidanceFor('auto.loop.stateCorrupt') }) };
@@ -775,46 +1148,48 @@ async function drive(ctx) {
   };
 
   // Per-run persistence: one record at run end on every exit route — the
-  // stage outcomes accumulated so far plus the end state. This is the
-  // evidence substrate the re-enable gate reads; a failed write never
-  // masks the run result itself (best effort by design).
-  const runId = crypto.randomUUID();
-  const runTag = runId.slice(0, 8);
-  const runStartedAtIso = new Date(now()).toISOString();
-  let runTaskId = null;
-  const runStageOutcomes = () => iterations.map((it) => {
-    const e = {
-      stage: String(it.stage || ''),
-      signal: typeof it.signal === 'string' && it.signal ? it.signal : null,
-      advanced: it.advanced === true,
-      counted: it.counted === true,
-      spawnId: String(it.spawnId || ''),
-    };
-    if (typeof it.detail === 'string' && it.detail) e.detail = String(it.detail).slice(0, 400);
-    if (Array.isArray(it.steps) && it.steps.length) {
-      e.steps = it.steps.map((sp) => ({
-        id: String((sp && sp.id) || ''),
-        kind: sp && sp.kind === 'S' ? 'S' : 'P',
-        status: String((sp && sp.status) || ''),
-      }));
-    }
-    return e;
-  });
+  // stage outcomes accumulated so far (plus the open iteration, if any, as
+  // one in-flight entry) and the end state. This is the evidence substrate
+  // the re-enable gate reads; a failed write never masks the run result
+  // itself (best effort by design). Identity comes from the hoisted
+  // runnerState; seq counts spawn slots across the run and sits above the
+  // closure so pre-run exits can name the in-flight fallback slot too.
+  const runId = runnerState.runId;
+  const runTag = runnerState.runTag;
+  let seq = 0;
+  // Per-run heal accounting for the pinned worktree (declared above the
+  // record writer so pre-run exits read a defined budget, never a TDZ
+  // reference): loadPinnedModuleWithHeal reads and increments it; the cap
+  // bounds re-materializations per run no matter how many legs ask. Retry
+  // capability lives in getPin — lazy-once, every load retries through the
+  // heal choke point instead.
+  const pinBudget = { heals: 0, cap: 2 };
   const persistRunRecord = (base) => {
+    // Disarm before any real end record lands: a signal arriving after the
+    // write must keep default behavior (a killed record here would shadow
+    // the truth with a second, contradicting record).
+    disarmKillHandlers(killHandlers);
     try {
-      store.writeRunRecord({
+      const rec = {
         runId,
         runTag,
-        taskId: runTaskId,
-        startedAtIso: runStartedAtIso,
+        taskId: runnerState.taskId,
+        startedAtIso: runnerState.startedAtIso,
         endedAtIso: new Date(now()).toISOString(),
         endState: {
           ok: base.ok === true,
           status: String(base.status || 'unknown'),
           reason: typeof base.reason === 'string' && base.reason ? base.reason : null,
         },
-        stages: runStageOutcomes(),
-      }, rootDir);
+        stages: recordStages(`${runId}-${seq + 1}-inflight`),
+      };
+      // Per-run pin heal count rides the record top level (additive integer,
+      // absent when zero): the record is the only per-run persisted artifact,
+      // so the status latest-run line reads its heals from here. The kill-path
+      // record stays without it — the handlers install before the budget
+      // object exists, and the restart's own record supersedes it as latest.
+      if (pinBudget.heals > 0) rec.heals = pinBudget.heals;
+      store.writeRunRecord(rec, rootDir);
     } catch { /* best effort: a record failure never masks the run result */ }
   };
   // Pre-run exits (before the breaker exists) keep their null breaker view.
@@ -832,7 +1207,7 @@ async function drive(ctx) {
   }
   let taskState = first.state;
   const taskId = core.currentTaskId(taskState) || 'task';
-  runTaskId = taskId;
+  runnerState.taskId = taskId;
 
   const stage0 = String(taskState.current_stage || '').toUpperCase();
   if (TERMINAL_STAGES.includes(stage0)) {
@@ -898,7 +1273,6 @@ async function drive(ctx) {
   // consumed after identity revalidation so a mutation pauses the loop
   // before any review spawn runs.
   let pendingLeg = null;
-  let seq = 0;
 
   // Pinned worktree at the loop-start commit: materialized lazily on first
   // need (wave dispatch, Class P legs, runner-trust leg modules). Consumers
@@ -919,13 +1293,35 @@ async function drive(ctx) {
     }
     return pinState.pin;
   };
+  // Pin-liveness probe: one terse stderr line per call — `pin-live: <phase>
+  // runTag=<tag> live=<yes|no>` — while a pin exists (a pin that was never
+  // materialized has nothing to bracket). Cheap fs check on the worktree
+  // registration only; never triggers materialization, never throws.
+  const pinLive = (phase) => {
+    const pin = pinState.pin;
+    if (!pin) return;
+    let live = false;
+    try {
+      const meta = pinMetadataPath(rootDir, pin.runTag);
+      live = meta != null && fs.existsSync(meta);
+    } catch { live = false; }
+    try { fs.writeSync(2, `pin-live: ${phase} runTag=${pin.runTag} live=${live ? 'yes' : 'no'}\n`); } catch { /* telemetry only */ }
+  };
   const loadLeg = (relPath, liveRequire) => {
     const pin = getPin();
     if (pin) {
-      const r = workers.loadPinnedModule(pin, relPath, { rootDir, gitRunner });
-      if (r.ok) return { module: r.module, source: 'pin' };
+      const r = workers.loadPinnedModuleWithHeal(pin, relPath, { rootDir, gitRunner, expectedLoopStartCommit: loopStartCommit, budget: pinBudget });
+      if (r.ok) {
+        if (r.healed) {
+          try { fs.writeSync(2, `pin-heal: runTag=${pin.runTag} heals=${pinBudget.heals}/${pinBudget.cap}\n`); } catch { /* telemetry only */ }
+        }
+        return { module: r.module, source: 'pin' };
+      }
       const detail = String(r.detail || '').split('\n')[0].slice(0, 160);
       console.error(`⚠ auto legs: pinned ${relPath} unavailable (${r.reason}${detail ? ': ' + detail : ''}) — loading the live-tree module`);
+      if (r.reason === 'heal-budget-exhausted') {
+        console.error(`⚠ auto legs: pin heal budget exhausted (${pinBudget.heals}/${pinBudget.cap} heals this run) — pinned ${relPath} stays down for the rest of the run`);
+      }
     }
     return { module: liveRequire(), source: 'live' };
   };
@@ -1213,11 +1609,18 @@ async function drive(ctx) {
     // baseline (guard off) rather than a multi-megabyte env.
     const dirtyBaseline = dirtyBaselineOf(gitRunner, rootDir);
 
+    // The iteration is open from here until its outcome lands in the
+    // ledger: the in-flight entry (step-less until scriptIteration attaches
+    // its live step ledger) keeps a record written at any point mid-run
+    // truthful about which stage was being driven.
+    runnerState.inFlight = { stage };
+
     // ---- script stages: no host, no model, pinned legs + fixed argv ----
     if (entry.worker !== 'agent') {
       const res = await scriptIteration({
         stage, entry, tableLoad, verifyTable, opts, env, rootDir, gitRunner, spawnRunner, tp, b,
         runId, seq, baselineSha, preStageHead, dirtyBaseline, getPin, withHeartbeat, now,
+        runnerState, loopStartCommit, pinBudget, pinLive,
         baselineEnvName: APPROVALS_BASELINE_ENV, endWith, tripNow,
       });
       if (res.err) return report(res.err, { iterations, breaker: breakerView() });
@@ -1225,6 +1628,7 @@ async function drive(ctx) {
       if (res.iter) {
         iterations.push(res.iter);
         seq = res.seq;
+        runnerState.inFlight = null;
         const afterS = truthRead();
         if (afterS.err) return endWith(afterS.err);
         if (afterS.none) {
@@ -1482,6 +1886,9 @@ async function drive(ctx) {
       ...(waveSummary ? { waves: waveSummary } : {}),
     };
     iterations.push(iter);
+    // The iteration's outcome landed in the ledger — the in-flight entry
+    // closes with it (its steps already rode the shared array reference).
+    runnerState.inFlight = null;
 
     // ---- post-spawn truth: read once, shared by scoring and the checks ----
     const after = truthRead();
@@ -1549,6 +1956,7 @@ async function scriptIteration(a) {
   const {
     stage, entry, tableLoad, verifyTable, opts, env, rootDir, gitRunner, spawnRunner, tp, b,
     runId, seq, baselineSha, preStageHead, dirtyBaseline, getPin, withHeartbeat, now,
+    runnerState, loopStartCommit, pinBudget, pinLive,
     baselineEnvName, endWith, tripNow,
   } = a;
 
@@ -1558,6 +1966,11 @@ async function scriptIteration(a) {
   }
   const startedAtMs = now();
   const stepsSeen = [];
+  // In-flight ledger for the record: stepsSeen (completed steps only) is
+  // shared by reference, so a record write at any step boundary snapshots
+  // the freshest step set without copying. Cleared when the iteration's
+  // outcome lands in the stage ledger.
+  runnerState.inFlight = { stage, steps: stepsSeen };
   const stepFailures = [];
   let lastStreamSha256 = null;
   let escapeTotal = 0;
@@ -1580,9 +1993,12 @@ async function scriptIteration(a) {
         catch (e) { leg = { ok: false, reason: 'leg-threw', detail: e instanceof Error ? e.message : String(e) }; }
       } else {
         const loaded = pin
-          ? workers.loadPinnedModule(pin, step.module, { rootDir, gitRunner })
+          ? workers.loadPinnedModuleWithHeal(pin, step.module, { rootDir, gitRunner, expectedLoopStartCommit: loopStartCommit, budget: pinBudget })
           : { ok: false, reason: 'pin-unavailable' };
         if (loaded.ok) {
+          if (loaded.healed) {
+            try { fs.writeSync(2, `pin-heal: runTag=${pin.runTag} heals=${pinBudget.heals}/${pinBudget.cap}\n`); } catch { /* telemetry only */ }
+          }
           const fn = loaded.module && loaded.module[step.fn];
           if (typeof fn !== 'function') {
             leg = { ok: false, reason: 'leg-fn-missing', detail: `${step.module} exports no function named ${step.fn}` };
@@ -1594,6 +2010,9 @@ async function scriptIteration(a) {
           leg = { ok: false, reason: 'pin-tampered', detail: loaded.detail };
         } else {
           console.error(`⚠ auto verify: pinned ${step.module} unavailable (${loaded.reason}) — running the live-tree module`);
+          if (loaded.reason === 'heal-budget-exhausted') {
+            console.error(`⚠ auto verify: pin heal budget exhausted (${pinBudget.heals}/${pinBudget.cap} heals this run) — pinned ${step.module} stays down for the rest of the run`);
+          }
           try {
             const mod = require(path.join(core.GOS_SELF_ROOT, step.module));
             const fn = mod && mod[step.fn];
@@ -1652,6 +2071,7 @@ async function scriptIteration(a) {
         kind: 'script',
       };
       store.heartbeatRunLock(rootDir);
+      pinLive('pre-spawn');
       let result;
       try {
         result = await withHeartbeat(() => spawnRunner(spec, { wallMs: tp.wallSec * 1000, idleMs: tp.idleSec * 1000, ackTick: () => store.serviceRequests(rootDir, spawnId) }));
@@ -1660,6 +2080,7 @@ async function scriptIteration(a) {
       }
       try { store.removeSpawn(spawnId, rootDir); } catch { /* already gone */ }
       store.heartbeatRunLock(rootDir);
+      pinLive('post-settle');
       const bumped = store.bumpSpawn(rootDir);
       if (!bumped.ok) {
         return { err: endWith({ ok: false, status: 'paused', paused: true, reason: 'budget-write-failed', path: bumped.path, guidance: bumped.guidance }) };
@@ -1735,7 +2156,10 @@ async function scriptIteration(a) {
     }
   } catch { /* unwritable: the channel reports it at the child */ }
   const childEnv = {
-    ...(env === process.env ? {} : env),
+    // Credential-stripped passthrough, same base the Class S spawns get: a
+    // CLI-driven runner sees env === process.env, and a bare-marker child
+    // would lose HOME/XDG and look up the spawn channel in the wrong store.
+    ...launcher.stripGosAutoEnv(registry.sanitizedSpawnEnv(env === process.env ? undefined : env)),
     [SPAWN_MARKER_ENV]: '1',
     GOS_AUTO_SPAWN_ID: exitSpawnId,
     [baselineEnvName]: baselineSha,

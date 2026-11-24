@@ -449,6 +449,23 @@ function autoStatus(mods, ui) {
     const lastTrip = [...st.breaker.records].reverse().find((r) => r.layer);
     if (lastTrip) console.log(core.t('auto.cli.status.breakerTripped', { layer: lastTrip.layer, cls: lastTrip.cls, ts: lastTrip.ts, detail: tripDetailArg(lastTrip.detail) }));
     else console.log(core.t('auto.cli.status.breakerClean', { n: st.breaker.records.length }));
+    // Latest-run line: the survival path made operator-visible — the latest
+    // record's end status, how many crash-side records were adopted
+    // (droppedRecord), and the pin heals that run spent. Absent entirely
+    // when the store holds no run records (no empty-field noise).
+    const cwd = process.cwd();
+    const latestLoad = mods.store.latestRunRecord(cwd);
+    if (latestLoad.ok && store.isPlainObject(latestLoad.record)) {
+      const rec = latestLoad.record;
+      const recs = mods.store.readRunRecords(cwd);
+      const dropped = recs.ok ? recs.runRecords.filter((r) => store.isPlainObject(r) && r.droppedRecord === true).length : 0;
+      const es = store.isPlainObject(rec.endState) ? rec.endState : {};
+      console.log(core.t('auto.cli.status.latestRun', {
+        status: typeof es.status === 'string' && es.status ? es.status : 'unknown',
+        dropped,
+        heals: Number.isInteger(rec.heals) ? rec.heals : 0,
+      }));
+    }
     // Clearance summary: the three-tier vocabulary over the delegated-stage
     // approval records, trust-flavored from the live store stamps.
     const clearance = clearanceTerms(trackedApprovals(), store.isPlainObject(st.stamps) ? st.stamps : undefined);

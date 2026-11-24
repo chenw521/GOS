@@ -228,6 +228,7 @@ TOTAL_PASS=0
 TOTAL_FAIL=0
 RESULTS_JSON=""
 FAILED_SECS=""
+SKIPPED_SECS=""
 RAN_NAMES=""
 SELECTOR="full"
 
@@ -336,13 +337,27 @@ for f in "$TREE_ROOT"/test/sections/T*.test.sh; do
   fi
   P="$(printf '%s\n' "$SEC_OUT" | grep -c '^  ✓' || true)"
   X="$(printf '%s\n' "$SEC_OUT" | grep -c '^  ✗' || true)"
+  # SKIP result type: a section that cannot run on this host (no sandbox
+  # engine, …) prints the sentinel `── SKIP <name>: <reason>` and exits 0.
+  # A clean skip (exit 0, no ✗, no abort) is recorded with its reason, kept
+  # out of failed_sections, and listed as skipped in the summary — never a
+  # silent pass. Any ✗ line or non-zero exit still counts as a failure row.
+  SKIP_REASON=""
+  if [ "$SEC_RC" -eq 0 ] && [ "$X" -eq 0 ]; then
+    SKIP_REASON="$(printf '%s\n' "$SEC_OUT" | grep "^── SKIP $name: " | head -n 1 | sed "s/^── SKIP $name: //")"
+  fi
   echo "--- $name: $P passed, $X failed ---"
   TOTAL_PASS=$((TOTAL_PASS + P))
   TOTAL_FAIL=$((TOTAL_FAIL + X))
   SEC_FAIL=$((X))
   [ "$SEC_RC" -ne 0 ] && SEC_FAIL=$((SEC_FAIL + 1))
-  RESULTS_JSON="$RESULTS_JSON$(python3 -c "import json,sys;print(json.dumps({sys.argv[1]: {'pass': int(sys.argv[2]), 'fail': int(sys.argv[3])}})[1:-1])" "$name" "$P" "$SEC_FAIL"),"
-  if [ "$SEC_FAIL" -gt 0 ]; then FAILED_SECS="$FAILED_SECS $name($SEC_FAIL)"; fi
+  if [ -n "$SKIP_REASON" ]; then
+    RESULTS_JSON="$RESULTS_JSON$(python3 -c "import json,sys;print(json.dumps({sys.argv[1]: {'pass': int(sys.argv[2]), 'fail': int(sys.argv[3]), 'skip': sys.argv[4]}})[1:-1])" "$name" "$P" "$SEC_FAIL" "$SKIP_REASON"),"
+    SKIPPED_SECS="$SKIPPED_SECS $name"
+  else
+    RESULTS_JSON="$RESULTS_JSON$(python3 -c "import json,sys;print(json.dumps({sys.argv[1]: {'pass': int(sys.argv[2]), 'fail': int(sys.argv[3])}})[1:-1])" "$name" "$P" "$SEC_FAIL"),"
+    if [ "$SEC_FAIL" -gt 0 ]; then FAILED_SECS="$FAILED_SECS $name($SEC_FAIL)"; fi
+  fi
 done
 
 # sweep: sections clean up via their own teardown; remove sandboxes leaked by
@@ -374,6 +389,7 @@ shopt -u nullglob
 echo ""
 echo "=== Sections total: $TOTAL_PASS passed, $TOTAL_FAIL failed ==="
 [ -n "$FAILED_SECS" ] && echo "failed sections:${FAILED_SECS}"
+[ -n "$SKIPPED_SECS" ] && echo "skipped sections:${SKIPPED_SECS}"
 echo "full log: $RUN_LOG"
 
 # run-manifest: overwrite-mode (never append — partial runs are snapshots,

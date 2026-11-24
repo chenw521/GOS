@@ -1,0 +1,39 @@
+--- T136: dogfood restart-safe auto loop (kill + restart) ---
+  ✓ C1: fixture built (fixture: fix)
+  ✓ C1: store resolved inside the fixture dir
+  ✓ C1: sentinel marker deleted — first-pass blocking re-armed (the kill window)
+  ✓ C1: sentinel marker armed (first pass blocking in the 600s window)
+  ✓ C1: marker carries the sentinel pid (156620)
+  ✓ C1: SIGTERM lands the runner at 128+15
+  ✓ C1: killed child silent in /proc (pid 156620 gone)
+  ✓ C1: kill telemetry on the runner stderr
+  ✓ C1: kill telemetry names the spawn id and pid
+  ✓ C1: killed record — exactly one, reason SIGTERM, in-flight VERIFY entry with steps
+  ✓ C1: run lock released (no run.lock in the store dir)
+  ✓ C1: restarted runner completes (exit 0, inside the 420s bound)
+  ✓ C1: restarted run reaches a GREEN record with every pin leg passing
+  ✓ C1: auto status carries the latest-run line
+  ✓ C1: round 1 log carries the pin-live markers
+  ✓ C1: round 2 log carries the pin-live markers
+  ✓ C2: fixture built (fixture: fix)
+  ✓ C2: store resolved inside the fixture dir
+  ✓ C2: sentinel marker deleted — first-pass blocking re-armed (the kill window)
+  ✓ C2: sentinel marker armed (first pass blocking in the 600s window)
+  ✓ C2: marker carries the sentinel pid (194971)
+  ✓ C2: SIGHUP lands the runner at 128+1
+  ✓ C2: killed child silent in /proc (pid 194971 gone)
+  ✓ C2: kill telemetry on the runner stderr
+  ✓ C2: kill telemetry names the spawn id and pid
+  ✓ C2: killed record — exactly one, reason SIGHUP, in-flight VERIFY entry with steps
+  ✓ C2: run lock released (no run.lock in the store dir)
+  ✓ C2: restarted runner completes (exit 0, inside the 420s bound)
+  ✓ C2: restarted run reaches a GREEN record with every pin leg passing
+  ✓ C2: auto status carries the latest-run line
+  ✓ C2: round 1 log carries the pin-live markers
+  ✓ C2: round 2 log carries the pin-live markers
+  ✓ C3: forced-no-bwrap self-invocation exits 0
+  ✓ C3: self-invocation prints the named SKIP sentinel
+  ✓ C3: skip carries zero assertion lines (runner skip-row inputs)
+  ✓ C3: section body never starts under the forced skip
+  ✓ C3: forced skip lands fast (0s — preflight fails fast, bound 10s)
+--- T136 summary: 37 passed, 0 failed ---

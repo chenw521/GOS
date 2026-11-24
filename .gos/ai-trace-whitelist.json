@@ -17,7 +17,7 @@
     "reason": "Anchor-style history quotes in ignore-rule comments document why machine-local zones are ignored.",
     "pin": {
       "type": "region-sha256",
-      "minLine": 75,
+      "minLine": 77,
       "regionSha256": "f0fca4b17258fa9cde8570b8692c8a88f4b6c88899445f544de7fe8549e84a3e"
     }
   },

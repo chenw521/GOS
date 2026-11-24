@@ -73,11 +73,20 @@ function cleanupOwnTestbase() {
   ownTestbase = null;
 }
 process.on('exit', cleanupOwnTestbase);
-for (const sig of ['SIGINT', 'SIGTERM']) {
-  // Node keeps custom listeners installed across self-signals — re-killing
-  // here would re-enter this handler forever. Clean up, then exit with the
-  // conventional 128+signal code (130/143) instead of re-raising.
-  process.on(sig, () => { cleanupOwnTestbase(); process.exit(sig === 'SIGINT' ? 130 : 143); });
+// Signal cleanup arms only while a section run actually holds a testbase:
+// registered at module load it would hijack SIGTERM/SIGINT for every CLI
+// process (including an auto runner, whose own kill handler must survive)
+// and exit before that handler ever ran.
+let ownTestbaseSignalsArmed = false;
+function armOwnTestbaseSignals() {
+  if (ownTestbaseSignalsArmed) return;
+  ownTestbaseSignalsArmed = true;
+  for (const sig of ['SIGINT', 'SIGTERM']) {
+    // Node keeps custom listeners installed across self-signals — re-killing
+    // here would re-enter this handler forever. Clean up, then exit with the
+    // conventional 128+signal code (130/143) instead of re-raising.
+    process.on(sig, () => { cleanupOwnTestbase(); process.exit(sig === 'SIGINT' ? 130 : 143); });
+  }
 }
 
 function sectionFileNames(root) {
@@ -283,6 +292,7 @@ async function cmdSectionRun(args) {
   const cacheDir = path.join(root, '.gos', 'cache');
   const base = makeTestbase(cacheDir);
   ownTestbase = base;
+  armOwnTestbaseSignals();
   // Full-run log: every byte the runner prints is teed to a per-run file so a
   // failure can be diagnosed from the artifact instead of re-running the suite.
   const logsDir = path.join(cacheDir, 'section-runs');

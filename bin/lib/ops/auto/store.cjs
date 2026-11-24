@@ -110,6 +110,13 @@ const RUN_RECORDS_CAP = 50;
 const RUN_STEP_KINDS = new Set(['P', 'S']);
 const RUN_STEP_STATUSES = new Set(['passed', 'failed', 'refused']);
 
+// Run-record drop sidecar: file names under the store root for the
+// crash-side run-record queue — the live ndjson queue the loop appends to
+// when a store write cannot land (signal death, store-busy), plus the
+// quarantine file that receives lines the drain validator rejects.
+const RUN_RECORDS_DROP_FILE = 'runrecords-drop.ndjson';
+const RUN_RECORDS_CORRUPT_FILE = 'runrecords-drop.corrupt.ndjson';
+
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 
 // ---- locale surfaces ----
@@ -183,10 +190,16 @@ function stampTelemetryWellTyped(s) {
 
 // Run-record shape validation: returns the first violation as a detail
 // string, null when well-formed. Shared by the store-shape validator
-// (present-but-malformed is structural damage) and the write path (a
-// malformed record is refused before the store ever sees it).
+// (present-but-malformed is structural damage), the write path (a
+// malformed record is refused before the store ever sees it), and the
+// drain validator. Optional boolean droppedRecord marks a record adopted
+// from the crash-side drop queue — absent stays valid, present must be a
+// boolean. Optional integer heals carries the per-run pin heal count —
+// absent stays valid, present must be a non-negative integer.
 function runRecordRejection(r) {
   if (!isPlainObject(r)) return 'record must be an object';
+  if (r.droppedRecord != null && typeof r.droppedRecord !== 'boolean') return 'droppedRecord: boolean or absent required';
+  if (r.heals != null && (!Number.isInteger(r.heals) || r.heals < 0)) return 'heals: non-negative integer or absent required';
   if (typeof r.runId !== 'string' || !r.runId) return 'runId: non-empty string required';
   if (typeof r.runTag !== 'string' || !r.runTag) return 'runTag: non-empty string required';
   if (r.taskId != null && (typeof r.taskId !== 'string' || !r.taskId)) return 'taskId: non-empty string or null required';
@@ -986,16 +999,37 @@ function saveProbeResult(p, rootDir) {
 // outcomes accumulated over the run (script-stage step statuses ride their
 // stage entry), the end state, and timestamps. Validated before the store
 // ever sees it — a malformed record is refused, never persisted; an older
-// store without the key adopts the array on the first append.
-function writeRunRecord(rec, rootDir) {
+// store without the key adopts the array on the first append. opts rides
+// into mutate (bounded waitMs for the mutation mutex — callers on a signal
+// path pass a small or zero budget and treat store-busy as data).
+function writeRunRecord(rec, rootDir, opts = {}) {
   const detail = runRecordRejection(rec);
   if (detail) return { ok: false, status: 'error', reason: 'invalid-run-record', detail };
   const r = mutate(rootDir, (st) => {
     if (!Array.isArray(st.runRecords)) st.runRecords = [];
     st.runRecords = trimArray([...st.runRecords, rec], RUN_RECORDS_CAP);
     return st;
-  });
+  }, opts);
   return r.ok ? { ok: true, path: r.path, record: r.store.runRecords[r.store.runRecords.length - 1] } : r;
+}
+
+// Adopt drained sidecar records in ONE mutate: the drain's multi-record
+// adoption is atomic (never a partial adoption interrupted by a concurrent
+// writer), and trimArray keeps the same cap parity as writeRunRecord.
+// Records arrive pre-validated and pre-marked (droppedRecord) by the drain
+// caller — a malformed entry here is a caller bug and refuses whole.
+function appendDrainedRunRecords(rootDir, records) {
+  if (!Array.isArray(records) || records.length === 0) {
+    return { ok: false, status: 'error', reason: 'invalid-drain-records', detail: 'non-empty array of validated records required' };
+  }
+  const detail = records.map(runRecordRejection).find(Boolean);
+  if (detail) return { ok: false, status: 'error', reason: 'invalid-run-record', detail };
+  const r = mutate(rootDir, (st) => {
+    if (!Array.isArray(st.runRecords)) st.runRecords = [];
+    st.runRecords = trimArray([...st.runRecords, ...records], RUN_RECORDS_CAP);
+    return st;
+  });
+  return r.ok ? { ok: true, path: r.path, appended: records.length } : r;
 }
 
 // Read-only view of every run record, oldest first.
@@ -1010,6 +1044,98 @@ function latestRunRecord(rootDir) {
   const r = readRunRecords(rootDir);
   if (!r.ok) return r;
   return { ok: true, path: r.path, record: r.runRecords.length ? r.runRecords[r.runRecords.length - 1] : null };
+}
+
+// ---- run-record drop sidecar (crash-side queue) ----
+// One JSON line per record appended to <storeRoot>/runrecords-drop.ndjson.
+// This family only moves lines: appends never validate beyond refusing a
+// null/undefined record (shape judgment is the drain validator's job, via
+// the exported runRecordRejection), reads return raw lines, rejected lines
+// quarantine into runrecords-drop.corrupt.ndjson, and truncate clears the
+// live queue.
+
+function runRecordsDropPath(rootDir) {
+  const root = storeRoot(rootDir);
+  return root == null ? null : path.join(root, RUN_RECORDS_DROP_FILE);
+}
+
+function runRecordsCorruptPath(rootDir) {
+  const root = storeRoot(rootDir);
+  return root == null ? null : path.join(root, RUN_RECORDS_CORRUPT_FILE);
+}
+
+// Queue one record as a single ndjson line. Best-effort by contract — the
+// queue must never be the thing that crashes a dying runner — so write
+// failures return { ok: false } data instead of throwing.
+function appendRunRecordDrop(rootDir, rec) {
+  if (rec == null) return { ok: false, status: 'error', reason: 'invalid-drop-record', detail: 'record value required (null/undefined is never queued)' };
+  const p = runRecordsDropPath(rootDir);
+  if (p == null) return { ok: false, status: 'error', reason: 'unwritable', detail: 'no XDG data home resolvable' };
+  try {
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.appendFileSync(p, JSON.stringify(rec) + '\n');
+  } catch (e) { return { ok: false, status: 'error', reason: 'append-failed', path: p, detail: e.message }; }
+  return { ok: true, path: p };
+}
+
+// Raw queue lines in order; an absent (or unreadable) file is an empty
+// queue, not an error.
+function readRunRecordDrops(rootDir) {
+  const p = runRecordsDropPath(rootDir);
+  let raw = '';
+  try { raw = fs.readFileSync(p, 'utf8'); } catch { return { ok: true, lines: [] }; }
+  return { ok: true, lines: raw.split('\n').filter((l) => l !== '') };
+}
+
+// Quarantine raw lines the drain validator rejected. Only appends to the
+// corrupt file — removing the lines from the live queue is the caller's
+// rebuild cycle (move what failed, truncate, re-append what survived).
+function moveCorruptDropLines(rootDir, lines) {
+  if (!Array.isArray(lines)) {
+    return { ok: false, status: 'error', reason: 'invalid-lines', detail: 'array of raw line strings required' };
+  }
+  const p = runRecordsCorruptPath(rootDir);
+  if (p == null) return { ok: false, status: 'error', reason: 'unwritable', detail: 'no XDG data home resolvable' };
+  const keep = lines.filter((l) => typeof l === 'string' && l !== '');
+  if (!keep.length) return { ok: true, moved: 0, path: p };
+  try {
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.appendFileSync(p, keep.join('\n') + '\n');
+  } catch (e) { return { ok: false, status: 'error', reason: 'quarantine-failed', path: p, detail: e.message }; }
+  return { ok: true, moved: keep.length, path: p };
+}
+
+// Clear the live queue. Removal is an unlink (not truncate-to-empty): an
+// absent file and an empty file read identically, and unlink keeps the
+// quarantine file the sole survivor of the cycle. Absence is success.
+function truncateRunRecordDrops(rootDir) {
+  const p = runRecordsDropPath(rootDir);
+  if (p == null) return { ok: false, status: 'error', reason: 'unwritable', detail: 'no XDG data home resolvable' };
+  try { fs.unlinkSync(p); }
+  catch (e) { if (e.code !== 'ENOENT') return { ok: false, status: 'error', reason: 'truncate-failed', path: p, detail: e.message }; }
+  return { ok: true };
+}
+
+// Atomically replace the live queue's content with exactly `lines` (tmp
+// file + rename over the target, same directory). The drain's rebuild step:
+// until the rename lands the source file still holds every original line,
+// so a crash anywhere before it preserves the whole queue, and a failed
+// rewrite leaves it untouched for the next run's retry.
+function rewriteRunRecordDrops(rootDir, lines) {
+  const p = runRecordsDropPath(rootDir);
+  if (p == null) return { ok: false, status: 'error', reason: 'unwritable', detail: 'no XDG data home resolvable' };
+  if (!Array.isArray(lines)) return { ok: false, status: 'error', reason: 'invalid-lines', detail: 'array of raw line strings required' };
+  const body = lines.filter((l) => typeof l === 'string' && l !== '');
+  const tmp = p + '.tmp';
+  try {
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(tmp, body.length ? body.join('\n') + '\n' : '', 'utf8');
+    fs.renameSync(tmp, p);
+  } catch (e) {
+    try { fs.unlinkSync(tmp); } catch { /* best effort */ }
+    return { ok: false, status: 'error', reason: 'rewrite-failed', path: p, detail: e.message };
+  }
+  return { ok: true, kept: body.length, path: p };
 }
 
 // ---- counters + breaker records ----
@@ -1122,7 +1248,11 @@ function lockHeartbeatStale(rec, lp, rootDir) {
 // Exclusive run lock. Refusals name the holder (cross-host refusals name
 // the owning clone — this machine cannot judge a remote pid). Recovery:
 // dead pid (same host or different boot_id) auto-recovers; ambiguous
-// live-pid-but-stale-heartbeat requires an explicit break.
+// live-pid-but-stale-heartbeat requires an explicit break. A success that
+// broke an existing lock carries tookOver {pid, hostname, reason} as its
+// audit — reason from the closed enum dead-pid | boot-changed | unreadable
+// | cross-host | heartbeat-stale, pid/hostname only as far as the broken
+// record proved them; a clean acquire carries no tookOver at all.
 function acquireRunLock(opts = {}) {
   const breakLock = opts.breakLock === true;
   if (_lockHeldPath) return { ok: true, reentrant: true, path: _lockHeldPath };
@@ -1130,12 +1260,14 @@ function acquireRunLock(opts = {}) {
   if (lp == null) return paused('unwritable', null, 'no XDG data home resolvable', 'auto.store.unwritable');
   try { fs.mkdirSync(path.dirname(lp), { recursive: true }); }
   catch (e) { return { ok: false, status: 'error', reason: 'unwritable', path: lp, detail: e.message, guidance: guidanceFor('auto.store.unwritable', { path: lp }) }; }
+  let tookOver = null;
   if (fs.existsSync(lp)) {
     const rec = readLockFile(lp);
     let remove = false;
     if (rec == null) {
       console.error(`⚠ auto run lock unreadable (${lp}) — auto-recovered`);
       remove = true;
+      tookOver = { pid: null, hostname: null, reason: 'unreadable' };
     } else {
       const sameHost = rec.hostname === os.hostname();
       const myBoot = readBootId();
@@ -1149,9 +1281,11 @@ function acquireRunLock(opts = {}) {
         }
         recordBreaker({ cls: 'takeover', detail: `cross-host break of lock held by ${rec.hostname} (${rec.clone_path})` }, opts.rootDir);
         remove = true;
+        tookOver = { pid: Number.isInteger(rec.pid) ? rec.pid : null, hostname: rec.hostname || null, reason: 'cross-host' };
       } else if (bootChanged || !livePid(rec.pid)) {
         console.error(`⚠ stale auto run lock (pid ${rec.pid} not running) — auto-recovered`);
         remove = true;
+        tookOver = { pid: Number.isInteger(rec.pid) ? rec.pid : null, hostname: rec.hostname || null, reason: bootChanged ? 'boot-changed' : 'dead-pid' };
       } else {
         const stale = lockHeartbeatStale(rec, lp, opts.rootDir);
         if (!stale || !breakLock) {
@@ -1162,6 +1296,7 @@ function acquireRunLock(opts = {}) {
         }
         recordBreaker({ cls: 'takeover', detail: `heartbeat-stale break of lock held by pid ${rec.pid}` }, opts.rootDir);
         remove = true;
+        tookOver = { pid: Number.isInteger(rec.pid) ? rec.pid : null, hostname: rec.hostname || null, reason: 'heartbeat-stale' };
       }
     }
     if (remove) { try { fs.unlinkSync(lp); } catch { /* racing */ } }
@@ -1192,7 +1327,9 @@ function acquireRunLock(opts = {}) {
       try { fs.unlinkSync(lp); } catch { /* gone */ }
     }
   });
-  return { ok: true, path: lp, lock: record };
+  const out = { ok: true, path: lp, lock: record };
+  if (tookOver) out.tookOver = tookOver;
+  return out;
 }
 
 // Refresh the heartbeat of OUR lock (long spawn waits and CI watches must
@@ -1286,7 +1423,11 @@ function breakRunLock(rootDir) {
 // validated fail-closed — vocabulary closed set, cap never past the hard
 // ceiling. Redteam spawns register without any write authorization; script
 // spawns (Class S fixed-argv steps) register as kind 'script' and only for
-// script-worker stages.
+// script-worker stages. Holder liveness is stamped here, not by call
+// sites: the doc always carries the registering pid (an explicitly provided
+// rec.pid wins, anything non-integer refuses) and its /proc starttime
+// (null off Linux), plus an optional absolute test_base for sections-suite
+// spawns whose testbed pin is derivable from rec.
 function registerSpawn(rec, rootDir) {
   if (!isPlainObject(rec) || typeof rec.spawnId !== 'string' || !SPAWN_ID_FILE_RE.test(rec.spawnId)) {
     return { ok: false, status: 'error', reason: 'invalid-spawn-id', detail: 'spawnId must be filename-safe (letters, digits, dot, dash, underscore)' };
@@ -1316,6 +1457,16 @@ function registerSpawn(rec, rootDir) {
   if (useCap > limits.HARD_USE_CAP_CEILING) {
     return { ok: false, status: 'error', reason: 'use-cap-over-ceiling', detail: `useCap ${useCap} exceeds the hard ceiling ${limits.HARD_USE_CAP_CEILING}` };
   }
+  let pid = process.pid;
+  if (rec.pid != null) {
+    if (!Number.isInteger(rec.pid) || rec.pid <= 0) {
+      return { ok: false, status: 'error', reason: 'invalid-pid', detail: 'pid must be a positive integer when provided' };
+    }
+    pid = rec.pid;
+  }
+  if (rec.test_base != null && (typeof rec.test_base !== 'string' || !path.isAbsolute(rec.test_base))) {
+    return { ok: false, status: 'error', reason: 'invalid-test-base', detail: 'test_base must be an absolute path string when provided' };
+  }
   const scratch = spawnreg.scratchPath(rootDir, rec.spawnId);
   if (scratch == null) return paused('unwritable', null, 'no XDG data home resolvable', 'auto.store.unwritable');
   const acksDir = spawnreg.acksPath(rootDir, rec.spawnId);
@@ -1327,7 +1478,9 @@ function registerSpawn(rec, rootDir) {
     use_cap: useCap,
     uses: 0,
     window_expiry: Date.now() + (rec.wallMs || 3600000),
-    pid: rec.pid,
+    pid,
+    starttime: spawnreg.procStartTime(pid),
+    ...(rec.test_base != null ? { test_base: rec.test_base } : {}),
   });
   try {
     fs.mkdirSync(scratch, { recursive: true });
@@ -1342,6 +1495,36 @@ function registerSpawn(rec, rootDir) {
 function removeSpawn(spawnId, rootDir) {
   spawnreg.removeEntry(rootDir, spawnId);
   return { ok: true };
+}
+
+// Best-effort directory listing of every spawnreg entry: reads entry files
+// directly (unlike readEntry, window expiry hides nothing — an expired
+// entry is still an entry on disk), names each unreadable one in `skipped`
+// instead of failing the whole listing, and never mistakes a grant manifest
+// for an entry. Unreadable individual files skip; an absent or empty
+// registry lists as empty.
+function listSpawnEntries(rootDir) {
+  const dir = spawnreg.spawnregDir(rootDir);
+  if (dir == null) return { ok: false, status: 'error', reason: 'unwritable', detail: 'no XDG data home resolvable' };
+  let names = [];
+  try { names = fs.readdirSync(dir); }
+  catch (e) {
+    if (e.code === 'ENOENT') return { ok: true, entries: [], skipped: [] };
+    return { ok: false, status: 'error', reason: 'list-failed', path: dir, detail: e.message };
+  }
+  const entries = [];
+  const skipped = [];
+  for (const name of names) {
+    if (!name.endsWith('.json') || name.endsWith('.manifest.json')) continue;
+    const stem = name.slice(0, -5);
+    if (!SPAWN_ID_FILE_RE.test(stem)) continue;
+    let doc = null;
+    try { doc = JSON.parse(fs.readFileSync(path.join(dir, name), 'utf8')); }
+    catch { doc = null; }
+    if (!doc || typeof doc !== 'object') { skipped.push(stem); continue; }
+    entries.push({ spawnId: stem, entry: doc });
+  }
+  return { ok: true, entries, skipped };
 }
 
 // Write this spawn's immutable grant manifest for ro-binding into its
@@ -1760,8 +1943,15 @@ module.exports = {
   recordTrip,
   recordBreaker,
   writeRunRecord,
+  appendDrainedRunRecords,
   readRunRecords,
   latestRunRecord,
+  runRecordRejection,
+  appendRunRecordDrop,
+  rewriteRunRecordDrops,
+  readRunRecordDrops,
+  moveCorruptDropLines,
+  truncateRunRecordDrops,
   mirrors,
   acquireRunLock,
   heartbeatRunLock,
@@ -1770,6 +1960,7 @@ module.exports = {
   breakRunLock,
   registerSpawn,
   removeSpawn,
+  listSpawnEntries,
   writeGrantManifest,
   admitAndAck,
   serviceRequests,

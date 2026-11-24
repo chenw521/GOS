@@ -159,6 +159,16 @@ if b is not None:
         elif got < floor:
             problems.append(f"{name}: pass {got} below the baseline floor {floor}")
 
+    # Skip entries: a section that refused to run (sandbox engine missing, …)
+    # must carry its refusal reason — an empty or non-string skip field is a
+    # silent pass and fails here.
+    for name in sorted(results):
+        res = results.get(name)
+        if isinstance(res, dict) and "skip" in res:
+            reason = res.get("skip")
+            if not isinstance(reason, str) or not reason.strip():
+                problems.append(f"{name}: skip entry without a non-empty reason")
+
 print("OK" if not problems else "BAD|" + "; ".join(problems))
 PY
 )"

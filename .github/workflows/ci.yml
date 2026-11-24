@@ -77,6 +77,9 @@ jobs:
       - name: ai-trace whitelist shrink guard (tracker may only shrink)
         run: bash test/checks/ai-trace-shrink.sh
 
+      - name: dogfood direct-require guard (T136 reaches the auto loop via the CLI only)
+        run: bash test/checks/dogfood-no-require.sh --self-test
+
   sections:
     name: Sections (Node ${{ matrix.node-version }})
     runs-on: ubuntu-24.04
