@@ -32,7 +32,12 @@ workspace write.
 - **R-01**: ci-tiering three-tier flow: PR CI runs affected sections plus
   the cheap whole-tree invariant sections for minutes-level feedback; main
   runs the heavy `gos-map:none` complement, the merge-diff blast closure
-  (every commit landing on main carries its own affected-section closure),
+  (every commit landing on main carries its own affected-section closure,
+  scoped v12 per rt2-F-1 at 3a22587b: under burst merges — a merge
+  landing while its predecessor's closeout is still PENDING — the
+  intermediate commit's affected slice is skipped by the single-pending
+  cancel; the invariant re-run still covers every push whole-tree, and
+  the skipped slice rides the DI-3/DI-4 backstop),
   and the invariant re-run (auto from intent). The invariant family is an
   explicit frozen enumeration carried by the runner's `--tier`
   implementation (T46 module counts, T66 census, T85 security-depth,
@@ -154,9 +159,12 @@ modes):
   motivation, concern 834fb3e7, holds). Push-to-main runs are never
   cancelled in progress: a newer push queues behind the running one, and
   the default single-pending semantics may cancel an older PENDING run —
-  a skipped commit's diff stays covered because the merge-diff blast
-  computes against the last COMPLETED main head, which then spans the
-  skipped commit. `queue: max` is not used: it combines only with
+  the skipped commit's own affected slice is then covered by no closeout,
+  because the surviving run's `before` base is the last ARRIVED head, not
+  the last completed one (rt2-F-1 at 3a22587b: the v11 coverage sentence
+  claimed a mechanism the design never pinned). R-01 scopes the guarantee
+  accordingly; the residual is the invariant floor plus DI-3/DI-4.
+  `queue: max` is not used: it combines only with
   `cancel-in-progress: false`, and a static `true` for PR events would
   be a workflow validation conflict. Main-push behavior change vs
   today, accepted: superseded main-push jobs queue and complete instead
@@ -178,6 +186,13 @@ modes):
   exits re-predicate to `INPUT_FILES empty AND SELECTED empty`; (b) the
   `map blast` call is skipped when INPUT_FILES is empty with SELECTED
   non-empty (blast dies on zero argv by construction, map/index.cjs:225).
+  The unmarked map:none floor is a filesystem enumeration over
+  test/sections, independent of blast — it joins SELECTED on the
+  skip-blast path too (rt2-F-2 at 3a22587b: the floor's live
+  implementation sits inside the blast-coupled selector at
+  run-sections.sh:293-299, so a docs-only PR would silently drop
+  T35/T37/T39 and contradict the quota lines unless the floor is pinned
+  on this path as well).
 - Deletion gap (accepted, documented): a DELETED section file escapes
   selection on every tier (the runner iterates existing files). Review
   discipline covers the residual; DI-4 tracks a roster-shrink detector
@@ -205,7 +220,7 @@ modes):
 
 | Option | Premise | Pros | Cons | Activates |
 |:--|:--|:--|:--|:--|
-| A. tiered rosters via a new `--tier` flag; main = complement ∪ invariants ∪ affected(merge-diff vs prior main) (chosen) | the 2026-11-24 evidence (rt rounds 1-8) shows (i) misses concentrate in whole-tree invariant sections, (ii) the heavy spawn family needs a guaranteed main slot, (iii) merge-before-green and composition require the merge's own blast at main, and (iv) partial-roster manifests cannot validate (manifest-coverage contract) — so the v3/v4 tree-guard and manifest-artifact interludes are withdrawn | minutes-level PR feedback; every commit landing on main carries its own blast closure (covers composition, merge-before-green, and PR-tier skips uniformly); no artifact trust, no tree comparison, no permanently-red-by-construction wiring | a stale map edge can starve an anchored section on all tiers (blast-wrong, not blast-fail) — mitigated by DI-3 nightly-full insurance; the gos-map:none auto-family regression surfaces only at merge (accepted trade, ruling 2026-11-24 option A) | the `--tier` flag, the `sections-pr` job, the tiered main job |
+| A. tiered rosters via a new `--tier` flag; main = complement ∪ invariants ∪ affected(merge-diff vs prior main) (chosen) | the 2026-11-24 evidence (rt rounds 1-8) shows (i) misses concentrate in whole-tree invariant sections, (ii) the heavy spawn family needs a guaranteed main slot, (iii) merge-before-green and composition require the merge's own blast at main, and (iv) partial-roster manifests cannot validate (manifest-coverage contract) — so the v3/v4 tree-guard and manifest-artifact interludes are withdrawn | minutes-level PR feedback; every commit landing on main carries its own blast closure (covers composition, merge-before-green, and PR-tier skips uniformly); no artifact trust, no tree comparison, no permanently-red-by-construction wiring | a stale map edge can starve an anchored section on all tiers (blast-wrong, not blast-fail) — mitigated by DI-3 nightly-full insurance (an unscheduled candidate, not a committed schedule, rt2-F-3 at 4c2dd9c2); the gos-map:none auto-family regression surfaces only at merge (accepted trade, ruling 2026-11-24 option A) | the `--tier` flag, the `sections-pr` job, the tiered main job |
 | B. PR affected only; main unchanged full suite | smallest diff | simple | rt2-F4: the tiered rosters are not expressible without the runner feature anyway; the map:none floor keeps PR slow; full-at-main keeps the 11-min closeout cost | nothing |
 | C. status quo: full dual-node on PR | selection unproven | zero new machinery | ~11 min x 2 per push; the concern's original cost | nothing — the current `sections` job |
 
@@ -356,11 +371,14 @@ roots split (loop.cjs:1771-1776), and the script-leg TESTBASE pin
 - [DI-3]: scheduled nightly full suite on main — bounded insurance against
   the blast-wrong residual (a stale map edge can starve an anchored
   section on all tiers; rt2-F5 at b9e370f6).
-- [DI-4]: roster-shrink detector hosted on the main closeout
-  (post-suite against the fresh manifest — after D-01 no scheduled
-  steady-state full-suite run exists to host it; deletion-gap residual;
-  the v4 manifest-coverage wiring was withdrawn — the check cannot
-  validate partial rosters; rt2-F-3 at 4c2dd9c2).
+- [DI-4]: roster-shrink detector (deletion-gap residual). Host/instrument
+  history: rt2-F-3 at 4c2dd9c2 rehosted it on the main closeout;
+  3a22587b-rt1-F2/rt2-F-3 broke that host — the manifest-based
+  instrument requires a full on-disk roster and the closeout is partial
+  by construction, which is exactly the withdrawn v4 contract. Candidate
+  instrument: disk-roster vs committed-baseline diff (needs a pinned
+  baseline store); candidate host: main closeout post-suite. Unbuilt
+  until a phase picks it up.
 - [DI-5]: blast-result caching across pushes of the same PR (only if
   selection cost ever shows up in job timings).
 
@@ -391,7 +409,9 @@ this session type; shared-prior blind spots cannot be caught this round).
 
 > Disposition key: ACCEPT(design change landed) / ACCEPT-PARTIAL /
 > REJECT(factual counter-evidence cited) / DEFER(to DI-n).
-> Verdict line: converged (final re-attack round returned zero new findings)
+> Verdict line: converged (inline round 3's single finding — the
+> floors-enumeration completion — was ACCEPTed; its re-attack of the
+> round 1-2 findings returned zero new defects)
 > for the inline rounds; the DISPATCHED independent rounds (rt1/rt2, below)
 > produced findings that were all ACCEPTed and amended into this spec —
 > final state post-amendment awaiting the resumed run's VERIFY.
@@ -468,9 +488,9 @@ at c5c0f2d0): c9b172bd (rt1 on v7, 5 findings, rt2 quota-dead) and
 
 > The TRUE findings trend across all dispatched runs (afaecaf8 → a37c07e8
 > → 966e04e2 → b9e370f6 → 587c9f4a → 1650d812 → c9b172bd → 123c8b8d →
-> de71f597 → 01fffe6b → c5c0f2d0): 8 -> 14 -> 14 -> 12 -> 16 -> 11 -> 5
-> (rt2 no-verdict) -> 0 (both legs no-verdict) -> 7 -> 2 (rt2 no-verdict)
-> -> 10 -> 7. Non-monotonic at AMENDMENT BOUNDARIES — the v5 SIMPLIFICATION
+> de71f597 → 01fffe6b → c5c0f2d0 → 4c2dd9c2): 8 -> 14 -> 14 -> 12 -> 16
+> -> 11 -> 5 (rt2 no-verdict) -> 0 (both legs no-verdict) -> 7 -> 2 (rt2
+> no-verdict) -> 10 -> 7. Non-monotonic at AMENDMENT BOUNDARIES — the v5 SIMPLIFICATION
 > round and the v9 record completion each traded large amendments for
 > fresh attack surface (2 -> 10 at c5c0f2d0 attacked exactly the
 > newly-pinned v9 text: concurrency, placement, record rows); counts
@@ -529,6 +549,23 @@ at c5c0f2d0): c9b172bd (rt1 on v7, 5 findings, rt2 quota-dead) and
 > v10 note FIRED: the verification-path decision (one more pair on v11
 > vs release with the record as-is) escalates to the human gate with a
 > decision brief; the v11 fixes and this record are landed either way.
+
+### Round 21+22 — re-attack on spec v11 (spawn 3a22587b)
+
+| Round | Perspective | Findings | Dispositions |
+|:---|:---|:---|:---|
+| rt1 (3a22587b) | misuse/edge | 2 | Freeze discipline violated one revision after adoption: an uncertified working-tree amendment (the D-01 Cons cell's DI-3 wording alignment, left by the delegated session's 4c2dd9c2 residual pass) diverged from the refrozen pin — B-22 would hard-fail the next task commit: ACCEPT — the residual edit certified via refreeze+commit; every amendment pass now ends with refreeze+commit before any runner launch. DI-4's rehosted detector contradicts the spec's own withdrawn-contract evidence (manifest-based validation on a partial roster re-introduces the permanently-impossible v4 contract): ACCEPT — DI-4 instrument honesty restored (candidate: disk-roster vs committed-baseline diff). |
+| rt2 (3a22587b) | edge/completeness | 5 | Burst-merge coverage hole: under C1→C2→C3 with pending-cancel, C2's affected slice is tested by no run, and the v11 "last COMPLETED" coverage sentence claimed a mechanism the design never pinned (`before` is the last arrived head): ACCEPT — R-01 guarantee scoped to burst-merge windows, concurrency sentence corrected, residual rides the invariant floor plus DI-3/DI-4. Docs-only PRs silently drop the unmarked map:none floor (the floor lives inside the blast-coupled selector; the skip-blast path never fires it, contradicting the quota lines): ACCEPT — floor pinned as a filesystem enumeration joining SELECTED on the skip-blast path too. F-3 = rt1's DI-4 instrument contradiction (convergent). Trend enumeration garbled again (12 counts vs 11 ids — 4c2dd9c2 missing from the id list): ACCEPT — ids completed. Inline verdict line contradicts its own table (round 3 recorded 1 finding): ACCEPT — restated precisely. |
+
+> All 7 findings ACCEPTed (6 distinct; DI-4 doubled across legs); spec
+> amended to v12. Class migration continues toward the periphery: one
+> claim-vs-mechanism contradiction (burst-merge coverage — the third
+> iteration of the pending-cancel class, now scoped honestly), one pin
+> gap (skip-blast floor), one process-discipline fix, three record
+> items. No premise- or core-mechanism finding; the v11 concurrency
+> design survived its first attack. Disposition recorded (delegated
+> consensus); verification path back to the human gate per the A
+> ruling — this record and the v12 fixes are landed either way.
 
 ## Risks
 - Under-selection ships a break to main → the heavy `gos-map:none`
