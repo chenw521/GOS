@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Spawn child-tracking registry section -- every child spawnRun has alive is
 # held in a module-level registry from the spawn call until the run settles,
 # so a runner shutting down can still reach its children

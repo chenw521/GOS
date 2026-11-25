@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Deny scoring is command-kind only — text echoes stay telemetry, never a
 # step failure. The harvested fixture test/fixtures/5419521c-deny-slice.log
 # carries the text-kind deny lines from the 2026-11-09 04:38 dogfood breaker

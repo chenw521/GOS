@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Dogfood acceptance section — the restart-safe auto loop kill/restart cycle
 # driven end to end through the real CLI operating on the committed dogfood
 # fixture (build.sh + seed-store.sh, per the fixture's seed-notes contract).

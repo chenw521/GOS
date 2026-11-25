@@ -1,9 +1,9 @@
 {
   "current": {
-    "total": 1648,
-    "callgraph": 1060,
+    "total": 1649,
+    "callgraph": 1061,
     "testof_fn": 131,
-    "fn_count": 973,
+    "fn_count": 974,
     "fns": [
       "absTaskPath",
       "ackWaitMs",
@@ -752,6 +752,7 @@
       "resolveWorkerPlan",
       "resolvedGrantsOf",
       "retireWrapperState",
+      "rewriteRunRecordDrops",
       "rollDispatchTableStamp",
       "rootOf",
       "rotateRunLogs",
@@ -1589,6 +1590,7 @@
       "readRunRecordDrops": "bin/lib/ops/auto/store.cjs",
       "moveCorruptDropLines": "bin/lib/ops/auto/store.cjs",
       "truncateRunRecordDrops": "bin/lib/ops/auto/store.cjs",
+      "rewriteRunRecordDrops": "bin/lib/ops/auto/store.cjs",
       "bumpSpawn": "bin/lib/ops/auto/store.cjs",
       "recordBreaker": "bin/lib/ops/auto/store.cjs",
       "recordTrip": "bin/lib/ops/auto/store.cjs",
@@ -1954,8 +1956,8 @@
       "pushLazyFreezeLedger": "bin/lib/task/plansnap.cjs",
       "cmdStage": "bin/lib/task/stage.cjs"
     },
-    "fp": "55137b9310427bd7",
-    "at": "2026-11-23T12:11:02.532Z"
+    "fp": "9f1fac997444ca6e",
+    "at": "2026-11-25T04:00:15.625Z"
   },
   "peak": {
     "total": 2065,

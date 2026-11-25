@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Think-trip regression section — the pointer/completed desync that tripped
 # the THINK breaker at 2026-11-09T09:17Z. A headless `commit think` executed
 # while the stage pointer still sat at INTENT marked THINK completed and

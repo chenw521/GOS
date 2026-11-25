@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Pin self-heal choke point section — loadPinnedModuleWithHeal wraps the
 # Class P module load with a bounded, anchor-gated rebuild: a load that
 # fails because the pinned worktree itself is unresolvable or tampered may

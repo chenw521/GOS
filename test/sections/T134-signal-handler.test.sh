@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Signal-handler section — the restart-safe shutdown path: one synchronous
 # handler for SIGTERM/SIGHUP/SIGINT kills tracked children, lands the killed
 # run record (store, or the crash-side drop sidecar under store-busy), and

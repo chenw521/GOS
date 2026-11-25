@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Auto wave contracts section — the BUILD wave driver over the frozen plan
 # snapshot (ops/auto/workers.cjs runWaveDispatch/reconcileWaves), its
 # runner-held prompt template, the store's wave completion records and

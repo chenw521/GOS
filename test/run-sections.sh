@@ -12,6 +12,16 @@
 #   bash test/run-sections.sh --affected [--base <ref>] [files...]
 #                                                      # map-blast closure ∩ section
 #                                                      # anchors + gos-map:none set
+#   bash test/run-sections.sh --tier pr  --base <ref>  # PR tier: affected
+#                                                      # subset + invariant
+#                                                      # enumeration + unmarked
+#                                                      # map:none floor
+#   bash test/run-sections.sh --tier main --base <ref> # main closeout:
+#                                                      # map:none family +
+#                                                      # invariants + affected
+#                                                      # vs previous main
+#   GOS_SECTIONS_ROSTER_ONLY=1   build the tier roster, print one section
+#                                name per line and exit — no section runs
 # Env:
 #   GOS_SECTIONS_TREE_OVERRIDE=<sha>    run the suite against a pinned
 #                                       worktree of <sha> checked out under
@@ -24,12 +34,19 @@ MODE="machine"
 FRESH_FLAG=""
 AFFECTED_FLAG=""
 BASE_REF=""
+TIER_FLAG=""
+TIER=""
 POSITIONAL=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --fresh)    MODE="fresh"; shift ;;
     --affected) MODE="affected"; shift ;;
-    --base)     BASE_REF="$2"; shift 2 ;;
+    --tier)
+      [ $# -ge 2 ] || { echo "✗ --tier: missing value (expected pr|main)" >&2; exit 1; }
+      TIER_FLAG="$2"; MODE="affected"; shift 2 ;;
+    --base)
+      [ $# -ge 2 ] || { echo "✗ --base: missing value" >&2; exit 1; }
+      BASE_REF="$2"; shift 2 ;;
     *)          POSITIONAL+=("$1"); shift ;;
   esac
 done
@@ -246,19 +263,89 @@ mkdir -p "$LOGS_DIR"
 RUN_LOG="$LOGS_DIR/$(date -u +%Y%m%dT%H%M%SZ)-${SELECTOR}$RANDOM.log"
 exec > >(tee "$RUN_LOG") 2>&1
 
+# ---- --tier CI rosters: pr = affected subset ∪ invariant enumeration ∪
+# unmarked map:none floor − marked sections off the input (a marked section
+# whose file IS in the input keeps its slot); main = whole map:none family ∪
+# invariants ∪ affected subset (the caller passes the previous-main diff as
+# --base). Frozen enumerations: the invariant roster below and the
+# gos-tier:main marker set (seeded on the heavy map:none sections) are
+# decision-gated membership — changes land as code edits.
+TIER_INVARIANTS="T46-module-structure T66-census-reconcile T85-security-depth T102-ai-trace T109-changelog-structural"
+
+# head-comment marker probes (the same file-head shape as gos-map:none)
+sec_has_marker() { head -c 400 "$1" 2>/dev/null | grep -qE '^#[[:space:]]*gos-tier:main'; }
+sec_is_map_none() { head -c 400 "$1" 2>/dev/null | grep -qE '^#[[:space:]]*gos-map:none'; }
+
+# roster-build validation: a gos-tier:main marker on a non-map:none section
+# orphans it from both tiers; an invariant name off disk breaks the frozen
+# roster — both fail loudly instead of silently shrinking coverage
+tier_roster_validate() {
+  local f name
+  for f in "$TREE_ROOT"/test/sections/T*.test.sh; do
+    name="$(basename "$f" .test.sh)"
+    if sec_has_marker "$f" && ! sec_is_map_none "$f"; then
+      echo "✗ --tier roster error: $name carries gos-tier:main but is not gos-map:none — it would run in no tier" >&2
+      return 1
+    fi
+  done
+  for name in $TIER_INVARIANTS; do
+    [ -e "$TREE_ROOT/test/sections/$name.test.sh" ] || {
+      echo "✗ --tier roster error: invariant section $name not found on disk" >&2
+      return 1
+    }
+  done
+  return 0
+}
+
+# filesystem map:none floor: every map:none section, minus gos-tier:main
+# sections in the pr tier (they ride the main closeout)
+tier_mapnone_floor() {
+  local f
+  for f in "$TREE_ROOT"/test/sections/T*.test.sh; do
+    sec_is_map_none "$f" || continue
+    if [ "$TIER" = "pr" ] && sec_has_marker "$f"; then continue; fi
+    basename "$f" .test.sh
+  done
+}
+
+# union of whitespace-separated name sets → one space-joined SELECTED line
+sel_union() {
+  printf '%s\n' "$@" | tr ' \t' '\n' | sort -u | sed '/^$/d' | tr '\n' ' ' | sed 's/ $//'
+}
+
 # ---- --affected: map-blast closure ∩ section anchors + the gos-map:none set.
 # Fail-safe by construction: un-anchored sections always run; blast's mustRun
 # already encodes cmd/fn section linkage via the testof edges.
 SELECTED=""
 if [ "$MODE" = "affected" ]; then
   SELECTOR="affected"
+  if [ -n "$TIER_FLAG" ]; then
+    case "$TIER_FLAG" in
+      pr|main) TIER="$TIER_FLAG" ;;
+      *) echo "✗ --tier: unknown tier '$TIER_FLAG' (expected pr|main)" >&2; exit 1 ;;
+    esac
+    SELECTOR="tier-$TIER"
+    FILTER=""
+    tier_roster_validate || exit 1
+  fi
   if [ $# -ge 1 ]; then
     INPUT_FILES="$*"
   else
     BASE="${BASE_REF:-$(node -e "const c=require('./bin/lib/core/index.cjs');const s=c.readState();process.stdout.write(s.task_head||'HEAD')" 2>/dev/null || echo HEAD)}"
     INPUT_FILES="$(git -C "$GOS_ROOT" -c core.quotepath=off diff --name-only "$BASE" 2>/dev/null; git -C "$GOS_ROOT" -c core.quotepath=off ls-files --others --exclude-standard 2>/dev/null)"
   fi
-  if [ -z "$INPUT_FILES" ]; then
+  # Self-selection (all affected/tier modes): section files in the RAW input
+  # re-inject their section NAMES into SELECTED — computed before both
+  # empty-input exits so a test-only PR is validated by its own sections.
+  # Paths never enter the blast argv (blast rejects .sh targets).
+  SELF_SEL="$(printf '%s\n' $INPUT_FILES 2>/dev/null | grep -E '^test/sections/T[^/]*\.test\.sh$' | sed -e 's|^test/sections/||' -e 's|\.test\.sh$||' | sort -u)"
+  SELECTED="$SELF_SEL"
+  # Invariant union joins at this early point: a docs-only PR still runs the
+  # invariant floor rather than exiting green with zero sections.
+  if [ -n "$TIER" ]; then
+    SELECTED="$(sel_union "$SELECTED" "$TIER_INVARIANTS")"
+  fi
+  if [ -z "$INPUT_FILES" ] && [ -z "$SELECTED" ]; then
     echo "── affected mode: empty input set (no diff vs base) — nothing to select"; exit 0
   fi
   # Pre-filter: blast only accepts scan-set files or file-anchor targets.
@@ -281,29 +368,74 @@ let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
   process.stdout.write(out.join("\n"));
 });' 2>"$GOS_ROOT/.gos/cache/affected-skipped.txt")" || true
   if [ -z "$INPUT_FILES" ]; then
-    echo "── affected mode: no graph-relevant inputs remain (see skip list)"; exit 0
-  fi
-  # shellcheck disable=SC2086
-  BLAST_JSON="$(node "$GOS" map blast --json $INPUT_FILES 2>/dev/null)" || { echo "✗ --affected: map blast failed (run: gos map scan)" >&2; exit 1; }
-  SELECTED="$(printf '%s' "$BLAST_JSON" | python3 -c "
+    if [ -z "$SELECTED" ]; then
+      echo "── affected mode: no graph-relevant inputs remain (see skip list)"; exit 0
+    fi
+    # Blast dies on zero argv by construction — with a pre-selected roster
+    # (self-selected section files, invariants) the call is skipped and the
+    # filesystem map:none floor joins SELECTED on this path too.
+    SELECTED="$(sel_union "$SELECTED" "$(tier_mapnone_floor)")"
+    echo "── affected mode: no graph-relevant inputs (blast skipped)"
+  else
+    export GOS_TIER="$TIER"
+    # shellcheck disable=SC2086
+    BLAST_JSON="$(node "$GOS" map blast --json $INPUT_FILES 2>/dev/null)" || { echo "✗ --affected: map blast failed (run: gos map scan)" >&2; exit 1; }
+    BLAST_SEL="$(printf '%s' "$BLAST_JSON" | python3 -c "
 import json, sys, glob, os, re
 d = json.load(sys.stdin)['blast']
 sel = {m['section'] for m in d.get('mustRun', [])}
 rationale = {m['section']: 'blast: ' + ','.join(sorted(m.get('cmds') or ['fn'] )) for m in d.get('mustRun', [])}
-# fail-safe: gos-map:none sections always run (behavior-contract tests outside static edges)
+# fail-safe: gos-map:none sections always run (behavior-contract tests outside static edges);
+# in the pr tier gos-tier:main-marked sections ride the main closeout instead
+tier = os.environ.get('GOS_TIER', '')
 root = os.environ.get('GOS_ROOT', '.')
 for f in sorted(glob.glob(os.path.join(root, 'test/sections/T*.test.sh'))):
     name = os.path.basename(f)[:-len('.test.sh')]
     head = open(f, encoding='utf-8', errors='replace').read(400)
     if re.search(r'^# gos-map:none', head, re.M):
-        sel.add(name); rationale.setdefault(name, 'gos-map:none (fail-safe)')
+        if tier == 'pr' and re.search(r'^#[ \\t]*gos-tier:main', head, re.M):
+            rationale.setdefault(name, 'gos-tier:main (rides the main closeout)')
+        else:
+            sel.add(name); rationale.setdefault(name, 'gos-map:none (fail-safe)')
 print(' '.join(sorted(sel)))
-print('\n'.join(f'{k}\t{v}' for k, v in sorted(rationale.items())), file=sys.stderr)
+print('\\n'.join(f'{k}\\t{v}' for k, v in sorted(rationale.items())), file=sys.stderr)
 " 2>"$GOS_ROOT/.gos/cache/affected-rationale.tsv")" || { echo "✗ --affected: selector parse failed" >&2; exit 1; }
+    unset GOS_TIER
+    # merge, never replace: the blast mustRun set and the map:none floor join
+    # the EXISTING SELECTED — the invariant union is not dropped when blast
+    # re-selects nothing it covers
+    SELECTED="$(sel_union "$SELECTED" "$BLAST_SEL")"
+  fi
+  # pr tier strips gos-tier:main sections off the input (their files in the
+  # input — self-selected above — keep their slots)
+  if [ "$TIER" = "pr" ]; then
+    MARKED_DROP=""
+    for f in "$TREE_ROOT"/test/sections/T*.test.sh; do
+      sec_has_marker "$f" || continue
+      n="$(basename "$f" .test.sh)"
+      printf '%s\n' "$SELF_SEL" | grep -qx "$n" || MARKED_DROP="$MARKED_DROP$n
+"
+    done
+    if [ -n "$MARKED_DROP" ]; then
+      SELECTED="$(printf '%s\n' $SELECTED | grep -Fvx -f <(printf '%s' "$MARKED_DROP") | tr '\n' ' ' | sed 's/ $//')"
+    fi
+  fi
+  # invariant union re-asserts after the blast/floor merge
+  if [ -n "$TIER" ]; then
+    SELECTED="$(sel_union "$SELECTED" "$TIER_INVARIANTS")"
+  fi
   echo "── affected mode: inputs ──"
-  printf '%s\n' $INPUT_FILES | sed 's/^/  · /'
+  [ -n "$INPUT_FILES" ] && printf '%s\n' $INPUT_FILES | sed 's/^/  · /'
+  if [ -n "$SELF_SEL" ]; then
+    echo "── self-selected section files in diff ──"
+    printf '%s\n' $SELF_SEL | sed 's/^/  ⊕ /'
+  fi
   echo "── selected sections (rationale in .gos/cache/affected-rationale.tsv) ──"
   printf '%s\n' $SELECTED | sed 's/^/  · /'
+  if [ -n "${GOS_SECTIONS_ROSTER_ONLY:-}" ]; then
+    printf '%s\n' $SELECTED
+    exit 0
+  fi
 fi
 
 for f in "$TREE_ROOT"/test/sections/T*.test.sh; do

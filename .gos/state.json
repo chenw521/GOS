@@ -2,10 +2,11 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 2,
-  "current_stage": "BUILD",
+  "current_stage": "VERIFY",
   "completed_stages": [
     "INTENT",
-    "THINK"
+    "THINK",
+    "BUILD"
   ],
   "intent": {
     "summary": "ci-tiering: PR CI runs affected sections plus gate audit for minutes-level feedback, main keeps the dual-node full suite; carries the profile-floors rider decision before any BUILD workspace write",
@@ -16,12 +17,7 @@
     }
   },
   "approvals": {
-    "THINK": {
-      "status": "PENDING",
-      "ts": "2026-11-24T05:23:10.947Z",
-      "mode": "auto",
-      "stage": "THINK"
-    }
+    "THINK": "2026-11-25T03:35:21.080Z"
   },
   "spec_path": ".gos/task/a40c5afc/spec.md",
   "plan_path": ".gos/task/a40c5afc/plan.md",
@@ -40,6 +36,7 @@
   "activation_source": "headless",
   "task_head": "a40c5afc4c775457ebaa8bc21eded36b618053cc",
   "spec_gate_version": 3,
-  "spec_sha256": "24ce7b05d078aff868f824bc5c52300502508ec995cd697589dd0046c640559e",
-  "dig_closure_frozen_at": "2026-11-24T05:23:10.967Z"
+  "spec_sha256": "fdbf930ea659fb95353feb78383df8043b77936f05e03ef78fd02973d95bcf77",
+  "dig_closure_frozen_at": "2026-11-25T03:32:59.405Z",
+  "changelog_user_summary": "Split section CI into a PR tier running affected sections plus invariants plus the unmarked map:none floor, and a main-push closeout running the map:none complement plus the merge-diff blast closure plus invariants, via the runner --tier rosters with gos-tier:main markers"
 }

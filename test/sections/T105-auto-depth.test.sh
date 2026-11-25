@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Full-auto adversarial depth section — the observable-truths spec section against the landed
 # auto modules. Case map (truth id -> case):
 #   truth-five  D1  delivery adapter absent: the loop ends cleanly at SHIP with
