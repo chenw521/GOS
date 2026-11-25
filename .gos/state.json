@@ -2,11 +2,12 @@
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
   "level": 2,
-  "current_stage": "VERIFY",
+  "current_stage": "DONE",
   "completed_stages": [
     "INTENT",
     "THINK",
-    "BUILD"
+    "BUILD",
+    "VERIFY"
   ],
   "intent": {
     "summary": "ci-tiering: PR CI runs affected sections plus gate audit for minutes-level feedback, main keeps the dual-node full suite; carries the profile-floors rider decision before any BUILD workspace write",
