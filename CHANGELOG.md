@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Split section CI into a PR tier running affected sections plus invariants plus the unmarked map:none floor, and a main-push closeout running the map:none complement plus the merge-diff blast closure plus invariants, via the runner --tier rosters with gos-tier:main markers (R-01) [2026-11-25]
 - Add Truth-evidence logs travel with the clone under a tracked evidence directory (D-114) [2026-11-24]
 - Add Auto loop survives a mid-VERIFY kill: a SIGTERM/SIGHUP runner now leaves a killed run record, takes its suite children down, and a restarted run heals the pin worktree and reaches a green record end to end (D-111/D-112/D-113/D-114) [2026-11-24]
 - Add Floor the dig-closure section state-dependent advisory leg at its cross-state minimum so post-archive trees meet the baseline (R-01) [2026-11-20]

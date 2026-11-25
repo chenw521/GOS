@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Full-auto core section — the observable-truths spec section against the landed auto modules
 # (store/breaker/loop/ratify/redteam/delivery-publish) and the CLI surface.
 # Case map (truth id -> case):

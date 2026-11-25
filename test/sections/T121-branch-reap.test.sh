@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Branch reap proof section -- the reaping verdicts and guards of
 # `gos branch reap` proven on fixture repos only (real-repo dry-run moves to
 # a machine-local verification step: the real branch set moves as PRs land).

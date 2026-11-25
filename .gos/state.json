@@ -1,404 +1,43 @@
 {
   "schema_version": 6,
   "repo_id": "85af56a090a78924",
-  "level": 3,
+  "level": 2,
   "current_stage": "DONE",
   "completed_stages": [
     "INTENT",
     "THINK",
-    "PLAN",
     "BUILD",
-    "REVIEW",
     "VERIFY"
   ],
   "intent": {
-    "summary": "Restart-safe auto loop: persist a run record on SIGTERM (signal route bypasses the exception record) and keep the VERIFY pin worktree live across kill/restart (dogfood 9a07a154-pin incident)",
+    "summary": "ci-tiering: PR CI runs affected sections plus gate audit for minutes-level feedback, main keeps the dual-node full suite; carries the profile-floors rider decision before any BUILD workspace write",
     "confirmed": true,
     "confirmation": {
       "mode": "headless-auto",
-      "ts": "2026-11-20T09:08:35.940Z"
+      "ts": "2026-11-24T05:10:44.195Z"
     }
   },
   "approvals": {
-    "THINK": "2026-11-23T01:33:37.328Z",
-    "PLAN": "2026-11-23T02:03:39.586Z",
-    "ARCHIVE": "2026-11-24T01:37:24.930Z"
+    "THINK": "2026-11-25T03:35:21.080Z"
   },
-  "spec_path": ".gos/archive/2026-11-24-publicize-task-restart-safe-auto-loop-persist/task/a06ea57f/spec.md",
-  "plan_path": ".gos/archive/2026-11-24-publicize-task-restart-safe-auto-loop-persist/task/a06ea57f/plan.md",
+  "spec_path": ".gos/task/a40c5afc/spec.md",
+  "plan_path": ".gos/task/a40c5afc/plan.md",
   "project": false,
   "requirements": [
     {
       "id": "R-01",
-      "text": "Restart-safe auto loop: persist a run record on SIGTERM (signal route bypasses the exception record) and keep the VER...",
+      "text": "ci-tiering: PR CI runs affected sections plus gate audit for minutes-level feedback, main keeps the dual-node full su...",
       "phase": null,
-      "level": 3
-    },
-    {
-      "id": "R-31",
-      "text": "A SIGTERM'd detached auto run leaves a killed run record in the store (endState killed, accumulated stage outcomes) and releases the run lock before exiting",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-32",
-      "text": "Pin legs survive a mid-suite pin death: the dead worktree re-materializes once per load at the recorded commit with treeSha re-verified; liveness telemetry brackets the suite window",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-33",
-      "text": "A SIGTERM'd runner terminates its spawned suite children (process-group kill); stray pins and sections-tree registrations recycle at the next run start under the run lock",
-      "phase": null,
-      "status": "active"
-    },
-    {
-      "id": "R-34",
-      "text": "The section suite runs a simulated dogfood cycle: real --fg runner on a fixture store, scripted mid-VERIFY SIGTERM, restart, green-record assert",
-      "phase": null,
-      "status": "active"
+      "level": 2
     }
   ],
-  "decisions": [
-    {
-      "id": "D-111",
-      "title": "Finding A cure: SIGTERM handler persists a killed run record and releases the run lock; no reconciliation backfill",
-      "rationale": "latestRunRecordReadsGreen reads the latest record only; exception route loop.cjs:705-713 proves in-process persistence; acceptance is SIGTERM-only so reconciliation buys nothing today",
-      "birth_phase": "init",
-      "status": "open",
-      "anchor": null,
-      "covered": false,
-      "covered_by": null,
-      "born_at": "2026-11-20T09:50:13.209Z",
-      "dig": {
-        "command": "bwrap mask experiments + store runRecords dump + loop.cjs read",
-        "output_excerpt": "killed run 15f78531 absent from runRecords; restarted 9a07a154 died on its OWN pin in the sections window",
-        "anchor": "bin/lib/ops/auto/loop.cjs:700"
-      },
-      "dug_at": "2026-11-20T09:50:13.209Z",
-      "dug_sha": "07af5c3694564c5d25d5494a0317c44f20968e2c6eb7df39504653296e49c22a"
-    },
-    {
-      "id": "D-112",
-      "title": "Finding B cure: bounded pin self-heal at load time + liveness telemetry + run-start stray-pin recycle",
-      "rationale": "killer unidentified (3 bwrap-refuted hypotheses), fix must be killer-agnostic; treeSha re-verified per load keeps the trust chain; store record is sandbox-unreachable; same-load re-death fails closed",
-      "birth_phase": "init",
-      "status": "open",
-      "anchor": null,
-      "covered": false,
-      "covered_by": null,
-      "born_at": "2026-11-20T09:52:20.835Z",
-      "dig": {
-        "command": "bwrap masked prune/collision-add experiments + workers.cjs loadPinnedModule read",
-        "output_excerpt": "masked prune keeps pin metadata; collision-add suffixes; pin died once mid-suite and stayed dead (tried latch)",
-        "anchor": "bin/lib/ops/auto/workers.cjs:646"
-      },
-      "dug_at": "2026-11-20T09:52:20.835Z",
-      "dug_sha": "905cb69bff4c879ae49933a657e0a7cb947a5e519c5c0d35878f71ce851c90ed"
-    },
-    {
-      "id": "D-113",
-      "title": "GA3: SIGTERM handler kills the process group; stranded sections-tree metadata left to the run-start stray sweep",
-      "rationale": "AMENDED R2: spawnreg pid is the RUNNER's own pid (loop.cjs:1336) — kill by it is suicide; spawnRun returns the child pid, loop backfills child_pid; handler kills only live child_pid entries",
-      "birth_phase": "init",
-      "status": "open",
-      "anchor": null,
-      "covered": false,
-      "covered_by": null,
-      "born_at": "2026-11-20T10:35:48.067Z",
-      "dig": {
-        "command": "store stamps + spawnreg scratch listing",
-        "output_excerpt": "killed run 15f78531 suite stamps continue to 04:35+, scratch survives today",
-        "anchor": "bin/lib/core/spawnreg.cjs:159"
-      },
-      "dug_at": "2026-11-20T10:35:48.067Z",
-      "dug_sha": "f7db0f6f19a68e4260f55ece2d386aa4ec3a3e99dd744ce34a39ec68741fdf24"
-    },
-    {
-      "id": "D-114",
-      "title": "GA4: simulated dogfood section in VERIFY (real --fg runner, scripted SIGTERM+restart) + post-ship real cycle",
-      "rationale": "live cycle cannot run while this task is current (p21 double-drive); evidence gate reads the real store, simulation cannot feed it; lesson 881b50bc demands real execution over argv asserts",
-      "birth_phase": "init",
-      "status": "open",
-      "anchor": null,
-      "covered": false,
-      "covered_by": null,
-      "born_at": "2026-11-20T10:38:45.879Z",
-      "dig": {
-        "command": "p21 archived runbook + re-enable gate code path",
-        "output_excerpt": "the dogfood cycle runs after this task ships; latestRunRecordReadsGreen reads the real store",
-        "anchor": ".gos/archive/2026-11-20-publicize-phase-p21-make-gos-auto-survivable-on-a-/task/p21/dogfood-runbook.md:9"
-      },
-      "dug_at": "2026-11-20T10:38:45.879Z",
-      "dug_sha": "575e476be6b97bb1b3c165678961d32337bfd497c0e3d1415cc08d436f19745e"
-    }
-  ],
-  "observable_truths": [
-    {
-      "id": "T1",
-      "description": "A mid-VERIFY SIGTERM of a detached auto run leaves a killed run record in the machine-local store runRecords (status killed, stage outcomes present)",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\"test/sections/T136-auto-dogfood-restart.test.sh\"]",
-        "output_excerpt": "✓ C1: sentinel marker armed (first pass blocking in the 600s window)",
-        "artifact_path": "test/evidence/verify-T136-dogfood-restart.log",
-        "replay": true
-      }
-    },
-    {
-      "id": "T2",
-      "description": "The simulated dogfood section (real --fg runner, fixture store, scripted SIGTERM mid-VERIFY, restart) ends green: the restarted run completes VERIFY with pin legs passing and writes a green run record",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\"test/sections/T136-auto-dogfood-restart.test.sh\"]",
-        "output_excerpt": "✓ C1: sentinel marker armed (first pass blocking in the 600s window)",
-        "artifact_path": "test/evidence/verify-T136-dogfood-restart.log",
-        "replay": true
-      }
-    },
-    {
-      "id": "T3",
-      "description": "After SIGTERM of a detached runner, no descendant suite/bwrap processes survive the kill",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\"test/sections/T136-auto-dogfood-restart.test.sh\"]",
-        "output_excerpt": "✓ C1: sentinel marker armed (first pass blocking in the 600s window)",
-        "artifact_path": "test/evidence/verify-T136-dogfood-restart.log",
-        "replay": true
-      }
-    },
-    {
-      "id": "T4",
-      "description": "A run log carries pin-liveness telemetry lines bracketing the sections suite window",
-      "verified": true,
-      "evidence": {
-        "command": "[\"bash\",\"test/sections/T136-auto-dogfood-restart.test.sh\"]",
-        "output_excerpt": "✓ C1: sentinel marker armed (first pass blocking in the 600s window)",
-        "artifact_path": "test/evidence/verify-T136-dogfood-restart.log",
-        "replay": true
-      }
-    }
-  ],
-  "gaps": [
-    {
-      "id": "G-1795436978420",
-      "type": "major",
-      "description": "Fluid back to PLAN: discovered during PLAN",
-      "status": "open"
-    },
-    {
-      "id": "G-1795437567506",
-      "type": "major",
-      "description": "Fluid back to BUILD: discovered during BUILD",
-      "status": "open"
-    }
-  ],
+  "decisions": [],
+  "observable_truths": [],
+  "gaps": [],
   "activation_source": "headless",
-  "task_head": "a06ea57f88d924750fede6e463c1392832f8576f",
+  "task_head": "a40c5afc4c775457ebaa8bc21eded36b618053cc",
   "spec_gate_version": 3,
-  "spec_sha256": "18b162a5ec391c7a5d11ea9beee5d5ac02c31b028db5f3c0f81e99fd232a1083",
-  "dig_closure_frozen_at": "2026-11-23T01:34:32.785Z",
-  "plan_snapshot": {
-    "tasks": [
-      {
-        "id": "T1",
-        "covers": [
-          "D-113",
-          "R-33"
-        ],
-        "files": [
-          "bin/lib/ops/auto/spawnrun.cjs",
-          "test/sections/T130-spawn-children.test.sh",
-          "test/sections/baseline.json"
-        ],
-        "wave": 1
-      },
-      {
-        "id": "T2",
-        "covers": [
-          "D-111",
-          "D-113"
-        ],
-        "files": [
-          "bin/lib/ops/auto/store.cjs",
-          "bin/lib/core/spawnreg.cjs",
-          "bin/lib/ops/auto/workers.cjs",
-          "bin/lib/ops/auto/loop.cjs",
-          "bin/lib/ops/auto/redteam.cjs",
-          "test/sections/T131-store-surface.test.sh",
-          "test/sections/baseline.json",
-          "test/sections/T46-module-structure.test.sh"
-        ],
-        "wave": 1
-      },
-      {
-        "id": "T3",
-        "covers": [
-          "D-112",
-          "R-32"
-        ],
-        "files": [
-          "bin/lib/ops/auto/workers.cjs",
-          "test/sections/T132-pin-heal.test.sh",
-          "test/sections/baseline.json"
-        ],
-        "wave": 2
-      },
-      {
-        "id": "T8a",
-        "covers": [
-          "D-114",
-          "R-34"
-        ],
-        "files": [
-          "test/sections/fixtures/dogfood/build.sh",
-          "test/sections/fixtures/dogfood/RUNBOOK.md"
-        ],
-        "wave": 2
-      },
-      {
-        "id": "T4",
-        "covers": [
-          "D-111",
-          "D-112",
-          "R-31",
-          "R-32"
-        ],
-        "files": [
-          "bin/lib/ops/auto/loop.cjs"
-        ],
-        "wave": 3
-      },
-      {
-        "id": "T8b",
-        "covers": [
-          "D-114",
-          "R-34"
-        ],
-        "files": [
-          "test/sections/fixtures/dogfood/build.sh",
-          "test/sections/fixtures/dogfood/seed-store.sh",
-          "test/sections/fixtures/dogfood/seed-notes.md"
-        ],
-        "wave": 3
-      },
-      {
-        "id": "T6a",
-        "covers": [
-          "D-111"
-        ],
-        "files": [
-          "bin/lib/ops/auto/loop.cjs",
-          "bin/lib/core/locales/en.cjs",
-          "bin/lib/core/locales/zh.cjs"
-        ],
-        "wave": 4
-      },
-      {
-        "id": "T6b",
-        "covers": [
-          "D-111",
-          "D-112",
-          "D-113",
-          "R-33"
-        ],
-        "files": [
-          "bin/lib/ops/auto/loop.cjs",
-          "test/sections/T133-run-start-recovery.test.sh",
-          "test/sections/baseline.json",
-          "bin/lib/core/locales/en.cjs",
-          "bin/lib/core/locales/zh.cjs"
-        ],
-        "wave": 5
-      },
-      {
-        "id": "T5",
-        "covers": [
-          "D-111",
-          "D-113",
-          "R-01",
-          "R-31",
-          "R-33"
-        ],
-        "files": [
-          "bin/lib/ops/auto/loop.cjs",
-          "test/sections/T134-signal-handler.test.sh",
-          "test/sections/baseline.json"
-        ],
-        "wave": 6
-      },
-      {
-        "id": "T7",
-        "covers": [
-          "D-112",
-          "R-32",
-          "R-01"
-        ],
-        "files": [
-          "bin/lib/ops/auto/loop.cjs",
-          "bin/lib/ops/auto/cli.cjs",
-          "bin/lib/core/locales/en.cjs",
-          "bin/lib/core/locales/zh.cjs",
-          "test/sections/T135-auto-observability.test.sh",
-          "test/sections/baseline.json"
-        ],
-        "wave": 7
-      },
-      {
-        "id": "T9a",
-        "covers": [
-          "D-111",
-          "D-112",
-          "D-113",
-          "D-114",
-          "R-01",
-          "R-31",
-          "R-32",
-          "R-33",
-          "R-34"
-        ],
-        "files": [
-          "test/sections/T136-auto-dogfood-restart.test.sh",
-          "test/run-sections.sh",
-          "test/checks/manifest-coverage.sh",
-          "bin/lib/ops/section.cjs"
-        ],
-        "wave": 8
-      },
-      {
-        "id": "T9b",
-        "covers": [
-          "D-114",
-          "R-31"
-        ],
-        "files": [
-          "test/sections/T136-auto-dogfood-restart.test.sh"
-        ],
-        "wave": 9
-      },
-      {
-        "id": "T10",
-        "covers": [
-          "D-114",
-          "R-34"
-        ],
-        "files": [
-          "test/checks/dogfood-no-require.sh",
-          ".github/workflows/ci.yml",
-          "test/sections/fixtures/dogfood/RUNBOOK.md"
-        ],
-        "wave": 9
-      }
-    ],
-    "audit": [],
-    "meta": {
-      "waveValidation": {
-        "ok": true,
-        "waves": 9
-      }
-    }
-  },
-  "checkpoints": [],
-  "changelog_user_summary": "Truth-evidence logs travel with the clone under a tracked evidence directory",
-  "completed_at": "2026-11-24T01:37:29.139Z"
+  "spec_sha256": "fdbf930ea659fb95353feb78383df8043b77936f05e03ef78fd02973d95bcf77",
+  "dig_closure_frozen_at": "2026-11-25T03:32:59.405Z",
+  "changelog_user_summary": "Split section CI into a PR tier running affected sections plus invariants plus the unmarked map:none floor, and a main-push closeout running the map:none complement plus the merge-diff blast closure plus invariants, via the runner --tier rosters with gos-tier:main markers"
 }

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Evidence-gated re-enable section — `auto on` never re-enables past a
 # TRIPPED breaker blindly: when run records exist the latest must read
 # green (every recorded stage advanced in INTENT->SHIP order, sandboxed

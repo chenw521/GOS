@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Auto liveness telemetry + status latest-run line — the pin survival path
 # made operator-visible. Three surfaces, one story:
 #   C1  pin-liveness probes bracket every Class S step: the run log carries

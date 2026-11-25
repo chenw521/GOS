@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Spawn write-channel section — the registry/request/ack channel that lets a
 # runner-spawned session perform exactly its registered stage verbs under the
 # runner's live lock, and nothing else. Authoritative entries live in the

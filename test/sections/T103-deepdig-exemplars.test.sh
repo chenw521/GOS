@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Static check for the dig exemplar file: existence, exactly three case
 # records, one 5-column card per case, a deepen-round marker, and the
 # de-identification grep (concern hex ids, decision ids, sha-shaped hex

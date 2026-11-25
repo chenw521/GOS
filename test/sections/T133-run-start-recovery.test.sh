@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Run-start recovery section — the restart-safe loop's opening sweep, pinned
 # between the detach sentinel and the seed materialization: the crash-side
 # record queue drains into runRecords (bounded, corrupt lines quarantine),

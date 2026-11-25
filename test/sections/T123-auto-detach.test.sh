@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Auto default-detach survival section -- `auto run` detaches by default so a
 # BUILD worker survives its enclosing operator terminal timing out. Three
 # proofs: the child argv contract (forwarded invocation minus detach-class

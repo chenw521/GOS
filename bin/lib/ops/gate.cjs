@@ -328,6 +328,8 @@ function checkManifest(root, mustRunSecs, allowlist) {   // → {advisories, fai
   // filter audit: a partial run is legitimate (closure responsibility) but never silent
   const advisories = [];
   if (m.selector === 'affected') advisories.push('manifest: affected-sections run (map-blast closure + fail-safe set) — full suite remains the CI authority');
+  if (m.selector === 'tier-pr') advisories.push('manifest: PR-tier sections run (affected subset + invariants + unmarked map:none floor) — the main closeout carries the complement');
+  if (m.selector === 'tier-main') advisories.push('manifest: main-closeout sections run (map:none complement + merge-blast closure + invariants)');
   if (typeof m.filter === 'string' && m.filter) advisories.push(SC.manifestPartialRun.replace('<filter>', m.filter));
   const cur = core.worktreeContentHash(root);
   if (!cur || !m.head_tree || !m.patch_sha) return { advisory: null, advisories, failures: [core.gateFail('manifest-stale', { verdict: SC.manifestStale, evidence: [p], fix: core.gateCmd('bash test/run-sections.sh') })] };

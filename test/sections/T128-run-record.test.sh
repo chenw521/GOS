@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Run-record persistence section — every loop exit route leaves one
 # per-run record in the machine-local trust store (run identity, per-stage
 # outcomes incl. the script-VERIFY step statuses, end state, timestamps).

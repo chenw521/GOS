@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Compose-invariants section — the Class S (script-spawn) writable surface
 # and the argv invariants every sandbox frame holds.
 # Case map:

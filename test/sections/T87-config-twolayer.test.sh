@@ -196,12 +196,14 @@ else
   echo "  ✗ probed checker not glm-5.3-family: $OUT"; FAIL=$((FAIL+1))
 fi
 # tracked repo pin: run from GOS_ROOT with fixture env (read-only command)
+# the sanctioned slot value is the provider-qualified id — opencode resolves
+# --model ids as provider/model and a bare name dies at spawn time
 OUT=$(cd "$GOS_ROOT" && HOME="$T87_FIX" OPENCODE_CONFIG_DIR="$T87_FIX" node "$GOS" resolve-model checker 2>&1); RC=$?
 assert_exit "repo resolve-model checker under fixture env" "0" "$RC"
-if printf '%s' "$OUT" | grep -Eq '"model":"[^"]*glm-5\.3flash'; then
-  echo "  ✓ repo tracked pin is glm-5.3flash"; PASS=$((PASS+1))
+if printf '%s' "$OUT" | grep -Eq '"model":"zai-coding-plan/glm-5\.3-flash"'; then
+  echo "  ✓ repo tracked pin is zai-coding-plan/glm-5.3-flash"; PASS=$((PASS+1))
 else
-  echo "  ✗ repo pin not glm-5.3flash: $OUT"; FAIL=$((FAIL+1))
+  echo "  ✗ repo pin not zai-coding-plan/glm-5.3-flash: $OUT"; FAIL=$((FAIL+1))
 fi
 
 # --- .8: project genesis guard — git history carries lessons.json → restore, don't remigrate

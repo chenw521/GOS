@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Store/spawnreg surface section — additive persistence primitives the
 # restart-safe loop builds on: takeover audits on the run lock (tookOver
 # carries the broken holder plus a closed reason enum), spawn registry

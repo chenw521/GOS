@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Auto-dispatch section — the stage-dispatch blueprint surface for the auto
 # loop. First case set: the spawn-text sanitizer module (core/sanitize.cjs)
 # that every render surface funnels spawn-originated bytes through before

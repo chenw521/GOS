@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # gos-map:none
+# gos-tier:main
 # Worktree helper topology — the writable pinned-worktree surface the
 # sandboxed section suite runs on (workers.cjs helper + the run-sections.sh
 # manifest contract).

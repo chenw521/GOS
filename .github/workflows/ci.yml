@@ -13,11 +13,17 @@ on:
     branches: [main]
   pull_request:
 
-# Cancel superseded runs on the same ref: private repos have a monthly
-# Actions minute quota, rapid-push workflows should not burn it twice.
+# Cancel superseded runs on the same ref — but only for pull_request events:
+# private repos have a monthly Actions minute quota, rapid PR pushes should
+# not burn it twice. Push-to-main runs are NEVER cancelled in progress: a
+# newer push queues behind the running one, and the default single-pending
+# semantics may cancel an older PENDING run — the skipped commit's own
+# affected slice is then covered by no closeout (the surviving run's `before`
+# base is the last ARRIVED head, not the last completed one); the invariant
+# re-run in each closeout still covers every push whole-tree.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -80,16 +86,29 @@ jobs:
       - name: dogfood direct-require guard (T136 reaches the auto loop via the CLI only)
         run: bash test/checks/dogfood-no-require.sh --self-test
 
+  # Main-push closeout (tiered CI): the heavy gos-map:none complement, the
+  # merge-diff blast closure (affected subset against the previous main
+  # head — whatever a PR tier skipped or an ungreen merge dodged still runs
+  # here), and the invariant re-run. PR feedback lives in sections-pr.
   sections:
-    name: Sections (Node ${{ matrix.node-version }})
+    name: Sections — main closeout (complement + merge-blast + invariants) (Node ${{ matrix.node-version }})
+    if: github.event_name == 'push'
     runs-on: ubuntu-24.04
+    # derived budget: install ~3 min + map:none complement family ~8-9 min +
+    # merge-blast additivity (a wide merge touching heavily-linked files can
+    # select a large anchored fraction, approaching full-suite wall time) —
+    # the budget must accommodate it or legitimate wide merges false-red
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         node-version: [20, 22]
     steps:
+      # full history: the base resolve needs HEAD~1, a force-pushed-away
+      # `before`, and merge-base — none reachable from a depth-1 checkout
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node-version }}
@@ -101,17 +120,104 @@ jobs:
       # binary in CI, not only against probe stubs
       - name: Install sandbox engine (bubblewrap)
         run: sudo apt-get update -qq && sudo apt-get install -y -qq bubblewrap
+      # Previous-main-head base for the merge's own blast closure: the push
+      # event's `before` field. A branch-creation push (before = 40×"0")
+      # resolves to HEAD~1; an unreachable `before` (force-push,
+      # platform-permitted until branch protection lands) falls back to
+      # fetching the raw sha. Every resolve failure stays red (fail-closed).
+      - name: Resolve previous main head (merge-diff base)
+        env:
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          set -e
+          if [ "$PUSH_BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "branch-creation push — base = HEAD~1"
+            echo "GOS_MAIN_CLOSEOUT_BASE=HEAD~1" >> "$GITHUB_ENV"
+          elif git rev-parse --verify --quiet "${PUSH_BEFORE}^{commit}" >/dev/null; then
+            echo "base = push event before ($PUSH_BEFORE)"
+            echo "GOS_MAIN_CLOSEOUT_BASE=$PUSH_BEFORE" >> "$GITHUB_ENV"
+          elif git fetch -q origin "$PUSH_BEFORE" \
+            && git rev-parse --verify --quiet "${PUSH_BEFORE}^{commit}" >/dev/null; then
+            echo "force-pushed-away before — fetched raw sha, base = $PUSH_BEFORE"
+            echo "GOS_MAIN_CLOSEOUT_BASE=$PUSH_BEFORE" >> "$GITHUB_ENV"
+          else
+            echo "::error::cannot resolve the push event's before sha as the closeout base"
+            exit 1
+          fi
       - name: Trust tracked custom gate (fresh checkout has no machine-local consent)
         run: node bin/gos.cjs gate trust check.sh
-      - name: Section regression suite
+      - name: Section closeout suite
         run: |
           set -o pipefail
-          bash test/run-sections.sh 2>&1 | tee "$RUNNER_TEMP/sections-log.txt"
+          bash test/run-sections.sh --tier main --base "$GOS_MAIN_CLOSEOUT_BASE" 2>&1 | tee "$RUNNER_TEMP/sections-log.txt"
       - name: Upload section log on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: sections-log-node${{ matrix.node-version }}
+          path: ${{ runner.temp }}/sections-log.txt
+          retention-days: 7
+
+  # PR tier (tiered CI): the affected subset against the PR merge-base plus
+  # the cheap whole-tree invariant sections and the unmarked map:none floor,
+  # for minutes-level feedback. A green check here is an affected-subset
+  # pass, never a full-suite pass — the main closeout carries the complement.
+  sections-pr:
+    name: Sections — PR tier (affected + invariants) (Node ${{ matrix.node-version }})
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    # derived budget: install ~3 min + invariants ~1-2 min + affected subset
+    # + the unmarked map:none floor, with merge-blast additivity allowance
+    # (a PR touching core hubs selects a large anchored fraction)
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22]
+    steps:
+      # full history: the merge-base resolve needs the PR base branch head
+      # and the head sha reachable — none guaranteed by a depth-1 checkout
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install sandbox engine (bubblewrap)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq bubblewrap
+      # HARD GATE: a failed or missing merge-base resolve fails the job red —
+      # never a silent fallback (verify-fetching only the head sha would leave
+      # --base "" falling back to task_head/HEAD: empty diff, exit 0). A
+      # resolved base with an empty diff is legitimately green (docs-only PR).
+      - name: Resolve PR merge base
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -e
+          git rev-parse --verify --quiet "$PR_HEAD_SHA^{commit}" >/dev/null \
+            || git fetch -q origin "$PR_HEAD_SHA"
+          mb="$(git merge-base "$PR_BASE_SHA" "$PR_HEAD_SHA")"
+          if [ -z "$mb" ]; then
+            echo "::error::merge-base resolve returned empty — failing closed"
+            exit 1
+          fi
+          echo "PR tier base = merge-base $mb"
+          echo "GOS_PR_MERGE_BASE=$mb" >> "$GITHUB_ENV"
+      - name: Trust tracked custom gate (fresh checkout has no machine-local consent)
+        run: node bin/gos.cjs gate trust check.sh
+      - name: Section PR-tier suite
+        run: |
+          set -o pipefail
+          bash test/run-sections.sh --tier pr --base "$GOS_PR_MERGE_BASE" 2>&1 | tee "$RUNNER_TEMP/sections-log.txt"
+      - name: Upload section log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sections-pr-log-node${{ matrix.node-version }}
           path: ${{ runner.temp }}/sections-log.txt
           retention-days: 7
 
