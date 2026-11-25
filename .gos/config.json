@@ -1,7 +1,12 @@
 {
   "model_profile": "solo",
   "models": {
-    "checker": "glm-5.3flash"
+    "checker": "glm-5.3-flash",
+    "think-redteam": "glm-5.3-flash",
+    "implementer": "glm-5.3-flash",
+    "planner": "glm-5.3-flash",
+    "researcher": "glm-5.3-flash",
+    "code-reviewer": "glm-5.3-flash"
   },
   "locale": "en"
 }
