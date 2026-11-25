@@ -1,12 +1,12 @@
 {
   "model_profile": "solo",
   "models": {
-    "checker": "glm-5.3-flash",
-    "think-redteam": "glm-5.3-flash",
-    "implementer": "glm-5.3-flash",
-    "planner": "glm-5.3-flash",
-    "researcher": "glm-5.3-flash",
-    "code-reviewer": "glm-5.3-flash"
+    "checker": "zai-coding-plan/glm-5.3-flash",
+    "think-redteam": "zai-coding-plan/glm-5.3-flash",
+    "implementer": "zai-coding-plan/glm-5.3-flash",
+    "planner": "zai-coding-plan/glm-5.3-flash",
+    "researcher": "zai-coding-plan/glm-5.3-flash",
+    "code-reviewer": "zai-coding-plan/glm-5.3-flash"
   },
   "locale": "en"
 }
