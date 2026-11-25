@@ -74,7 +74,9 @@ modes):
   unmarked map:none section running; the marker exclusion is the only
   strip — rt1-F1 at c5c0f2d0: this floor term was missing from the
   formula, and the quota derivations below follow the wrong roster),
-  MINUS `gos-tier:main`-marked sections; `--tier main`
+   MINUS `gos-tier:main`-marked sections EXCEPT those whose section file
+   is in the diff (the D-03 new-section precedence rule — an
+   unconditional minus breaks T-3, rt1-F4 at 4c2dd9c2); `--tier main`
   selects the `gos-map:none` family UNION the invariant enumeration UNION
   the affected subset computed against the PREVIOUS main head (the merge's
   own diff — this covers composition and the merge-before-green case:
@@ -109,8 +111,12 @@ modes):
   push) resolves to `HEAD~1`; an unreachable `before` (force-push,
   platform-permitted until branch protection lands per concern
   98c5d641) falls back to merge-base against the fetched history — and
-  every resolve failure stays red (fail-closed direction unchanged).
-  timeout-minutes derived from the complement family's measured
+   every resolve failure stays red (fail-closed direction unchanged).
+   The closeout checkout pins an explicit `fetch-depth: 0` (rt1-F1 at
+   4c2dd9c2: the inherited sections-job checkout is depth 1, ci.yml:92-93
+   — `HEAD~1`, a force-pushed-away `before`, and merge-base all need
+   history that depth 1 does not fetch).
+   timeout-minutes derived from the complement family's measured
   wall time (~8-9 min) plus install overhead PLUS the merge-blast
   additivity (a wide merge touching heavily-linked files can select a
   large anchored fraction, approaching full-suite wall time — the budget
@@ -134,25 +140,28 @@ modes):
   invariants)" / "Sections — main closeout (complement + merge-blast +
   invariants)") so a green check is never misread as a full-suite pass.
 - Concurrency (rt2-F-3 at 1650d812, amended v9 per rt2-F-1 at
-  de71f597, re-pinned v10 per rt1-F2/rt2-F-1 at c5c0f2d0): GitHub
-  cancels at the RUN level — with the workflow-level group
-  `ci-${{ github.ref }}` + `cancel-in-progress: true` in place, a newer
-  push to main cancels the entire older workflow run INCLUDING its
-  closeout job, and no job-level group can rescue it (the v9
-  job-level-only fix was ineffective against run-level cancellation).
-  The workflow-level `concurrency` block is REMOVED and concurrency
-  moves to per-job declarations: PR-tier jobs carry `ci-${{ github.ref }}`
-  with `cancel-in-progress: true` (superseded pushes are wasteful to
-  run); the main closeout job carries its OWN group
-  (`ci-main-closeout`, `cancel-in-progress: false`) AND the
-  pending-cancellation caveat is closed with an explicit `queue: max`
-  (GitHub's queue semantics cancel an older PENDING run when a newer one
-  queues even without cancel-in-progress — `queue: max` opts out,
-  keeping every queued closeout; solo-maintainer velocity makes
-  unbounded queue growth a non-issue). Without a workflow-level group
-  nothing cancels the closeout run itself. The main tier's merge-diff
-  blast computes against the last COMPLETED main head, which under
-  no-cancel queuing is the immediately-prior commit.
+  de71f597, re-pinned v10 per rt1-F2/rt2-F-1 at c5c0f2d0, simplified v11
+  per rt1-F2/F-3 + rt2-F-1/F-2 at 4c2dd9c2): GitHub cancels at the RUN
+  level, and JOB-level groups are repo-wide and job-scoped — the v10
+  per-job design makes same-run PR jobs sharing `ci-${{ github.ref }}`
+  mutually cancel each other and serialize the node 20/22 matrix legs
+  (docs-verified: at most one job in a group runs at a time). The
+  workflow-level group is therefore KEPT and `cancel-in-progress`
+  becomes event-conditional (expressions are supported per the GitHub
+  Actions concurrency docs): `group: ci-${{ github.ref }}` with
+  `cancel-in-progress: ${{ github.event_name == 'pull_request' }}`.
+  PR events keep today's superseded-run cancellation (the quota
+  motivation, concern 834fb3e7, holds). Push-to-main runs are never
+  cancelled in progress: a newer push queues behind the running one, and
+  the default single-pending semantics may cancel an older PENDING run —
+  a skipped commit's diff stays covered because the merge-diff blast
+  computes against the last COMPLETED main head, which then spans the
+  skipped commit. `queue: max` is not used: it combines only with
+  `cancel-in-progress: false`, and a static `true` for PR events would
+  be a workflow validation conflict. Main-push behavior change vs
+  today, accepted: superseded main-push jobs queue and complete instead
+  of being cancelled — main receives only squash-merges, burst merges
+  are rare, and closeout correctness dominates.
 
 `test/run-sections.sh` selection semantics (all tiers):
 
@@ -317,10 +326,10 @@ roots split (loop.cjs:1771-1776), and the script-leg TESTBASE pin
 
 ### In Scope
 - ci.yml: `if:` split of the sections job, new `sections-pr` job; the
-  workflow-level concurrency group is removed and concurrency moves to
-  per-job declarations — the main closeout never cancels in progress
-  (rt2-F-3, re-pinned v10: run-level cancellation defeated the v9
-  job-level-only fix).
+  workflow-level concurrency group keeps its group expression and gains
+  event-conditional `cancel-in-progress` (v11: pull_request events
+  cancel superseded runs, push events never cancel in progress —
+  rt2-F-3, re-pinned v10/v11).
 - run-sections.sh: the `--tier <pr|main>` roster capability
   (union/minus/exclusion semantics, marker validation, self-selection
   placement and exit-predicate changes) — rt2-F-4.
@@ -330,7 +339,10 @@ roots split (loop.cjs:1771-1776), and the script-leg TESTBASE pin
 - CHANGELOG entry; census and layout untouched.
 
 ### Out of Scope
-- Gate, pack, masters, commitlint jobs (unchanged behavior on both tiers).
+- Gate, pack, masters, commitlint jobs (unchanged behavior on
+  pull_request events; on push events the superseded-run cancel becomes
+  queue-and-complete with in-flight protection — the v11 concurrency
+  trade; rt1-F3/rt2-F-1 at 4c2dd9c2).
 - Any auto-loop code change — D-04 decides floors, it does not re-implement
   them.
 - Local `--fresh` repair (concern adf8d93a — separate debt).
@@ -344,9 +356,11 @@ roots split (loop.cjs:1771-1776), and the script-leg TESTBASE pin
 - [DI-3]: scheduled nightly full suite on main — bounded insurance against
   the blast-wrong residual (a stale map edge can starve an anchored
   section on all tiers; rt2-F5 at b9e370f6).
-- [DI-4]: roster-shrink detector for full-suite runs (deletion-gap
-  residual; the v4 manifest-coverage wiring was withdrawn — the check
-  cannot validate partial rosters).
+- [DI-4]: roster-shrink detector hosted on the main closeout
+  (post-suite against the fresh manifest — after D-01 no scheduled
+  steady-state full-suite run exists to host it; deletion-gap residual;
+  the v4 manifest-coverage wiring was withdrawn — the check cannot
+  validate partial rosters; rt2-F-3 at 4c2dd9c2).
 - [DI-5]: blast-result caching across pushes of the same PR (only if
   selection cost ever shows up in job timings).
 
@@ -456,11 +470,13 @@ at c5c0f2d0): c9b172bd (rt1 on v7, 5 findings, rt2 quota-dead) and
 > → 966e04e2 → b9e370f6 → 587c9f4a → 1650d812 → c9b172bd → 123c8b8d →
 > de71f597 → 01fffe6b → c5c0f2d0): 8 -> 14 -> 14 -> 12 -> 16 -> 11 -> 5
 > (rt2 no-verdict) -> 0 (both legs no-verdict) -> 7 -> 2 (rt2 no-verdict)
-> -> 10. Non-monotonic at AMENDMENT BOUNDARIES — the v5 SIMPLIFICATION
+> -> 10 -> 7. Non-monotonic at AMENDMENT BOUNDARIES — the v5 SIMPLIFICATION
 > round and the v9 record completion each traded large amendments for
 > fresh attack surface (2 -> 10 at c5c0f2d0 attacked exactly the
 > newly-pinned v9 text: concurrency, placement, record rows); counts
-> decayed once the new text was pinned. Class note (v10): the v9
+> decay only after a text survives a pair unchanged — v10 did not
+> (10 -> 7, every finding inside the freshly pinned v10 concurrency and
+> formula amendments). Class note (v10): the v9
 > "zero design-level findings" claim is RETRACTED — c5c0f2d0 found two
 > convergent mechanism-level defects (run-level cancellation defeating
 > the no-closeout-cancel guarantee; blast reassignment clobbering the
@@ -498,6 +514,22 @@ at c5c0f2d0): c9b172bd (rt1 on v7, 5 findings, rt2 quota-dead) and
 > gate with a release-with-known-gaps brief instead of another dialectic
 > round.
 
+### Round 19+20 — re-attack on spec v10 (spawn 4c2dd9c2)
+
+| Round | Perspective | Findings | Dispositions |
+|:---|:---|:---|:---|
+| rt1 (4c2dd9c2) | edge/misuse/completeness | 4 | Main-closeout checkout depth unpinned (the inherited depth-1 checkout cannot resolve `HEAD~1`, a force-pushed-away `before`, or a merge-base — the v10 force-push fallback is unachievable there): ACCEPT — `fetch-depth: 0` pinned on the closeout. v10 per-job concurrency makes same-run PR jobs sharing `ci-${{ github.ref }}` mutually cancel (job-level groups are repo-wide and job-scoped; a later-queuing job cancels the running one): ACCEPT — v11 keeps the workflow-level group and makes `cancel-in-progress` event-conditional (docs-verified). Concurrency unassigned for non-sections jobs while Out of Scope claims unchanged behavior (removing the workflow-level block drops their superseded-run cancellation — quota regression contradicting concern 834fb3e7): ACCEPT — Out of Scope restated (PR events unchanged; push events queue-and-complete, trade documented). Approach marker MINUS unconditional, contradicting D-03/R-02/T-3's in-diff exception (the identical class the v10 floor-term fix closed, re-introduced for the marker term): ACCEPT — formula gains the precedence exception. |
+| rt2 (4c2dd9c2) | completeness/edge | 3 | F-1 = rt1's non-sections-jobs orphaning (convergent). F-2 static job-level groups serialize the retained node 20/22 matrix legs (~2x PR feedback and closeout wall time, unaccepted trade): ACCEPT — dissolved by the v11 workflow-level design (run-scoped grouping keeps matrix legs parallel; matrix/strategy are legal group-expression contexts per docs, but no per-job group is needed at all). F-3 DI-4 roster-shrink detector unhostable (D-01 removes scheduled full-suite runs, so "for full-suite runs" has no steady-state host) + Risks still calls DI-3 "the scheduled insurance" although DI-3 is an unscheduled deferred idea: ACCEPT — DI-4 rehosted on the closeout post-suite; Risks wording corrected. |
+
+> All 7 findings ACCEPTed (5 distinct; two convergent pairs); spec
+> amended to v11, disposition recorded (delegated consensus, ruling
+> 2026-11-24). Every finding landed inside the freshly pinned v10 text —
+> the amendment-boundary pattern repeated on the loop's OWN fix. The
+> pre-declared confirmation round did not clear, so the STOP-LOSS in the
+> v10 note FIRED: the verification-path decision (one more pair on v11
+> vs release with the record as-is) escalates to the human gate with a
+> decision brief; the v11 fixes and this record are landed either way.
+
 ## Risks
 - Under-selection ships a break to main → the heavy `gos-map:none`
   complement is tiered to main (always runs there) and the invariant
@@ -505,8 +537,8 @@ at c5c0f2d0): c9b172bd (rt1 on v7, 5 findings, rt2 quota-dead) and
   risks: composition drift between PR tier and the merged tree (covered
   by main's merge-diff blast closure) and blast-WRONG from a stale map
   edge (an anchored section starves on all tiers — the T85 case is
-  excluded from this class by invariant membership; DI-3 nightly-full
-  is the scheduled insurance).
+   excluded from this class by invariant membership; DI-3 nightly-full
+   remains a parked idea, not scheduled — rt2-F-3 at 4c2dd9c2).
 - Selection machinery depends on map data health → `map blast` failure
   exits red in the PR tier (run-sections.sh:287), never a silent skip.
 - Quota: the PR tier is dual-node but bounded by the invariant floor plus
